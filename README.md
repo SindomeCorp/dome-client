@@ -50,7 +50,7 @@ It is a browser-based MUD client built with Node.js, Express, and Socket.io. It 
    ```
 3. Copy `.env-example-local` (for local/dev) or `.env-example-production` (for production) to `.env` and adjust for your environment.
    - `LOG_LEVEL` sets log verbosity.
-   - For MOO-side integration and optional URL shortener setup, see [docs/MOO-SETUP.md](docs/MOO-SETUP.md)
+   - For MOO-side integration, see [docs/MOO-SETUP.md](docs/MOO-SETUP.md)
 4. Start the development server:
    ```bash
    npm start
