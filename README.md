@@ -1,6 +1,17 @@
 # Dome Client
 
-Browser-based MUD client (Built for LambdaMOO & ToastStunt but works for any MUD) built with Node.js, Express, and Socket.io. It bridges WebSocket connections from a user's browser to a traditional MOO telnet server, providing play without browser plugins.
+> Modern, actively maintained browser MUD client for LambdaMOO/ToastStunt and compatible MUD servers.
+
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](#requirements)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE.txt)
+
+Dome Client is the maintained successor to [Legacy Dome Client](https://github.com/javaChilly/dome-client.js), with ongoing fixes, modernized dependencies, and expanded documentation.
+
+It is a browser-based MUD client built with Node.js, Express, and Socket.io. It bridges browser WebSocket connections to traditional telnet-based MOO servers, so players can connect without plugins.
+
+**Quick links:** [Requirements](#requirements) · [Installation](#installation) · [Setup Guides](#setup-guides) · [Contributing](#contributing)
+
+**Tech keywords:** `mud client`, `moo client`, `lambdamoo`, `toaststunt`, `websocket`, `telnet bridge`, `browser mud`
 
 ## Features
 
