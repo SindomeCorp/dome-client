@@ -45,7 +45,7 @@ Browser-based MUD client (Built for LambdaMOO & ToastStunt but works for any MUD
    npm start
    ```
    Assets compile automatically at startup. For production builds, run `npm run build` before launching the service.
-
+5. Connect in your browser to the NODE_SOCKET_URL defined in your .env. For example: http://localhost:8080
 All environment variables and defaults live in [`src/env.js`](src/env.js). Example configurations are provided in [`.env-example-local`](.env-example-local) and [`.env-example-production`](.env-example-production).
 
 ### Supervisor deployment
