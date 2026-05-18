@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-05-18
+
+### Added
+- Added global autocomplete feature toggle (`AUTOCOMPLETE_ENABLED`) with default-off behavior and dedicated setup documentation (`docs/AUTOCOMPLETE.md`).
+
+### Changed
+- Renamed IDE window title branding to `Dome-Client Developer IDE [tab-count]`.
+- Updated runtime defaults to be more generic by setting `WEBSITE_BASE` and `SHORTEN_DOMAIN` defaults to empty values.
+- Updated `.env` example files to reflect new defaults and include autocomplete toggle guidance.
+- Expanded and aligned setup documentation across README and `docs/` for autocomplete, URL shortener, and website auth behavior.
+
+### Removed
+- Removed outdated internal UI polish scratch doc (`docs/UI-POLISH.md`) to keep release docs focused on active features and operator setup.
+
 ## 2026-02-17
 
 ### Added
