@@ -27,7 +27,7 @@
     "ejs": "^3.1.10",
     "envalid": "^8.1.0",
     "esbuild": "^0.25.9",
-    "express": "^5.1.0",
+    "express": "^5.2.1",
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.18.2",
     "less": "^4.4.1",
