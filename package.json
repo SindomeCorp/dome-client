@@ -25,7 +25,7 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.1",
     "ejs": "^3.1.10",
-    "envalid": "^8.1.0",
+    "envalid": "^8.1.1",
     "esbuild": "^0.25.9",
     "express": "^5.1.0",
     "express-ejs-layouts": "^2.5.1",
