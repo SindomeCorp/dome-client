@@ -38,9 +38,6 @@ It is a browser-based MUD client built with Node.js, Express, and Socket.io. It 
 
 ## Screenshots
 
-### Welcome / Connect
-![Welcome page and connection flow](docs/images/welcome-page.png)
-
 ### Client Connection
 ![Client connection view](docs/images/client-connection.png)
 
