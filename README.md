@@ -1,38 +1,57 @@
-# Dome Client
-
-> Modern, actively maintained browser MUD client for LambdaMOO/ToastStunt and compatible MUD servers.
+<p align="center"><strong>Dome Client</strong> is a modern websocket powered MUD client with a built-in IDE. Designed for MOOs, but works for any MUD.</p>
+<p align="center">
+  <img src="docs/images/client-connection.png" alt="Dome Client connected to a game" width="80%" />
+</p>
+</br>
 
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](#requirements)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE.txt)
 
-Dome Client is the maintained successor to [Legacy Dome Client](https://github.com/javaChilly/dome-client.js), with ongoing fixes, modernized dependencies, and expanded documentation.
+Dome Client is the maintained successor to the [Legacy Dome Client](https://github.com/javaChilly/dome-client.js), with ongoing fixes, modernized dependencies, a developer IDE for editing MOO verbs & properties, and expanded documentation.
 
-It is a browser-based MUD client built with Node.js, Express, and Socket.io. It bridges browser WebSocket connections to traditional telnet-based MOO servers, so players can connect without plugins.
+It is a browser-based MUD client built with Node.js, Express, and Socket.io. It bridges browser WebSocket connections to traditional telnet-based MUD servers, so players can connect without installing anything.
 
-**Quick links:** [Requirements](#requirements) · [Installation](#installation) · [Setup Guides](#setup-guides) · [Contributing](#contributing)
+**Quick links:** · [Installation](#installation) · [Setup Guides](#setup-guides) · [Contributing](#contributing)
 
-**Tech keywords:** `mud client`, `moo client`, `lambdamoo`, `toaststunt`, `websocket`, `telnet bridge`, `browser mud`
+## Requirements
+
+- Node.js 22+
+- npm
 
 ## Features
 
-- ANSI/Xterm-style color rendering with multiple color presets and readable monospace font options.
-- Browser-based MOO play over WebSocket with no plugin/Flash dependency.
-- HTTPS support (optional) with separate HTTP/HTTPS Socket.io listeners when SSL certs are configured.
+- ANSI/Xterm256 color rendering with multiple color presets and readable monospace font options.
+- Browser-based MUD play over WebSocket with no installation
+- HTTPS support
+- Optional URL-shortener integration
+- Rich client options: command hints, local echo, image preview, overlay transparency, buffer size, alert sound, font/theme choices, and editor mode selection.
+- Session log export as HTML for preserving and sharing scrollback.
+- Built-in keyboard shortcuts for both client and IDE workflows.
+
+## IDE Features
 - Built-in IDE editor for verb and property editing, including multi-tab editing workflows.
 - Object Browser and Property Browser panes in the IDE for fast navigation across loaded objects.
 - Ctrl/Cmd-click code navigation in the IDE (`@edit` target jumps), with optional parent-chain lookup support.
 - Hover overlays in the IDE for verb/property metadata lookups via SDWC out-of-band commands.
 - Optional VMS note workflow for program saves (can append a commit-style note line after `@program` saves).
 - Scratch pad workflow (`@scratch` / `@edit me.scratch`) for temporary editing and recall.
-- Optional URL-shortener integration for long links in MOO output (globally toggleable and user-toggleable).
-- Rich client options: command hints, local echo, image preview, overlay transparency, buffer size, alert sound, font/theme choices, and editor mode selection.
-- Session log export as HTML for preserving and sharing scrollback.
-- Built-in keyboard shortcuts for both client and IDE workflows.
 
-## Requirements
+## Screenshots
 
-- Node.js 22+
-- npm
+### Welcome / Connect
+![Welcome page and connection flow](docs/images/welcome-page.png)
+
+### Client Connection
+![Client connection view](docs/images/client-connection.png)
+
+### Client Options
+![Client options panel](docs/images/client-options.png)
+
+### IDE Editor
+![Built-in IDE editor](docs/images/ide-editor.png)
+
+### Xterm256 Color Support
+![Xterm256 color rendering support](docs/images/xterm256-color-support.png)
 
 ## Installation
 
@@ -41,7 +60,6 @@ It is a browser-based MUD client built with Node.js, Express, and Socket.io. It 
    sudo apt update
    sudo apt install -y nodejs npm git supervisor
    ```
-   Ensure Node.js is v22 or newer (use NodeSource or nvm if the Ubuntu package is older).
 2. Clone the repository and install npm packages:
    ```bash
    git clone https://github.com/SindomeCorp/dome-client.git
@@ -49,15 +67,12 @@ It is a browser-based MUD client built with Node.js, Express, and Socket.io. It 
    npm install
    ```
 3. Copy `.env-example-local` (for local/dev) or `.env-example-production` (for production) to `.env` and adjust for your environment.
-   - `LOG_LEVEL` sets log verbosity.
    - For MOO-side integration, see [docs/MOO-SETUP.md](docs/MOO-SETUP.md)
 4. Start the development server:
    ```bash
    npm start
    ```
-   Assets compile automatically at startup. For production builds, run `npm run build` before launching the service.
 5. Connect in your browser to the NODE_SOCKET_URL defined in your .env. For example: http://localhost:8080
-All environment variables and defaults live in [`src/env.js`](src/env.js). Example configurations are provided in [`.env-example-local`](.env-example-local) and [`.env-example-production`](.env-example-production).
 
 ### Supervisor deployment
 
@@ -70,6 +85,20 @@ sudo supervisorctl update
 ```
 
 After linking, manage the service with `sudo supervisorctl start dome-client`, `sudo supervisorctl restart dome-client`, etc. Adjust the paths inside `supervisor.conf` if the repository lives somewhere other than `/opt/dome-client`.
+
+## Running without Supervisor
+
+Start the application: 
+
+`node src/server.js`
+
+To run it in the background:
+
+```bash
+sudo nohup node src/server.js &
+```
+
+On production systems, SSL certificates are typically readable only by root. Start the server with `sudo` so Node can access the key files.
 
 ## Project structure
 
@@ -102,27 +131,11 @@ The in-browser editor uses [Ace](https://ace.c9.io/) v1.43.2 with a custom MOO m
 - [Website Auth](docs/WEBSITE-AUTH.md)
 - [Status Service](docs/STATUS-SERVICE.md)
 
-## Running without Supervisor
-
-Invoke `node src/server.js`.
-
-To run it in the background:
-
-```bash
-sudo nohup node src/server.js &
-```
-
-On production systems, SSL certificates are typically readable only by root. Start the server with `sudo` so Node can access the key files.
-
 ## Dealing with port 80 and file permissions
 
 ```bash
 sudo setcap 'cap_net_bind_service=+ep' $(which node)
 ```
-
-## Logging
-
-The application logs to stdout using Winston. Adjust verbosity with the `LOG_LEVEL` environment variable.
 
 ## Linting
 
