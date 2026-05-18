@@ -1,8 +1,8 @@
-<p align="center"><strong>Dome Client</strong> is a modern websocket powered MUD client with a built-in IDE. Designed for MOOs, but works for any MUD.</p>
+<p align="center"><strong>Dome Client</strong> is a modern WebSocket-powered MUD client with a built-in IDE. Designed for MOOs, but it works for any MUD.</p>
 <p align="center">
   <img src="docs/images/client-connection.png" alt="Dome Client connected to a game" width="80%" />
 </p>
-</br>
+<br />
 
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](#requirements)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE.txt)
@@ -11,7 +11,7 @@ Dome Client is the maintained successor to the [Legacy Dome Client](https://gith
 
 It is a browser-based MUD client built with Node.js, Express, and Socket.io. It bridges browser WebSocket connections to traditional telnet-based MUD servers, so players can connect without installing anything.
 
-**Quick links:** · [Installation](#installation) · [Setup Guides](#setup-guides) · [Contributing](#contributing)
+**Quick links:** [Installation](#installation) · [Setup Guides](#setup-guides) · [Contributing](#contributing)
 
 ## Requirements
 
@@ -21,21 +21,31 @@ It is a browser-based MUD client built with Node.js, Express, and Socket.io. It 
 ## Features
 
 - ANSI/Xterm256 color rendering with multiple color presets and readable monospace font options.
-- Browser-based MUD play over WebSocket with no installation
-- HTTPS support
+- Browser-based MUD play over WebSocket with no installation.
+- HTTPS support.
+- Automatic URL linkification in output buffer.
+- Inline media previews for image/video/YouTube links with expand/collapse toggles.
+- Host/IP enrichment for `[host=...]` tokens, with clickable IP/hostname lookup links.
+- Copy-friendly wrapping for `#obj` and `$ref`-style tokens in buffer output.
+- Regex-based client alerts with optional sound/window attention on match.
+- Connection safety UX: disconnect overlay with one-click reconnect, unload warning while connected, and graceful `@quit` on page exit.
+- Live health panel with hover/click detail view and rolling CPU/RAM/user charts (when status service is configured).
+- Input ergonomics: command history recall, long-input-friendly arrow behavior, and keyboard shortcuts (`Pause/Break`, `Home`, `Insert`).
 - Rich client options: command hints, local echo, image preview, overlay transparency, buffer size, alert sound, font/theme choices, and editor mode selection.
 - Session log export as HTML for preserving and sharing scrollback.
 - Built-in keyboard shortcuts for both client and IDE workflows.
-- Optional URL-shortener integration
-- Optional Status Service integration
+- Optional URL-shortener integration.
+- Optional status-service integration.
 
 ## IDE Features
+
 - Built-in IDE editor for verb and property editing, including multi-tab editing workflows.
 - Object Browser and Property Browser panes in the IDE for fast navigation across loaded objects.
 - Ctrl/Cmd-click code navigation in the IDE (`@edit` target jumps), with optional parent-chain lookup support.
 - Hover overlays in the IDE for verb/property metadata lookups via SDWC out-of-band commands.
 - Optional VMS note workflow for program saves (can append a commit-style note line after `@program` saves).
 - Scratch pad workflow (`@scratch` / `@edit me.scratch`) for temporary editing and recall.
+- Optional individual editor-window mode (non-IDE) with unsaved-change protection.
 
 ## Screenshots
 
@@ -69,7 +79,7 @@ It is a browser-based MUD client built with Node.js, Express, and Socket.io. It 
    ```
 5. Connect in your browser to the NODE_SOCKET_URL defined in your .env. For example: http://localhost:8080
 
-### Supervisor deployment
+### Supervisor Deployment
 
 The repository ships with [`supervisor.conf`](supervisor.conf) for managing the process via Supervisor on Ubuntu. Link it into Supervisor's configuration directory and reload:
 
@@ -83,9 +93,11 @@ After linking, manage the service with `sudo supervisorctl start dome-client`, `
 
 ## Running without Supervisor
 
-Start the application: 
+Start the application:
 
-`node src/server.js`
+```bash
+node src/server.js
+```
 
 To run it in the background:
 
@@ -95,7 +107,7 @@ sudo nohup node src/server.js &
 
 On production systems, SSL certificates are typically readable only by root. Start the server with `sudo` so Node can access the key files.
 
-## Project structure
+## Project Structure
 
 All application code resides in `src/` and follows a layered design:
 
@@ -115,9 +127,11 @@ Controllers may depend on services and configuration, but services remain indepe
 
 The in-browser editor uses [Ace](https://ace.c9.io/) v1.43.2 with a custom MOO mode and optional Vim keybindings. Custom modules live under `src/client/ace` and are bundled during the build. Run `npm start` or `npm run build` after editing these modules to regenerate client assets. See [docs/ace-notes.md](docs/ace-notes.md) for details.
 
-## Setup Guides
+## Advanced Setup Guides
 
 ### MOO Verbs for Local Editing
+
+If you want the IDE to function properly you'll need to make a few verb changes/additions on your MOO.
 - [MOO Verbs Setup](docs/MOO-SETUP.md)
 
 ### Advanced Setup
@@ -153,14 +167,6 @@ npm run coverage
 ```
 
 The test suite also renders each EJS view to verify templates compile. If you add a template that requires locals, extend the sample-data map in [`test/views.test.js`](test/views.test.js) with representative values.
-
-To profile slow tests and log durations:
-
-```bash
-npm run test:profile
-```
-
-Results are written to `tmp/slow-tests.log`.
 
 ## Contributing
 
