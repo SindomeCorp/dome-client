@@ -23,10 +23,11 @@ It is a browser-based MUD client built with Node.js, Express, and Socket.io. It 
 - ANSI/Xterm256 color rendering with multiple color presets and readable monospace font options.
 - Browser-based MUD play over WebSocket with no installation
 - HTTPS support
-- Optional URL-shortener integration
 - Rich client options: command hints, local echo, image preview, overlay transparency, buffer size, alert sound, font/theme choices, and editor mode selection.
 - Session log export as HTML for preserving and sharing scrollback.
 - Built-in keyboard shortcuts for both client and IDE workflows.
+- Optional URL-shortener integration
+- Optional Status Service integration
 
 ## IDE Features
 - Built-in IDE editor for verb and property editing, including multi-tab editing workflows.
