@@ -1,0 +1,2276 @@
+TAP version 13
+# (node:541894) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: assigns session user on success
+ok 1 - assigns session user on success
+  ---
+  duration_ms: 88.72311
+  type: 'test'
+  ...
+# Subtest: handles JSON parse errors
+ok 2 - handles JSON parse errors
+  ---
+  duration_ms: 16.784469
+  type: 'test'
+  ...
+# Subtest: redirects to first char when gogogo set
+ok 3 - redirects to first char when gogogo set
+  ---
+  duration_ms: 13.399752
+  type: 'test'
+  ...
+# Subtest: return parameter overrides destination
+ok 4 - return parameter overrides destination
+  ---
+  duration_ms: 17.090723
+  type: 'test'
+  ...
+# Subtest: builds request options when host includes port
+ok 5 - builds request options when host includes port
+  ---
+  duration_ms: 17.081277
+  type: 'test'
+  ...
+# Subtest: explicit port overrides port in host
+ok 6 - explicit port overrides port in host
+  ---
+  duration_ms: 18.278575
+  type: 'test'
+  ...
+# Subtest: sets session error on remote error status
+ok 7 - sets session error on remote error status
+  ---
+  duration_ms: 15.129706
+  type: 'test'
+  ...
+# Subtest: handles response error
+ok 8 - handles response error
+  ---
+  duration_ms: 25.263363
+  type: 'test'
+  ...
+# Subtest: handles request error
+ok 9 - handles request error
+  ---
+  duration_ms: 12.236293
+  type: 'test'
+  ...
+# (node:541902) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: build compiles assets
+ok 10 - build compiles assets
+  ---
+  duration_ms: 56.016078
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+# (node:541910) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: socket handlers delegate and uncaught exceptions log
+ok 11 - socket handlers delegate and uncaught exceptions log
+  ---
+  duration_ms: 846.84759
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+# (node:541920) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# 2025-08-31T05:40:52.145Z [info] client-app socket.io listening to http
+# 2025-08-31T05:40:52.150Z [info] client-app socket.io listening to https
+# 2025-08-31T05:40:52.198Z [info] client-app [0mGET / [32m200[0m 28.410 ms - 15896[0m
+# Subtest: client app integration
+    # Subtest: GET / serves connect page and sets locals
+    ok 1 - GET / serves connect page and sets locals
+      ---
+      duration_ms: 52.334846
+      type: 'test'
+      ...
+# 2025-08-31T05:40:52.223Z [info] client-app [0mGET /moo/status/ [32m200[0m 12.592 ms - 121[0m
+    # Subtest: GET /moo/status/ returns status json
+    ok 2 - GET /moo/status/ returns status json
+      ---
+      duration_ms: 18.480381
+      type: 'test'
+      ...
+    1..2
+ok 12 - client app integration
+  ---
+  duration_ms: 866.683802
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+# (node:541934) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# 2025-08-31T05:40:53.247Z [info] client-app socket.io listening to http
+# 2025-08-31T05:40:53.249Z [info] client-app socket.io listening to https
+# 2025-08-31T05:40:53.290Z [info] client-app [0mGET /__test__/locals [32m200[0m 22.986 ms - 14[0m
+# Subtest: client app locals
+    # Subtest: showReporter returns false when user-agent contains MSAppHost
+    ok 1 - showReporter returns false when user-agent contains MSAppHost
+      ---
+      duration_ms: 42.97382
+      type: 'test'
+      ...
+# 2025-08-31T05:40:53.314Z [info] client-app [0mGET /__test__/locals [32m200[0m 12.037 ms - 13[0m
+    # Subtest: showReporter returns true for other user-agents
+    ok 2 - showReporter returns true for other user-agents
+      ---
+      duration_ms: 20.690663
+      type: 'test'
+      ...
+# 2025-08-31T05:40:53.325Z [info] client-app [0mGET /css/foo.css [32m200[0m 3.280 ms - 6[0m
+    # Subtest: serves /css/foo.css from public/css
+    ok 3 - serves /css/foo.css from public/css
+      ---
+      duration_ms: 11.136232
+      type: 'test'
+      ...
+    1..3
+ok 13 - client app locals
+  ---
+  duration_ms: 873.369846
+  type: 'test'
+  ...
+# (node:541948) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: disables x-powered-by header
+ok 14 - disables x-powered-by header
+  ---
+  duration_ms: 128.756597
+  type: 'test'
+  ...
+# Subtest: creates https server and logs when ssl config provided
+ok 15 - creates https server and logs when ssl config provided
+  ---
+  duration_ms: 32.450862
+  type: 'test'
+  ...
+# Subtest: logs requests through winston
+ok 16 - logs requests through winston
+  ---
+  duration_ms: 32.360471
+  type: 'test'
+  ...
+# Subtest: creates https server with ca and passphrase
+ok 17 - creates https server with ca and passphrase
+  ---
+  duration_ms: 45.024679
+  type: 'test'
+  ...
+# Subtest: registers https connection and error handlers
+ok 18 - registers https connection and error handlers
+  ---
+  duration_ms: 27.880985
+  type: 'test'
+  ...
+# Subtest: falls back to http when ssl config missing
+ok 19 - falls back to http when ssl config missing
+  ---
+  duration_ms: 37.299082
+  type: 'test'
+  ...
+# Subtest: decache appends hash and logs error if autocomplete file check fails
+ok 20 - decache appends hash and logs error if autocomplete file check fails
+  ---
+  duration_ms: 22.208893
+  type: 'test'
+  ...
+# Subtest: servers listen on ports when ip not configured
+ok 21 - servers listen on ports when ip not configured
+  ---
+  duration_ms: 27.01294
+  type: 'test'
+  ...
+# Subtest: servers listen on configured ip when provided
+ok 22 - servers listen on configured ip when provided
+  ---
+  duration_ms: 27.448428
+  type: 'test'
+  ...
+# Subtest: logs error when asset build fails
+ok 23 - logs error when asset build fails
+  ---
+  duration_ms: 22.849315
+  type: 'test'
+  ...
+# Subtest: start resolves when servers listen
+ok 24 - start resolves when servers listen
+  ---
+  duration_ms: 25.099606
+  type: 'test'
+  ...
+# Subtest: start rejects when server listen fails
+ok 25 - start rejects when server listen fails
+  ---
+  duration_ms: 26.296698
+  type: 'test'
+  ...
+# Subtest: start listens on https when ssl configured without ip
+ok 26 - start listens on https when ssl configured without ip
+  ---
+  duration_ms: 21.107331
+  type: 'test'
+  ...
+# Subtest: start skips https listen when ssl missing
+ok 27 - start skips https listen when ssl missing
+  ---
+  duration_ms: 30.401172
+  type: 'test'
+  ...
+# Subtest: logs errors when build and autocomplete check fail
+ok 28 - logs errors when build and autocomplete check fail
+  ---
+  duration_ms: 30.416592
+  type: 'test'
+  ...
+# Subtest: http and https managers emit events
+ok 29 - http and https managers emit events
+  ---
+  duration_ms: 23.723356
+  type: 'test'
+  ...
+# Subtest: route errors reach global handler
+ok 30 - route errors reach global handler
+  ---
+  duration_ms: 24.892541
+  type: 'test'
+  ...
+# Subtest: stop closes servers and managers
+ok 31 - stop closes servers and managers
+  ---
+  duration_ms: 25.588956
+  type: 'test'
+  ...
+# @client-options
+# Subtest: @client-options prints preferences locally
+ok 32 - @client-options prints preferences locally
+  ---
+  duration_ms: 72.51431
+  type: 'test'
+  ...
+# Subtest: setupAutoComplete loads commands and attaches widget
+ok 33 - setupAutoComplete loads commands and attaches widget
+  ---
+  duration_ms: 69.536626
+  type: 'test'
+  ...
+# Subtest: setupAutoComplete warns when fetch fails
+ok 34 - setupAutoComplete warns when fetch fails
+  ---
+  duration_ms: 14.469397
+  type: 'test'
+  ...
+# Subtest: source filters suggestions and handles edge cases
+ok 35 - source filters suggestions and handles edge cases
+  ---
+  duration_ms: 7.432395
+  type: 'test'
+  ...
+# Subtest: typing displays matching suggestions
+ok 36 - typing displays matching suggestions
+  ---
+  duration_ms: 18.04281
+  type: 'test'
+  ...
+# Subtest: keyboard navigation and selection of suggestions
+ok 37 - keyboard navigation and selection of suggestions
+  ---
+  duration_ms: 8.926644
+  type: 'test'
+  ...
+# Subtest: setupAutoComplete respects existing commandSuggestions function
+ok 38 - setupAutoComplete respects existing commandSuggestions function
+  ---
+  duration_ms: 6.29492
+  type: 'test'
+  ...
+# Subtest: none mode toggle updates DOM and state
+ok 39 - none mode toggle updates DOM and state
+  ---
+  duration_ms: 78.226089
+  type: 'test'
+  ...
+# Subtest: changing autoScroll to none removes dblclick handler
+ok 40 - changing autoScroll to none removes dblclick handler
+  ---
+  duration_ms: 11.08669
+  type: 'test'
+  ...
+# Subtest: dbl mode scroll calculation and user scroll disables auto-scroll
+ok 41 - dbl mode scroll calculation and user scroll disables auto-scroll
+  ---
+  duration_ms: 10.821094
+  type: 'test'
+  ...
+# Subtest: long mode scroll calculation and user scroll disables auto-scroll
+ok 42 - long mode scroll calculation and user scroll disables auto-scroll
+  ---
+  duration_ms: 15.616624
+  type: 'test'
+  ...
+# Subtest: BarGraph draws and animates with size and maxValue
+ok 43 - BarGraph draws and animates with size and maxValue
+  ---
+  duration_ms: 3.794202
+  type: 'test'
+  ...
+# Subtest: BarGraph recomputes largest value without maxValue
+ok 44 - BarGraph recomputes largest value without maxValue
+  ---
+  duration_ms: 0.459905
+  type: 'test'
+  ...
+# Error: Not implemented: HTMLFormElement.prototype.submit
+#     at module.exports (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+#     at HTMLFormElementImpl.submit (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/nodes/HTMLFormElement-impl.js:96:5)
+#     at HTMLFormElement.submit (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/generated/HTMLFormElement.js:108:34)
+#     at Object.apply (node:internal/test_runner/mock/mock:605:20)
+#     at HTMLButtonElement.handler (file:///home/ubuntu/dome-client.js-sd/src/client/u-buttons.js:45:12)
+#     at HTMLButtonElement.callTheUserObjectsOperation (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+#     at innerInvokeEventListeners (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+#     at invokeEventListeners (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+#     at HTMLButtonElementImpl._dispatch (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+#     at fireAnEvent (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/helpers/events.js:18:36) undefined
+# Subtest: attachImage injects linked image
+ok 45 - attachImage injects linked image
+  ---
+  duration_ms: 101.137481
+  type: 'test'
+  ...
+# Subtest: toggleImage shows and hides images
+ok 46 - toggleImage shows and hides images
+  ---
+  duration_ms: 20.954757
+  type: 'test'
+  ...
+# Subtest: clear button empties buffer
+ok 47 - clear button empties buffer
+  ---
+  duration_ms: 8.819988
+  type: 'test'
+  ...
+# Subtest: scroll button triggers handler
+ok 48 - scroll button triggers handler
+  ---
+  duration_ms: 24.457307
+  type: 'test'
+  ...
+# Subtest: options button toggles overlay
+ok 49 - options button toggles overlay
+  ---
+  duration_ms: 37.30698
+  type: 'test'
+  ...
+# Subtest: options overlay closes on escape key
+ok 50 - options overlay closes on escape key
+  ---
+  duration_ms: 8.549849
+  type: 'test'
+  ...
+# Subtest: save button submits form with buffer
+ok 51 - save button submits form with buffer
+  ---
+  duration_ms: 14.244991
+  type: 'test'
+  ...
+# Subtest: shortcuts button toggles fullscreen overlay
+ok 52 - shortcuts button toggles fullscreen overlay
+  ---
+  duration_ms: 7.523926
+  type: 'test'
+  ...
+# Subtest: shortcuts overlay closes on escape key
+ok 53 - shortcuts overlay closes on escape key
+  ---
+  duration_ms: 10.730956
+  type: 'test'
+  ...
+# Subtest: reconnect button reinitializes socket without reloading
+ok 54 - reconnect button reinitializes socket without reloading
+  ---
+  duration_ms: 7.193043
+  type: 'test'
+  ...
+# Subtest: reconnect button replaces socket and listener
+ok 55 - reconnect button replaces socket and listener
+  ---
+  duration_ms: 6.543956
+  type: 'test'
+  ...
+# Subtest: chevron click toggles image
+ok 56 - chevron click toggles image
+  ---
+  duration_ms: 88.624944
+  type: 'test'
+  ...
+# Error: Not implemented: navigation (except hash changes)
+#     at module.exports (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+#     at navigateFetch (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/window/navigation.js:77:3)
+#     at exports.navigate (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/window/navigation.js:55:3)
+#     at LocationImpl._locationObjectNavigate (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/window/Location-impl.js:31:5)
+#     at LocationImpl._locationObjectSetterNavigate (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/window/Location-impl.js:25:17)
+#     at set href (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/window/Location-impl.js:47:10)
+#     at set href (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/generated/Location.js:125:37)
+#     at Reflect.set (<anonymous>)
+#     at set location (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/browser/Window.js:426:15)
+#     at HTMLAnchorElement.<anonymous> (file:///home/ubuntu/dome-client.js-sd/src/client/pages/client-connect.js?guest:299:23) undefined
+# Error: Not implemented: navigation (except hash changes)
+#     at module.exports (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+#     at navigateFetch (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/window/navigation.js:77:3)
+#     at exports.navigate (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/window/navigation.js:55:3)
+#     at LocationImpl._locationObjectNavigate (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/window/Location-impl.js:31:5)
+#     at LocationImpl._locationObjectSetterNavigate (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/window/Location-impl.js:25:17)
+#     at set href (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/window/Location-impl.js:47:10)
+#     at set href (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/living/generated/Location.js:125:37)
+#     at Reflect.set (<anonymous>)
+#     at set location (/home/ubuntu/dome-client.js-sd/node_modules/jsdom/lib/jsdom/browser/Window.js:426:15)
+#     at HTMLAnchorElement.<anonymous> (file:///home/ubuntu/dome-client.js-sd/src/client/pages/client-connect.js?manual:314:23) undefined
+# (node:541998) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: guest connect stores initial command
+ok 57 - guest connect stores initial command
+  ---
+  duration_ms: 139.253005
+  type: 'test'
+  ...
+# Subtest: stored usernames without fields is handled
+ok 58 - stored usernames without fields is handled
+  ---
+  duration_ms: 8.048282
+  type: 'test'
+  ...
+# Subtest: manual connect clears guest command
+ok 59 - manual connect clears guest command
+  ---
+  duration_ms: 54.410947
+  type: 'test'
+  ...
+# number: 123
+# Subtest: client-options render, toggle, and submit all options
+ok 60 - client-options render, toggle, and submit all options
+  ---
+  duration_ms: 602.512626
+  type: 'test'
+  ...
+# Subtest: client-options change scrolls buffer
+ok 61 - client-options change scrolls buffer
+  ---
+  duration_ms: 578.596093
+  type: 'test'
+  ...
+# Subtest: client-options updates state and persists to store
+ok 62 - client-options updates state and persists to store
+  ---
+  duration_ms: 576.876292
+  type: 'test'
+  ...
+# Subtest: parseCommand splits command and target
+ok 63 - parseCommand splits command and target
+  ---
+  duration_ms: 1.095923
+  type: 'test'
+  ...
+# Subtest: parseCommand handles missing target
+ok 64 - parseCommand handles missing target
+  ---
+  duration_ms: 0.199576
+  type: 'test'
+  ...
+# Subtest: getCommandLabel returns empty string when command is missing
+ok 65 - getCommandLabel returns empty string when command is missing
+  ---
+  duration_ms: 0.152423
+  type: 'test'
+  ...
+# Subtest: getCommandLabel falls back to command and target for unknown command
+ok 66 - getCommandLabel falls back to command and target for unknown command
+  ---
+  duration_ms: 0.112726
+  type: 'test'
+  ...
+# Subtest: getCommandLabel returns Editing Note with editorName for @@set_note
+ok 67 - getCommandLabel returns Editing Note with editorName for @@set_note
+  ---
+  duration_ms: 0.114966
+  type: 'test'
+  ...
+# Subtest: getCommandLabel appends (LIST) for @@set
+ok 68 - getCommandLabel appends (LIST) for @@set
+  ---
+  duration_ms: 0.127325
+  type: 'test'
+  ...
+# Subtest: getCommandLabel returns target for @program
+ok 69 - getCommandLabel returns target for @program
+  ---
+  duration_ms: 0.167325
+  type: 'test'
+  ...
+# Subtest: getCommandLabel returns target for @set-note-text
+ok 70 - getCommandLabel returns target for @set-note-text
+  ---
+  duration_ms: 0.106869
+  type: 'test'
+  ...
+# Subtest: getCommandLabel returns target for @set-note-string
+ok 71 - getCommandLabel returns target for @set-note-string
+  ---
+  duration_ms: 0.779124
+  type: 'test'
+  ...
+# Subtest: getCommandLabel returns command and target for @grep
+ok 72 - getCommandLabel returns command and target for @grep
+  ---
+  duration_ms: 0.387782
+  type: 'test'
+  ...
+# Subtest: getCommandLabel uses editorName when command string missing
+ok 73 - getCommandLabel uses editorName when command string missing
+  ---
+  duration_ms: 0.186712
+  type: 'test'
+  ...
+# Subtest: getCommandLabel uses editorName when command string is none
+ok 74 - getCommandLabel uses editorName when command string is none
+  ---
+  duration_ms: 0.098358
+  type: 'test'
+  ...
+# Subtest: getCommandLabel returns empty string when both command string and editorName are none
+ok 75 - getCommandLabel returns empty string when both command string and editorName are none
+  ---
+  duration_ms: 0.088691
+  type: 'test'
+  ...
+# Subtest: getCommandLabel returns title for @scratch
+ok 76 - getCommandLabel returns title for @scratch
+  ---
+  duration_ms: 0.099
+  type: 'test'
+  ...
+# (node:542033) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: up arrow recalls previous command
+ok 77 - up arrow recalls previous command
+  ---
+  duration_ms: 585.435424
+  type: 'test'
+  ...
+# Subtest: enter emits command and echoes
+ok 78 - enter emits command and echoes
+  ---
+  duration_ms: 15.882547
+  type: 'test'
+  ...
+# Subtest: enter echoes even without server ack
+ok 79 - enter echoes even without server ack
+  ---
+  duration_ms: 7.376902
+  type: 'test'
+  ...
+# Subtest: insert prompts and sends command
+ok 80 - insert prompts and sends command
+  ---
+  duration_ms: 10.989613
+  type: 'test'
+  ...
+# Subtest: command history capped at 2000 entries
+ok 81 - command history capped at 2000 entries
+  ---
+  duration_ms: 8.353049
+  type: 'test'
+  ...
+# Subtest: down arrow stores current input and clears field
+ok 82 - down arrow stores current input and clears field
+  ---
+  duration_ms: 7.258991
+  type: 'test'
+  ...
+# Subtest: pause key toggles autoscroll
+ok 83 - pause key toggles autoscroll
+  ---
+  duration_ms: 10.088488
+  type: 'test'
+  ...
+# Subtest: down arrow restores last input
+ok 84 - down arrow restores last input
+  ---
+  duration_ms: 46.320613
+  type: 'test'
+  ...
+# Subtest: long line arrow navigation respects cursor position
+ok 85 - long line arrow navigation respects cursor position
+  ---
+  duration_ms: 30.075754
+  type: 'test'
+  ...
+# Subtest: enter on empty input does nothing
+ok 86 - enter on empty input does nothing
+  ---
+  duration_ms: 7.824028
+  type: 'test'
+  ...
+# Subtest: arrow up after send recalls last command
+ok 87 - arrow up after send recalls last command
+  ---
+  duration_ms: 7.66241
+  type: 'test'
+  ...
+# Subtest: formats dates using tokens
+ok 88 - formats dates using tokens
+  ---
+  duration_ms: 1.347157
+  type: 'test'
+  ...
+# Subtest: formats hours in 12-hour clock
+ok 89 - formats hours in 12-hour clock
+  ---
+  duration_ms: 1.20717
+  type: 'test'
+  ...
+# Subtest: setClientOption broadcasts editorFont
+ok 90 - setClientOption broadcasts editorFont
+  ---
+  duration_ms: 60.259834
+  type: 'test'
+  ...
+# null zoom undefined
+# Editor1 zoom {
+#   focusCalled: false,
+#   focus: [Function: focus],
+#   close: [Function: close]
+# }
+# Editor2 close {
+#   focusCalled: false,
+#   closeCalled: false,
+#   focus: [Function: focus],
+#   close: [Function: close]
+# }
+# Subtest: makeEditor cancels when existing window is not replaced
+ok 91 - makeEditor cancels when existing window is not replaced
+  ---
+  duration_ms: 3.256757
+  type: 'test'
+  ...
+# Subtest: makeEditor selects type and updates existing window
+ok 92 - makeEditor selects type and updates existing window
+  ---
+  duration_ms: 0.719098
+  type: 'test'
+  ...
+# Subtest: makeEditor routes editors to IDE
+ok 93 - makeEditor routes editors to IDE
+  ---
+  duration_ms: 0.587428
+  type: 'test'
+  ...
+# Subtest: makeEditor uses individual windows when editorType is windows
+ok 94 - makeEditor uses individual windows when editorType is windows
+  ---
+  duration_ms: 0.625273
+  type: 'test'
+  ...
+# Subtest: updateEditorListView handles missing view and empty list
+ok 95 - updateEditorListView handles missing view and empty list
+  ---
+  duration_ms: 3.243975
+  type: 'test'
+  ...
+# Subtest: updateEditorListView renders list and handles clicks
+ok 96 - updateEditorListView renders list and handles clicks
+  ---
+  duration_ms: 30.967639
+  type: 'test'
+  ...
+# Subtest: editor window notifies parent via message and unload
+ok 97 - editor window notifies parent via message and unload
+  ---
+  duration_ms: 9.77599
+  type: 'test'
+  ...
+# updating editor ...
+# null
+# updating editor ...
+# null
+# Subtest: editor window initializes and handles save and close
+ok 98 - editor window initializes and handles save and close
+  ---
+  duration_ms: 241.482908
+  type: 'test'
+  ...
+# Subtest: beforeunload warns on unsaved changes
+ok 99 - beforeunload warns on unsaved changes
+  ---
+  duration_ms: 58.974409
+  type: 'test'
+  ...
+# Subtest: editor utils support setup, upload, and abort
+ok 100 - editor utils support setup, upload, and abort
+  ---
+  duration_ms: 8.662749
+  type: 'test'
+  ...
+# (node:542068) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: EditorIDE toggles tab orientation with shortcut
+ok 101 - EditorIDE toggles tab orientation with shortcut # SKIP Unknown file extension ".jsx" for /home/ubuntu/dome-client.js-sd/src/client/react/EditorIDE.jsx
+  ---
+  duration_ms: 113.087377
+  type: 'test'
+  ...
+# (node:542076) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: EditorIDE hides save and disables shortcut when commandTarget is none or missing
+ok 102 - EditorIDE hides save and disables shortcut when commandTarget is none or missing # SKIP Unknown file extension ".jsx" for /home/ubuntu/dome-client.js-sd/src/client/react/EditorIDE.jsx
+  ---
+  duration_ms: 115.36638
+  type: 'test'
+  ...
+# (node:542084) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: EditorIDE opens distinct tabs for same editorName with different targets
+ok 103 - EditorIDE opens distinct tabs for same editorName with different targets # SKIP Unknown file extension ".jsx" for /home/ubuntu/dome-client.js-sd/src/client/react/EditorIDE.jsx
+  ---
+  duration_ms: 111.989778
+  type: 'test'
+  ...
+# foo
+# Subtest: parseSocketData appends lines and trims buffer
+ok 104 - parseSocketData appends lines and trims buffer
+  ---
+  duration_ms: 83.037709
+  type: 'test'
+  ...
+# Subtest: parseSocketData preserves blank lines
+ok 105 - parseSocketData preserves blank lines
+  ---
+  duration_ms: 18.544175
+  type: 'test'
+  ...
+# Subtest: parseSocketData handles CRLF line endings
+ok 106 - parseSocketData handles CRLF line endings
+  ---
+  duration_ms: 9.807967
+  type: 'test'
+  ...
+# Subtest: parseSocketData converts host tags to links
+ok 107 - parseSocketData converts host tags to links
+  ---
+  duration_ms: 16.96553
+  type: 'test'
+  ...
+# Subtest: parseSocketData doesn't insert extra blank line across segments
+ok 108 - parseSocketData doesn't insert extra blank line across segments
+  ---
+  duration_ms: 11.940163
+  type: 'test'
+  ...
+# Subtest: parseSocketData preserves blank line split across segments
+ok 109 - parseSocketData preserves blank line split across segments
+  ---
+  duration_ms: 53.225975
+  type: 'test'
+  ...
+# Subtest: parseSocketData adds user to who list
+ok 110 - parseSocketData adds user to who list
+  ---
+  duration_ms: 16.478034
+  type: 'test'
+  ...
+# Subtest: parseSocketData removes user from who list
+ok 111 - parseSocketData removes user from who list
+  ---
+  duration_ms: 9.050068
+  type: 'test'
+  ...
+# Subtest: parseSocketData toggles active editor state
+ok 112 - parseSocketData toggles active editor state
+  ---
+  duration_ms: 12.553615
+  type: 'test'
+  ...
+# (node:542099) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# showing help for: LAG
+# { code: 'ETIMEOUT' }
+# showing help for: NETWORK
+# { code: 'ENOTFOUND' }
+# showing help for: NETWORK
+# { code: 'ETIMEOUT' }
+# showing help for: CHECK_FIREWALL
+# { code: 'ECONNREFUSED' }
+# showing help for: NETWORK
+# { code: 'EOTHER' }
+# showing help for: MOO_DOWN
+# { code: 'EOTHER' }
+# { code: 'ENOTFOUND' }
+# { msg: 'custom' }
+# { code: 'ECODE' }
+# Subtest: troubleshootConnection covers all branches
+ok 113 - troubleshootConnection covers all branches
+  ---
+  duration_ms: 172.915941
+  type: 'test'
+  ...
+# Subtest: onErrorHandler uses message fields and persists
+ok 114 - onErrorHandler uses message fields and persists
+  ---
+  duration_ms: 18.439794
+  type: 'test'
+  ...
+# Subtest: toggleGameHealth opens and closes
+ok 115 - toggleGameHealth opens and closes
+  ---
+  duration_ms: 63.513694
+  type: 'test'
+  ...
+# Subtest: setGameHealthDisplay updates globe and graphs
+ok 116 - setGameHealthDisplay updates globe and graphs
+  ---
+  duration_ms: 35.931337
+  type: 'test'
+  ...
+# { code: 'ENOTFOUND' }
+# { code: 'ETIMEDOUT' }
+# { code: 'ECONNREFUSED' }
+# { code: 'EOTHER' }
+# Subtest: updateMOOStatus handles perfBuffer and ajax errors
+ok 117 - updateMOOStatus handles perfBuffer and ajax errors
+  ---
+  duration_ms: 40.728587
+  type: 'test'
+  ...
+# { code: 'ENOTFOUND' }
+# Subtest: setFadeText ignores aborted animations
+ok 118 - setFadeText ignores aborted animations
+  ---
+  duration_ms: 17.408878
+  type: 'test'
+  ...
+# Subtest: updateMOOStatus recovers after failure
+ok 119 - updateMOOStatus recovers after failure
+  ---
+  duration_ms: 23.798088
+  type: 'test'
+  ...
+# Subtest: setGameHealthDisplay handles each MOO status
+    # Subtest: UNCHECKED
+    ok 1 - UNCHECKED
+      ---
+      duration_ms: 16.623933
+      type: 'test'
+      ...
+    # Subtest: UNKNOWN
+    ok 2 - UNKNOWN
+      ---
+      duration_ms: 35.404313
+      type: 'test'
+      ...
+    # Subtest: OK
+    ok 3 - OK
+      ---
+      duration_ms: 17.641598
+      type: 'test'
+      ...
+    # Subtest: CLIENT_DOWN
+    ok 4 - CLIENT_DOWN
+      ---
+      duration_ms: 22.177008
+      type: 'test'
+      ...
+    # Subtest: SITE_DOWN
+    ok 5 - SITE_DOWN
+      ---
+      duration_ms: 19.962548
+      type: 'test'
+      ...
+    # Subtest: MOO_DOWN
+    ok 6 - MOO_DOWN
+      ---
+      duration_ms: 28.164295
+      type: 'test'
+      ...
+    # Subtest: LAG
+    ok 7 - LAG
+      ---
+      duration_ms: 22.240319
+      type: 'test'
+      ...
+    # Subtest: NETWORK
+    ok 8 - NETWORK
+      ---
+      duration_ms: 13.152058
+      type: 'test'
+      ...
+    1..8
+ok 120 - setGameHealthDisplay handles each MOO status
+  ---
+  duration_ms: 177.278478
+  type: 'test'
+  ...
+# IDE editor invoked {
+#   uploadCommand: '@program foo',
+#   editorName: 'Test Tab',
+#   buffer: 'This is some test data',
+#   command: '@program',
+#   commandTarget: 'foo'
+# }
+# Subtest: openIDE logs complete command info
+ok 121 - openIDE logs complete command info
+  ---
+  duration_ms: 61.972225
+  type: 'test'
+  ...
+# IDE editor invoked {
+#   editorName: 'one',
+#   uploadCommand: '',
+#   command: '',
+#   commandTarget: ''
+# }
+# IDE editor invoked {
+#   editorName: 'two',
+#   uploadCommand: '',
+#   command: '',
+#   commandTarget: ''
+# }
+# IDE editor invoked {
+#   editorName: 'three',
+#   uploadCommand: '',
+#   command: '',
+#   commandTarget: ''
+# }
+# Subtest: openIDE reuses existing window after beforeunload
+ok 122 - openIDE reuses existing window after beforeunload
+  ---
+  duration_ms: 67.134017
+  type: 'test'
+  ...
+# Subtest: test/client/index.js
+ok 30 - test/client/index.js
+  ---
+  duration_ms: 40.220971
+  type: 'test'
+  ...
+# fetch fallback
+# Subtest: logger falls back to fetch when sendBeacon is unavailable
+ok 124 - logger falls back to fetch when sendBeacon is unavailable
+  ---
+  duration_ms: 55.791858
+  type: 'test'
+  ...
+# Subtest: logger sends messages and logs to console
+ok 125 - logger sends messages and logs to console
+  ---
+  duration_ms: 9.263305
+  type: 'test'
+  ...
+# Subtest: logger logs to console when endpoint missing
+ok 126 - logger logs to console when endpoint missing
+  ---
+  duration_ms: 12.877286
+  type: 'test'
+  ...
+# Subtest: note editor loads note data
+ok 127 - note editor loads note data
+  ---
+  duration_ms: 274.762299
+  type: 'test'
+  ...
+# Subtest: upload button sends command and buffer
+ok 128 - upload button sends command and buffer
+  ---
+  duration_ms: 24.230388
+  type: 'test'
+  ...
+# Subtest: abort prompts and closes on unsaved changes
+ok 129 - abort prompts and closes on unsaved changes
+  ---
+  duration_ms: 12.719876
+  type: 'test'
+  ...
+# Subtest: save shows success message and allows closing without prompt
+ok 130 - save shows success message and allows closing without prompt
+  ---
+  duration_ms: 11.560144
+  type: 'test'
+  ...
+# Subtest: validation error is shown for empty note
+ok 131 - validation error is shown for empty note
+  ---
+  duration_ms: 14.770652
+  type: 'test'
+  ...
+# Subtest: note editor utilities handle setup and actions
+ok 132 - note editor utilities handle setup and actions
+  ---
+  duration_ms: 15.587444
+  type: 'test'
+  ...
+# @client-option localEcho true
+# @client-option transparentOverlay true
+# @client-option transparentOverlay false
+# @client-option pb 100
+# Subtest: weakBrowser detects Chrome version
+ok 133 - weakBrowser detects Chrome version
+  ---
+  duration_ms: 61.684726
+  type: 'test'
+  ...
+# Subtest: readPreferences returns defaults
+ok 134 - readPreferences returns defaults
+  ---
+  duration_ms: 13.585447
+  type: 'test'
+  ...
+# Subtest: readPreferences parses url options
+ok 135 - readPreferences parses url options
+  ---
+  duration_ms: 7.346713
+  type: 'test'
+  ...
+# Subtest: readPreferences parses additional url options
+ok 136 - readPreferences parses additional url options
+  ---
+  duration_ms: 6.777302
+  type: 'test'
+  ...
+# Subtest: readPreferences handles comic-mono font
+ok 137 - readPreferences handles comic-mono font
+  ---
+  duration_ms: 6.492935
+  type: 'test'
+  ...
+# Subtest: readPreferences handles monaco font
+ok 138 - readPreferences handles monaco font
+  ---
+  duration_ms: 6.028483
+  type: 'test'
+  ...
+# Subtest: readPreferences defaults performanceBuffer for weak browsers
+ok 139 - readPreferences defaults performanceBuffer for weak browsers
+  ---
+  duration_ms: 7.469739
+  type: 'test'
+  ...
+# Subtest: readPreferences loads saved colorSet from localStorage
+ok 140 - readPreferences loads saved colorSet from localStorage
+  ---
+  duration_ms: 27.79196
+  type: 'test'
+  ...
+# Subtest: parseClientOptionCommand persists preference
+ok 141 - parseClientOptionCommand persists preference
+  ---
+  duration_ms: 43.064759
+  type: 'test'
+  ...
+# Subtest: parseClientOptionCommand sets overlay classes
+ok 142 - parseClientOptionCommand sets overlay classes
+  ---
+  duration_ms: 20.947423
+  type: 'test'
+  ...
+# Subtest: @client-option pb accepts numeric values
+ok 143 - @client-option pb accepts numeric values
+  ---
+  duration_ms: 5.167568
+  type: 'test'
+  ...
+# Subtest: urlRegex matches http/https links and not plain text
+ok 144 - urlRegex matches http/https links and not plain text
+  ---
+  duration_ms: 1.600792
+  type: 'test'
+  ...
+# Subtest: ipRegex matches IPv4 and IPv6
+ok 145 - ipRegex matches IPv4 and IPv6
+  ---
+  duration_ms: 7.253163
+  type: 'test'
+  ...
+# Subtest: hostnameRegex matches hostnames and not emails
+ok 146 - hostnameRegex matches hostnames and not emails
+  ---
+  duration_ms: 0.416543
+  type: 'test'
+  ...
+# Subtest: xterm256 foreground color replacement
+ok 147 - xterm256 foreground color replacement
+  ---
+  duration_ms: 0.285613
+  type: 'test'
+  ...
+# Subtest: xterm256 background color replacement
+ok 148 - xterm256 background color replacement
+  ---
+  duration_ms: 0.158492
+  type: 'test'
+  ...
+# Subtest: z-setup replaces existing socket and binds data handler
+ok 149 - z-setup replaces existing socket and binds data handler
+  ---
+  duration_ms: 81.08005
+  type: 'test'
+  ...
+# Subtest: z-setup surfaces setupSocket errors
+ok 150 - z-setup surfaces setupSocket errors
+  ---
+  duration_ms: 15.784166
+  type: 'test'
+  ...
+# Subtest: z-setup assigns DOM references and invokes setup hooks
+ok 151 - z-setup assigns DOM references and invokes setup hooks
+  ---
+  duration_ms: 79.289134
+  type: 'test'
+  ...
+# (node:542170) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# disconnected
+# Subtest: socket lifecycle updates state and disconnect view
+ok 152 - socket lifecycle updates state and disconnect view
+  ---
+  duration_ms: 40.545294
+  type: 'test'
+  ...
+# disconnected
+# disconnected before we connected!
+# disconnected
+# disconnected before we connected!
+# enabling short urls
+# Subtest: handlers manage reconnect, login branches, and errors
+ok 153 - handlers manage reconnect, login branches, and errors
+  ---
+  duration_ms: 46.726014
+  type: 'test'
+  ...
+# Subtest: toggling shortenUrls after connection emits event
+ok 154 - toggling shortenUrls after connection emits event
+  ---
+  duration_ms: 7.583915
+  type: 'test'
+  ...
+# Subtest: setupSocket disconnects existing socket
+ok 155 - setupSocket disconnects existing socket
+  ---
+  duration_ms: 3.402609
+  type: 'test'
+  ...
+# (node:542178) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: store lists, reads, writes, and deletes values
+ok 156 - store lists, reads, writes, and deletes values
+  ---
+  duration_ms: 638.151115
+  type: 'test'
+  ...
+# Subtest: store.put logs and returns false on error
+ok 157 - store.put logs and returns false on error
+  ---
+  duration_ms: 17.603071
+  type: 'test'
+  ...
+# Subtest: store.get logs error on getItem failure
+ok 158 - store.get logs error on getItem failure
+  ---
+  duration_ms: 14.870827
+  type: 'test'
+  ...
+# Subtest: store.get warns and removes invalid JSON
+ok 159 - store.get warns and removes invalid JSON
+  ---
+  duration_ms: 30.823592
+  type: 'test'
+  ...
+# Subtest: store.remove logs errors
+ok 160 - store.remove logs errors
+  ---
+  duration_ms: 11.625708
+  type: 'test'
+  ...
+# Subtest: clientOptions throws on invalid option
+ok 161 - clientOptions throws on invalid option
+  ---
+  duration_ms: 10.829323
+  type: 'test'
+  ...
+# Subtest: z-setup applies transparent overlay after async autocomplete setup
+ok 162 - z-setup applies transparent overlay after async autocomplete setup
+  ---
+  duration_ms: 78.895892
+  type: 'test'
+  ...
+# Subtest: sets exported constants
+ok 163 - sets exported constants
+  ---
+  duration_ms: 5.357627
+  type: 'test'
+  ...
+# Subtest: setSocket overwrites existing socket
+ok 164 - setSocket overwrites existing socket
+  ---
+  duration_ms: 0.858626
+  type: 'test'
+  ...
+# Subtest: window handlers parse IDs, set titles, and flash alerts
+ok 165 - window handlers parse IDs, set titles, and flash alerts
+  ---
+  duration_ms: 69.782848
+  type: 'test'
+  ...
+# Subtest: onFocusHandler clears alerts and focuses input
+ok 166 - onFocusHandler clears alerts and focuses input
+  ---
+  duration_ms: 16.949102
+  type: 'test'
+  ...
+# Subtest: onScrollHandler hides offscreen images
+ok 167 - onScrollHandler hides offscreen images
+  ---
+  duration_ms: 14.905785
+  type: 'test'
+  ...
+# Subtest: window handlers respond to focus, blur, resize, and unload
+ok 168 - window handlers respond to focus, blur, resize, and unload
+  ---
+  duration_ms: 10.510277
+  type: 'test'
+  ...
+# Subtest: toggling playDing while unfocused updates alert
+ok 169 - toggling playDing while unfocused updates alert
+  ---
+  duration_ms: 13.744938
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+# Subtest: config/env loads node configuration
+ok 170 - config/env loads node configuration
+  ---
+  duration_ms: 0.676306
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (46) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+# [dotenv@17.2.1] injecting env (0) from .env -- tip: 📡 version env with Radar: https://dotenvx.com/radar
+# [dotenv@17.2.1] injecting env (1) from .env -- tip: 📡 version env with Radar: https://dotenvx.com/radar
+# Subtest: config/env builds SSL configuration when keys are present
+ok 171 - config/env builds SSL configuration when keys are present
+  ---
+  duration_ms: 93.758522
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (10) from .env -- tip: ⚙️  override existing env vars with { override: true }
+# Subtest: config/env applies defaults for node configuration
+ok 172 - config/env applies defaults for node configuration
+  ---
+  duration_ms: 15.422525
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+# Subtest: config/env uses overrides for node configuration
+ok 173 - config/env uses overrides for node configuration
+  ---
+  duration_ms: 12.083578
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+# Subtest: test/helpers/auth.js
+ok 44 - test/helpers/auth.js
+  ---
+  duration_ms: 174.999586
+  type: 'test'
+  ...
+# Subtest: test/helpers/client-app.js
+ok 45 - test/helpers/client-app.js
+  ---
+  duration_ms: 66.445337
+  type: 'test'
+  ...
+# Subtest: test/helpers/setup-dom.js
+ok 46 - test/helpers/setup-dom.js
+  ---
+  duration_ms: 565.285599
+  type: 'test'
+  ...
+# Subtest: test/helpers/socket.js
+ok 47 - test/helpers/socket.js
+  ---
+  duration_ms: 41.05468
+  type: 'test'
+  ...
+# (node:542267) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: cleanDir removes filtered files and ignores missing directories
+ok 178 - cleanDir removes filtered files and ignores missing directories
+  ---
+  duration_ms: 2.88225
+  type: 'test'
+  ...
+# Subtest: cleanDir propagates removal errors
+ok 179 - cleanDir propagates removal errors
+  ---
+  duration_ms: 0.265211
+  type: 'test'
+  ...
+# Subtest: compileLess generates CSS for each .less file
+ok 180 - compileLess generates CSS for each .less file
+  ---
+  duration_ms: 745.41924
+  type: 'test'
+  ...
+# Subtest: compileLess rejects when mkdir fails
+ok 181 - compileLess rejects when mkdir fails
+  ---
+  duration_ms: 1.884071
+  type: 'test'
+  ...
+# Subtest: compileLess rejects when render fails
+ok 182 - compileLess rejects when render fails
+  ---
+  duration_ms: 0.362032
+  type: 'test'
+  ...
+# Subtest: compileJs bundles entry and produces normal and minified outputs
+ok 183 - compileJs bundles entry and produces normal and minified outputs
+  ---
+  duration_ms: 79.369345
+  type: 'test'
+  ...
+# Subtest: compileJs rejects when cleanup fails
+ok 184 - compileJs rejects when cleanup fails
+  ---
+  duration_ms: 15.782437
+  type: 'test'
+  ...
+# Subtest: copyAce copies ace-builds assets to destination
+ok 185 - copyAce copies ace-builds assets to destination
+  ---
+  duration_ms: 5.96357
+  type: 'test'
+  ...
+# Subtest: build executes only once
+ok 186 - build executes only once
+  ---
+  duration_ms: 19.09802
+  type: 'test'
+  ...
+# Subtest: build rejects when a step fails and memoizes the error
+ok 187 - build rejects when a step fails and memoizes the error
+  ---
+  duration_ms: 14.512959
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+# 2025-08-31T05:41:19.464Z [warn] middleware/error 404 {"stack":"Error: 404\\n    at file:///home/ubuntu/dome-client.js-sd/test/lib/error.test.js:15:48\\n    at Layer.handleRequest (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/layer.js:152:17)\\n    at next (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/route.js:157:13)\\n    at Route.dispatch (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/route.js:117:3)\\n    at handle (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:435:11)\\n    at Layer.handleRequest (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/layer.js:152:17)\\n    at /home/ubuntu/dome-client.js-sd/node_modules/router/index.js:295:15\\n    at processParams (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:582:12)\\n    at next (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:291:5)\\n    at file:///home/ubuntu/dome-client.js-sd/test/lib/error.test.js:13:5"}
+# Subtest: notFound handles 404 error
+ok 188 - notFound handles 404 error
+  ---
+  duration_ms: 46.245403
+  type: 'test'
+  ...
+# 2025-08-31T05:41:19.477Z [error] middleware/error Unexpected Error Encountered from /boom boom {"stack":"Error: boom\\n    at file:///home/ubuntu/dome-client.js-sd/test/lib/error.test.js:16:45\\n    at Layer.handleRequest (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/layer.js:152:17)\\n    at next (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/route.js:157:13)\\n    at Route.dispatch (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/route.js:117:3)\\n    at handle (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:435:11)\\n    at Layer.handleRequest (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/layer.js:152:17)\\n    at /home/ubuntu/dome-client.js-sd/node_modules/router/index.js:295:15\\n    at processParams (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:582:12)\\n    at next (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:291:5)\\n    at file:///home/ubuntu/dome-client.js-sd/test/lib/error.test.js:13:5"}
+# Subtest: non-404 errors result in 500
+ok 189 - non-404 errors result in 500
+  ---
+  duration_ms: 5.925624
+  type: 'test'
+  ...
+# Subtest: errorHandler defaults to 404 for unknown routes
+ok 190 - errorHandler defaults to 404 for unknown routes
+  ---
+  duration_ms: 4.926776
+  type: 'test'
+  ...
+# 2025-08-31T05:41:19.487Z [error] middleware/error File Not Found {"code":404,"stack":"Error: File Not Found\\n    at json.errorHandler (file:///home/ubuntu/dome-client.js-sd/src/middleware/error.js:87:11)\\n    at file:///home/ubuntu/dome-client.js-sd/test/lib/error.test.js:43:42\\n    at Layer.handleRequest (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/layer.js:152:17)\\n    at trimPrefix (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:342:13)\\n    at /home/ubuntu/dome-client.js-sd/node_modules/router/index.js:297:9\\n    at processParams (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:582:12)\\n    at next (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:291:5)\\n    at Function.handle (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:186:3)\\n    at Function.handle (/home/ubuntu/dome-client.js-sd/node_modules/express/lib/application.js:177:15)\\n    at Server.app (/home/ubuntu/dome-client.js-sd/node_modules/express/lib/express.js:38:9)"}
+# Subtest: json.errorHandler defaults to 404 when no error
+ok 191 - json.errorHandler defaults to 404 when no error
+  ---
+  duration_ms: 4.986879
+  type: 'test'
+  ...
+# 2025-08-31T05:41:19.492Z [error] middleware/error bad request {"code":400,"stack":"Error: bad request\\n    at file:///home/ubuntu/dome-client.js-sd/test/lib/error.test.js:52:17\\n    at Layer.handleRequest (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/layer.js:152:17)\\n    at next (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/route.js:157:13)\\n    at Route.dispatch (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/route.js:117:3)\\n    at handle (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:435:11)\\n    at Layer.handleRequest (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/layer.js:152:17)\\n    at /home/ubuntu/dome-client.js-sd/node_modules/router/index.js:295:15\\n    at processParams (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:582:12)\\n    at next (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:291:5)\\n    at Function.handle (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:186:3)"}
+# Subtest: json.errorHandler uses provided error code
+ok 192 - json.errorHandler uses provided error code
+  ---
+  duration_ms: 4.104485
+  type: 'test'
+  ...
+# Subtest: serves compiled css and creates dest directory
+ok 193 - serves compiled css and creates dest directory
+  ---
+  duration_ms: 50.987614
+  type: 'test'
+  ...
+# Subtest: preprocess.path adjusts pathname
+ok 194 - preprocess.path adjusts pathname
+  ---
+  duration_ms: 6.975434
+  type: 'test'
+  ...
+# Subtest: calls next with readFile error
+ok 195 - calls next with readFile error
+  ---
+  duration_ms: 0.743591
+  type: 'test'
+  ...
+# Subtest: middleware resolves nested paths and compiles
+ok 196 - middleware resolves nested paths and compiles
+  ---
+  duration_ms: 1.508688
+  type: 'test'
+  ...
+# Subtest: calls next with render error
+ok 197 - calls next with render error
+  ---
+  duration_ms: 0.505187
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: 📡 auto-backup env with Radar: https://dotenvx.com/radar
+# Subtest: shortens and caches URLs
+ok 198 - shortens and caches URLs
+  ---
+  duration_ms: 29.354228
+  type: 'test'
+  ...
+# Subtest: caps cache at configured limit
+ok 199 - caps cache at configured limit
+  ---
+  duration_ms: 37.770276
+  type: 'test'
+  ...
+# Subtest: does not shorten short URLs
+ok 200 - does not shorten short URLs
+  ---
+  duration_ms: 4.606574
+  type: 'test'
+  ...
+# Subtest: returns input when no URLs exist
+ok 201 - returns input when no URLs exist
+  ---
+  duration_ms: 1.656628
+  type: 'test'
+  ...
+# 2025-08-31T05:41:20.143Z [warn] url shortener connection failed: boom
+# Subtest: returns input on network failures
+    # Subtest: network error
+    ok 1 - network error
+      ---
+      duration_ms: 18.018793
+      type: 'test'
+      ...
+# 2025-08-31T05:41:20.198Z [warn] url shortener request timed out
+# 2025-08-31T05:41:20.205Z [warn] url shortener connection failed: boom
+    # Subtest: request timeout
+    ok 2 - request timeout
+      ---
+      duration_ms: 55.016763
+      type: 'test'
+      ...
+    # Subtest: request exception
+    ok 3 - request exception
+      ---
+      duration_ms: 6.157827
+      type: 'test'
+      ...
+    1..3
+ok 202 - returns input on network failures
+  ---
+  duration_ms: 79.864481
+  type: 'test'
+  ...
+# 2025-08-31T05:41:20.225Z [warn] url shortener connection failed: ouch
+# Subtest: does not cache failed network responses
+ok 203 - does not cache failed network responses
+  ---
+  duration_ms: 27.677592
+  type: 'test'
+  ...
+# 2025-08-31T05:41:20.247Z [warn] shortening urls failed Cannot read properties of null (reading 'match') {"stack":"TypeError: Cannot read properties of null (reading 'match')\\n    at Module.urls (file:///home/ubuntu/dome-client.js-sd/src/services/shorten.js?cachebust=9:57:26)\\n    at TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/lib/shorten.test.js:172:32)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)"}
+# Subtest: does not cache invalid responses
+ok 204 - does not cache invalid responses
+  ---
+  duration_ms: 11.712747
+  type: 'test'
+  ...
+# Subtest: logs and returns input when matching fails
+ok 205 - logs and returns input when matching fails
+  ---
+  duration_ms: 2.168131
+  type: 'test'
+  ...
+# 2025-08-31T05:41:20.286Z [warn] shortening urls failed data.match is not a function {"stack":"TypeError: data.match is not a function\\n    at Module.urls (file:///home/ubuntu/dome-client.js-sd/src/services/shorten.js?cachebust=11:57:26)\\n    at TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/lib/shorten.test.js:198:32)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)"}
+# Subtest: continues shortening when one URL fails
+ok 206 - continues shortening when one URL fails
+  ---
+  duration_ms: 36.767866
+  type: 'test'
+  ...
+# Subtest: returns input and logs when data is invalid
+ok 207 - returns input and logs when data is invalid
+  ---
+  duration_ms: 1.591046
+  type: 'test'
+  ...
+# Subtest: parse returns defaults for empty UA
+ok 208 - parse returns defaults for empty UA
+  ---
+  duration_ms: 19.588894
+  type: 'test'
+  ...
+# Subtest: parse extracts browser and OS information
+ok 209 - parse extracts browser and OS information
+  ---
+  duration_ms: 8.921677
+  type: 'test'
+  ...
+# Subtest: parse identifies device types and helpers
+ok 210 - parse identifies device types and helpers
+  ---
+  duration_ms: 8.023493
+  type: 'test'
+  ...
+# Subtest: deviceCapture assigns device for various user agents
+ok 211 - deviceCapture assigns device for various user agents
+  ---
+  duration_ms: 0.974294
+  type: 'test'
+  ...
+# Subtest: deviceCapture defaults to desktop without user-agent
+ok 212 - deviceCapture defaults to desktop without user-agent
+  ---
+  duration_ms: 0.657172
+  type: 'test'
+  ...
+# Subtest: test/mock-module.js
+ok 53 - test/mock-module.js
+  ---
+  duration_ms: 38.28307
+  type: 'test'
+  ...
+# (node:542318) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+# Subtest: sessionError populates req.session.error
+ok 214 - sessionError populates req.session.error
+  ---
+  duration_ms: 142.272355
+  type: 'test'
+  ...
+# Subtest: sessionError throws without session
+ok 215 - sessionError throws without session
+  ---
+  duration_ms: 5.849871
+  type: 'test'
+  ...
+# Subtest: isAdmin
+    # Subtest: returns false without session
+    ok 1 - returns false without session
+      ---
+      duration_ms: 0.233336
+      type: 'test'
+      ...
+    # Subtest: returns false without user
+    ok 2 - returns false without user
+      ---
+      duration_ms: 1.097664
+      type: 'test'
+      ...
+    # Subtest: returns false without perms
+    ok 3 - returns false without perms
+      ---
+      duration_ms: 0.121613
+      type: 'test'
+      ...
+    # Subtest: returns false for non-admin perms
+    ok 4 - returns false for non-admin perms
+      ---
+      duration_ms: 0.177474
+      type: 'test'
+      ...
+    # Subtest: returns admin classes intersection
+    ok 5 - returns admin classes intersection
+      ---
+      duration_ms: 1.056189
+      type: 'test'
+      ...
+    1..5
+ok 216 - isAdmin
+  ---
+  duration_ms: 11.749234
+  type: 'test'
+  ...
+# Subtest: detectAdmin populates req.admin and calls next
+    # Subtest: admin request
+    ok 1 - admin request
+      ---
+      duration_ms: 0.418314
+      type: 'test'
+      ...
+    # Subtest: non-admin request
+    ok 2 - non-admin request
+      ---
+      duration_ms: 0.190217
+      type: 'test'
+      ...
+    # Subtest: request without session
+    ok 3 - request without session
+      ---
+      duration_ms: 0.112496
+      type: 'test'
+      ...
+    1..3
+ok 217 - detectAdmin populates req.admin and calls next
+  ---
+  duration_ms: 8.759828
+  type: 'test'
+  ...
+# Subtest: requireAdmin handles authorization
+    # Subtest: fails for non-admin
+    ok 1 - fails for non-admin
+      ---
+      duration_ms: 13.781031
+      type: 'test'
+      ...
+    # Subtest: allows admins through
+    ok 2 - allows admins through
+      ---
+      duration_ms: 33.736105
+      type: 'test'
+      ...
+    1..2
+ok 218 - requireAdmin handles authorization
+  ---
+  duration_ms: 47.839362
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+# 2025-08-31T05:41:21.152Z [error] controllers/autocomplete boom {"stack":"Error: boom\\n    at Object.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/autocomplete.test.js:47:11)\\n    at Object.apply (node:internal/test_runner/mock/mock:605:20)\\n    at ac (file:///home/ubuntu/dome-client.js-sd/src/controllers/autocomplete.js?update=1756618881151:17:38)\\n    at TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/autocomplete.test.js:52:26)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)"}
+# Subtest: ac caches results across calls
+ok 219 - ac caches results across calls
+  ---
+  duration_ms: 51.962844
+  type: 'test'
+  ...
+# Subtest: ac returns empty array for unknown user type
+ok 220 - ac returns empty array for unknown user type
+  ---
+  duration_ms: 1.030052
+  type: 'test'
+  ...
+# Subtest: ac throws on read failure
+ok 221 - ac throws on read failure
+  ---
+  duration_ms: 2.998205
+  type: 'test'
+  ...
+# Subtest: basic route returns autocomplete data
+ok 222 - basic route returns autocomplete data
+  ---
+  duration_ms: 51.400641
+  type: 'test'
+  ...
+# Subtest: autocomplete route returns empty array for unknown type
+ok 223 - autocomplete route returns empty array for unknown type
+  ---
+  duration_ms: 13.831611
+  type: 'test'
+  ...
+# 2025-08-31T05:41:21.223Z [error] controllers/autocomplete boom {"stack":"Error: boom\\n    at Object.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/autocomplete.test.js:104:11)\\n    at Object.apply (node:internal/test_runner/mock/mock:605:20)\\n    at ac (file:///home/ubuntu/dome-client.js-sd/src/controllers/autocomplete.js?update=1756618881220:17:38)\\n    at basic (file:///home/ubuntu/dome-client.js-sd/src/controllers/autocomplete.js?update=1756618881220:30:24)\\n    at Layer.handleRequest (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/layer.js:152:17)\\n    at next (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/route.js:157:13)\\n    at Route.dispatch (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/route.js:117:3)\\n    at handle (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:435:11)\\n    at Layer.handleRequest (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/layer.js:152:17)\\n    at /home/ubuntu/dome-client.js-sd/node_modules/router/index.js:295:15"}
+# 2025-08-31T05:41:21.223Z [error] controllers/autocomplete boom {"stack":"Error: boom\\n    at Object.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/autocomplete.test.js:104:11)\\n    at Object.apply (node:internal/test_runner/mock/mock:605:20)\\n    at ac (file:///home/ubuntu/dome-client.js-sd/src/controllers/autocomplete.js?update=1756618881220:17:38)\\n    at basic (file:///home/ubuntu/dome-client.js-sd/src/controllers/autocomplete.js?update=1756618881220:30:24)\\n    at Layer.handleRequest (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/layer.js:152:17)\\n    at next (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/route.js:157:13)\\n    at Route.dispatch (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/route.js:117:3)\\n    at handle (/home/ubuntu/dome-client.js-sd/node_modules/router/index.js:435:11)\\n    at Layer.handleRequest (/home/ubuntu/dome-client.js-sd/node_modules/router/lib/layer.js:152:17)\\n    at /home/ubuntu/dome-client.js-sd/node_modules/router/index.js:295:15"}
+# Subtest: autocomplete route handles errors
+ok 224 - autocomplete route handles errors
+  ---
+  duration_ms: 7.016726
+  type: 'test'
+  ...
+# (node:542337) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+# 2025-08-31T05:41:22.895Z [info] client-app socket.io listening to http
+# 2025-08-31T05:41:22.898Z [info] client-app socket.io listening to https
+# 2025-08-31T05:41:22.996Z [info] client-app [0mGET /player-client/ [32m200[0m 50.193 ms - 16046[0m
+# Subtest: player client includes client options overlay
+ok 225 - player client includes client options overlay
+  ---
+  duration_ms: 1150.329094
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+# (node:542351) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# 2025-08-31T05:41:24.689Z [info] client-app socket.io listening to http
+# 2025-08-31T05:41:24.690Z [info] client-app socket.io listening to https
+# 2025-08-31T05:41:24.823Z [info] client-app [0mPOST /website-login/ [36m302[0m 59.616 ms - 33[0m
+# 2025-08-31T05:41:24.853Z [info] client-app [0mGET /?auto=hero [32m200[0m 21.754 ms - 16394[0m
+# Subtest: successful login redirects without error
+ok 226 - successful login redirects without error
+  ---
+  duration_ms: 1208.308721
+  type: 'test'
+  ...
+# 2025-08-31T05:41:25.168Z [info] client-app socket.io listening to http
+# 2025-08-31T05:41:25.171Z [info] client-app socket.io listening to https
+# 2025-08-31T05:41:25.184Z [info] client-app [0mPOST /website-login/ [36m302[0m 6.436 ms - 23[0m
+# 2025-08-31T05:41:25.192Z [info] client-app [0mGET / [32m200[0m 2.592 ms - 15959[0m
+# Subtest: failed login displays error message
+ok 227 - failed login displays error message
+  ---
+  duration_ms: 148.03603
+  type: 'test'
+  ...
+# (node:542365) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: 📡 version env with Radar: https://dotenvx.com/radar
+# 2025-08-31T05:41:26.857Z [info] client-app socket.io listening to http
+# 2025-08-31T05:41:26.859Z [info] client-app socket.io listening to https
+# 2025-08-31T05:41:26.959Z [info] client-app [0mGET /player-client/ [32m200[0m 48.557 ms - 16046[0m
+# Subtest: save button uses parsed date in filename
+ok 228 - save button uses parsed date in filename
+  ---
+  duration_ms: 1241.504107
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+# 2025-08-31T05:41:27.349Z [info] controllers/save generating log for 127.0.0.1
+# 2025-08-31T05:41:27.352Z [info] controllers/save generating log for 127.0.0.1
+# Subtest: log uses sanitized params.filename in Content-disposition
+ok 229 - log uses sanitized params.filename in Content-disposition
+  ---
+  duration_ms: 2.706738
+  type: 'test'
+  ...
+# Subtest: log wraps buffer in HTML body
+ok 230 - log wraps buffer in HTML body
+  ---
+  duration_ms: 0.725978
+  type: 'test'
+  ...
+# Subtest: connect renders connect-as with metadata
+ok 231 - connect renders connect-as with metadata
+  ---
+  duration_ms: 2.805322
+  type: 'test'
+  ...
+# Subtest: client renders client with metadata
+ok 232 - client renders client with metadata
+  ---
+  duration_ms: 0.248938
+  type: 'test'
+  ...
+# Subtest: editor resolves basic template
+ok 233 - editor resolves basic template
+  ---
+  duration_ms: 0.185711
+  type: 'test'
+  ...
+# Subtest: editor resolves basic template in readonly mode
+ok 234 - editor resolves basic template in readonly mode
+  ---
+  duration_ms: 1.174374
+  type: 'test'
+  ...
+# Subtest: editor resolves verb template
+ok 235 - editor resolves verb template
+  ---
+  duration_ms: 0.177066
+  type: 'test'
+  ...
+# Subtest: editor resolves note-viewer template
+ok 236 - editor resolves note-viewer template
+  ---
+  duration_ms: 0.202848
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+# Subtest: sessionError populates req.session.error
+ok 237 - sessionError populates req.session.error
+  ---
+  duration_ms: 1.197604
+  type: 'test'
+  ...
+# Subtest: sessionError throws without session
+ok 238 - sessionError throws without session
+  ---
+  duration_ms: 0.370697
+  type: 'test'
+  ...
+# (node:542404) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+# 2025-08-31T05:41:29.068Z [info] client-app socket.io listening to http
+# 2025-08-31T05:41:29.071Z [info] client-app socket.io listening to https
+# 2025-08-31T05:41:29.217Z [info] client-app [0mGET /player-client/ [32m200[0m 83.601 ms - 16046[0m
+# Subtest: player client includes shortcuts overlay
+ok 239 - player client includes shortcuts overlay
+  ---
+  duration_ms: 1070.843187
+  type: 'test'
+  ...
+# [dotenv@17.2.1] injecting env (48) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+# 2025-08-31T05:41:29.657Z [info] controllers/socket HI  127.0.0.1 Other 0.0.0   
+# 2025-08-31T05:41:29.728Z [info] controllers/socket HI  127.0.0.1 Other 0.0.0   
+# 2025-08-31T05:41:29.728Z [info] controllers/socket DNS 127.0.0.1 host 
+# 2025-08-31T05:41:29.728Z [error] controllers/socket moo error event occurred
+# 2025-08-31T05:41:29.729Z [error] controllers/socket ERR 127.0.0.1 Other 0.0.0    boom boom {"stack":"Error: boom\\n    at TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/socket.test.js:408:18)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/socket.test.js:393:3)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)"}
+# 2025-08-31T05:41:29.730Z [error] controllers/socket socket error event occurred
+# 2025-08-31T05:41:29.731Z [error] controllers/socket ERR 127.0.0.1 Other 0.0.0    boom boom {"stack":"Error: boom\\n    at TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/socket.test.js:408:18)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/socket.test.js:393:3)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)"}
+# 2025-08-31T05:41:29.731Z [error] controllers/socket moo error event occurred
+# 2025-08-31T05:41:29.731Z [error] controllers/socket ERR 127.0.0.1 Other 0.0.0    later later {"stack":"Error: later\\n    at TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/socket.test.js:412:18)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/socket.test.js:393:3)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)"}
+# 2025-08-31T05:41:29.739Z [info] controllers/socket HI  127.0.0.1 Other 0.0.0   
+# 2025-08-31T05:41:29.740Z [info] controllers/socket DNS 127.0.0.1 host 
+# 2025-08-31T05:41:29.750Z [info] controllers/socket HI  127.0.0.1 Other 0.0.0   
+# 2025-08-31T05:41:29.750Z [info] controllers/socket DNS 127.0.0.1 host 
+# Subtest: error utility logs via stub logger
+ok 240 - error utility logs via stub logger
+  ---
+  duration_ms: 30.51602
+  type: 'test'
+  ...
+# Subtest: handles net.connect failure
+ok 241 - handles net.connect failure
+  ---
+  duration_ms: 35.298197
+  type: 'test'
+  ...
+# Subtest: userIp handles object and proxied addresses
+ok 242 - userIp handles object and proxied addresses
+  ---
+  duration_ms: 16.411399
+  type: 'test'
+  ...
+# Subtest: logUser formats info messages
+ok 243 - logUser formats info messages
+  ---
+  duration_ms: 2.12671
+  type: 'test'
+  ...
+# Subtest: logError logs error details
+ok 244 - logError logs error details
+  ---
+  duration_ms: 2.100822
+  type: 'test'
+  ...
+# Subtest: logUser handles error objects
+ok 245 - logUser handles error objects
+  ---
+  duration_ms: 1.948919
+  type: 'test'
+  ...
+# Subtest: connection logs DNS error for direct IP
+ok 246 - connection logs DNS error for direct IP
+  ---
+  duration_ms: 4.990184
+  type: 'test'
+  ...
+# Subtest: connection logs DNS error for proxied IP
+ok 247 - connection logs DNS error for proxied IP
+  ---
+  duration_ms: 5.368792
+  type: 'test'
+  ...
+# Subtest: dns reverse handling
+    # Subtest: success
+    ok 1 - success
+      ---
+      duration_ms: 6.684444
+      type: 'test'
+      ...
+    # Subtest: ENOTIMP
+    ok 2 - ENOTIMP
+      ---
+      duration_ms: 3.595081
+      type: 'test'
+      ...
+    # Subtest: NOTFOUND
+    ok 3 - NOTFOUND
+      ---
+      duration_ms: 1.651199
+      type: 'test'
+      ...
+    # Subtest: SERVFAIL
+    ok 4 - SERVFAIL
+      ---
+      duration_ms: 2.650083
+      type: 'test'
+      ...
+    # Subtest: TIMEOUT
+    ok 5 - TIMEOUT
+      ---
+      duration_ms: 1.577546
+      type: 'test'
+      ...
+    # Subtest: throws
+    ok 6 - throws
+      ---
+      duration_ms: 14.721099
+      type: 'test'
+      ...
+    # Subtest: throws synchronously
+    ok 7 - throws synchronously
+      ---
+      duration_ms: 6.488692
+      type: 'test'
+      ...
+    1..7
+ok 248 - dns reverse handling
+  ---
+  duration_ms: 39.269799
+  type: 'test'
+  ...
+# Subtest: moo and socket events
+    # Subtest: handles moo end
+    ok 1 - handles moo end
+      ---
+      duration_ms: 3.488553
+      type: 'test'
+      ...
+    # Subtest: logs socket error
+    ok 2 - logs socket error
+      ---
+      duration_ms: 4.699494
+      type: 'test'
+      ...
+    # Subtest: moo error event respects isActive
+    ok 3 - moo error event respects isActive
+      ---
+      duration_ms: 6.050353
+      type: 'test'
+      ...
+    # Subtest: shorten-on toggles flag
+    ok 4 - shorten-on toggles flag
+      ---
+      duration_ms: 8.042636
+      type: 'test'
+      ...
+    1..4
+ok 249 - moo and socket events
+  ---
+  duration_ms: 22.776238
+  type: 'test'
+  ...
+# Subtest: socket route connection lifecycle
+    # Subtest: forwards data and shortens URLs
+    ok 1 - forwards data and shortens URLs
+      ---
+      duration_ms: 90.591025
+      type: 'test'
+      ...
+# 2025-08-31T05:41:29.838Z [info] controllers/socket HI  127.0.0.1 Other 0.0.0   
+# 2025-08-31T05:41:29.839Z [info] controllers/socket DNS 127.0.0.1 host 
+    # Subtest: handles moo.write throwing based on activity
+    ok 2 - handles moo.write throwing based on activity
+      ---
+      duration_ms: 4.511657
+      type: 'test'
+      ...
+# 2025-08-31T05:41:29.849Z [info] controllers/socket HI  127.0.0.1 Other 0.0.0   
+# 2025-08-31T05:41:29.850Z [info] controllers/socket DNS 127.0.0.1 host 
+    # Subtest: handles @quit and disconnect
+    ok 3 - handles @quit and disconnect
+      ---
+      duration_ms: 5.130806
+      type: 'test'
+      ...
+# 2025-08-31T05:41:29.856Z [info] controllers/socket HI  127.0.0.1 Other 0.0.0   
+# 2025-08-31T05:41:29.856Z [info] controllers/socket DNS 127.0.0.1 host 
+# 2025-08-31T05:41:29.857Z [error] controllers/socket socket error event occurred
+# 2025-08-31T05:41:29.858Z [error] controllers/socket ERR 127.0.0.1 Other 0.0.0    no input no input {"stack":"Error: no input\\n    at EventEmitter.<anonymous> (file:///home/ubuntu/dome-client.js-sd/src/controllers/socket.js?cachebust=24:166:28)\\n    at EventEmitter.emit (node:events:518:28)\\n    at socket.emit (file:///home/ubuntu/dome-client.js-sd/test/helpers/socket.js:16:21)\\n    at TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/socket.test.js:620:12)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/socket.test.js:605:3)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)"}
+# 2025-08-31T05:41:29.882Z [info] controllers/socket HI  127.0.0.1 Other 0.0.0   
+# 2025-08-31T05:41:29.884Z [info] controllers/socket DNS 127.0.0.1 host 
+# 2025-08-31T05:41:29.884Z [error] controllers/socket moo error event occurred
+# 2025-08-31T05:41:29.885Z [error] controllers/socket ERR 127.0.0.1 Other 0.0.0    boom boom {"stack":"Error: boom\\n    at TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/socket.test.js:796:17)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/socket.test.js:777:3)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)"}
+# 2025-08-31T05:41:29.885Z [error] controllers/socket socket error event occurred
+# 2025-08-31T05:41:29.897Z [error] controllers/socket ERR 127.0.0.1 Other 0.0.0    boom boom {"stack":"Error: boom\\n    at TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/socket.test.js:796:17)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async TestContext.<anonymous> (file:///home/ubuntu/dome-client.js-sd/test/routes/socket.test.js:777:3)\\n    at async Test.run (node:internal/test_runner/test:1054:7)\\n    at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)"}
+    # Subtest: emits status for non-quit commands
+    ok 4 - emits status for non-quit commands
+      ---
+      duration_ms: 9.501192
+      type: 'test'
+      ...
+    # Subtest: input rejects null command
+    ok 5 - input rejects null command
+      ---
+      duration_ms: 7.282223
+      type: 'test'
+      ...
+    # Subtest: connect command logs user
+    ok 6 - connect command logs user
+      ---
+      duration_ms: 2.070488
+      type: 'test'
+      ...
+    # Subtest: disconnect event with reason writes @quit
+    ok 7 - disconnect event with reason writes @quit
+      ---
+      duration_ms: 1.430816
+      type: 'test'
+      ...
+    # Subtest: disconnect event without reason writes @quit
+    ok 8 - disconnect event without reason writes @quit
+      ---
+      duration_ms: 3.079635
+      type: 'test'
+      ...
+    # Subtest: handles dome-client-user marker and data errors
+    ok 9 - handles dome-client-user marker and data errors
+      ---
+      duration_ms: 14.697969
+      type: 'test'
+      ...
+    # Subtest: propagates error events from moo
+    ok 10 - propagates error events from moo
+      ---
+      duration_ms: 18.162488
+      type: 'test'
+      ...
+    # Subtest: logs proxied address and device
+    ok 11 - logs proxied address and device
+      ---
+      duration_ms: 6.489911
+      type: 'test'
+      ...
+    1..11
+ok 250 - socket route connection lifecycle
+  ---
+  duration_ms: 164.240315
+  type: 'test'
+  ...
+# (node:542428) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: healthCheck updates lastStatus
+ok 251 - healthCheck updates lastStatus
+  ---
+  duration_ms: 65.620092
+  type: 'test'
+  ...
+# Subtest: get returns default status before first check then updates after
+ok 252 - get returns default status before first check then updates after
+  ---
+  duration_ms: 5.857797
+  type: 'test'
+  ...
+# Subtest: get returns latest status after subsequent check
+ok 253 - get returns latest status after subsequent check
+  ---
+  duration_ms: 7.34329
+  type: 'test'
+  ...
+# Subtest: healthCheck handles ECONNREFUSED
+ok 254 - healthCheck handles ECONNREFUSED
+  ---
+  duration_ms: 4.885766
+  type: 'test'
+  ...
+# Subtest: healthCheck handles ETIMEOUT
+ok 255 - healthCheck handles ETIMEOUT
+  ---
+  duration_ms: 6.180867
+  type: 'test'
+  ...
+# Subtest: healthCheck handles ENOTFOUND
+ok 256 - healthCheck handles ENOTFOUND
+  ---
+  duration_ms: 16.240709
+  type: 'test'
+  ...
+# Subtest: healthCheck handles EUNKNOWN
+ok 257 - healthCheck handles EUNKNOWN
+  ---
+  duration_ms: 4.581648
+  type: 'test'
+  ...
+# Subtest: healthCheck handles json parse error
+ok 258 - healthCheck handles json parse error
+  ---
+  duration_ms: 7.273213
+  type: 'test'
+  ...
+# Subtest: test/slow-tests.mjs
+ok 65 - test/slow-tests.mjs
+  ---
+  duration_ms: 40.762366
+  type: 'test'
+  ...
+# Subtest: falls back to defaults for all keys
+ok 260 - falls back to defaults for all keys
+  ---
+  duration_ms: 37.400725
+  type: 'test'
+  ...
+# Subtest: uses provided env values for all keys
+ok 261 - uses provided env values for all keys
+  ---
+  duration_ms: 8.432288
+  type: 'test'
+  ...
+# Subtest: mixes defaults and overrides when some keys missing
+ok 262 - mixes defaults and overrides when some keys missing
+  ---
+  duration_ms: 1.641076
+  type: 'test'
+  ...
+# Subtest: uses git hash from command when GIT_HASH unset
+ok 263 - uses git hash from command when GIT_HASH unset
+  ---
+  duration_ms: 35.850916
+  type: 'test'
+  ...
+# Subtest: returns empty git hash and sets default log level when command fails
+ok 264 - returns empty git hash and sets default log level when command fails
+  ---
+  duration_ms: 7.681853
+  type: 'test'
+  ...
+# Subtest: uses provided GIT_HASH without calling git command
+ok 265 - uses provided GIT_HASH without calling git command
+  ---
+  duration_ms: 5.888996
+  type: 'test'
+  ...
+# Subtest: honors LOG_LEVEL and defaults to info
+ok 266 - honors LOG_LEVEL and defaults to info
+  ---
+  duration_ms: 19.601204
+  type: 'test'
+  ...
+# 2025-08-31T05:41:30.625Z [info] alpha test
+# 2025-08-31T05:41:30.631Z [debug] { a: 1, b: { c: [ 2, 3 ] } }
+# 2025-08-31T05:41:30.639Z [info] alpha test log {"beta":2}
+# 2025-08-31T05:41:30.645Z [info] alpha one
+# 2025-08-31T05:41:30.646Z [warn] beta two
+# 2025-08-31T05:41:30.646Z [error] beta three
+# 2025-08-31T05:41:30.650Z [error] alpha loud
+# Subtest: named returns child logger with namespace
+ok 267 - named returns child logger with namespace
+  ---
+  duration_ms: 131.156159
+  type: 'test'
+  ...
+# Subtest: inspect logs formatted object at debug level
+ok 268 - inspect logs formatted object at debug level
+  ---
+  duration_ms: 4.068464
+  type: 'test'
+  ...
+# Subtest: format printf includes namespace and metadata
+ok 269 - format printf includes namespace and metadata
+  ---
+  duration_ms: 7.457184
+  type: 'test'
+  ...
+# Subtest: logger uses LOG_LEVEL from env
+ok 270 - logger uses LOG_LEVEL from env
+  ---
+  duration_ms: 3.557084
+  type: 'test'
+  ...
+# Subtest: named delegates levels with namespace prefixes
+ok 271 - named delegates levels with namespace prefixes
+  ---
+  duration_ms: 2.818485
+  type: 'test'
+  ...
+# Subtest: silent mode suppresses logging
+ok 272 - silent mode suppresses logging
+  ---
+  duration_ms: 2.896233
+  type: 'test'
+  ...
+# Subtest: renders views/connect-as.ejs
+ok 273 - renders views/connect-as.ejs
+  ---
+  duration_ms: 11.150812
+  type: 'test'
+  ...
+# Subtest: renders views/client.ejs
+ok 274 - renders views/client.ejs
+  ---
+  duration_ms: 3.615738
+  type: 'test'
+  ...
+# Subtest: renders views/shells/child-window-ide-header.ejs
+ok 275 - renders views/shells/child-window-ide-header.ejs
+  ---
+  duration_ms: 1.320158
+  type: 'test'
+  ...
+# Subtest: renders views/shells/child-window-header.ejs
+ok 276 - renders views/shells/child-window-header.ejs
+  ---
+  duration_ms: 3.248719
+  type: 'test'
+  ...
+# Subtest: renders views/shells/child-window-footer.ejs
+ok 277 - renders views/shells/child-window-footer.ejs
+  ---
+  duration_ms: 1.453475
+  type: 'test'
+  ...
+# Subtest: renders views/partials/shortcuts-overlay.ejs
+ok 278 - renders views/partials/shortcuts-overlay.ejs
+  ---
+  duration_ms: 1.037136
+  type: 'test'
+  ...
+# Subtest: renders views/partials/overlays.ejs
+ok 279 - renders views/partials/overlays.ejs
+  ---
+  duration_ms: 2.337191
+  type: 'test'
+  ...
+# Subtest: renders views/partials/mini-controls.ejs
+ok 280 - renders views/partials/mini-controls.ejs
+  ---
+  duration_ms: 1.862404
+  type: 'test'
+  ...
+# Subtest: renders views/partials/disconnect-buttons.ejs
+ok 281 - renders views/partials/disconnect-buttons.ejs
+  ---
+  duration_ms: 1.261389
+  type: 'test'
+  ...
+# Subtest: renders views/partials/client-options-overlay.ejs
+ok 282 - renders views/partials/client-options-overlay.ejs
+  ---
+  duration_ms: 1.563071
+  type: 'test'
+  ...
+# Subtest: renders views/layouts/main.ejs
+ok 283 - renders views/layouts/main.ejs
+  ---
+  duration_ms: 1.823664
+  type: 'test'
+  ...
+# Subtest: renders views/editors/verb.ejs
+ok 284 - renders views/editors/verb.ejs
+  ---
+  duration_ms: 1.628104
+  type: 'test'
+  ...
+# Subtest: renders views/editors/note-viewer.ejs
+ok 285 - renders views/editors/note-viewer.ejs
+  ---
+  duration_ms: 2.906625
+  type: 'test'
+  ...
+# Subtest: renders views/editors/ide.ejs
+ok 286 - renders views/editors/ide.ejs
+  ---
+  duration_ms: 1.508519
+  type: 'test'
+  ...
+# Subtest: renders views/editors/basic.ejs
+ok 287 - renders views/editors/basic.ejs
+  ---
+  duration_ms: 1.702474
+  type: 'test'
+  ...
+1..287
+# tests 335
+# suites 0
+# pass 332
+# fail 0
+# cancelled 0
+# skipped 3
+# todo 0
+# duration_ms 41353.987224

@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---- IDE theme variables (light & dark) ----
+   These back the Tailwind tokens used in JSX (bg-*, ink-*, line-*, brand-*). */
+
+:root {
+  /* LIGHT */
+  --bg-canvas: 248 250 252;  /* slate-50 */
+  --bg-surface: 255 255 255; /* white */
+  --bg-sunken: 241 245 249;  /* slate-100 */
+  --bg-raised: 255 255 255;  /* white */
+
+  --ink: 15 23 42;           /* slate-900 */
+  --ink-muted: 100 116 139;  /* slate-500 */
+  --ink-invert: 255 255 255; /* white */
+
+  --line-subtle: 226 232 240; /* slate-200 */
+  --line-strong: 100 116 139; /* slate-500 */
+
+  --brand-500: 59 130 246;   /* blue-500 */
+  --brand-600: 37 99 235;    /* blue-600 */
+}
+
+.dark {
+  /* DARK */
+  --bg-canvas: 15 23 42;     /* slate-900 */
+  --bg-surface: 17 24 39;    /* slate-800 */
+  --bg-sunken: 30 41 59;     /* slate-700 */
+  --bg-raised: 17 24 39;     /* slate-800 */
+
+  --ink: 226 232 240;        /* slate-200 */
+  --ink-muted: 148 163 184;  /* slate-400 */
+  --ink-invert: 17 24 39;    /* slate-800 */
+
+  --line-subtle: 51 65 85;   /* slate-600 */
+  --line-strong: 71 85 105;  /* slate-600 */
+}
+
+@layer base {
+  html, body, #root { height: 100%; }
+  /* Remove default browser body margin and give the page the themed background/text */
+  body { margin: 0; }
+  body { @apply bg-bg-canvas text-ink; }
+}
+
+/* Override dome.css body padding for IDE pages */
+body.ide-editor {
+  padding-top: 0 !important;
+}

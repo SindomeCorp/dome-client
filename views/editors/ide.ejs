@@ -1,0 +1,25 @@
+<%
+  var editThemes = ['ambience', 'chaos', 'chrome', 'clouds', 'clouds_midnight', 'cobalt', 'crimson_editor', 'dawn', 'dreamweaver', 'eclipse', 'github', 'idle_fingers', 'kr_theme', 'merbivore', 'merbivore_soft', 'mono_industrial', 'monokai', 'pastel_on_dark', 'solarized_dark', 'solarized_light', 'terminal', 'textmate', 'tomorrow_night', 'tomorrow_night_blue', 'tomorrow_night_bright', 'tomorrow_night_eighties', 'twilight', 'vibrant_ink', 'xcode'];
+  var editorTheme = 'twilight';
+  if ( req['query'] && req.query['et'] ) {
+    var et = req.query['et'];
+    for (var i = 0; i < editThemes.length; i++) {
+      if (et == editThemes[i]) {
+        editorTheme = et;
+        break;
+      }
+    }
+  }
+%>
+<%- include('../shells/child-window-ide-header') -%>
+<div
+  id="root"
+  data-editor-theme="<%=editorTheme%>"
+  data-local-save-node-max-lines="<%=editor.localSaveNodeMaxLines%>"
+  data-local-save-node-admin-max-lines="<%=editor.localSaveNodeAdminMaxLines%>"
+  data-local-save-note-max-lines="<%=editor.localSaveNoteMaxLines%>"
+  data-ide-edit-open-parent="<%=editor.ideEditOpenParent%>"
+  data-ide-vms-note-enabled="<%=editor.ideVmsNoteEnabled%>"
+></div>
+<script type="module" src="/js/ide-editor-window.js"></script>
+<%- include('../shells/child-window-footer') -%>

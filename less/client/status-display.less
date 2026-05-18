@@ -1,0 +1,80 @@
+#browser-client {
+  #status {
+    color: var(--offWhite, @offWhite);
+    font-size: smaller;
+    background-color: RGBA(0,0,0,0.5);
+    text-shadow: 1px 1px 1px RGBA(0,0,0,0.5);
+    position: fixed;
+    z-index: 999;
+    top: 0;
+    left: 0;
+    padding: 3px 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: auto;
+    #perf-buffer-flag {
+      padding-right: 3px;
+      color: orange;
+      margin-top: 1px;
+    }
+    .warn {
+        color: var(--domeOrange, @domeOrange);
+    }
+    #statusMsg {
+      flex: 1;
+      z-index: 10001;
+      position: relative;
+      top: -1px;
+    }
+    #gameHealth{
+      z-index: 10001;
+      position: relative;
+      .gylphicon-warning-sign {
+        padding-right: 10px;
+      }
+      .globe {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+        vertical-align: text-top;
+        background-image: url("/img/moo-status-sprite.png");
+        background-position: 16px 16px;
+        background-repeat: no-repeat;
+        margin: -1px 3px 0 -2px;
+        &.globe-fatal {
+          background-position: 0 0px;
+        }
+        &.globe-warn {
+          background-position: 0 -17px;
+        }
+        &.globe-ok {
+          background-position: 0 -33px;
+        }
+      }
+    }
+    #gameHealthDetail {
+      background-color: RGBA(0, 0, 0, 0.5);
+      width: 150px;
+      position: fixed;
+      top: 0;
+      z-index: 900;
+      left: -152px;
+
+      CANVAS {
+        border: 1px solid var(--domeOrange, @domeOrange);
+        border-radius: 4px;
+      }
+
+      .last-details {
+        margin: 5px;
+        padding: 5px;
+        font-size: smaller;
+        text-shadow: 2px 2px #2c2c29;
+        background-color: RGBA(0,0,0,0.5);
+          color: var(--grayLight, @grayLight);
+      }
+    }
+  }
+}

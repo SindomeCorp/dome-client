@@ -1,0 +1,316 @@
+/boost | activates Flashboost Capacitor Unit | Requires Flashboost cyberware.
+/erect | activates the laser sight | Requires Studdly cyberware.
+/extend | readies installed Nailz for combat | Requires Nailz cyberware.
+/flaccid | deactivates the laser sight | Requires Studdly cyberware.
+/nailz | extends/retracts installed Nailz | Requires Nailz cyberware.
+/retract | deactivate installed Nailz | Requires Nailz cyberware
+/studd | toggles the laser sight on and off | Requires Studdly cyberware.
+@bug | submit a game bug to bug tracker | 
+@fatal | toggle whether you kill those you fight | 
+@history | enter the history system | 
+@holdback <0-60> | reduce stats by specified percent, 0 to clear | Read help holdback.
+@ic | return to game world from the OOC lounge | 
+@lethal | toggle whether you kill those you fight | 
+@look_place me is <description> | set how you look in a room | 
+@macros | opens the menu to manage character macros | 
+@macros-add | starts the process of adding a new macro | 
+@macros-add <name> | starts adding a new macro named <name> | 
+@mooinfo | display server info i.e. population and db size | 
+@naked <part> is <anything> | set the description of the specified body part | 
+@nakeds | lists the descriptions of your body parts | 
+@name <anything> to <anything> | rename cloth to wearable item name | Requires cloth.
+@newbie | lists helpful information for new players | 
+@notes | interactive list of your character's notes | 
+@ooc | step out of the game world into the OOC lounge | 
+@rules | lists the rules of Sindome | Required reading for new players.
+@shortdesc | displays your current shortdesc term | 
+@shortdesc change | lists options to change your shortdesc term | 
+@slang | shows a random entry from Sindome slang dictionary | 
+@sleep_place me is <description> | set how you look while asleep in a room | 
+@stats | view your current skills and stats | 
+@temp_place me is <message> | set your temp place to <message> | 
+@tp | list your current look, temp, and sleep_place | 
+@tp me is <message> | set your temp place to <message> | 
+address <anyone> | speak specifically to target person | 
+addressing | shows who in the room you are speaking to | 
+afk | OOCly Step Away From your Keyboard. | 
+afk <person> | OOCly Note that <person> is AFK. | 
+aim at <anyone> | aim at target person with equipped weapon | 
+aim at <direction> | take aim at adjacent room with ranged weapon | Requires a ranged weapon.
+aim at <direction> edge | aim at the room off the specified edge | Requires a ranged weapon.
+akg | OOCly return from being AFK. | 
+akg <person> | OOCly wonder when <person> will return from AFK. | 
+attack <anyone> | attack target person with held item/weapon | 
+catch <thrown object> | catch a <thrown object> | must be in same location
+connect <character name> <password> | Login as <character> using <password> | 
+connect guest | Login using a guest account | Use @register to come play with us!
+count | count out the amount of chyen on your character | 
+disarm <person> | attempt to knock item out of target person's hands | Target must be holding item.
+dropm <amount> | drop an amount of chyen on the floor | Requires chyen, not in container.
+dropmoney <amount> | drops an amount of chyen on the floor | 
+enter <vehicle> | enters the front of a vehicle | 
+escort <someone> | Move in front of escorted person. | Requires target to @trust you to escort.
+examine <anything> | display all available commands for target | Highly recommended for newbies.
+follow <anyone> | follow target person if they leave the room | 
+free <person> | attempt to free target person from their grapple | Target must be grappled.
+freehands | puts away all held items | 
+frisk <anyone> | attempt to pat down target to see inventory | 
+get <anything> from <anything> | get an object from another object | 
+get <anything> | get an object from the room | 
+get <amount> from <anything> | get amount of chyen from container | Requires container that holds chyen.
+grapple <person> | attempt to restrain target person | 
+health | displays your current condition | 
+hide <anything> | hides an object in the room | 
+hide | hide yourself in the room | 
+ht | displays your current condition | 
+ignore <anyone> | stop watching/addressing target person | 
+information | displays list of helpful commands/help topics | 
+install <anything> | installs an object in the current room | Requires a specific toolbelt.
+inventory | displays your current inventory and encumbrance | 
+load <firearm> with <ammunition> | loads target weapon with specified ammunition | Requires correct ammo to load.
+memorize <anything> | attempt to memorize specified information | 
+memory | displays your memorized information | 
+mumble <message> | mumble something under your breath | 
+mutter <message> | mutter something under your breath | 
+ooc <message> | broadcast an OOC message to current room | 
+pay <amount> to <person> | pay target person specified amount of chyen | 
+pay <person> <amount> | pay target person specified amount of chyen | 
+pickpocket <person> | attempt to steal chyen from target person | 
+plant <item> on <person> | attempt to plant target item on target person | Must be holding item.
+pointout <anyone> | points out a hidden target to everyone in the room | 
+posture <style> | changes your fighting style in combat | Must be in combat. Help posture.
+put <anything> in <anything> | put an object inside a container | Requires container.
+put <amount> in <container> | put chyen inside a container | Requires container that holds chyen
+release <person> | release your grapple on target person | 
+resist | attempt to break out of a grapple | Must be grappled.
+say <anything> | say something outloud. See also Help Speaking | 
+search | search the current room for hidden exits, objects and people | 
+search <here> for tracks | search the current room for tracks | Must be a room that supports tracks.
+shadow <anyone> | follow target person while sneaking | 
+shortchange <amount> to <anyone> | attempt to fool someone into thinking you've paid | 
+shout <message> | shout loud enough to be heard in adjacent rooms | 
+smell <anyone> | displays scent of either yourself or target | 
+speaking | shows who can hear you, your language and @voice | 
+steal <item> from <person> | attempt to steal target item from target person | 
+stop <anything> | stops current action (walking, driving, etc) | 
+think <message> | convey your character's current thoughts | 
+throw <anything> to <exit> | throws the object through the exit | Must be holding the object.
+throw <anything> to <anything> | throws the object at the target object/person | Must be holding the object.
+time | checks available sources for the time | Requires watch or clock in room.
+uncuff <person> | attempt to remove target person's handcuffs | 
+unhide | step out of hiding | Must be hiding in the room.
+uninstall <anything> | uninstalls an object in the room | Requires a specific toolbelt.
+unload <firearm> | unloads target ranged weapon | 
+watch <anyone> | begin paying attention to target player's speech | 
+watch all | watch everyone in the room | 
+watching | shows who in the room you are paying attention to | 
+whisper "<message>" to <whoever> | whisper a <message> quietly to <whoever> | <whoever> is in the same location
+xhelp <message> | send <message> to admins | 
+@request-puppet
+@invis
+@add-note
+@an
+@twitter
+kill
+@homepage
+@email
+@socials
+@social
+@title
+@addalias
+@ansicolors
+@assign
+debug
+switchto
+@current-weapon
+@default-weapon
+@default-htoh
+speak
+flee
+@face
+@options
+grab
+wrest
+@profile
+@respond
+@luck
+@forums
+@wow
+@wisdom
+unaddress
+@voice
+@access
+@clear
+roles
+@typo
+@more
+@wrap
+@linelength
+@pagelength
+help
+@help
+@mail-options
+@edit-options
+@display-options
+@describe
+@messages
+@notedit
+@last-connection
+ex
+@quit
+@password
+news
+@time
+@ansi
+@who
+take
+drop
+to
+poke
+kiss
+ruffle
+pet
+pat
+cry
+pout
+frown
+eye
+shrug
+giggle
+shake
+wave
+spit
+pet
+french
+blink
+wink
+stare
+dream
+burp
+clap
+snert
+snuggle
+sigh
+growl
+yes
+gasp
+yawn
+nibble
+drool
+curse
+cackle
+tremble
+nod
+whistle
+goose
+kneel
+slap
+groove
+no!
+lag
+hi5
+smirk
+thwap
+chuckle
+raspberry
+grin
+laugh
+smile
+sob
+zerbert
+nestle
+melvin
+nuggie
+hug
+huggle
+bounce
+lick
+roll
+whuggle
+mumble
+stroke
+hicough
+floor
+puke
+gag
+fart
+snicker
+feh
+swoon
+cough
+brow
+curtsey
+typo
+sneeze
+pinch
+spaz
+dance
+worship
+bow
+point
+blush
+no
+purr
+punch
+d'oh
+ckiss
+bird
+buttkick
+pose
+crack
+craft
+@trust
+@trusted
+@untrust
+@addtrust
+@rmtrust
+strip
+/system
+/die
+/arm
+/unreel
+/reel
+/whip
+/thermo
+unslot
+/map
+/coords
+/legend
+/lowlight
+/lowlite
+/nightvision
+/nv
+/lenses
+/scan
+/zoom
+/link
+/unlink
+/video
+/videolink
+/videounlink
+/color
+/enhanceview
+/listen
+/silence
+/echo
+/rainbow
+cm
+ca
+cc
+cr
+ci
+ce
+ce+
+ce-
+ch
+who
+@who
+map
+xm
+xmo
+xooc
+xgame
+xhelp
+@xcon
+@xlisten
+@xsilence

@@ -1,0 +1,21 @@
+<%- include('../shells/child-window-header') -%>
+<div class="editor note-popup">
+  <div class="menu">
+    <% if ( !editor.readonly ) { %>
+      <button class="btn btn-danger abort pull-left">CLOSE</button>
+      <button class="btn btn-success upload pull-right" data-command="">LOADING ...</button>
+    <% } else { %>
+      <button class="btn btn-danger abort pull-left">CLOSE</button>
+      <button class="btn pull-right">READ-ONLY</button>
+    <% } %>
+  </div>
+  <div class="note-header">
+    <div class="note-authors"><span class="header-label">By</span><span class="header-value">Johnny</span></div>
+    <div class="note-timestamp"><span class="header-label">Noted</span><span class="header-value">Saturday, Jan 1st 1969 12:00AM PST</span></div>
+    <div class="note-subject"><span class="header-label">Subject</span><span class="header-value">Note Subject</span></div>
+    <div class="note-objects"><span class="header-label">Applies To</span><span class="header-value"><a href="javascript:void(0);" class="obj-text" data-obj="#98">Johnny (#98)</a><a href="javascript:void(0);" class="obj-text" data-obj="#18657">Slither (#18657)</a></span></div>
+  </div>
+    <textarea class="basic-textarea" rows="15" cols="50"></textarea>
+</div>
+<script type="module" src="/js/note-editor-window.js"></script>
+<%- include('../shells/child-window-footer') -%>

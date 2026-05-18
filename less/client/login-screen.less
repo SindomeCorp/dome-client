@@ -1,0 +1,335 @@
+.moo-login-page, .client-options-page {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 1160px;
+  padding: 12px;
+
+  .connect-error {
+    margin: 12px auto 18px;
+    width: min(860px, 100%);
+    background-color: rgba(0, 0, 0, 0.72);
+    border-radius: 10px;
+    border: 2px solid #A94442;
+    font-size: 16px;
+    text-align: left;
+    line-height: 1.35;
+
+    .close {
+      color: #A94442;
+      opacity: .65;
+      margin-top: -8px;
+      margin-right: -4px;
+    }
+  }
+
+  h1 {
+    text-shadow: 1px 1px 0 var(--black, @black);
+    background-color: rgba(0, 0, 0, 0.56);
+    border: 2px solid rgba(0, 0, 0, 0.95);
+    border-radius: 10px;
+    margin: 0 auto 14px;
+    font-size: 30px;
+    line-height: 1.1;
+    padding: 12px 18px;
+    width: fit-content;
+    max-width: 100%;
+    text-align: center;
+  }
+
+  .option-group {
+    width: 100%;
+    margin: 0 auto 14px;
+    padding: 12px;
+    height: auto;
+    clear: both;
+
+    &.connect-as-group,
+    &.website-login-group,
+    &.guest-group {
+      background-color: rgba(0, 0, 0, 0.56);
+      border: 2px solid rgba(0, 0, 0, 0.95);
+      border-radius: 10px;
+    }
+
+    &.guest-group {
+      text-align: center;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+      max-width: 100%;
+      padding: 12px 14px;
+    }
+
+    &.connect-as-group,
+    &.website-login-group {
+      padding: 16px;
+      min-height: 0;
+
+      h2 {
+        text-shadow: 1px 1px 0 var(--black, @black);
+        margin-top: 0;
+        margin-bottom: 14px;
+      }
+    }
+
+    .btn-xlarge {
+      padding: 11px 14px;
+      font-size: 24px;
+      line-height: 1.2;
+      border-radius: 6px;
+    }
+
+    .btn {
+      font-size: 16px;
+    }
+
+    input[type=text],
+    input[type=password],
+    input[type=email] {
+      width: 100%;
+      max-width: 100%;
+      padding: 8px 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid var(--gray, @gray);
+      color: var(--almostBlack, @almostBlack);
+      background: #fff;
+    }
+
+    label {
+      font-size: 15px;
+      letter-spacing: .02em;
+      text-shadow: 1px 1px 0 var(--black, @black);
+
+      &.gogogo {
+        color: #fff;
+        display: inline-block;
+        margin-left: 4px;
+      }
+    }
+
+    .moo-login-box,
+    .website-login-box {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+
+      .client-options {
+        color: var(--black, @black);
+        width: 50%;
+      }
+
+      .relative-group {
+        position: relative;
+        margin-top: 12px;
+
+        #secure-toggle,
+        .glyph-unlocked,
+        .glyph-locked {
+          cursor: pointer;
+        }
+
+        a,
+        input,
+        i {
+          vertical-align: top;
+          margin-right: 6px;
+        }
+      }
+
+      div#user-picker {
+        margin-bottom: 10px;
+
+        ul.dropdown-menu {
+          background-color: #171717;
+          border: 1px solid var(--black, @black);
+          padding: 0;
+
+          .box-shadow {
+            border: 5px 5px 5px rgba(0, 0, 0, 0.5);
+          }
+
+          .divider {
+            background-color: var(--black, @black);
+            border-bottom: 1px solid var(--gray, @gray);
+            margin: 0;
+            padding: 0;
+          }
+
+          li {
+            margin-right: 0;
+            padding: 4px;
+            color: var(--brightBlue, @brightBlue);
+            cursor: pointer;
+
+            &:hover,
+            &:focus {
+              color: lighten(#066, 10%);
+              background-image: linear-gradient(@black, darken(#111, 5%));
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .centered {
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .guest-group .btn {
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .left-seam {
+    border-left: 2px dashed #CCC;
+  }
+
+  .version {
+    font-family: 'Source Code Pro';
+    min-height: 0;
+    text-shadow: 1px 1px 0 var(--black, @black);
+    color: darken(@domeOrange, 8%);
+    border-radius: 8px;
+    width: 100%;
+    padding: 8px;
+    right: auto;
+    bottom: auto;
+    position: relative;
+    background-color: transparent;
+    margin: 4px 0 0;
+    white-space: normal;
+    border: 0;
+    text-align: center;
+
+    span {
+      margin: 4px;
+      display: inline-block;
+    }
+
+    a {
+      display: inline-block;
+      margin: 4px;
+    }
+  }
+
+  #login_btn {
+    margin-top: 10px;
+  }
+
+  .version-wrap {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.82);
+    border: 1px solid rgba(0, 0, 0, 0.98);
+    border-radius: 10px;
+    padding: 6px 10px;
+  }
+}
+
+@media (min-width: @screen-sm-min) {
+  .moo-login-page, .client-options-page {
+    padding: 18px 20px;
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 36px;
+      padding: 14px 22px;
+    }
+
+    .option-group {
+      margin-bottom: 18px;
+      padding: 16px;
+
+      .moo-login-box,
+      .website-login-box {
+        max-width: 560px;
+      }
+
+      .moo-login-box {
+        .relative-group {
+          #secure-toggle,
+          .glyph-unlocked,
+          .glyph-locked {
+            position: absolute;
+            right: -36px;
+            top: 2px;
+            left: auto;
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (min-width: @screen-md-min) {
+  .moo-login-page, .client-options-page {
+    display: grid;
+    grid-template-columns: minmax(320px, 620px);
+    grid-template-areas:
+      "title"
+      "auth"
+      "guest"
+      "mobile"
+      "version";
+    gap: 16px;
+    justify-content: center;
+    align-items: start;
+
+    h1 {
+      grid-area: title;
+    }
+
+    .connect-error,
+    #chrome-performance-warning {
+      grid-column: 1 / -1;
+    }
+
+    .option-group {
+      margin: 0;
+      height: auto;
+    }
+
+    .option-group.connect-as-group,
+    .option-group.website-login-group {
+      grid-area: auth;
+      min-height: 360px;
+      width: 100%;
+    }
+
+    .option-group.guest-group.right-seam {
+      grid-area: guest;
+      border-left: 0;
+      justify-self: center;
+      width: fit-content;
+      min-height: 0;
+    }
+
+    .option-group.guest-group.hidden-md.hidden-lg {
+      grid-area: mobile;
+      display: none !important;
+    }
+
+    .version-wrap {
+      grid-area: version;
+      margin-top: 2px;
+    }
+  }
+}
+
+@media (max-width: (@screen-md-min - 1)) {
+  .moo-login-page, .client-options-page {
+    .option-group.guest-group.hidden-xs.hidden-sm {
+      display: none !important;
+    }
+
+    .option-group.guest-group.hidden-md.hidden-lg {
+      display: block !important;
+    }
+  }
+}

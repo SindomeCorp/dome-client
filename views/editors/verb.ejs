@@ -1,0 +1,30 @@
+<%
+  var editThemes = ['ambience', 'chaos', 'chrome', 'clouds', 'clouds_midnight', 'cobalt', 'crimson_editor', 'dawn', 'dreamweaver', 'eclipse', 'github', 'idle_fingers', 'kr_theme', 'merbivore', 'merbivore_soft', 'mono_industrial', 'monokai', 'pastel_on_dark', 'solarized_dark', 'solarized_light', 'terminal', 'textmate', 'tomorrow_night', 'tomorrow_night_blue', 'tomorrow_night_bright', 'tomorrow_night_eighties', 'twilight', 'vibrant_ink', 'xcode'];
+	
+  var editorTheme = 'twilight'; // default theme
+  if ( req['query'] && req.query['et'] ) {
+	  var et = req.query['et'];
+	  for (var i = 0; i < editThemes.length; i++) {
+		  if (et == editThemes[i]) {
+			  editorTheme = et;
+			  break;
+			}
+	  }
+  }
+%>
+<%- include('../shells/child-window-header') -%>
+<div class="editor">
+  <div class="menu">
+    <% if ( !editor.readonly ) { %>
+      <button class="btn btn-danger abort pull-left">CLOSE</button>
+      <button class="btn btn-success upload pull-right" data-command="">LOADING ...</button>
+    <% } else { %>
+      <button class="btn btn-danger abort pull-left">CLOSE</button>
+      <button class="btn pull-right">READ-ONLY</button>
+    <% } %>
+    <div id="verb-status-holder" class="verb-status">Unsaved</div>
+  </div>
+  <div id="verb-editor-holder" class="verb-editor" data-editor-theme="<%=editorTheme%>"></div>
+</div>
+<script type="module" src="/js/editor-window.js"></script>
+<%- include('../shells/child-window-footer') -%>

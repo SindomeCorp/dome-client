@@ -1,0 +1,14 @@
+<!-- for some reason, insert the doctype mucks up the editor <!DOCTYPE html> -->
+<html lang="en">
+  <head>
+    <title><%=meta.title%></title>
+    <meta name="description" content="<%= meta.description %>">
+          <meta name="keywords" content="<%= meta.keywords %>">
+        <!--<meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro|Quantico:400,400italic,700|Roboto+Mono|Comic+Mono">
+    <script type="module" src="<%=decache('/js/logger.js')%>"></script>
+    <link rel="stylesheet" type="text/css" href="<%=decache('/css/ide.css')%>">
+  </head>
+  <body class="child-window">

@@ -1,0 +1,53 @@
+
+.ansi-bgred {
+  background-color: #900;
+}
+
+.ansi-bgblue {
+  background-color: #009;
+}
+
+.ansi-bggreen {
+  background-color: #090;
+}
+
+.ansi-bgcyan {
+  background-color: #099;
+}
+
+.ansi-bgyellow {
+  background-color: #990;
+}
+
+.ansi-bgmagenta {
+  background-color: #909;
+}
+
+.ansi-bgwhite {
+  background-color: #FFF;
+}
+
+.ansi-underline {
+  text-decoration: underline;
+}
+
+.ansi-faint {
+  filter: brightness(50%);
+}
+
+@keyframes blinker {
+  from { opacity: 1.0; }
+  to { opacity: 0.0; }
+}
+
+.ansi-slow-blink {
+  animation-name: blinker;
+  animation-iteration-count: infinite;
+  animation-timing-function: cubic-bezier(1.0,0,0,1.0);
+  animation-duration: 1400ms;
+}
+
+.input-echo {
+  color: #c67605;
+  font-style: italic;
+}

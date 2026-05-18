@@ -1,0 +1,52 @@
+#client-options-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1001;
+  background-color: var(--black, @black);
+  opacity: 0.8;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 1vh;
+}
+
+#client-options-overlay .client-options-page {
+  color: var(--offWhite, @offWhite);
+  margin-top: 0;
+}
+
+#client-options-overlay .client-options-page .well {
+  background-color: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--black, @black);
+  color: white;
+  max-height: 90vh;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 8px;
+  position: relative;
+}
+
+#client-options-overlay .options-top {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+#client-options-save-indicator {
+  color: var(--ansiBrGreen, @ansiBrGreen);
+}
+
+#button-client-options-close {
+  background: none;
+  border: none;
+  color: var(--offWhite, @offWhite);
+  font-size: 1.5em;
+  cursor: pointer;
+  margin-left: auto;
+}

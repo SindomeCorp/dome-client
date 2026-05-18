@@ -1,0 +1,20 @@
+<div class="mini-controls">
+  <% if (showReporter(req)) { %>
+    <button id="button-client-options" class="btn btn-primary btn-xs" type="button" title="open client options">
+      <i class="icon-cog icon-white" aria-hidden="true"></i><span class="hidden-xs">OPTIONS</span>
+    </button>
+    <button id="button-shortcuts" class="btn btn-primary btn-xs" href="#shortcuts" title="view keyboard shortcuts">
+      <i class="icon-th-list icon-white" aria-hidden="true"></i><span class="hidden-xs">SHORTCUTS</span>
+    </button>
+    <button id="button-clear-buffer" class="btn btn-primary btn-xs pull-right" href="clearbuffer" title="clear the output buffer.">
+      <i class="icon-remove icon-white" aria-hidden="true"></i><span class="hidden-xs">CLEAR BUFFER</span>
+    </button>
+    <button id="button-auto-scroll" class="btn btn-primary btn-xs pull-right" href="#autoscroll" title="pause/unpause automatic scrolling">
+      <i class="icon-pause icon-white" aria-hidden="true"></i><span class="hidden-xs">PAUSE SCROLL</span>
+    </button>
+    <button id="button-save-mini" class="btn btn-primary btn-xs pull-right" href="#savelog" title="save session as an HTML log file">
+      <i class="icon-download-alt icon-white" aria-hidden="true"></i><span class="hidden-xs">LOG</span>
+    </button>
+  <% } %>
+  <div id="editor-list-view" class="editor-list-view" style="display:none"></div>
+</div>

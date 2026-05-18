@@ -1,0 +1,121 @@
+<div class="moo-login-page">
+  <h1>Play <%=mooName%> Now</h1>
+
+  <%
+  var errorMsg = null;
+  if ( req.query && req.query[ 'error' ] ) {
+    if ( req.query.error == 'notadmin' ) {
+      errorMsg = 'Sorry, you\'re not authorized for that or you\'ve lost your session. Please login again.';
+    } else {
+      errorMsg = 'Unexpected error with code (' + req.query.error + ') occurred.';
+    }
+  } else if ( session && session[ 'error' ] ) {
+    errorMsg = session.error;
+    delete session[ 'error' ];
+  }
+
+  if ( errorMsg ) {
+  %>
+  <div class="connect-error alert alert-danger"><%=errorMsg%></div>
+
+  <% } %>
+
+  <div id="chrome-performance-warning" class="hidden connect-error alert alert-danger" style="display: flow-root; margin-bottom: 0">
+    <button type="button" class="close">×</button>
+    <strong>Warning!</strong> The version of Google Chrome you are using has a serious issue causing TERRIBLE performance for our community. We recommend using the new Firefox until we overcome this issue. You can continue to use Google Chrome but your buffer will be limited (which will limit your ability to download logs).</br>
+    <div class="pull-right">Thank you and apologies!</div>
+  </div>
+  <script language="JavaScript">
+      var chromeVersion = navigator.appVersion.match(/Chrome\/(\d+)/); 
+      var badChrome = (chromeVersion != null && parseInt(chromeVersion[1]) >= 79);
+      if (badChrome) document.getElementById('chrome-performance-warning').setAttribute('class', 'connect-error alert alert-danger');
+  </script>
+
+  <div class="option-group guest-group centered right-seam hidden-xs hidden-sm">
+    <a class="btn btn-xlarge btn-primary btn-connect-guest" rel="nofollow" href="/player-client/">Connect as a Guest</a>
+    <br>
+    <br>
+    <a class="btn btn-xlarge btn-primary btn-connect-other" rel="nofollow" href="/player-client/">Connect Manually</a>
+    <br>
+    <br>
+    <% if (signupUrl) { %>
+    <a class="btn btn-primary" href="<%=signupUrl%>">Signup Now</a>
+    <% } %>
+  </div>
+  <% if ( session && session.user ) { %>
+  <div class="option-group connect-as-group">
+    <h2 style="color: #eeeeee">Play As ...</h2>
+    <div class="moo-login-box">
+      <label for="moo-username">CHARACTER NAME</label><br>
+      <div id="user-picker" class="btn-group hide">
+        <button class="btn btn-default user-picker-label">{character name}</button>
+        <button class="btn btn-default dropdown-toggle">
+          <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu">
+          <%
+             if ( session.user?.chars ) {
+               var chars = session.user.chars;
+
+               for ( var i = 0 ; i < chars.length; i++) {
+
+          %>
+          <li class="character" data-username="<%=chars[i].name%>"><%=chars[i].name%></li>
+          <% } } %>
+          <li class="divider"></li>
+          <li data-command="newChar" class="command">Add Character</li>
+          <li data-command="purgeAll" class="command">Forget All</li>
+        </ul>
+      </div>
+      <input id="moo-username" type="text" name="username"><br>
+      <label for="moo-password">PASSWORD</label><br>
+      <input id="moo-password" type="password" name="password"><br>
+      <div class="relative-group">
+        <div class="pull-right">
+          <input class="btn btn-lg btn-primary" id="connect_as" type="submit" name="connect" value="Connect">
+          <i id="secure-toggle" class="glyph-network"></i>
+        </div> </div> </div> </div>
+
+  <% } else if (showWebsiteAuth) { %>
+  <div class="option-group website-login-group">
+    <h2 style="color:#EEE"><%=mooName%> Website Login</h2>
+    <div class="website-login-box">
+      <form method="POST" action="/website-login/">
+      <label for="email">EMAIL ADDRESS</label><br>
+      <input type="email" id="email-address" name="email"><br> <br>
+      <label for="password">PASSWORD</label><br>
+      <input type="password" name="pass"><br>
+      <input type="checkbox" name="gogogo" checked="checked"/> <label class="gogogo" for="gogogo" title="You probably only have one account, so leave this checked. If you've connected before, you'll skip character selection.">Connect Immediately</label>
+
+        <input class="btn btn-lg btn-primary pull-right" id="login_btn" type="submit" name="login" value="Login">
+        <% if ( req.query[ 'return' ] ) { %>
+        <input type="hidden" name="return" value="<%=req.query.return%>">
+        <% } %>
+      </form>
+    </div>
+  </div>
+
+  <% } %>
+
+  <div class="option-group guest-group centered hidden-md hidden-lg">
+    <a class="btn btn-xlarge btn-primary btn-connect-guest" rel="nofollow" href="/player-client/">Connect as a Guest</a>
+    <br>
+    <br>
+    <a class="btn btn-xlarge btn-primary btn-connect-other" rel="nofollow" href="/player-client/">Connect Manually</a>
+    <br>
+    <br>
+    <% if (signupUrl) { %>
+    <a class="btn btn-primary" href="<%=signupUrl%>">Signup Now</a>
+    <% } %>
+  </div>
+
+  <div class="version-wrap">
+    <div class="version">
+      <span>Dome Client v<%=version%></span>
+      <span>&copy; The Sindome Corporation 1997-<%=new Date().getFullYear()%></span>
+      <a href="/CHANGELOG.md">Changelog</a>
+    </div>
+  </div>
+</div>
+<%- include('partials/client-options-overlay') %>
+<script type="module" src="<%=decache('/js/client-connect.js')%>"></script>

@@ -1,0 +1,40 @@
+<% var useMinified = !debugMode;
+%>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title><%= meta.title %> | <%= gameName %></title>
+    <meta name="description" content="<%= meta.description %>">
+    <meta name="keywords" content="<%= meta.keywords %>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro|Quantico:400,400italic,700|Roboto+Mono|Comic+Mono">
+    <script language="javascript">
+      var socketUrl    = "<%=socketUrl%>";
+      var socketUrlSSL = "<%=socketUrlSSL%>";
+      var ip = "<%=req.ip%>";
+      var poweredBy = "<%=poweredBy%>";
+      var gameName = "<%=gameName%>";
+      var guestConnectCommand = "<%=guestConnectCommand%>";
+      var shortenEnabled = <%= shortenEnabled ? "true" : "false" %>;
+    </script>
+    <script type="module" src="<%=decache('/js/logger.js')%>"></script>
+    <link rel="stylesheet" type="text/css" href="<%=decache(mainWebsite + '/css/dome.css')%>">
+<%
+  var skin = 'client';
+  if (req.device) {
+    if (req.device == 'phone') {
+      skin = 'mobile-client';
+    } else if (req.device == 'tablet') {
+      skin = 'tablet-client';
+    }
+  }
+%>
+    <link rel="stylesheet" type="text/css" href="<%=decache('/css/' + skin + '.css')%>">
+  </head>
+  <body <%-((req.bodyClass == null) ? '' : ('class="' + req.bodyClass + '"'))%>>
+    <%- body %>
+  </body>
+</html>

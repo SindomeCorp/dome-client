@@ -1,0 +1,35 @@
+#shortcuts-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 998;
+  background-color: var(--black, @black);
+  opacity: 0.8;
+}
+#shortcuts-overlay .shortcuts-content {
+  opacity: 1;
+  background-color: var(--almostBlack, @almostBlack);
+  width: 300px;
+  margin: 0 auto;
+  padding: 10px;
+  border: 1px dotted var(--grayDark, @grayDark);
+  color: var(--offWhite, @offWhite);
+  text-align: left;
+  position: absolute;
+  z-index: 10001;
+  top: 150px;
+  right: 150px;
+  border-radius: 8px;
+}
+#shortcuts-overlay .shortcuts-content h4 {
+  margin-top: 0;
+}
+#shortcuts-overlay .shortcuts-content ul {
+  list-style: none;
+  padding-left: 0;
+}
+#shortcuts-overlay .shortcuts-content li {
+  margin: 5px 0;
+}

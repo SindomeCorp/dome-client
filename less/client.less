@@ -1,0 +1,40 @@
+@import "client/variables";
+
+@font-face {
+  font-family: 'Glyphicons Halflings';
+  src: url('/fonts/glyphicons-halflings-regular.eot');
+  src: url('/fonts/glyphicons-halflings-regular.eot?#iefix') format('embedded-opentype'),
+       url('/fonts/glyphicons-halflings-regular.woff2') format('woff2'),
+       url('/fonts/glyphicons-halflings-regular.woff') format('woff'),
+       url('/fonts/glyphicons-halflings-regular.ttf') format('truetype'),
+       url('/fonts/glyphicons-halflings-regular.svg#glyphicons_halflingsregular') format('svg');
+}
+
+@import "client/moo-text.less";      // moo text classes not provided by www.sindome.org/css/dome.css
+@import "client/xterm256.less";      // xterm 256 color support
+@import "client/core-elements.less"; // BODY, scrollbar, #browser-client root
+
+@import "client/auto-complete.less";
+@import "client/editors.less";
+@import "client/disconnect-overlay.less";
+@import "client/shortcuts-overlay.less";
+@import "client/options-overlay.less";
+@import "client/output-buffer.less";
+@import "client/input-buffer.less";
+@import "client/status-display.less";
+@import "client/mini-controls.less";
+@import "client/login-screen.less";
+@import "client/options-screen.less";
+
+// Responsive backgrounds
+@media (max-width: @screen-xs-max) {
+  BODY {
+    background: url('/img/fuller_street1_sq_sm.jpg');
+  }
+}
+
+@media (min-width: @screen-sm-min) and (max-width: @screen-sm-max) {
+  BODY {
+    background: url('/img/fuller_street1_sq_sm.jpg');
+  }
+}

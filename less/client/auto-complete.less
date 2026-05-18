@@ -1,0 +1,93 @@
+INPUT.ui-autocomplete-input {
+
+}
+
+UL.ui-autocomplete {
+  background-color:rgba(0, 0, 0, 1.0) !important;
+  background-image: none !important;
+  z-index: 1000;
+  &.ui-widget {
+    font-size: 0.9em;
+  }
+  &.ui-transparent-overlay {
+    background-color:rgba(0, 0, 0, 0.6) !important;
+  }
+
+  DIV.command-syntax {
+    min-width: 250px;
+    display: inline-block;
+  }
+
+  DIV.command-requires {
+    display: none;
+  }
+
+  DIV.command-instruction {
+    display: none;
+  }
+
+  DIV.command-syntax, DIV.command-instruction, DIV.command-requires {
+    white-space: nowrap;
+    padding: 3px 1px 3px 5px;
+    I {
+      color: var(--grayLight, @grayLight);
+    }
+  }
+
+  DIV.command-instruction {
+    color: var(--ansiBrYellow, @ansiBrYellow);
+    I {
+      color: darken( @ansiBrYellow, 20%);
+    }
+  }
+
+  DIV.command-requires {
+    color: var(--ansiBrMagenta, @ansiBrMagenta);
+  }
+
+  @media (min-width: 600px) {
+    DIV.command-instruction {
+      display: inline-block;
+    }
+  }
+
+  @media (min-width: @screen-sm-min) {
+    DIV.command-requires {
+      display: inline-block;
+    }
+  }
+}
+
+UL.ui-menu {
+  LI.ui-menu-item {
+    line-height: 10px;
+    padding: 0;
+
+    A {
+      color: white;
+      display: block;
+        text-shadow: 1px 1px 0 var(--black, @black);
+      padding: 0;
+      margin: 0;
+      line-height: normal;
+      text-decoration: none;
+        border-left: 3px solid var(--black, @black);
+        &#ui-active-menuitem {
+          border: 0;
+          border-left: 3px solid var(--domeOrange, @domeOrange);
+          background: none;
+          background-color: var(--black, @black);
+        }
+        &.ui-state-hover {
+          border-left: 3px solid var(--domeOrange, @domeOrange);
+          DIV {
+            font-weight: bold;
+          }
+        }
+    }
+
+    DIV.ui.menu-item-wrapper {
+      border: 0;
+    }
+  }
+}

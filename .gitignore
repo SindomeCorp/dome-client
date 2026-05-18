@@ -1,0 +1,11 @@
+node_modules
+.env
+coverage/
+public/*
+tmp/
+test-output.log
+!public/legacy/
+!/public/CHANGELOG.md
+webclient.log
+npm-debug.log
+nohup.out

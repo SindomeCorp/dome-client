@@ -1,0 +1,25 @@
+<%
+var useMinified = !debugMode;
+%>
+<% req.bodyClass = 'client'; %>
+<div id="browser-client">
+  <div id="lineBuffer" class="standardText" aria-live="polite"></div>
+  <textarea data-lpignore="true" id="inputBuffer" rows="4" cols="50"></textarea>
+  <div id="status">
+    <i id="perf-buffer-flag" class="hide glyphicon glyphicon-warning-sign" title="Unlimited Scrollback"></i>
+    <% if (typeof showStatusService !== "undefined" && showStatusService) { %>
+      <a href="<%= statusServiceUrl || '' %>" target="_blank" rel="noopener noreferrer"><span id="gameHealth" class="hidden-xs"><i class="warning-sign warning-sign-warn"></i><i class="globe globe-warn"></i></span></a><span id="statusMsg"></span>
+      <div id="gameHealthDetail"></div>
+    <% } %>
+  </div>
+</div>
+<%- include('partials/overlays') %>
+<%- include('partials/shortcuts-overlay') %>
+<%- include('partials/client-options-overlay') %>
+<%- include('partials/disconnect-buttons') %>
+<%- include('partials/mini-controls') %>
+  <script type="module">
+    import { clientOptions } from "<%=decache('/js/client-options.js')%>";
+    clientOptions["deviceType"] = "<%=req.device%>";
+  </script>
+  <script defer src="<%=decache('/js/player-client' + (useMinified ? '.min' : '') + '.js')%>"></script>

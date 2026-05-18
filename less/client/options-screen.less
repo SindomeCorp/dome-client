@@ -1,0 +1,48 @@
+.client-options-page {
+  .well {
+    background-color: RGBA(0,0,0,0.6);
+    border: 1px solid var(--black, @black);
+    color: white;
+    max-height: 90vh;
+    overflow: auto;
+    padding: 10px;
+    border-radius: 8px;
+    position: relative;
+    .option-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px;
+      font-size: 14px;
+      white-space: no-wrap;
+      min-height: 30px;
+      SPAN.option-label {
+        font-weight: bolder;
+        flex: 0 0 190px;
+        i {
+          pointer-events: auto;
+        }
+      }
+      DIV.option-choices {
+        flex: 1;
+      }
+      btn {
+        margin: 0 5px;
+        margin-left: auto;
+      }
+      SELECT {
+        width: 100%;
+      }
+      INPUT {
+        border-radius: 4px;
+        color: black;
+      }
+      .space-down {
+        height: 80px;
+      }
+    }
+  }
+  .divider {
+    clear: both;
+  }
+}
