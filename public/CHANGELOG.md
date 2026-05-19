@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Bumped displayed client version to `4.0.1` so the footer and server startup version match `package.json`.
 - Updated app version wiring to use `APP_VERSION` first, then `package.json` version, with a final fallback to `0.0.0`.
+- Unified client stylesheet loading to always use `/css/client.css` across desktop, phone, and tablet requests.
 
 ### Fixed
 - Reduced IDE toolbar button sizing and enabled responsive wrapping so top-row controls and editor content remain visible at the default non-maximized window size.
