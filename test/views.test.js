@@ -86,5 +86,9 @@ for (const file of files) {
     if (file === "views/client.ejs") {
       assert.match(html, /id="editor-list-view"/);
     }
+    if (file === "views/layouts/main.ejs") {
+      assert.match(html, /href="\/css\/client\.css"/);
+      assert.doesNotMatch(html, /mobile-client\.css|tablet-client\.css/);
+    }
   });
 }
