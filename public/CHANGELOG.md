@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
 - Restored `npm run build` behavior by making the build script execute the asset pipeline when run directly.
 - Re-centered IDE tab close buttons so the `×` icon stays visually centered within each tab.
 - Added a global `window.DomeBridge` ingress API so mobile native bridge integrations can route inbound game data through the standard client parser and retain color/format rendering.
+- Enabled mobile native bridge log downloads by sending generated HTML logs through `window.DomeNative.downloadLog` when available, with browser download fallback retained.
+- Added native-bridge socket shimming in the client bootstrap so mobile wrappers with `window.DomeNative` can run transport through the native bridge instead of initializing browser Socket.IO.
 
 ### Changed
 - Switched IDE top-bar theme, wrap, and tab-orientation controls to compact icon/glyph buttons with tooltips to improve fit at smaller window sizes.

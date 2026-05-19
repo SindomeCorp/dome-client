@@ -48,6 +48,17 @@ dome.setupButtons = function() {
       const filename = `${baseName}.log.${timestamp}.html`;
       const bufferHtml = dome.buffer?.innerHTML ?? "";
       const htmlDocument = buildLogHtml(bufferHtml);
+      if (typeof window !== "undefined" && window.DomeNative && typeof window.DomeNative.downloadLog === "function") {
+        try {
+          window.DomeNative.downloadLog(filename, htmlDocument);
+          if (dome.setFadeText && dome.statusDisplay) {
+            dome.setFadeText(dome.statusDisplay, "SAVING LOG...");
+          }
+          return;
+        } catch (err) {
+          logger?.warn?.("Native log download failed, falling back to browser download.", err);
+        }
+      }
       const blob = new Blob([htmlDocument], { type: "text/html;charset=utf-8" });
       const nav = typeof navigator !== "undefined" ? navigator : undefined;
       if (nav?.msSaveOrOpenBlob) {
