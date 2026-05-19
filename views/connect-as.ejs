@@ -58,6 +58,9 @@
                var chars = session.user.chars;
 
                for ( var i = 0 ; i < chars.length; i++) {
+                 if (!chars[i] || !chars[i].name) {
+                   continue;
+                 }
 
           %>
           <li class="character" data-username="<%=chars[i].name%>"><%=chars[i].name%></li>
