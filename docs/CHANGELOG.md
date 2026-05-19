@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-05-19
+
+### Changed
+- Reordered and reformatted `.env-example-production` to match `.env-example-local` section layout while preserving production-oriented example values.
+- Refreshed `README.md` with updated top-of-file hero copy/image, expanded feature coverage, screenshot section integration, and consistency cleanup.
+
+### Fixed
+- Improved status-service health-check error handling to avoid noisy JSON parse stack traces when misconfigured endpoints return HTML/non-JSON responses.
+- Added clearer status check diagnostics including HTTP status, content type, and short response preview for easier operator troubleshooting.
+
 ## 2026-05-18
 
 ### Added
