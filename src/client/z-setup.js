@@ -1,6 +1,7 @@
-import { dome, SOCKET_STATE_ENUM } from "./b-variables.js";
+import { dome, SOCKET_STATE_ENUM, setSocket } from "./b-variables.js";
 
 const init = () => {
+  const hasNativeBridge = typeof window !== "undefined" && !!window.DomeNative && typeof window.DomeNative.sendInput === "function";
 
   // references to various objects
   Object.assign(dome, {
@@ -98,16 +99,50 @@ const init = () => {
       }
     },
     sendInput(command) {
+      if (hasNativeBridge && window.DomeNative && typeof window.DomeNative.sendInput === "function") {
+        window.DomeNative.sendInput(String(command ?? ""));
+        return;
+      }
       if (dome.socket && typeof dome.socket.emit === "function") {
         dome.socket.emit("input", String(command ?? ""));
       }
     }
   };
 
-  setTimeout(function() {
-    dome.socket = dome.setupSocket();
-    dome.socket.on("data", dome.parseSocketData);
-  }, 500);
+  if (hasNativeBridge) {
+    const nativeSocketShim = {
+      emit(event, payload, ack) {
+        if (event === "input" && window.DomeNative && typeof window.DomeNative.sendInput === "function") {
+          window.DomeNative.sendInput(String(payload ?? ""));
+          if (typeof ack === "function") {
+            ack({ status: "command sent" });
+          }
+        } else if (typeof ack === "function") {
+          ack({ status: "ok" });
+        }
+      },
+      on() {},
+      off() {},
+      disconnect() {
+        if (window.DomeNative && typeof window.DomeNative.disconnectNative === "function") {
+          window.DomeNative.disconnectNative();
+        }
+      },
+      connect() {
+        if (window.DomeNative && typeof window.DomeNative.connectNative === "function") {
+          window.DomeNative.connectNative();
+        }
+      }
+    };
+    setSocket(nativeSocketShim);
+    dome.socket = nativeSocketShim;
+    dome.socketState = SOCKET_STATE_ENUM.CONNECTED;
+  } else {
+    setTimeout(function() {
+      dome.socket = dome.setupSocket();
+      dome.socket.on("data", dome.parseSocketData);
+    }, 500);
+  }
 };
 
 if (document.readyState === "loading") {
