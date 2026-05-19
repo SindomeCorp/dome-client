@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Prevented website-login crashes when remote auth returns null entries in `user.chars` by filtering invalid characters before session storage and rendering.
+- Reduced excess empty space in the logged-in "Play As ..." panel by removing fixed desktop minimum height so the box fits its content.
 
 ## 2026-05-18
 
