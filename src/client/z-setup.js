@@ -80,6 +80,30 @@ const init = () => {
   if (dome.setupHealthCheck) dome.setupHealthCheck();
 
   dome.setupOutputParser();
+
+  window.DomeBridge = {
+    onData(payload) {
+      if (typeof dome.parseSocketData === "function") {
+        dome.parseSocketData(String(payload ?? ""));
+      }
+    },
+    onStatus(payload) {
+      if (dome.setFadeText && dome.statusDisplay) {
+        dome.setFadeText(dome.statusDisplay, String(payload ?? ""));
+      }
+    },
+    onError(payload) {
+      if (dome.setFadeText && dome.statusDisplay) {
+        dome.setFadeText(dome.statusDisplay, "ERROR: " + String(payload ?? ""), true);
+      }
+    },
+    sendInput(command) {
+      if (dome.socket && typeof dome.socket.emit === "function") {
+        dome.socket.emit("input", String(command ?? ""));
+      }
+    }
+  };
+
   setTimeout(function() {
     dome.socket = dome.setupSocket();
     dome.socket.on("data", dome.parseSocketData);
