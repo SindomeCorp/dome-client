@@ -20,7 +20,7 @@
     "lint:views": "ejslint \"views/**/*.ejs\""
   },
   "dependencies": {
-    "ace-builds": "^1.43.2",
+    "ace-builds": "^1.44.0",
     "autoprefixer": "^10.4.19",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.1",
