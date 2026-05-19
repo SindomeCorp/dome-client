@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-05-18
 
+### Fixed
+- Prevented website-login crashes when remote auth returns null entries in `user.chars` by filtering invalid characters before session storage and rendering.
+
+## 2026-05-18
+
 ### Added
 - Added global autocomplete feature toggle (`AUTOCOMPLETE_ENABLED`) with default-off behavior and dedicated setup documentation (`docs/AUTOCOMPLETE.md`).
 

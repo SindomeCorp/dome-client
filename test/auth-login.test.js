@@ -30,7 +30,7 @@ test("assigns session user on success", async t => {
   login(req, res);
   await done;
   scope.done();
-  assert.deepEqual(req.session.user, { perms: [1] });
+  assert.deepEqual(req.session.user, { perms: [1], chars: [] });
   assert.strictEqual(redirect.url, "/");
 });
 
@@ -60,6 +60,23 @@ test("redirects to first char when gogogo set", async t => {
   login(req, res);
   await done;
   scope.done();
+  assert.strictEqual(redirect.url, "/?auto=hero");
+});
+
+test("ignores null char entries from remote auth payload", async t => {
+  const { login, setupAuth } = await load(t);
+  const { req, res, scope, redirect, done } = setupAuth({
+    status: 200,
+    response: {
+      status: "ok",
+      user: { perms: [1], chars: [null, { name: "hero" }] }
+    },
+    body: { email: "a", pass: "b", gogogo: true }
+  });
+  login(req, res);
+  await done;
+  scope.done();
+  assert.deepEqual(req.session.user.chars, [{ name: "hero" }]);
   assert.strictEqual(redirect.url, "/?auto=hero");
 });
 
@@ -95,7 +112,7 @@ test("builds request options when host includes port", async t => {
   login(req, res);
   await done;
   scope.done();
-  assert.deepEqual(req.session.user, { perms: [] });
+  assert.deepEqual(req.session.user, { perms: [], chars: [] });
   assert.strictEqual(redirect.url, "/");
 });
 
@@ -115,7 +132,7 @@ test("builds request options for https host", async t => {
   login(req, res);
   await done;
   scope.done();
-  assert.deepEqual(req.session.user, { perms: [] });
+  assert.deepEqual(req.session.user, { perms: [], chars: [] });
   assert.strictEqual(redirect.url, "/");
 });
 
