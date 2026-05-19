@@ -162,3 +162,13 @@ export default function build(options = {}) {
   }
   return buildPromise;
 }
+
+const runAsScript = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+
+if (runAsScript) {
+  build().catch((err) => {
+    const message = err?.stack || err?.message || String(err);
+    process.stderr.write(`${message}\n`);
+    process.exitCode = 1;
+  });
+}

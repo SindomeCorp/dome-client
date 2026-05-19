@@ -8,6 +8,19 @@ All notable changes to this project will be documented in this file.
 - Bumped displayed client version to `4.0.1` so the footer and server startup version match `package.json`.
 - Updated app version wiring to use `APP_VERSION` first, then `package.json` version, with a final fallback to `0.0.0`.
 
+### Fixed
+- Reduced IDE toolbar button sizing and enabled responsive wrapping so top-row controls and editor content remain visible at the default non-maximized window size.
+- Restored `npm run build` behavior by making the build script execute the asset pipeline when run directly.
+- Re-centered IDE tab close buttons so the `×` icon stays visually centered within each tab.
+
+### Changed
+- Switched IDE top-bar theme, wrap, and tab-orientation controls to compact icon/glyph buttons with tooltips to improve fit at smaller window sizes.
+- Changed the IDE shortcuts control to a compact glyph button and reduced tab button padding so more tabs fit comfortably in the tab strip.
+- Made the IDE shortcuts modal responsive at smaller/zoomed window sizes by reducing typography scale and adding internal scroll handling.
+- Reworked IDE toolbar responsiveness so controls/status/save/close stay on the first row at smaller sizes, with the editing context line moved to a centered second row.
+- Removed small-screen toolbar horizontal scrolling, tightened mobile control sizing, and shortened `View Saved Scratch` to `View Scratch` for better fit.
+- Shifted IDE toolbar responsive breakpoint to `md` so 640px stays in two-row mode, keeping the editing label visible below controls while further reducing mobile button sizing.
+
 ## 2026-05-18
 
 ### Added
