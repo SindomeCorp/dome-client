@@ -22,17 +22,7 @@
     </script>
     <script type="module" src="<%=decache('/js/logger.js')%>"></script>
     <link rel="stylesheet" type="text/css" href="<%=decache(mainWebsite + '/css/dome.css')%>">
-<%
-  var skin = 'client';
-  if (req.device) {
-    if (req.device == 'phone') {
-      skin = 'mobile-client';
-    } else if (req.device == 'tablet') {
-      skin = 'tablet-client';
-    }
-  }
-%>
-    <link rel="stylesheet" type="text/css" href="<%=decache('/css/' + skin + '.css')%>">
+    <link rel="stylesheet" type="text/css" href="<%=decache('/css/client.css')%>">
   </head>
   <body <%-((req.bodyClass == null) ? '' : ('class="' + req.bodyClass + '"'))%>>
     <%- body %>
