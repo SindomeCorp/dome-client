@@ -146,19 +146,7 @@ async function copyAce(outDir = path.join(__dirname, "..", "..", "public", "js",
   await fs.cp(srcDir, outDir, { recursive: true });
 }
 
-async function copyChangelog() {
-  const srcFile = path.join(__dirname, "..", "..", "docs", "CHANGELOG.md");
-  const destFile = path.join(__dirname, "..", "..", "public", "CHANGELOG.md");
-  try {
-    await fs.copyFile(srcFile, destFile);
-  } catch (err) {
-    if (err.code !== "ENOENT") {
-      throw err;
-    }
-  }
-}
-
-export { cleanDir, compileLess, compileReactCss, compileJs, compileEjsScripts, copyAce, copyChangelog };
+export { cleanDir, compileLess, compileReactCss, compileJs, compileEjsScripts, copyAce };
 
 export default function build(options = {}) {
   if (!buildPromise) {
@@ -169,7 +157,6 @@ export default function build(options = {}) {
         compileJs(options.jsOutDir),
         compileEjsScripts(options.jsOutDir),
         copyAce(options.aceOutDir),
-        copyChangelog()
       ]);
     })();
   }
