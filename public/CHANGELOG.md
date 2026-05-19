@@ -4,15 +4,6 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-05-18
 
-### Fixed
-- Prevented website-login crashes when remote auth returns null entries in `user.chars` by filtering invalid characters before session storage and rendering.
-- Reduced excess empty space in the logged-in "Play As ..." panel by removing fixed desktop minimum height so the box fits its content.
-
-### Removed
-- Removed the non-functional lock/unlock toggle from the logged-in "Play As ..." section.
-
-## 2026-05-18
-
 ### Added
 - Added global autocomplete feature toggle (`AUTOCOMPLETE_ENABLED`) with default-off behavior and dedicated setup documentation (`docs/AUTOCOMPLETE.md`).
 
@@ -22,7 +13,12 @@ All notable changes to this project will be documented in this file.
 - Updated `.env` example files to reflect new defaults and include autocomplete toggle guidance.
 - Expanded and aligned setup documentation across README and `docs/` for autocomplete, URL shortener, and website auth behavior.
 
+### Fixed
+- Prevented website-login crashes when remote auth returns null entries in `user.chars` by filtering invalid characters before session storage and rendering.
+- Reduced excess empty space in the logged-in "Play As ..." panel by removing fixed desktop minimum height so the box fits its content.
+
 ### Removed
+- Removed the non-functional lock/unlock toggle from the logged-in "Play As ..." section.
 - Removed outdated internal UI polish scratch doc (`docs/UI-POLISH.md`) to keep release docs focused on active features and operator setup.
 
 ## 2026-02-17
