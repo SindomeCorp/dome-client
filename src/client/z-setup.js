@@ -109,6 +109,14 @@ const init = () => {
     }
   };
 
+  if (typeof window.DomeNativeFlushQueuedEvents === "function") {
+    try {
+      window.DomeNativeFlushQueuedEvents();
+    } catch (err) {
+      // Ignore queue flush failures so the client can continue initializing.
+    }
+  }
+
   if (hasNativeBridge) {
     const nativeSocketShim = {
       emit(event, payload, ack) {
