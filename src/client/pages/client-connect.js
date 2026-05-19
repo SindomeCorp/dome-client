@@ -101,7 +101,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const usernamePickerToggle = usernamePicker ? usernamePicker.querySelector(".dropdown-toggle") : null;
   const usernameField = document.getElementById("moo-username");
   const passwordField = document.getElementById("moo-password");
-  const secureToggle = document.getElementById("secure-toggle");
   const chromeWarning = document.getElementById("chrome-performance-warning");
   const chromeWarningClose = chromeWarning ? chromeWarning.querySelector(".close") : null;
 
@@ -270,25 +269,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // we can auto launch
         connectFunction();
       }
-    }
-  }
-
-  if (secureToggle) {
-    secureToggle.className = "";
-    if ("https:" == document.location.protocol) {
-      secureToggle.classList.add("glyph-locked");
-      secureToggle.setAttribute("title", "You're about to connect in secure, encrypted mode. Click the lock icon to disable.");
-      secureToggle.addEventListener("click", () => {
-        if (window.confirm("Disable Encrypted Mode?")) {
-          window.location = "http://" + document.location.hostname + document.location.pathname;
-        }
-      });
-    } else {
-      secureToggle.classList.add("glyph-unlocked");
-      secureToggle.setAttribute("title", "You're about to connect in unencrypted mode. Click the open lock icon to switch to secure, encrypted mode.");
-      secureToggle.addEventListener("click", () => {
-        window.location = "https://" + document.location.hostname + document.location.pathname;
-      });
     }
   }
 

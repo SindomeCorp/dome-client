@@ -41,10 +41,13 @@ export async function login(req, res) {
     const authJSON = await remoteRes.json();
     let dest = "/";
     if (authJSON.status == "ok") {
-      req.session.user = authJSON.user;
+      const remoteUser = authJSON.user && typeof authJSON.user === "object" ? authJSON.user : {};
+      const chars = Array.isArray(remoteUser.chars)
+        ? remoteUser.chars.filter(char => char && typeof char.name === "string" && char.name.length)
+        : [];
+      req.session.user = { ...remoteUser, chars };
       if (req.body["gogogo"] && req.session["user"]) {
-        const chars = req.session.user.chars;
-        if (chars && chars.length && chars[0].name) {
+        if (chars.length && chars[0].name) {
           dest = "/?auto=" + chars[0].name;
         }
       }
