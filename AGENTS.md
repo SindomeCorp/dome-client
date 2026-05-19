@@ -14,6 +14,7 @@
 ## Changelog
 - Always update `public/CHANGELOG.md` when you add a feature, fix a bug, or make a user-visible enhancement.
 - Add new entries at the top of the file under the current date in `YYYY-MM-DD` format. If that date section does not exist, create it directly above older entries.
+- If the current date section already exists, append new bullets under that existing section and heading; do not create a second heading with the same date.
 - Group entries under the existing headings when applicable (`Added`, `Changed`, `Fixed`, `Removed`) and keep bullets concise, specific, and user-facing.
 - Do not delete or rewrite historical entries unless explicitly requested; only prepend or append the new relevant notes for the current change.
 
