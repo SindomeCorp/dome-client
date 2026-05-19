@@ -109,6 +109,14 @@ const init = () => {
     }
   };
 
+  if (hasNativeBridge && window.DomeNative && typeof window.DomeNative.bridgeReady === "function") {
+    try {
+      window.DomeNative.bridgeReady();
+    } catch (err) {
+      // Ignore bridge ready handshake failures.
+    }
+  }
+
   if (typeof window.DomeNativeFlushQueuedEvents === "function") {
     try {
       window.DomeNativeFlushQueuedEvents();
