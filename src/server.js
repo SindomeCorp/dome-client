@@ -16,6 +16,7 @@ import build from "./services/build.js";
 import router from "./routes/index.js";
 import * as socket from "./controllers/socket.js";
 import { fileURLToPath } from "node:url";
+import packageJson from "../package.json" with { type: "json" };
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const logger = named("client-app");
@@ -23,6 +24,7 @@ const logger = named("client-app");
 /** Constants **/
 const versionHash = process.env.GIT_HASH || "t" + new Date().getTime();
 const APP_START_TIME = new Date();
+const appVersion = process.env.APP_VERSION || packageJson.version || "0.0.0";
 
 /** Build Express & Start the HTTP Server **/
 const app = express();
@@ -61,7 +63,7 @@ app.set("view engine", "ejs");
 app.use(expressLayouts);
 app.set("layout", "layouts/main");
 app.set("cachingHash", versionHash);
-app.set("version", "4.0.0");
+app.set("version", appVersion);
 
 /** Setup Express Middleware **/
 app.use(morgan("dev", {

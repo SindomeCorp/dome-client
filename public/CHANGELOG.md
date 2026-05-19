@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-05-19
+
+### Changed
+- Bumped displayed client version to `4.0.1` so the footer and server startup version match `package.json`.
+- Updated app version wiring to use `APP_VERSION` first, then `package.json` version, with a final fallback to `0.0.0`.
+
 ## 2026-05-18
 
 ### Added
