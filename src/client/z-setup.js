@@ -1,6 +1,7 @@
-import { dome, SOCKET_STATE_ENUM } from "./b-variables.js";
+import { dome, SOCKET_STATE_ENUM, setSocket } from "./b-variables.js";
 
 const init = () => {
+  const hasNativeBridge = typeof window !== "undefined" && !!window.DomeNative && typeof window.DomeNative.sendInput === "function";
 
   // references to various objects
   Object.assign(dome, {
@@ -80,10 +81,84 @@ const init = () => {
   if (dome.setupHealthCheck) dome.setupHealthCheck();
 
   dome.setupOutputParser();
-  setTimeout(function() {
-    dome.socket = dome.setupSocket();
-    dome.socket.on("data", dome.parseSocketData);
-  }, 500);
+
+  window.DomeBridge = {
+    onData(payload) {
+      if (typeof dome.parseSocketData === "function") {
+        dome.parseSocketData(String(payload ?? ""));
+      }
+    },
+    onStatus(payload) {
+      if (dome.setFadeText && dome.statusDisplay) {
+        dome.setFadeText(dome.statusDisplay, String(payload ?? ""));
+      }
+    },
+    onError(payload) {
+      if (dome.setFadeText && dome.statusDisplay) {
+        dome.setFadeText(dome.statusDisplay, "ERROR: " + String(payload ?? ""), true);
+      }
+    },
+    sendInput(command) {
+      if (hasNativeBridge && window.DomeNative && typeof window.DomeNative.sendInput === "function") {
+        window.DomeNative.sendInput(String(command ?? ""));
+        return;
+      }
+      if (dome.socket && typeof dome.socket.emit === "function") {
+        dome.socket.emit("input", String(command ?? ""));
+      }
+    }
+  };
+
+  if (hasNativeBridge && window.DomeNative && typeof window.DomeNative.bridgeReady === "function") {
+    try {
+      window.DomeNative.bridgeReady();
+    } catch (err) {
+      // Ignore bridge ready handshake failures.
+    }
+  }
+
+  if (typeof window.DomeNativeFlushQueuedEvents === "function") {
+    try {
+      window.DomeNativeFlushQueuedEvents();
+    } catch (err) {
+      // Ignore queue flush failures so the client can continue initializing.
+    }
+  }
+
+  if (hasNativeBridge) {
+    const nativeSocketShim = {
+      emit(event, payload, ack) {
+        if (event === "input" && window.DomeNative && typeof window.DomeNative.sendInput === "function") {
+          window.DomeNative.sendInput(String(payload ?? ""));
+          if (typeof ack === "function") {
+            ack({ status: "command sent" });
+          }
+        } else if (typeof ack === "function") {
+          ack({ status: "ok" });
+        }
+      },
+      on() {},
+      off() {},
+      disconnect() {
+        if (window.DomeNative && typeof window.DomeNative.disconnectNative === "function") {
+          window.DomeNative.disconnectNative();
+        }
+      },
+      connect() {
+        if (window.DomeNative && typeof window.DomeNative.connectNative === "function") {
+          window.DomeNative.connectNative();
+        }
+      }
+    };
+    setSocket(nativeSocketShim);
+    dome.socket = nativeSocketShim;
+    dome.socketState = SOCKET_STATE_ENUM.CONNECTED;
+  } else {
+    setTimeout(function() {
+      dome.socket = dome.setupSocket();
+      dome.socket.on("data", dome.parseSocketData);
+    }, 500);
+  }
 };
 
 if (document.readyState === "loading") {
