@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - Migrated legacy dome utility/button/icon styles into the LESS source and bundled them in `/css/client.css`, removing the separate `/css/dome-extract.css` asset from runtime includes.
 - Updated HTML log export to inline the client stylesheet directly in downloaded log files so session logs no longer depend on Sindome-hosted CSS.
 - Updated keyboard shortcut help to document `Ctrl+R` command-history search.
+- Updated command-history search results so the active selection uses the client blue highlight with high-contrast white text, auto-scrolls into view during keyboard navigation, and expands to show full wrapped command text.
 
 ### Fixed
 - Prevented mobile connect-page horizontal overflow so the main auth panel, Website Login box, guest actions, and footer no longer bleed off the screen on small viewports.
@@ -28,6 +29,8 @@ All notable changes to this project will be documented in this file.
 - Added mobile-only up/down history buttons beside the input box that trigger the same command-history navigation behavior as keyboard arrow keys.
 - Fixed mobile history button behavior in multiline input so caret navigation now matches arrow-key behavior before history recall triggers.
 - Increased small-screen input box height beside mobile history buttons so the textarea fills the control column height without leaving dead space.
+- Filtered exact duplicate entries from command-history search results so repeated identical commands appear once.
+- Corrected history-search overlay/input sizing so the search field no longer expands beyond modal edges on smaller screens.
 
 ## 2026-05-19
 
