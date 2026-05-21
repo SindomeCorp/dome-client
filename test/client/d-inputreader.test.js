@@ -290,3 +290,16 @@ test("history search close button and backdrop close overlay", async (t) => {
   overlay.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert.ok(overlay.classList.contains("hide"));
 });
+
+test("history search de-duplicates exact command matches", async (t) => {
+  const { window } = await loadInputReader(t, { history: ["look", "@edit $su:nn", "@edit $su:nn", "@edit $su:nn", "say hi"] });
+  const query = document.querySelector("#history-search-query");
+  const results = document.querySelector("#history-search-results");
+
+  document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "r", ctrlKey: true, bubbles: true, cancelable: true }));
+  query.value = "@edit";
+  query.dispatchEvent(new window.Event("input", { bubbles: true }));
+
+  assert.equal(results.children.length, 1);
+  assert.equal(results.children[0].textContent, "@edit $su:nn");
+});

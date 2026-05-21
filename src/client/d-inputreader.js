@@ -164,12 +164,20 @@ dome.setupInputReader = () => {
       }
       const needle = historySearchQuery.value.trim().toLowerCase();
       const source = getHistorySearchSource();
-      historySearchMatches = source.filter((entry) => {
-        if (needle === "") {
-          return true;
+      const uniqueMatches = [];
+      const seen = new Set();
+      source.forEach((entry) => {
+        const normalized = String(entry);
+        if (needle !== "" && !normalized.toLowerCase().includes(needle)) {
+          return;
         }
-        return String(entry).toLowerCase().includes(needle);
+        if (seen.has(normalized)) {
+          return;
+        }
+        seen.add(normalized);
+        uniqueMatches.push(normalized);
       });
+      historySearchMatches = uniqueMatches;
       historySearchActiveIndex = historySearchMatches.length > 0 ? 0 : -1;
       renderHistorySearchResults();
     };
