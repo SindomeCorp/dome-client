@@ -21,7 +21,10 @@ test("buildLogHtml does not include remote stylesheet links", () => {
 test("buildLogHtml can use legacy linked stylesheet mode", () => {
   const html = buildLogHtml("<p>hello</p>", ".x { color: blue; }", false);
 
-  assert.match(html, /<link rel="stylesheet" href="https:\/\/sindome\.org\/css\/dome\.css">/);
+  assert.match(html, /https:\/\/fonts\.googleapis\.com\/css\?family=Source\+Code\+Pro\|Quantico:400,400italic,700\|Roboto\+Mono\|Comic\+Mono/);
+  assert.match(html, /<base href="https:\/\/play\.sindome\.org">/);
+  assert.match(html, /https:\/\/www\.sindome\.org\/css\/dome\.css/);
+  assert.match(html, /https:\/\/play\.sindome\.org\/css\/client\.css/);
   assert.doesNotMatch(html, /<style>\.x \{ color: blue; \}<\/style>/);
 });
 

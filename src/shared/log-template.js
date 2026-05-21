@@ -1,5 +1,10 @@
 const HTML_SUFFIX = "</div></div></body></html>";
-const LEGACY_LOG_STYLESHEET = "https://sindome.org/css/dome.css";
+const LEGACY_LOG_HEAD = [
+  "<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css?family=Source+Code+Pro|Quantico:400,400italic,700|Roboto+Mono|Comic+Mono\">",
+  "<base href=\"https://play.sindome.org\">",
+  "<link rel=\"stylesheet\" type=\"text/css\" href=\"https://www.sindome.org/css/dome.css\">",
+  "<link rel=\"stylesheet\" type=\"text/css\" href=\"https://play.sindome.org/css/client.css\">",
+].join("");
 
 /**
  * Wraps buffer markup in the HTML shell used for downloadable logs.
@@ -14,7 +19,7 @@ export function buildLogHtml(bufferHtml = "", styleCss = "", inlineCss = true) {
   const safeStyle = (styleCss ?? "").replace(/<\/style/gi, "<\\/style");
   const styleMarkup = inlineCss
     ? `<style>${safeStyle}</style>`
-    : `<link rel="stylesheet" href="${LEGACY_LOG_STYLESHEET}">`;
+    : LEGACY_LOG_HEAD;
   const htmlPrefix = [
     "<html><head><meta charset=\"utf-8\"><title>Web Client Buffer</title>",
     styleMarkup,

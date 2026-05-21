@@ -225,7 +225,8 @@ test("save button supports legacy linked stylesheet log mode", async (t) => {
   btn.click();
 
   const blobText = await capturedBlob.text();
-  assert.match(blobText, /https:\/\/sindome\.org\/css\/dome\.css/);
+  assert.match(blobText, /https:\/\/www\.sindome\.org\/css\/dome\.css/);
+  assert.match(blobText, /https:\/\/play\.sindome\.org\/css\/client\.css/);
   assert.doesNotMatch(blobText, /<style>body \{ background: #000; \}<\/style>/);
 });
 
