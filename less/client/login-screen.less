@@ -3,6 +3,13 @@
   width: 100%;
   max-width: 1160px;
   padding: 12px;
+  box-sizing: border-box;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: inherit;
+  }
 
   .connect-error {
     margin: 12px auto 18px;
@@ -317,6 +324,17 @@
 
 @media (max-width: (@screen-md-min - 1)) {
   .moo-login-page, .client-options-page {
+    .option-group.guest-group {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .guest-group .btn {
+      white-space: normal;
+      width: 100%;
+      max-width: 100%;
+    }
+
     .option-group.guest-group.hidden-xs.hidden-sm {
       display: none !important;
     }

@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - Updated HTML log export to inline the client stylesheet directly in downloaded log files so session logs no longer depend on Sindome-hosted CSS.
 
 ### Fixed
+- Prevented mobile connect-page horizontal overflow so the main auth panel, Website Login box, guest actions, and footer no longer bleed off the screen on small viewports.
 - Fixed real-device mobile styling mismatch by serving local `client.css` for all device types and removing runtime dependency on external `dome.css`.
 - Fixed exported HTML log typography fallback so buffer text stays monospace when `Source Code Pro` is unavailable offline.
 - Restored base legacy UI styling (`.btn`, `.hidden`, `.close`) in `dome-extract.css` so connect-page buttons and the Chrome performance warning render correctly without remote `dome.css`.
