@@ -213,29 +213,19 @@ test("mobile history buttons trigger up and down navigation", async (t) => {
   assert.equal(input.value, "temp");
 });
 
-test("mobile up/down buttons move caret within multiline input before history", async (t) => {
+test("mobile buttons always navigate history even in multiline input", async (t) => {
   const { window } = await loadInputReader(t);
   const input = dome.inputReader;
   const multiline = `${"a".repeat(70)}\n${"b".repeat(70)}\n${"c".repeat(70)}`;
   input.value = multiline;
-  const thirdLineStart = input.value.lastIndexOf("\n") + 1;
-  const pos = thirdLineStart + 3;
+  const pos = input.value.lastIndexOf("\n") + 3;
   input.selectionStart = pos;
   input.selectionEnd = pos;
   input.focus();
 
   document.querySelector("#button-input-history-up").click();
-  const secondLineStart = input.value.indexOf("\n") + 1;
-  const secondLineEnd = input.value.indexOf("\n", secondLineStart);
-  assert.ok(input.selectionStart >= secondLineStart && input.selectionStart <= secondLineEnd);
-  assert.equal(input.value, multiline);
+  assert.equal(input.value, "look");
 
   document.querySelector("#button-input-history-down").click();
-  assert.ok(input.selectionStart >= thirdLineStart && input.selectionStart <= input.value.length);
-  assert.equal(input.value, multiline);
-
-  input.selectionStart = 0;
-  input.selectionEnd = 0;
-  document.querySelector("#button-input-history-up").click();
-  assert.equal(input.value, "look");
+  assert.equal(input.value, "");
 });

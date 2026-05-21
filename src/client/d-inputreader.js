@@ -131,38 +131,36 @@ dome.setupInputReader = () => {
       }
       return false;
     };
-    const moveCaretByLine = (key) => {
-      const value = inputReader.value;
-      const direction = key === "ArrowUp" ? -1 : 1;
-      const basePos = direction < 0 ? inputReader.selectionStart : inputReader.selectionEnd;
-      const lineStart = value.lastIndexOf("\n", Math.max(0, basePos - 1)) + 1;
-      const lineEndIndex = value.indexOf("\n", basePos);
-      const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
-      const column = Math.max(0, basePos - lineStart);
-
-      if (direction < 0) {
-        if (lineStart === 0) {
-          return;
+    const applyHistoryNavigationFromButtons = (key) => {
+      if ( key === "ArrowUp" ) {
+        if ( commandPointer >= 0 ) {
+          commandPointer = ( commandPointer <= -1 ? commandBuffer.length : commandPointer ) - 1;
+          inputReader.value = commandBuffer[ commandPointer ];
+          return true;
         }
-        const prevLineEnd = lineStart - 1;
-        const prevLineStart = value.lastIndexOf("\n", Math.max(0, prevLineEnd - 1)) + 1;
-        const prevLineLength = prevLineEnd - prevLineStart;
-        const nextPos = prevLineStart + Math.min(column, prevLineLength);
-        inputReader.selectionStart = nextPos;
-        inputReader.selectionEnd = nextPos;
-        return;
+      } else if ( key === "ArrowDown" ) {
+        if ( commandPointer < commandBuffer.length - 1 ) {
+          commandPointer = ( commandPointer + 1 > commandBuffer.length ? 0 : commandPointer ) + 1;
+          inputReader.value = commandBuffer[ commandPointer ];
+          return true;
+        } else if ( commandPointer >= commandBuffer.length - 1 ) {
+          commandPointer = commandBuffer.length;
+          if ( inputReader.value == lastInput && inputReader.value != "" ) {
+            commandBuffer[ commandBuffer.length ] = inputReader.value;
+            if ( commandBuffer.length > 2e3 ) {
+              commandBuffer.shift();
+            }
+            commandPointer = commandBuffer.length;
+            store.put( "my-input-buffer", commandBuffer );
+            inputReader.value = "";
+            lastInput = "";
+          } else {
+            inputReader.value = lastInput;
+          }
+          return true;
+        }
       }
-
-      if (lineEnd >= value.length) {
-        return;
-      }
-      const nextLineStart = lineEnd + 1;
-      const nextLineEndIndex = value.indexOf("\n", nextLineStart);
-      const nextLineEnd = nextLineEndIndex === -1 ? value.length : nextLineEndIndex;
-      const nextLineLength = nextLineEnd - nextLineStart;
-      const nextPos = nextLineStart + Math.min(column, nextLineLength);
-      inputReader.selectionStart = nextPos;
-      inputReader.selectionEnd = nextPos;
+      return false;
     };
 
     inputReader.addEventListener("keydown", (event) => {
@@ -223,9 +221,7 @@ dome.setupInputReader = () => {
       });
       button.addEventListener("click", () => {
         inputReader.focus();
-        if (!applyHistoryNavigation(key)) {
-          moveCaretByLine(key);
-        }
+        applyHistoryNavigationFromButtons(key);
       });
     };
     wireHistoryButton("#button-input-history-up", "ArrowUp");
