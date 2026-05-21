@@ -10,8 +10,10 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Updated the main layout stylesheet include to use local `/css/dome-extract.css` instead of loading remote `https://sindome.org/css/dome.css`.
+- Migrated legacy dome utility/button/icon styles into the LESS source and bundled them in `/css/client.css`, removing the separate `/css/dome-extract.css` asset from runtime includes.
 
 ### Fixed
+- Fixed real-device mobile styling mismatch by serving local `client.css` for all device types and removing runtime dependency on external `dome.css`.
 - Restored base legacy UI styling (`.btn`, `.hidden`, `.close`) in `dome-extract.css` so connect-page buttons and the Chrome performance warning render correctly without remote `dome.css`.
 - Aligned extracted legacy global/link/button/title styles with Sindome’s `dome.css` so connect-page buttons, heading color, and version/changelog link colors match expected appearance more closely.
 - Restored explicit terminal font styling for `#inputBuffer` so command entry text matches the expected in-game monospace appearance.
