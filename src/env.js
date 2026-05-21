@@ -29,7 +29,7 @@ const env = cleanEnv(process.env, {
   SSL_KEY: str({ default: "" }),
   SSL_CERT: str({ default: "" }),
   SSL_PASSPHRASE: str({ default: "" }),
-  MOO_NAME: str({ default: "Anaconda" }),
+  MOO_NAME: str({ default: "Sindome" }),
   MOO_HOST: str({ default: "moo.sindome.org" }),
   MOO_PORT: num({ default: 5555 }),
   WEBSITE_BASE: str({ default: "" }),
