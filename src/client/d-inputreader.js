@@ -175,5 +175,26 @@ dome.setupInputReader = () => {
     });
     inputReader.addEventListener("focus", () => {
     });
+
+    const wireHistoryButton = (selector, key) => {
+      const button = document.querySelector(selector);
+      if (!button) {
+        return;
+      }
+      button.addEventListener("click", () => {
+        inputReader.focus();
+        const inputWindow = inputReader.ownerDocument?.defaultView;
+        if (!inputWindow || typeof inputWindow.KeyboardEvent !== "function") {
+          return;
+        }
+        inputReader.dispatchEvent(new inputWindow.KeyboardEvent("keydown", {
+          key,
+          bubbles: true,
+          cancelable: true
+        }));
+      });
+    };
+    wireHistoryButton("#button-input-history-up", "ArrowUp");
+    wireHistoryButton("#button-input-history-down", "ArrowDown");
   }
 };

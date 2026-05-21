@@ -23,6 +23,7 @@ All notable changes to this project will be documented in this file.
 - Restored explicit terminal font styling for `#inputBuffer` so command entry text matches the expected in-game monospace appearance.
 - Restored the input buffer top separator border to prevent visual clipping/offset at the bottom edge and match legacy `dome.css` behavior.
 - Corrected input buffer edge styling by removing the thicker top separator and restoring bottom spacing so the bottom line remains visible without increasing top border thickness.
+- Added mobile-only up/down history buttons beside the input box that trigger the same command-history navigation behavior as keyboard arrow keys.
 
 ## 2026-05-19
 
