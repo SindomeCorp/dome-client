@@ -1,4 +1,6 @@
 HTML {
+  font-size: 10px;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
   height: 100%;
   overflow: hidden;
 }
@@ -9,6 +11,10 @@ BODY {
   background-color: #111;
   background: url('/img/fuller_street1_sq.jpg');
   background-size: 100% 300%;
+  color: #eee;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.42857143;
   margin: 0;
   padding: 0;
   position: static;
@@ -32,6 +38,316 @@ BODY.client {
 *::-webkit-scrollbar-thumb {
   opacity: 0.1;
   background-image: linear-gradient(@brightBlue, @notsoBrightBlue);
+}
+
+a {
+  color: #08c;
+  text-decoration: none;
+}
+
+a:hover,
+a:focus {
+  color: #1ab2ff;
+  text-decoration: underline;
+}
+
+.hide {
+  display: none !important;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.pull-right {
+  float: right !important;
+}
+
+.pull-left {
+  float: left !important;
+}
+
+.alert {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  padding: 15px;
+}
+
+.alert-danger {
+  background-color: #f2dede;
+  border-color: #ebccd1;
+  color: #a94442;
+}
+
+.close {
+  color: #000;
+  float: right;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.2;
+  text-shadow: 0 1px 0 #fff;
+}
+
+.close:hover,
+.close:focus {
+  color: #000;
+  cursor: pointer;
+  opacity: 0.5;
+  text-decoration: none;
+}
+
+.btn {
+  background-image: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.42857143;
+  margin-bottom: 0;
+  padding: 6px 12px;
+  text-align: center;
+  text-decoration: none;
+  touch-action: manipulation;
+  user-select: none;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.btn:hover,
+.btn:focus,
+.btn.focus {
+  color: #fff;
+  text-decoration: none !important;
+}
+
+.btn:active,
+.btn.active {
+  background-image: none;
+  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+  outline: 0;
+}
+
+.btn.disabled,
+.btn[disabled],
+fieldset[disabled] .btn {
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.btn-default {
+  background-color: #e6e6e6;
+  border-color: #bbb;
+  color: #fff;
+}
+
+.btn-default:hover,
+.btn-default:focus,
+.btn-default.focus,
+.btn-default:active,
+.btn-default.active,
+.open > .dropdown-toggle.btn-default {
+  background-color: #ccc;
+  border-color: #9c9c9c;
+  color: #fff;
+}
+
+.btn-primary {
+  background-color: #08c;
+  border-color: #0044cc;
+  color: #fff;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary.focus,
+.btn-primary:active,
+.btn-primary.active,
+.open > .dropdown-toggle.btn-primary {
+  background-color: #006699;
+  border-color: #00308f;
+  color: #fff;
+}
+
+.btn-success {
+  background-color: #5cb85c;
+  border-color: #4cae4c;
+  color: #fff;
+}
+
+.btn-success:hover,
+.btn-success:focus,
+.btn-success.focus,
+.btn-success:active,
+.btn-success.active,
+.open > .dropdown-toggle.btn-success {
+  background-color: #449d44;
+  border-color: #398439;
+  color: #fff;
+}
+
+.btn-danger {
+  background-color: #ee5f5b;
+  border-color: #bd362f;
+  color: #fff;
+}
+
+.btn-danger:hover,
+.btn-danger:focus,
+.btn-danger.focus,
+.btn-danger:active,
+.btn-danger.active,
+.open > .dropdown-toggle.btn-danger {
+  background-color: #e9322d;
+  border-color: #8c2823;
+  color: #fff;
+}
+
+.btn-group {
+  display: inline-block;
+  position: relative;
+  vertical-align: middle;
+}
+
+.btn-group > .btn {
+  float: left;
+  position: relative;
+}
+
+.btn-group > .btn + .btn,
+.btn-group > .btn + .btn-group,
+.btn-group > .btn-group + .btn,
+.btn-group > .btn-group + .btn-group {
+  margin-left: -1px;
+}
+
+.btn-group > .btn:first-child {
+  margin-left: 0;
+}
+
+.btn-group .dropdown-toggle:active,
+.btn-group.open .dropdown-toggle {
+  outline: 0;
+}
+
+.btn-group > .btn + .dropdown-toggle {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.btn-lg,
+.btn-group-lg > .btn {
+  border-radius: 6px;
+  font-size: 18px;
+  line-height: 1.3333333;
+  padding: 10px 16px;
+}
+
+.btn-xs,
+.btn-group-xs > .btn {
+  border-radius: 3px;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 1px 5px;
+}
+
+.caret {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px dashed;
+  display: inline-block;
+  height: 0;
+  margin-left: 2px;
+  vertical-align: middle;
+  width: 0;
+}
+
+.btn-lg .caret {
+  border-left-width: 5px;
+  border-right-width: 5px;
+  border-top-width: 5px;
+}
+
+.dropdown-toggle:focus {
+  outline: 0;
+}
+
+.open > .dropdown-menu {
+  display: block;
+}
+
+.glyphicon {
+  display: inline-block;
+  font-family: "Glyphicons Halflings";
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1;
+  position: relative;
+  top: 1px;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+}
+
+.glyphicon-question-sign:before {
+  content: "\e085";
+}
+
+.glyphicon-warning-sign:before {
+  content: "\e107";
+}
+
+[class^="icon-"],
+[class*=" icon-"] {
+  background-image: url("/img/glyphicons-halflings-white.png");
+  background-position: 14px 14px;
+  background-repeat: no-repeat;
+  display: inline-block;
+  height: 14px;
+  line-height: 14px;
+  margin-top: 1px;
+  vertical-align: text-top;
+  width: 14px;
+}
+
+.icon-white {
+  background-image: url("/img/glyphicons-halflings-white.png");
+}
+
+.icon-th-list {
+  background-position: -264px 0;
+}
+
+.icon-remove {
+  background-position: -312px 0;
+}
+
+.icon-cog {
+  background-position: -432px 0;
+}
+
+.icon-download-alt {
+  background-position: -96px -24px;
+}
+
+.icon-pause {
+  background-position: -456px -24px;
+}
+
+.icon-play {
+  background-position: -264px -72px;
+}
+
+.icon-chevron-up {
+  background-position: -288px -120px;
+}
+
+.icon-chevron-down {
+  background-position: -313px -119px;
 }
 
 .all-copy {
