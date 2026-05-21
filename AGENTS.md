@@ -18,6 +18,11 @@
 - Group entries under the existing headings when applicable (`Added`, `Changed`, `Fixed`, `Removed`) and keep bullets concise, specific, and user-facing.
 - Do not delete or rewrite historical entries unless explicitly requested; only prepend or append the new relevant notes for the current change.
 
+## Stylesheets (LLM Critical)
+- `public/css/client.css` is a generated build artifact. Do not hand-edit this file.
+- Make stylesheet changes in `less/**/*.less` (usually under `less/client/`), then run `npm run build` to regenerate `public/css/client.css`.
+- If both a LESS source file and `public/css/client.css` appear changed, keep the LESS edits as the source of truth and ensure the generated CSS comes from the build.
+
 ## Logging
 - Use the shared Winston logger in src/logger.js for all output.
 - Select appropriate log levels (error, warn, info, etc.) with logger.*.
