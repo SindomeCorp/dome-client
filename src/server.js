@@ -13,18 +13,28 @@ import session from "express-session";
 import morgan from "morgan";
 import { deviceCapture } from "./services/ua.js";
 import build from "./services/build.js";
+import { getLogExportCss } from "./services/log-export-style.js";
 import router from "./routes/index.js";
 import * as socket from "./controllers/socket.js";
 import { fileURLToPath } from "node:url";
-import packageJson from "../package.json" with { type: "json" };
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const logger = named("client-app");
+const packageJsonPath = path.join(__dirname, "..", "package.json");
+
+function getPackageVersion() {
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+    return packageJson?.version || "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
 
 /** Constants **/
 const versionHash = process.env.GIT_HASH || "t" + new Date().getTime();
 const APP_START_TIME = new Date();
-const appVersion = process.env.APP_VERSION || packageJson.version || "0.0.0";
+const appVersion = process.env.APP_VERSION || getPackageVersion();
 
 /** Build Express & Start the HTTP Server **/
 const app = express();
@@ -103,6 +113,7 @@ app.use(function(req, res, next) {
   res.locals.mainWebsite = config.website.base;
   res.locals.guestConnectCommand = config.guest.connectCommand;
   res.locals.shortenEnabled = config.shorten.enabled;
+  res.locals.logExportCss = getLogExportCss();
   res.locals.showReporter = function(req) {
     let ua = req.headers["user-agent"];
     if (ua && ua.match("MSAppHost")) {
