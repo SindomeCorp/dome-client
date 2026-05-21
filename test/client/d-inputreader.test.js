@@ -303,3 +303,21 @@ test("history search de-duplicates exact command matches", async (t) => {
   assert.equal(results.children.length, 1);
   assert.equal(results.children[0].textContent, "@edit $su:nn");
 });
+
+test("history search keyboard navigation scrolls active item into view", async (t) => {
+  const { window } = await loadInputReader(t, { history: ["one", "two", "three"] });
+  const query = document.querySelector("#history-search-query");
+  let calls = 0;
+  const original = window.HTMLElement.prototype.scrollIntoView;
+  window.HTMLElement.prototype.scrollIntoView = () => {
+    calls++;
+  };
+  t.after(() => {
+    window.HTMLElement.prototype.scrollIntoView = original;
+  });
+
+  document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "r", ctrlKey: true, bubbles: true, cancelable: true }));
+  query.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+
+  assert.ok(calls >= 2);
+});

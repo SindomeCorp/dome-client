@@ -140,6 +140,7 @@ dome.setupInputReader = () => {
       if (!hasMatches) {
         return;
       }
+      let activeItem = null;
       historySearchMatches.forEach((entry, index) => {
         const item = document.createElement("li");
         item.className = "history-search-item";
@@ -147,6 +148,7 @@ dome.setupInputReader = () => {
         if (index === historySearchActiveIndex) {
           item.classList.add("active");
           item.setAttribute("aria-selected", "true");
+          activeItem = item;
         }
         item.addEventListener("mousedown", (event) => {
           event.preventDefault();
@@ -157,6 +159,9 @@ dome.setupInputReader = () => {
         });
         historySearchResults.appendChild(item);
       });
+      if (activeItem && typeof activeItem.scrollIntoView === "function") {
+        activeItem.scrollIntoView({ block: "nearest" });
+      }
     };
     const applyHistorySearchQuery = () => {
       if (!historySearchQuery) {
