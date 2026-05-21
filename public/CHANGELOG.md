@@ -25,6 +25,7 @@ All notable changes to this project will be documented in this file.
 - Corrected input buffer edge styling by removing the thicker top separator and restoring bottom spacing so the bottom line remains visible without increasing top border thickness.
 - Added mobile-only up/down history buttons beside the input box that trigger the same command-history navigation behavior as keyboard arrow keys.
 - Fixed mobile history button behavior in multiline input so caret navigation now matches arrow-key behavior before history recall triggers.
+- Increased small-screen input box height beside mobile history buttons so the textarea fills the control column height without leaving dead space.
 
 ## 2026-05-19
 
