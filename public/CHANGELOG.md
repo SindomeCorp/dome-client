@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - Added `public/css/dome-extract.css` to locally provide the legacy `dome.css` utility/button/alert/dropdown/icon styles still used by the client.
 - Added local glyphicon sprite assets (`public/img/glyphicons-halflings.png` and `public/img/glyphicons-halflings-white.png`) to remove runtime dependency on remote icon images.
 - Added a `Ctrl+R` command-history search overlay with live filtering, keyboard navigation, and click-to-select support that inserts the chosen command back into the input buffer.
+- Added a new client option to choose log export style between default inline CSS and legacy linked `https://sindome.org/css/dome.css` output.
 
 ### Changed
 - Updated the main layout stylesheet include to use local `/css/dome-extract.css` instead of loading remote `https://sindome.org/css/dome.css`.

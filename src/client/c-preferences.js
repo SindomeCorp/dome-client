@@ -35,6 +35,7 @@ dome.readPreferences = function() {
     lineBufferFont     : "standard",
     editorFont         : "standard",
     imagePreview       : false,
+    inlineLogCss       : true,
     transparentOverlay : true,
     broadSearch        : true,
     performanceBuffer  : dome.weakBrowser() ? 1750 : 0 // set to 0 for unlimited buffer / weak browsers get defaulted to 1750
@@ -68,6 +69,9 @@ dome.readPreferences = function() {
 
     if (options.indexOf("iv=true") != -1) {
       preferences.imagePreview = true;
+    }
+    if (options.indexOf("lc=false") != -1) {
+      preferences.inlineLogCss = false;
     }
 
     if (options.indexOf("as=long") != -1) {
@@ -180,6 +184,7 @@ const PREFERENCE_ENUM = {
   "pd" : { name: "playDing", storeKey: "playding", def: true },
   "le" : { name: "localEcho", storeKey: "localecho", def: false },
   "iv" : { name: "imagePreview", storeKey: "imageview", def: false },
+  "lc" : { name: "inlineLogCss", storeKey: "logcss", def: true },
   "as" : { name: "autoScroll", storeKey: "scroll", def: "dbl", valid: ["dbl", "long", "none"] },
   "of" : { name: "lineBufferFont", storeKey: "outfont", def: "standard", valid: FONT_CHOICES },
   "ef" : { name: "editorFont", storeKey: "editorfont", def: "standard", valid: FONT_CHOICES },

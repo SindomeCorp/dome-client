@@ -193,6 +193,43 @@ test("save button downloads HTML log", async (t) => {
   assert.equal(btn.disabled, false);
 });
 
+test("save button supports legacy linked stylesheet log mode", async (t) => {
+  const { window, dome } = await setupWindow(t);
+  window.__LOG_EXPORT_CSS__ = "body { background: #000; }";
+  const btn = window.document.createElement("button");
+  window.document.body.appendChild(btn);
+  dome.saveButton = btn;
+  dome.preferences.inlineLogCss = false;
+  dome.buffer.innerHTML = "<p>log</p>";
+
+  window.URL.createObjectURL = () => {
+    throw new Error("Expected URL.createObjectURL to be mocked");
+  };
+  window.URL.revokeObjectURL = () => {};
+
+  let capturedBlob;
+  t.mock.method(window.URL, "createObjectURL", (blob) => {
+    capturedBlob = blob;
+    return "blob:mock";
+  });
+  t.mock.method(window.URL, "revokeObjectURL", () => {});
+  const originalAppend = window.document.body.appendChild;
+  t.mock.method(window.document.body, "appendChild", function(element) {
+    if (element.tagName === "A") {
+      t.mock.method(element, "click");
+    }
+    return originalAppend.call(this, element);
+  });
+
+  dome.setupButtons();
+  btn.click();
+
+  const blobText = await capturedBlob.text();
+  assert.match(blobText, /https:\/\/www\.sindome\.org\/css\/dome\.css/);
+  assert.match(blobText, /https:\/\/play\.sindome\.org\/css\/client\.css/);
+  assert.doesNotMatch(blobText, /<style>body \{ background: #000; \}<\/style>/);
+});
+
 test("shortcuts button toggles fullscreen overlay", async () => {
   const { window, dome } = await setupWindow();
   const btn = window.document.createElement("button");
