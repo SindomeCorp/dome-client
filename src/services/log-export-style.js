@@ -12,6 +12,30 @@ const CSS_PATHS = [
 
 let cachedCss;
 
+function addFontFallbacks(cssText) {
+  if (!cssText) {
+    return "";
+  }
+  let css = cssText;
+  css = css.replace(
+    /font-family:\s*['"]?Source Code Pro['"]?/g,
+    "font-family:'Source Code Pro','Liberation Mono','DejaVu Sans Mono',monospace"
+  );
+  css = css.replace(
+    /font-family:\s*['"]?Roboto Mono['"]?/g,
+    "font-family:'Roboto Mono','Liberation Mono','DejaVu Sans Mono',monospace"
+  );
+  css = css.replace(
+    /font-family:\s*['"]?Comic Mono['"]?/g,
+    "font-family:'Comic Mono','Liberation Mono','DejaVu Sans Mono',monospace"
+  );
+  css = css.replace(
+    /font-family:\s*['"]?Quantico['"]?/g,
+    "font-family:'Quantico','Helvetica Neue',Helvetica,Arial,sans-serif"
+  );
+  return css;
+}
+
 export function getLogExportCss() {
   if (cachedCss !== undefined) {
     return cachedCss;
@@ -19,7 +43,7 @@ export function getLogExportCss() {
 
   for (const cssPath of CSS_PATHS) {
     try {
-      cachedCss = fs.readFileSync(cssPath, "utf8");
+      cachedCss = addFontFallbacks(fs.readFileSync(cssPath, "utf8"));
       return cachedCss;
     } catch (err) {
       if (err?.code !== "ENOENT") {
