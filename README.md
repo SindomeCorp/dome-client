@@ -18,10 +18,7 @@ cd dome-client
 npm i
 npm start
 ```
-
 Open in Browser: http://localhost:8080
-```
-```
 
 **Quick links:** [Installation](#installation) · [Setup Guides](#setup-guides) · [Contributing](#contributing)
 
