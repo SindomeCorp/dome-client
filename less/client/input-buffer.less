@@ -1,5 +1,41 @@
 
 #browser-client {
+  .input-buffer-row {
+    align-items: stretch;
+    display: flex;
+    gap: 4px;
+
+    #inputBuffer {
+      flex: 1 1 auto;
+
+      @media (max-width: @screen-xs-max) {
+        height: 68px;
+      }
+    }
+  }
+
+  .input-history-nav {
+    background-color: #000;
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 6px;
+    justify-content: center;
+    padding: 4px;
+    width: 64px;
+
+    button {
+      height: 28px;
+      line-height: 1;
+      padding: 4px 10px;
+      width: 100%;
+    }
+
+    @media (min-width: @screen-sm-min) {
+      display: none !important;
+    }
+  }
+
   #inputBuffer {
     height: 50px;
     line-height: 16px;

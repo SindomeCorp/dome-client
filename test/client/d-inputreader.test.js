@@ -5,7 +5,7 @@ import { setupDom } from "./index.js";
 import { dome, socket, setSocket, logger } from "../../src/client/b-variables.js";
 
 const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
-  const { window } = setupDom("<!doctype html><html><body><input id=\"input\" /></body></html>");
+  const { window } = setupDom("<!doctype html><html><body><textarea id=\"input\"></textarea><button id=\"button-input-history-up\" type=\"button\"></button><button id=\"button-input-history-down\" type=\"button\"></button></body></html>");
   const origGlobals = { window: globalThis.window, document: globalThis.document };
   const { store } = await import("../../src/client/store.js");
   Object.assign(store, {
@@ -197,4 +197,35 @@ test("arrow up after send recalls last command", async (t) => {
   input.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
   input.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowUp" }));
   assert.equal(input.value, "say hi");
+});
+
+test("mobile history buttons trigger up and down navigation", async (t) => {
+  t.mock.timers.enable();
+  const { window } = await loadInputReader(t);
+  const input = dome.inputReader;
+  input.value = "temp";
+  input.dispatchEvent(new window.KeyboardEvent("keypress", { key: "t" }));
+  t.mock.timers.tick(5);
+
+  document.querySelector("#button-input-history-up").click();
+  assert.equal(input.value, "look");
+  document.querySelector("#button-input-history-down").click();
+  assert.equal(input.value, "temp");
+});
+
+test("mobile buttons always navigate history even in multiline input", async (t) => {
+  const { window } = await loadInputReader(t);
+  const input = dome.inputReader;
+  const multiline = `${"a".repeat(70)}\n${"b".repeat(70)}\n${"c".repeat(70)}`;
+  input.value = multiline;
+  const pos = input.value.lastIndexOf("\n") + 3;
+  input.selectionStart = pos;
+  input.selectionEnd = pos;
+  input.focus();
+
+  document.querySelector("#button-input-history-up").click();
+  assert.equal(input.value, "look");
+
+  document.querySelector("#button-input-history-down").click();
+  assert.equal(input.value, "");
 });

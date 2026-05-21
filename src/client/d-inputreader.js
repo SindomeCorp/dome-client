@@ -89,19 +89,17 @@ dome.setupInputReader = () => {
 
   if ( dome.inputReader ) {
     const inputReader = dome.inputReader;
-    inputReader.addEventListener("keydown", (event) => {
-      // total characters in the input; used to decide when to allow history recall
+    const applyHistoryNavigation = (key) => {
       const lineLength = inputReader.value.length;
-      if ( event.key === "ArrowUp" ) {
+      if ( key === "ArrowUp" ) {
         // Up arrow: recall previous command when at line start or line is short
         const cursor = getCursorPosition( inputReader );
         if ( commandPointer >= 0 && cursor.start == cursor.end && ( lineLength < 150 || cursor.start === 0 ) ) {
           commandPointer = ( commandPointer <= -1 ? commandBuffer.length : commandPointer ) - 1;
           inputReader.value = commandBuffer[ commandPointer ];
-          event.preventDefault();
-          return false;
+          return true;
         }
-      } else if ( event.key === "ArrowDown" ) {
+      } else if ( key === "ArrowDown" ) {
         // Down arrow: show next command when at line end or line is short
         const cursor = getCursorPosition( inputReader );
         if ( cursor.start == cursor.end && ( lineLength < 150 || cursor.start === lineLength ) ) {
@@ -109,8 +107,7 @@ dome.setupInputReader = () => {
             // down (show next newest)
             commandPointer = ( commandPointer + 1 > commandBuffer.length ? 0 : commandPointer ) + 1;
             inputReader.value = commandBuffer[ commandPointer ];
-            event.preventDefault();
-            return false;
+            return true;
           } else if ( commandPointer >= commandBuffer.length - 1 ) {
             // down (at last, don't show me anything)
             commandPointer = commandBuffer.length;
@@ -128,10 +125,48 @@ dome.setupInputReader = () => {
             } else {
               inputReader.value = lastInput;
             }
-            event.preventDefault();
-            return false;
+            return true;
           }
         }
+      }
+      return false;
+    };
+    const applyHistoryNavigationFromButtons = (key) => {
+      if ( key === "ArrowUp" ) {
+        if ( commandPointer >= 0 ) {
+          commandPointer = ( commandPointer <= -1 ? commandBuffer.length : commandPointer ) - 1;
+          inputReader.value = commandBuffer[ commandPointer ];
+          return true;
+        }
+      } else if ( key === "ArrowDown" ) {
+        if ( commandPointer < commandBuffer.length - 1 ) {
+          commandPointer = ( commandPointer + 1 > commandBuffer.length ? 0 : commandPointer ) + 1;
+          inputReader.value = commandBuffer[ commandPointer ];
+          return true;
+        } else if ( commandPointer >= commandBuffer.length - 1 ) {
+          commandPointer = commandBuffer.length;
+          if ( inputReader.value == lastInput && inputReader.value != "" ) {
+            commandBuffer[ commandBuffer.length ] = inputReader.value;
+            if ( commandBuffer.length > 2e3 ) {
+              commandBuffer.shift();
+            }
+            commandPointer = commandBuffer.length;
+            store.put( "my-input-buffer", commandBuffer );
+            inputReader.value = "";
+            lastInput = "";
+          } else {
+            inputReader.value = lastInput;
+          }
+          return true;
+        }
+      }
+      return false;
+    };
+
+    inputReader.addEventListener("keydown", (event) => {
+      if ((event.key === "ArrowUp" || event.key === "ArrowDown") && applyHistoryNavigation(event.key)) {
+        event.preventDefault();
+        return false;
       }
     });
     inputReader.addEventListener("keypress", (event) => {
@@ -175,5 +210,21 @@ dome.setupInputReader = () => {
     });
     inputReader.addEventListener("focus", () => {
     });
+
+    const wireHistoryButton = (selector, key) => {
+      const button = document.querySelector(selector);
+      if (!button) {
+        return;
+      }
+      button.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+      });
+      button.addEventListener("click", () => {
+        inputReader.focus();
+        applyHistoryNavigationFromButtons(key);
+      });
+    };
+    wireHistoryButton("#button-input-history-up", "ArrowUp");
+    wireHistoryButton("#button-input-history-down", "ArrowDown");
   }
 };
