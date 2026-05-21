@@ -69,6 +69,9 @@ Open in Browser: http://localhost:8080
 ### Xterm256 Color Support
 ![Xterm256 color rendering support](docs/images/xterm256-color-support.png)
 
+### Command History Search
+![Command History Search](docs/images/command-history-search.png)
+
 ## Installation
 
 1. Install system dependencies (Ubuntu example):
