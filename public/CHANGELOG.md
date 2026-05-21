@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Restored base legacy UI styling (`.btn`, `.hidden`, `.close`) in `dome-extract.css` so connect-page buttons and the Chrome performance warning render correctly without remote `dome.css`.
+- Aligned extracted legacy global/link/button/title styles with Sindome’s `dome.css` so connect-page buttons, heading color, and version/changelog link colors match expected appearance more closely.
 
 ## 2026-05-19
 

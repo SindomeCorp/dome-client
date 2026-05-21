@@ -3,6 +3,30 @@
  * Scope: only selectors still referenced by the app templates/client code.
  */
 
+html {
+  font-size: 10px;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+body {
+  background-color: #000;
+  color: #eee;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.42857143;
+}
+
+a {
+  color: #08c;
+  text-decoration: none;
+}
+
+a:hover,
+a:focus {
+  color: #1ab2ff;
+  text-decoration: underline;
+}
+
 .hide {
   display: none !important;
 }
@@ -62,6 +86,7 @@
   margin-bottom: 0;
   padding: 6px 12px;
   text-align: center;
+  text-decoration: none;
   touch-action: manipulation;
   user-select: none;
   vertical-align: middle;
@@ -72,7 +97,7 @@
 .btn:focus,
 .btn.focus {
   color: #fff;
-  text-decoration: none;
+  text-decoration: none !important;
 }
 
 .btn:active,
@@ -92,9 +117,9 @@ fieldset[disabled] .btn {
 }
 
 .btn-default {
-  background-color: #fff;
-  border-color: #ccc;
-  color: #333;
+  background-color: #e6e6e6;
+  border-color: #bbb;
+  color: #fff;
 }
 
 .btn-default:hover,
@@ -103,14 +128,14 @@ fieldset[disabled] .btn {
 .btn-default:active,
 .btn-default.active,
 .open > .dropdown-toggle.btn-default {
-  background-color: #e6e6e6;
-  border-color: #adadad;
-  color: #333;
+  background-color: #ccc;
+  border-color: #9c9c9c;
+  color: #fff;
 }
 
 .btn-primary {
-  background-color: #337ab7;
-  border-color: #2e6da4;
+  background-color: #08c;
+  border-color: #0044cc;
   color: #fff;
 }
 
@@ -120,8 +145,8 @@ fieldset[disabled] .btn {
 .btn-primary:active,
 .btn-primary.active,
 .open > .dropdown-toggle.btn-primary {
-  background-color: #286090;
-  border-color: #204d74;
+  background-color: #006699;
+  border-color: #00308f;
   color: #fff;
 }
 
@@ -143,8 +168,8 @@ fieldset[disabled] .btn {
 }
 
 .btn-danger {
-  background-color: #d9534f;
-  border-color: #d43f3a;
+  background-color: #ee5f5b;
+  border-color: #bd362f;
   color: #fff;
 }
 
@@ -154,9 +179,26 @@ fieldset[disabled] .btn {
 .btn-danger:active,
 .btn-danger.active,
 .open > .dropdown-toggle.btn-danger {
-  background-color: #c9302c;
-  border-color: #ac2925;
+  background-color: #e9322d;
+  border-color: #8c2823;
   color: #fff;
+}
+
+.moo-login-page h1,
+.client-options-page h1 {
+  color: #d07c05;
+}
+
+.moo-login-page .version a,
+.client-options-page .version a {
+  color: inherit;
+}
+
+.moo-login-page .version a:hover,
+.moo-login-page .version a:focus,
+.client-options-page .version a:hover,
+.client-options-page .version a:focus {
+  color: #e28e18;
 }
 
 .btn-group {
