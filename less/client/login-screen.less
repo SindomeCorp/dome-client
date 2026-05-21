@@ -23,6 +23,7 @@
   }
 
   h1 {
+    color: #d07c05;
     text-shadow: 1px 1px 0 var(--black, @black);
     background-color: rgba(0, 0, 0, 0.56);
     border: 2px solid rgba(0, 0, 0, 0.95);
@@ -208,8 +209,14 @@
     }
 
     a {
+      color: inherit;
       display: inline-block;
       margin: 4px;
+
+      &:hover,
+      &:focus {
+        color: #e28e18;
+      }
     }
   }
 
