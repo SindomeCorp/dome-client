@@ -11,9 +11,13 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Updated the main layout stylesheet include to use local `/css/dome-extract.css` instead of loading remote `https://sindome.org/css/dome.css`.
 - Migrated legacy dome utility/button/icon styles into the LESS source and bundled them in `/css/client.css`, removing the separate `/css/dome-extract.css` asset from runtime includes.
+- Updated HTML log export to inline the client stylesheet directly in downloaded log files so session logs no longer depend on Sindome-hosted CSS.
 
 ### Fixed
+- Prevented mobile connect-page horizontal overflow so the main auth panel, Website Login box, guest actions, and footer no longer bleed off the screen on small viewports.
+- Restored responsive visibility utility classes (`hidden-xs`/`hidden-sm`/`hidden-md`/`hidden-lg`) so player-client top controls collapse back to glyph-only labels on small screens.
 - Fixed real-device mobile styling mismatch by serving local `client.css` for all device types and removing runtime dependency on external `dome.css`.
+- Fixed exported HTML log typography fallback so buffer text stays monospace when `Source Code Pro` is unavailable offline.
 - Restored base legacy UI styling (`.btn`, `.hidden`, `.close`) in `dome-extract.css` so connect-page buttons and the Chrome performance warning render correctly without remote `dome.css`.
 - Aligned extracted legacy global/link/button/title styles with Sindome’s `dome.css` so connect-page buttons, heading color, and version/changelog link colors match expected appearance more closely.
 - Restored explicit terminal font styling for `#inputBuffer` so command entry text matches the expected in-game monospace appearance.
