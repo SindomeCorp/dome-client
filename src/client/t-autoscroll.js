@@ -50,7 +50,7 @@ export function setupAutoscroll(dome, win = window) {
       }
       dome.buffer.scrollTop = dome.buffer.scrollHeight;
       dome.buffer.classList.remove("scroll-disabled");
-      button.innerHTML = "<i class=\"icon-pause icon-white\"></i><span class=\"hidden-xs\">PAUSE SCROLL</span>";
+      button.innerHTML = "<span aria-hidden=\"true\">||</span><span class=\"hidden-xs\">PAUSE SCROLL</span>";
       button.classList.add("btn-primary");
       button.classList.remove("btn-danger");
       document.querySelector("#inputBuffer").focus();
@@ -60,7 +60,7 @@ export function setupAutoscroll(dome, win = window) {
         dome.setFadeText(dome.statusDisplay, "SCROLLING PAUSED");
       }
       dome.buffer.classList.add("scroll-disabled");
-      button.innerHTML = "<i class=\"icon-play icon-white\"></i><span class=\"hidden-xs\">RESUME SCROLL</span>";
+      button.innerHTML = "<span aria-hidden=\"true\">▶</span><span class=\"hidden-xs\">RESUME SCROLL</span>";
       button.classList.add("btn-danger");
       button.classList.remove("btn-primary");
       document.querySelector("#lineBuffer").focus();
