@@ -201,6 +201,10 @@ fieldset[disabled] .btn {
   color: #e28e18;
 }
 
+#browser-client #inputBuffer {
+  font-family: "Source Code Pro", monospace;
+}
+
 .btn-group {
   display: inline-block;
   position: relative;
