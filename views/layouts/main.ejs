@@ -19,6 +19,7 @@
       var gameName = "<%=gameName%>";
       var guestConnectCommand = "<%=guestConnectCommand%>";
       var shortenEnabled = <%= shortenEnabled ? "true" : "false" %>;
+      window.__LOG_EXPORT_CSS__ = <%- JSON.stringify(typeof logExportCss === "string" ? logExportCss : "") %>;
     </script>
     <script type="module" src="<%=decache('/js/logger.js')%>"></script>
     <link rel="stylesheet" type="text/css" href="<%=decache('/css/client.css')%>">

@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { named } from "../logger.js";
 import { buildLogHtml } from "../shared/log-template.js";
+import { getLogExportCss } from "../services/log-export-style.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const logger = named("controllers/" + path.basename(__filename, ".js"));
@@ -19,6 +20,6 @@ export function log(req, res) {
   const safeName = encodeURIComponent(path.basename(req.params.filename));
   res.setHeader("Content-disposition", "attachment; filename=" + safeName);
   res.setHeader("Content-type", "text/html");
-  const html = buildLogHtml(req.body?.buffer);
+  const html = buildLogHtml(req.body?.buffer, getLogExportCss());
   res.send(html);
 }
