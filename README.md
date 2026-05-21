@@ -11,6 +11,18 @@ Dome Client is the maintained successor to the [Legacy Dome Client](https://gith
 
 It is a browser-based MUD client built with Node.js, Express, and Socket.io. It bridges browser WebSocket connections to traditional telnet-based MUD servers, so players can connect without installing anything.
 
+## Quick Start
+```
+git clone git@github.com:SindomeCorp/dome-client.git
+cd dome-client
+npm i
+npm start
+```
+
+Open in Browser: http://localhost:8080
+```
+```
+
 **Quick links:** [Installation](#installation) · [Setup Guides](#setup-guides) · [Contributing](#contributing)
 
 ## Requirements
