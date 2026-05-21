@@ -7,6 +7,10 @@
   display: none !important;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .pull-right {
   float: right !important;
 }
@@ -26,6 +30,65 @@
   background-color: #f2dede;
   border-color: #ebccd1;
   color: #a94442;
+}
+
+.close {
+  color: #000;
+  float: right;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.2;
+  text-shadow: 0 1px 0 #fff;
+}
+
+.close:hover,
+.close:focus {
+  color: #000;
+  cursor: pointer;
+  opacity: 0.5;
+  text-decoration: none;
+}
+
+.btn {
+  background-image: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.42857143;
+  margin-bottom: 0;
+  padding: 6px 12px;
+  text-align: center;
+  touch-action: manipulation;
+  user-select: none;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.btn:hover,
+.btn:focus,
+.btn.focus {
+  color: #fff;
+  text-decoration: none;
+}
+
+.btn:active,
+.btn.active {
+  background-image: none;
+  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+  outline: 0;
+}
+
+.btn.disabled,
+.btn[disabled],
+fieldset[disabled] .btn {
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.65;
+  pointer-events: none;
 }
 
 .btn-default {

@@ -11,6 +11,9 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Updated the main layout stylesheet include to use local `/css/dome-extract.css` instead of loading remote `https://sindome.org/css/dome.css`.
 
+### Fixed
+- Restored base legacy UI styling (`.btn`, `.hidden`, `.close`) in `dome-extract.css` so connect-page buttons and the Chrome performance warning render correctly without remote `dome.css`.
+
 ## 2026-05-19
 
 ### Changed
