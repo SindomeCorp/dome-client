@@ -10,6 +10,9 @@ public/*
 !public/fonts/**
 !public/img/
 !public/img/**
+!public/css/
+public/css/*
+!public/css/dome-extract.css
 tmp/
 test-output.log
 webclient.log
