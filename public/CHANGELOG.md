@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-05-21
+
+### Added
+- Added `public/css/dome-extract.css` to locally provide the legacy `dome.css` utility/button/alert/dropdown/icon styles still used by the client.
+- Added local glyphicon sprite assets (`public/img/glyphicons-halflings.png` and `public/img/glyphicons-halflings-white.png`) to remove runtime dependency on remote icon images.
+
+### Changed
+- Updated the main layout stylesheet include to use local `/css/dome-extract.css` instead of loading remote `https://sindome.org/css/dome.css`.
+
 ## 2026-05-19
 
 ### Changed

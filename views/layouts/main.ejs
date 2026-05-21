@@ -21,7 +21,7 @@
       var shortenEnabled = <%= shortenEnabled ? "true" : "false" %>;
     </script>
     <script type="module" src="<%=decache('/js/logger.js')%>"></script>
-    <link rel="stylesheet" type="text/css" href="<%=decache(mainWebsite + '/css/dome.css')%>">
+    <link rel="stylesheet" type="text/css" href="<%=decache('/css/dome-extract.css')%>">
     <link rel="stylesheet" type="text/css" href="<%=decache('/css/client.css')%>">
   </head>
   <body <%-((req.bodyClass == null) ? '' : ('class="' + req.bodyClass + '"'))%>>
