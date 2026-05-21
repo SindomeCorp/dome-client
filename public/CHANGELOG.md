@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-05-21
+
+### Added
+- Added `public/css/dome-extract.css` to locally provide the legacy `dome.css` utility/button/alert/dropdown/icon styles still used by the client.
+- Added local glyphicon sprite assets (`public/img/glyphicons-halflings.png` and `public/img/glyphicons-halflings-white.png`) to remove runtime dependency on remote icon images.
+
+### Changed
+- Updated the main layout stylesheet include to use local `/css/dome-extract.css` instead of loading remote `https://sindome.org/css/dome.css`.
+
+### Fixed
+- Restored base legacy UI styling (`.btn`, `.hidden`, `.close`) in `dome-extract.css` so connect-page buttons and the Chrome performance warning render correctly without remote `dome.css`.
+- Aligned extracted legacy global/link/button/title styles with Sindome’s `dome.css` so connect-page buttons, heading color, and version/changelog link colors match expected appearance more closely.
+- Restored explicit terminal font styling for `#inputBuffer` so command entry text matches the expected in-game monospace appearance.
+- Restored the input buffer top separator border to prevent visual clipping/offset at the bottom edge and match legacy `dome.css` behavior.
+- Corrected input buffer edge styling by removing the thicker top separator and restoring bottom spacing so the bottom line remains visible without increasing top border thickness.
+
 ## 2026-05-19
 
 ### Changed
