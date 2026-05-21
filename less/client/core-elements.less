@@ -353,3 +353,34 @@ fieldset[disabled] .btn {
 .all-copy {
   user-select: all;
 }
+
+.hidden-xs,
+.hidden-sm,
+.hidden-md,
+.hidden-lg {
+  display: block !important;
+}
+
+@media (max-width: @screen-xs-max) {
+  .hidden-xs {
+    display: none !important;
+  }
+}
+
+@media (min-width: @screen-sm-min) and (max-width: @screen-sm-max) {
+  .hidden-sm {
+    display: none !important;
+  }
+}
+
+@media (min-width: @screen-md-min) and (max-width: @screen-md-max) {
+  .hidden-md {
+    display: none !important;
+  }
+}
+
+@media (min-width: @screen-lg-min) {
+  .hidden-lg {
+    display: none !important;
+  }
+}
