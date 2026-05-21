@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - Aligned extracted legacy global/link/button/title styles with Sindome’s `dome.css` so connect-page buttons, heading color, and version/changelog link colors match expected appearance more closely.
 - Restored explicit terminal font styling for `#inputBuffer` so command entry text matches the expected in-game monospace appearance.
 - Restored the input buffer top separator border to prevent visual clipping/offset at the bottom edge and match legacy `dome.css` behavior.
+- Corrected input buffer edge styling by removing the thicker top separator and restoring bottom spacing so the bottom line remains visible without increasing top border thickness.
 
 ## 2026-05-19
 
