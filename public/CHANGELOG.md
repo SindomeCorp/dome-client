@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Updated the main layout stylesheet include to use local `/css/dome-extract.css` instead of loading remote `https://sindome.org/css/dome.css`.
 - Migrated legacy dome utility/button/icon styles into the LESS source and bundled them in `/css/client.css`, removing the separate `/css/dome-extract.css` asset from runtime includes.
+- Updated HTML log export to inline the client stylesheet directly in downloaded log files so session logs no longer depend on Sindome-hosted CSS.
 
 ### Fixed
 - Fixed real-device mobile styling mismatch by serving local `client.css` for all device types and removing runtime dependency on external `dome.css`.

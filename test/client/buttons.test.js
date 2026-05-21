@@ -144,6 +144,7 @@ test("options overlay closes on escape key", async () => {
 
 test("save button downloads HTML log", async (t) => {
   const { window, dome } = await setupWindow(t);
+  window.__LOG_EXPORT_CSS__ = "body { background: #000; }";
   const btn = window.document.createElement("button");
   window.document.body.appendChild(btn);
   dome.saveButton = btn;
@@ -186,7 +187,7 @@ test("save button downloads HTML log", async (t) => {
 
   assert.equal(capturedBlob?.type, "text/html;charset=utf-8");
   const blobText = await capturedBlob.text();
-  assert.equal(blobText, buildLogHtml("<p>log</p>"));
+  assert.equal(blobText, buildLogHtml("<p>log</p>", "body { background: #000; }"));
 
   assert.equal(revokeObjectURL.mock.calls[0]?.arguments[0], "blob:mock");
   assert.equal(btn.disabled, false);
