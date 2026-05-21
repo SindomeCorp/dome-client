@@ -18,3 +18,5 @@ test-output.log
 webclient.log
 npm-debug.log
 nohup.out
+play.sindome.org.pem
+play.sindome.org.crt
