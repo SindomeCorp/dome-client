@@ -89,19 +89,17 @@ dome.setupInputReader = () => {
 
   if ( dome.inputReader ) {
     const inputReader = dome.inputReader;
-    inputReader.addEventListener("keydown", (event) => {
-      // total characters in the input; used to decide when to allow history recall
+    const applyHistoryNavigation = (key) => {
       const lineLength = inputReader.value.length;
-      if ( event.key === "ArrowUp" ) {
+      if ( key === "ArrowUp" ) {
         // Up arrow: recall previous command when at line start or line is short
         const cursor = getCursorPosition( inputReader );
         if ( commandPointer >= 0 && cursor.start == cursor.end && ( lineLength < 150 || cursor.start === 0 ) ) {
           commandPointer = ( commandPointer <= -1 ? commandBuffer.length : commandPointer ) - 1;
           inputReader.value = commandBuffer[ commandPointer ];
-          event.preventDefault();
-          return false;
+          return true;
         }
-      } else if ( event.key === "ArrowDown" ) {
+      } else if ( key === "ArrowDown" ) {
         // Down arrow: show next command when at line end or line is short
         const cursor = getCursorPosition( inputReader );
         if ( cursor.start == cursor.end && ( lineLength < 150 || cursor.start === lineLength ) ) {
@@ -109,8 +107,7 @@ dome.setupInputReader = () => {
             // down (show next newest)
             commandPointer = ( commandPointer + 1 > commandBuffer.length ? 0 : commandPointer ) + 1;
             inputReader.value = commandBuffer[ commandPointer ];
-            event.preventDefault();
-            return false;
+            return true;
           } else if ( commandPointer >= commandBuffer.length - 1 ) {
             // down (at last, don't show me anything)
             commandPointer = commandBuffer.length;
@@ -128,10 +125,50 @@ dome.setupInputReader = () => {
             } else {
               inputReader.value = lastInput;
             }
-            event.preventDefault();
-            return false;
+            return true;
           }
         }
+      }
+      return false;
+    };
+    const moveCaretByLine = (key) => {
+      const value = inputReader.value;
+      const direction = key === "ArrowUp" ? -1 : 1;
+      const basePos = direction < 0 ? inputReader.selectionStart : inputReader.selectionEnd;
+      const lineStart = value.lastIndexOf("\n", Math.max(0, basePos - 1)) + 1;
+      const lineEndIndex = value.indexOf("\n", basePos);
+      const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
+      const column = Math.max(0, basePos - lineStart);
+
+      if (direction < 0) {
+        if (lineStart === 0) {
+          return;
+        }
+        const prevLineEnd = lineStart - 1;
+        const prevLineStart = value.lastIndexOf("\n", Math.max(0, prevLineEnd - 1)) + 1;
+        const prevLineLength = prevLineEnd - prevLineStart;
+        const nextPos = prevLineStart + Math.min(column, prevLineLength);
+        inputReader.selectionStart = nextPos;
+        inputReader.selectionEnd = nextPos;
+        return;
+      }
+
+      if (lineEnd >= value.length) {
+        return;
+      }
+      const nextLineStart = lineEnd + 1;
+      const nextLineEndIndex = value.indexOf("\n", nextLineStart);
+      const nextLineEnd = nextLineEndIndex === -1 ? value.length : nextLineEndIndex;
+      const nextLineLength = nextLineEnd - nextLineStart;
+      const nextPos = nextLineStart + Math.min(column, nextLineLength);
+      inputReader.selectionStart = nextPos;
+      inputReader.selectionEnd = nextPos;
+    };
+
+    inputReader.addEventListener("keydown", (event) => {
+      if ((event.key === "ArrowUp" || event.key === "ArrowDown") && applyHistoryNavigation(event.key)) {
+        event.preventDefault();
+        return false;
       }
     });
     inputReader.addEventListener("keypress", (event) => {
@@ -181,17 +218,14 @@ dome.setupInputReader = () => {
       if (!button) {
         return;
       }
+      button.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+      });
       button.addEventListener("click", () => {
         inputReader.focus();
-        const inputWindow = inputReader.ownerDocument?.defaultView;
-        if (!inputWindow || typeof inputWindow.KeyboardEvent !== "function") {
-          return;
+        if (!applyHistoryNavigation(key)) {
+          moveCaretByLine(key);
         }
-        inputReader.dispatchEvent(new inputWindow.KeyboardEvent("keydown", {
-          key,
-          bubbles: true,
-          cancelable: true
-        }));
       });
     };
     wireHistoryButton("#button-input-history-up", "ArrowUp");
