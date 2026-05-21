@@ -32,7 +32,6 @@ const env = cleanEnv(process.env, {
   MOO_NAME: str({ default: "Sindome" }),
   MOO_HOST: str({ default: "moo.sindome.org" }),
   MOO_PORT: num({ default: 5555 }),
-  WEBSITE_BASE: str({ default: "" }),
   WEBSITE_SIGNUP_URL: str({ default: "" }),
   GUEST_CONNECT_COMMAND: str({ default: "connect guest" }),
   AUTOCOMPLETE_ENABLED: bool({ default: false }),

@@ -110,7 +110,6 @@ app.use(function(req, res, next) {
   res.locals.version = app.get("version");
   res.locals.poweredBy = config.node.poweredBy;
   res.locals.gameName = config.moo.name;
-  res.locals.mainWebsite = config.website.base;
   res.locals.guestConnectCommand = config.guest.connectCommand;
   res.locals.shortenEnabled = config.shorten.enabled;
   res.locals.logExportCss = getLogExportCss();

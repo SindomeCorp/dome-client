@@ -18,7 +18,6 @@ const config = {
     port: env.MOO_PORT
   },
   website: {
-    base: env.WEBSITE_BASE,
     signupUrl: env.WEBSITE_SIGNUP_URL
   },
   guest: {

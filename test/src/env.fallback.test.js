@@ -22,7 +22,6 @@ const defaults = {
   MOO_NAME: "Sindome",
   MOO_HOST: "moo.sindome.org",
   MOO_PORT: 5555,
-  WEBSITE_BASE: "",
   WEBSITE_SIGNUP_URL: "",
   GUEST_CONNECT_COMMAND: "connect guest",
   AUTOCOMPLETE_ENABLED: false,
