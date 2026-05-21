@@ -39,7 +39,9 @@ Open in Browser: http://localhost:8080
 - Regex-based client alerts with optional sound/window attention on match.
 - Connection safety UX: disconnect overlay with one-click reconnect, unload warning while connected, and graceful `@quit` on page exit.
 - Live health panel with hover/click detail view and rolling CPU/RAM/user charts (when status service is configured).
-- Input ergonomics: command history recall, long-input-friendly arrow behavior, and keyboard shortcuts (`Pause/Break`, `Home`, `Insert`).
+- Input ergonomics: command history recall, long-input-friendly arrow behavior, and keyboard shortcuts (`Pause/Break`, `Home`, `Insert`, `Ctrl+R`).
+- Command history search overlay (`Ctrl+R`) with live filtering, de-duplicated exact matches, keyboard navigation, and one-key insert back into the input buffer.
+- Mobile-friendly small-screen input controls, including dedicated up/down history buttons and responsive input sizing for touch devices.
 - Rich client options: command hints, local echo, image preview, overlay transparency, buffer size, alert sound, font/theme choices, and editor mode selection.
 - Session log export as HTML for preserving and sharing scrollback.
 - Built-in keyboard shortcuts for both client and IDE workflows.

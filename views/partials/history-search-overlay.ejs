@@ -1,0 +1,18 @@
+<div id="history-search-overlay" class="hide" role="dialog" aria-modal="true" aria-labelledby="history-search-title">
+  <div class="history-search-content">
+    <div class="history-search-top">
+      <h4 id="history-search-title">Command History Search</h4>
+      <button id="button-history-search-close" class="history-search-close" aria-label="Close">&times;</button>
+    </div>
+    <input
+      id="history-search-query"
+      type="text"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder="Search command history..."
+      aria-label="Search command history"
+    />
+    <ul id="history-search-results" aria-label="History search results"></ul>
+    <div id="history-search-empty" class="hide">No matching commands.</div>
+  </div>
+</div>
