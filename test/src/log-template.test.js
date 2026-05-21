@@ -18,6 +18,13 @@ test("buildLogHtml does not include remote stylesheet links", () => {
   assert.doesNotMatch(html, /<base href=/);
 });
 
+test("buildLogHtml can use legacy linked stylesheet mode", () => {
+  const html = buildLogHtml("<p>hello</p>", ".x { color: blue; }", false);
+
+  assert.match(html, /<link rel="stylesheet" href="https:\/\/sindome\.org\/css\/dome\.css">/);
+  assert.doesNotMatch(html, /<style>\.x \{ color: blue; \}<\/style>/);
+});
+
 test("buildLogHtml escapes style end tags in css payload", () => {
   const html = buildLogHtml("", "/* test */ </style><script>bad()</script>");
 

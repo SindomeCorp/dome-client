@@ -48,7 +48,8 @@ dome.setupButtons = function() {
       const filename = `${baseName}.log.${timestamp}.html`;
       const bufferHtml = dome.buffer?.innerHTML ?? "";
       const logExportCss = typeof window !== "undefined" ? (window.__LOG_EXPORT_CSS__ || "") : "";
-      const htmlDocument = buildLogHtml(bufferHtml, logExportCss);
+      const inlineLogCss = dome.preferences?.inlineLogCss !== false;
+      const htmlDocument = buildLogHtml(bufferHtml, logExportCss, inlineLogCss);
       if (typeof window !== "undefined" && window.DomeNative && typeof window.DomeNative.downloadLog === "function") {
         try {
           window.DomeNative.downloadLog(filename, htmlDocument);

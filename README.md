@@ -43,7 +43,7 @@ Open in Browser: http://localhost:8080
 - Command history search overlay (`Ctrl+R`) with live filtering, de-duplicated exact matches, keyboard navigation, and one-key insert back into the input buffer.
 - Mobile-friendly small-screen input controls, including dedicated up/down history buttons and responsive input sizing for touch devices.
 - Rich client options: command hints, local echo, image preview, overlay transparency, buffer size, alert sound, font/theme choices, and editor mode selection.
-- Session log export as HTML for preserving and sharing scrollback.
+- Session log export as HTML for preserving and sharing scrollback, with a client option to switch between default self-contained inline CSS and a lighter legacy linked stylesheet mode.
 - Built-in keyboard shortcuts for both client and IDE workflows.
 - Optional URL-shortener integration.
 - Optional status-service integration.

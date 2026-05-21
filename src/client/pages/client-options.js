@@ -40,6 +40,7 @@ const clientOptions = {
     playding: { param: "pd", def: true, ok: [true, false] },
     localecho: { param: "le", def: false, ok: [true, false] },
     imageview: { param: "iv", def: false, ok: [true, false] },
+    logcss: { param: "lc", def: true, ok: [true, false] },
     transparent: { param: "to", def: true, ok: [true, false] },
     broadly: { param: "bs", def: true, ok: [true, false] },
     buffer: { param: "pb", def: weakBrowser() ? 1750 : 0 }
@@ -98,6 +99,7 @@ const PREF_NAME = {
   playding: "playDing",
   localecho: "localEcho",
   imageview: "imagePreview",
+  logcss: "inlineLogCss",
   transparent: "transparentOverlay",
   broadly: "broadSearch",
   buffer: "performanceBuffer"

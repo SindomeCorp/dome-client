@@ -87,12 +87,13 @@ test("readPreferences returns defaults", async (t) => {
   assert.equal(prefs.shortenUrls, true);
   assert.equal(prefs.autoScroll, "dbl");
   assert.equal(prefs.broadSearch, true);
+  assert.equal(prefs.inlineLogCss, true);
   assert.equal(prefs.transparentOverlay, true);
   assert.equal(prefs.performanceBuffer, 0);
 });
 
 test("readPreferences parses url options", async (t) => {
-  const url = "https://example.com/?cs=false&su=false&pd=false&le=true&iv=true&as=none&to=false&bs=false";
+  const url = "https://example.com/?cs=false&su=false&pd=false&le=true&iv=true&lc=false&as=none&to=false&bs=false";
   const win = await setupWindow(t, url, "Chrome/78");
   const prefs = win.dome.readPreferences();
   assert.equal(prefs.commandSuggestions, false);
@@ -100,6 +101,7 @@ test("readPreferences parses url options", async (t) => {
   assert.equal(prefs.playDing, false);
   assert.equal(prefs.localEcho, true);
   assert.equal(prefs.imagePreview, true);
+  assert.equal(prefs.inlineLogCss, false);
   assert.equal(prefs.autoScroll, "none");
   assert.equal(prefs.transparentOverlay, false);
   assert.equal(prefs.broadSearch, false);
@@ -196,4 +198,3 @@ test("@client-option pb accepts numeric values", async (t) => {
   assert.equal(win.dome.preferences.performanceBuffer, 100);
   assert.ok(output.some((line) => line.includes("changing @client-option performanceBuffer to 100")));
 });
-
