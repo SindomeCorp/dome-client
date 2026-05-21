@@ -5,7 +5,7 @@ import { setupDom } from "./index.js";
 import { dome, socket, setSocket, logger } from "../../src/client/b-variables.js";
 
 const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
-  const { window } = setupDom("<!doctype html><html><body><textarea id=\"input\"></textarea><button id=\"button-input-history-up\" type=\"button\"></button><button id=\"button-input-history-down\" type=\"button\"></button></body></html>");
+  const { window } = setupDom("<!doctype html><html><body><textarea id=\"input\"></textarea><button id=\"button-input-history-up\" type=\"button\"></button><button id=\"button-input-history-down\" type=\"button\"></button><div id=\"history-search-overlay\" class=\"hide\"><div class=\"history-search-content\"><button id=\"button-history-search-close\" type=\"button\">x</button><input id=\"history-search-query\" /><ul id=\"history-search-results\"></ul><div id=\"history-search-empty\" class=\"hide\">No matching commands.</div></div></div></body></html>");
   const origGlobals = { window: globalThis.window, document: globalThis.document };
   const { store } = await import("../../src/client/store.js");
   Object.assign(store, {
@@ -214,7 +214,7 @@ test("mobile history buttons trigger up and down navigation", async (t) => {
 });
 
 test("mobile buttons always navigate history even in multiline input", async (t) => {
-  const { window } = await loadInputReader(t);
+  await loadInputReader(t);
   const input = dome.inputReader;
   const multiline = `${"a".repeat(70)}\n${"b".repeat(70)}\n${"c".repeat(70)}`;
   input.value = multiline;
@@ -228,4 +228,65 @@ test("mobile buttons always navigate history even in multiline input", async (t)
 
   document.querySelector("#button-input-history-down").click();
   assert.equal(input.value, "");
+});
+
+test("ctrl+r opens history search overlay and focuses query", async (t) => {
+  const { window } = await loadInputReader(t);
+  const overlay = document.querySelector("#history-search-overlay");
+  const query = document.querySelector("#history-search-query");
+  document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "r", ctrlKey: true, bubbles: true, cancelable: true }));
+  assert.ok(!overlay.classList.contains("hide"));
+  assert.equal(document.activeElement, query);
+});
+
+test("ctrl+r while overlay is open does not prevent default", async (t) => {
+  const { window } = await loadInputReader(t);
+  document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "r", ctrlKey: true, bubbles: true, cancelable: true }));
+  const event = new window.KeyboardEvent("keydown", { key: "r", ctrlKey: true, bubbles: true, cancelable: true });
+  document.dispatchEvent(event);
+  assert.equal(event.defaultPrevented, false);
+});
+
+test("history search filters by contains and selects with enter", async (t) => {
+  const { window } = await loadInputReader(t, { history: ["look", "say hi", "pose hi there"] });
+  const input = dome.inputReader;
+  const query = document.querySelector("#history-search-query");
+  const results = document.querySelector("#history-search-results");
+  const overlay = document.querySelector("#history-search-overlay");
+
+  document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "r", ctrlKey: true, bubbles: true, cancelable: true }));
+  query.value = "hi";
+  query.dispatchEvent(new window.Event("input", { bubbles: true }));
+  assert.equal(results.children.length, 2);
+  assert.equal(results.children[0].textContent, "pose hi there");
+  assert.equal(results.children[1].textContent, "say hi");
+
+  query.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+  query.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+
+  assert.ok(overlay.classList.contains("hide"));
+  assert.equal(input.value, "say hi");
+});
+
+test("history search closes on escape without changing input", async (t) => {
+  const { window } = await loadInputReader(t);
+  const input = dome.inputReader;
+  input.value = "keep me";
+  document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "r", ctrlKey: true, bubbles: true, cancelable: true }));
+  const query = document.querySelector("#history-search-query");
+  query.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+  assert.ok(document.querySelector("#history-search-overlay").classList.contains("hide"));
+  assert.equal(input.value, "keep me");
+});
+
+test("history search close button and backdrop close overlay", async (t) => {
+  const { window } = await loadInputReader(t);
+  const overlay = document.querySelector("#history-search-overlay");
+  document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "r", ctrlKey: true, bubbles: true, cancelable: true }));
+  document.querySelector("#button-history-search-close").click();
+  assert.ok(overlay.classList.contains("hide"));
+
+  document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "r", ctrlKey: true, bubbles: true, cancelable: true }));
+  overlay.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  assert.ok(overlay.classList.contains("hide"));
 });
