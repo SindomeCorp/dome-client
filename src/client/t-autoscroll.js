@@ -13,6 +13,9 @@ const setScrollBuffer = dome => {
   };
 };
 
+const pauseIconMarkup = "<span class=\"mini-glyph\" aria-hidden=\"true\"><svg class=\"mini-glyph-svg\" viewBox=\"0 0 14 14\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"2\" y=\"2\" width=\"3.5\" height=\"10\" rx=\"0.9\"></rect><rect x=\"8.5\" y=\"2\" width=\"3.5\" height=\"10\" rx=\"0.9\"></rect></svg></span>";
+const playIconMarkup = "<span class=\"mini-glyph\" aria-hidden=\"true\"><svg class=\"mini-glyph-svg\" viewBox=\"0 0 14 14\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M3 2.2L11.5 7L3 11.8Z\"></path></svg></span>";
+
 export function setupAutoscroll(dome, win = window) {
 
   // remove previous bindings
@@ -50,7 +53,7 @@ export function setupAutoscroll(dome, win = window) {
       }
       dome.buffer.scrollTop = dome.buffer.scrollHeight;
       dome.buffer.classList.remove("scroll-disabled");
-      button.innerHTML = "<span aria-hidden=\"true\">||</span><span class=\"hidden-xs\">PAUSE SCROLL</span>";
+      button.innerHTML = `${pauseIconMarkup}<span class="hidden-xs">PAUSE SCROLL</span>`;
       button.classList.add("btn-primary");
       button.classList.remove("btn-danger");
       document.querySelector("#inputBuffer").focus();
@@ -60,7 +63,7 @@ export function setupAutoscroll(dome, win = window) {
         dome.setFadeText(dome.statusDisplay, "SCROLLING PAUSED");
       }
       dome.buffer.classList.add("scroll-disabled");
-      button.innerHTML = "<span aria-hidden=\"true\">▶</span><span class=\"hidden-xs\">RESUME SCROLL</span>";
+      button.innerHTML = `${playIconMarkup}<span class="hidden-xs">RESUME SCROLL</span>`;
       button.classList.add("btn-danger");
       button.classList.remove("btn-primary");
       document.querySelector("#lineBuffer").focus();
