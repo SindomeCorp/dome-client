@@ -5,14 +5,12 @@ All notable changes to this project will be documented in this file.
 ## 2026-05-21
 
 ### Added
-- Added `public/css/dome-extract.css` to locally provide the legacy `dome.css` utility/button/alert/dropdown/icon styles still used by the client.
 - Added local glyphicon sprite assets (`public/img/glyphicons-halflings.png` and `public/img/glyphicons-halflings-white.png`) to remove runtime dependency on remote icon images.
 - Added a `Ctrl+R` command-history search overlay with live filtering, keyboard navigation, and click-to-select support that inserts the chosen command back into the input buffer.
 - Added a new client option to choose log export style between default inline CSS and legacy linked `https://sindome.org/css/dome.css` output.
 
 ### Changed
-- Updated the main layout stylesheet include to use local `/css/dome-extract.css` instead of loading remote `https://sindome.org/css/dome.css`.
-- Migrated legacy dome utility/button/icon styles into the LESS source and bundled them in `/css/client.css`, removing the separate `/css/dome-extract.css` asset from runtime includes.
+- Migrated legacy dome utility/button/icon styles into the LESS source and bundled them in `/css/client.css`, replacing runtime dependency on remote `https://sindome.org/css/dome.css`.
 - Updated HTML log export to inline the client stylesheet directly in downloaded log files so session logs no longer depend on Sindome-hosted CSS.
 - Updated keyboard shortcut help to document `Ctrl+R` command-history search.
 - Updated command-history search results so the active selection uses the client blue highlight with high-contrast white text, auto-scrolls into view during keyboard navigation, and expands to show full wrapped command text.
@@ -22,7 +20,7 @@ All notable changes to this project will be documented in this file.
 - Restored responsive visibility utility classes (`hidden-xs`/`hidden-sm`/`hidden-md`/`hidden-lg`) so player-client top controls collapse back to glyph-only labels on small screens.
 - Fixed real-device mobile styling mismatch by serving local `client.css` for all device types and removing runtime dependency on external `dome.css`.
 - Fixed exported HTML log typography fallback so buffer text stays monospace when `Source Code Pro` is unavailable offline.
-- Restored base legacy UI styling (`.btn`, `.hidden`, `.close`) in `dome-extract.css` so connect-page buttons and the Chrome performance warning render correctly without remote `dome.css`.
+- Restored base legacy UI styling (`.btn`, `.hidden`, `.close`) in bundled client styles so connect-page buttons and the Chrome performance warning render correctly without remote `dome.css`.
 - Aligned extracted legacy global/link/button/title styles with Sindome’s `dome.css` so connect-page buttons, heading color, and version/changelog link colors match expected appearance more closely.
 - Restored explicit terminal font styling for `#inputBuffer` so command entry text matches the expected in-game monospace appearance.
 - Restored the input buffer top separator border to prevent visual clipping/offset at the bottom edge and match legacy `dome.css` behavior.
@@ -32,6 +30,9 @@ All notable changes to this project will be documented in this file.
 - Increased small-screen input box height beside mobile history buttons so the textarea fills the control column height without leaving dead space.
 - Filtered exact duplicate entries from command-history search results so repeated identical commands appear once.
 - Corrected history-search overlay/input sizing so the search field no longer expands beyond modal edges on smaller screens.
+
+### Removed
+- Removed unused `WEBSITE_BASE` environment variable from env validation, app config wiring, server template locals, and env example files.
 
 ## 2026-05-19
 
