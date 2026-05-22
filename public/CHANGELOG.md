@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-05-22
+
+### Added
+- Added a new client option, `SDWC No-Wrap Blocks` (default off), to enable horizontal-scroll rendering for explicit SDWC nowrap marker regions.
+
+### Changed
+- Added support for server OOB markers `#$# SDWC-START-NOWRAP` and `#$# SDWC-END-NOWRAP` so marked output streams into a dedicated no-wrap horizontal-scroll block while preserving per-line styling.
+- Updated log/export styling parity so SDWC nowrap blocks retain their horizontal-scroll presentation in rendered output.
+
 ## 2026-05-21
 
 ### Added

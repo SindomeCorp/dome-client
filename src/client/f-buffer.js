@@ -113,6 +113,25 @@ dome.setupOutputParser = function () {
   // Carry buffer for trailing partial line
   // ------------------------------
   let _carry = "";
+  let sdwcNowrapActive = false;
+  let activeSdwcNowrapBlock = null;
+
+  const createSdwcNowrapBlock = () => {
+    if (!dome.buffer || typeof document === "undefined") {
+      return null;
+    }
+    const block = document.createElement("div");
+    block.className = "sdwc-nowrap-block";
+    dome.buffer.append(block);
+    return block;
+  };
+
+  const resetSdwcNowrapState = () => {
+    sdwcNowrapActive = false;
+    activeSdwcNowrapBlock = null;
+  };
+
+  dome.resetSdwcNowrapState = resetSdwcNowrapState;
 
   // ------------------------------
   // Main parser
@@ -225,6 +244,29 @@ dome.setupOutputParser = function () {
         segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
         withFadeText("pinged");
       } else if (/^\s*SDWC\b/i.test(metaCommand)) {
+        const metaCommandNormalized = metaCommand.trim().toUpperCase();
+        if (metaCommandNormalized === "SDWC-START-NOWRAP") {
+          if (!dome.preferences?.sdwcNowrapBlocks) {
+            segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
+            continue;
+          }
+          if (sdwcNowrapActive) {
+            logger.warn("Received duplicate SDWC-START-NOWRAP while nowrap mode is active");
+          } else {
+            activeSdwcNowrapBlock = createSdwcNowrapBlock();
+            sdwcNowrapActive = Boolean(activeSdwcNowrapBlock);
+          }
+          segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
+          continue;
+        } else if (metaCommandNormalized === "SDWC-END-NOWRAP") {
+          if (sdwcNowrapActive) {
+            resetSdwcNowrapState();
+          } else {
+            logger.warn("Received SDWC-END-NOWRAP without an active nowrap block");
+          }
+          segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
+          continue;
+        }
         const sdwcParts = metaCommand.trim().split("%%");
         if ((sdwcParts[0] || "").toUpperCase() === "SDWC") {
           const sdwcCommand = (sdwcParts[1] || "").trim().toLowerCase();
@@ -359,7 +401,13 @@ dome.setupOutputParser = function () {
     const html = wrapLinesToDivs(segment);
 
     // Append to buffer
-    dome.buffer.insertAdjacentHTML("beforeend", html);
+    if (sdwcNowrapActive && activeSdwcNowrapBlock && !dome.buffer.contains(activeSdwcNowrapBlock)) {
+      resetSdwcNowrapState();
+    }
+    const outputTarget = sdwcNowrapActive && activeSdwcNowrapBlock
+      ? activeSdwcNowrapBlock
+      : dome.buffer;
+    outputTarget.insertAdjacentHTML("beforeend", html);
 
     // ------------------ Perf logging and pruning ------------------
     const WARN_THRESHOLD = 10; // ms
