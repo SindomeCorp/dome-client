@@ -246,8 +246,11 @@ dome.setupOutputParser = function () {
       } else if (/^\s*SDWC\b/i.test(metaCommand)) {
         const metaCommandNormalized = metaCommand.trim().toUpperCase();
         if (metaCommandNormalized === "SDWC-START-NOWRAP") {
-          logger.info("Received SDWC-START-NOWRAP");
-          if (!dome.preferences?.sdwcNowrapBlocks) {
+          const nowrapEnabled = dome.preferences?.sdwcNowrapBlocks === true;
+          logger.info(nowrapEnabled
+            ? "Received SDWC-START-NOWRAP"
+            : "Received SDWC-START-NOWRAP (ignored: sdwcNowrapBlocks disabled)");
+          if (!nowrapEnabled) {
             segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
             continue;
           }
@@ -260,7 +263,14 @@ dome.setupOutputParser = function () {
           segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
           continue;
         } else if (metaCommandNormalized === "SDWC-END-NOWRAP") {
-          logger.info("Received SDWC-END-NOWRAP");
+          const nowrapEnabled = dome.preferences?.sdwcNowrapBlocks === true;
+          logger.info(nowrapEnabled
+            ? "Received SDWC-END-NOWRAP"
+            : "Received SDWC-END-NOWRAP (ignored: sdwcNowrapBlocks disabled)");
+          if (!nowrapEnabled) {
+            segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
+            continue;
+          }
           if (sdwcNowrapActive) {
             resetSdwcNowrapState();
           } else {
