@@ -119,10 +119,28 @@
   }
 }
 
-@media (max-width: @screen-xs-max), (hover: none) and (pointer: coarse) {
+@media (max-width: @screen-xs-max) {
   #browser-client .mini-controls {
-    position: absolute;
-    top: max(0px, env(safe-area-inset-top, 0px));
-    right: 8px;
+    position: relative;
+    top: auto;
+    right: auto;
+    z-index: 2;
+    height: auto;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding: 4px 6px;
+    background-color: RGBA(0, 0, 0, 0.7);
+    border-top: 1px solid var(--frameColor, @frameColor);
+    border-bottom: 1px solid var(--frameColor, @frameColor);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  #browser-client .mini-controls button,
+  #browser-client .mini-controls A.btn {
+    margin-top: 0;
+    margin-right: 0;
+    flex: 0 0 auto;
   }
 }

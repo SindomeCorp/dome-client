@@ -4,6 +4,7 @@ var useMinified = !debugMode;
 <% req.bodyClass = 'client'; %>
 <div id="browser-client">
   <div id="lineBuffer" class="standardText" aria-live="polite"></div>
+  <%- include('partials/mini-controls') %>
   <div class="input-buffer-row">
     <textarea
       data-lpignore="true"
@@ -27,7 +28,6 @@ var useMinified = !debugMode;
       <div id="gameHealthDetail"></div>
     <% } %>
   </div>
-  <%- include('partials/mini-controls') %>
 </div>
 <%- include('partials/overlays') %>
 <%- include('partials/shortcuts-overlay') %>

@@ -22,6 +22,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed real-device mobile top control behavior by anchoring mini-controls to the client container on touch devices so output-area icons remain pinned while scrolling.
+- Fixed very small-screen controls by converting mini-controls into an in-layout toolbar above the input buffer so actions remain accessible while output scrolls.
 - Preserved existing xterm256 class-based color mapping behavior while adding TrueColor, so client color schemes continue overriding palette-based colors as before.
 - Fixed ANSI rendering for SGR reset/toggle sequences (`22m`, `25m`, `7m`, `27m`) so bold/blink/inverse styles stop correctly and raw escape codes are no longer shown in output.
 - Replaced regex ANSI rendering with a stateful stream parser so SGR resets, inverse fg/bg swapping, xterm256 themed colors, TrueColor, and split escape sequences render consistently with terminal behavior.
