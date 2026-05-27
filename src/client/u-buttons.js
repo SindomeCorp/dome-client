@@ -106,20 +106,41 @@ dome.setupButtons = function() {
   }
 
   dome.clearButton = toElement(dome.clearButton);
+  dome.clearBufferOverlay = toElement(dome.clearBufferOverlay);
+  dome.clearBufferConfirmButton = toElement(dome.clearBufferConfirmButton);
+  dome.clearBufferCancelButton = toElement(dome.clearBufferCancelButton);
   if (dome.clearButton) {
-    dome.clearButton.addEventListener("click", () => {
-      const isSmallScreen = typeof window !== "undefined"
-        && typeof window.matchMedia === "function"
-        && window.matchMedia("(max-width: 767px)").matches;
-      if (isSmallScreen) {
-        const confirmed = window.confirm("Clear the output buffer?");
-        if (!confirmed) {
-          return;
-        }
-      }
+    const clearBuffer = () => {
       dome.buffer.innerHTML = "";
       dome.resetSdwcNowrapState?.();
       dome.resetAnsiRendererState?.();
+    };
+    const closeClearBufferOverlay = () => {
+      dome.clearBufferOverlay?.classList.add("hide");
+    };
+    const shouldConfirmClearBuffer = () => (
+      typeof window !== "undefined"
+      && typeof window.matchMedia === "function"
+      && window.matchMedia("(max-width: 767px)").matches
+    );
+
+    dome.clearButton.addEventListener("click", () => {
+      if (shouldConfirmClearBuffer() && dome.clearBufferOverlay) {
+        dome.clearBufferOverlay.classList.remove("hide");
+        return;
+      }
+      clearBuffer();
+    });
+
+    dome.clearBufferCancelButton?.addEventListener("click", closeClearBufferOverlay);
+    dome.clearBufferConfirmButton?.addEventListener("click", () => {
+      clearBuffer();
+      closeClearBufferOverlay();
+    });
+    dome.clearBufferOverlay?.addEventListener("click", event => {
+      if (event.target === dome.clearBufferOverlay) {
+        closeClearBufferOverlay();
+      }
     });
   }
 
@@ -170,6 +191,9 @@ dome.setupButtons = function() {
       }
       if (dome.shortcutsOverlay && !dome.shortcutsOverlay.classList.contains("hide")) {
         dome.shortcutsOverlay.classList.add("hide");
+      }
+      if (dome.clearBufferOverlay && !dome.clearBufferOverlay.classList.contains("hide")) {
+        dome.clearBufferOverlay.classList.add("hide");
       }
     }
   });

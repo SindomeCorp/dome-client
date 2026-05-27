@@ -1,0 +1,38 @@
+#clear-buffer-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1002;
+  background-color: rgba(0, 0, 0, 0.82);
+}
+
+#clear-buffer-overlay .clear-buffer-content {
+  background-color: var(--almostBlack, @almostBlack);
+  border: 1px dotted var(--grayDark, @grayDark);
+  border-radius: 8px;
+  color: var(--offWhite, @offWhite);
+  left: 50%;
+  max-width: 360px;
+  padding: 12px;
+  position: fixed;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100vw - 24px);
+}
+
+#clear-buffer-overlay .clear-buffer-content h4 {
+  margin: 0 0 8px;
+}
+
+#clear-buffer-overlay .clear-buffer-content p {
+  margin: 0 0 12px;
+}
+
+#clear-buffer-overlay .clear-buffer-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
