@@ -10,7 +10,7 @@ const loadOutputParser = async (t) => {
     "<!doctype html><html><body><div id=\"buffer\"><div>old1</div><div>old2</div></div><table id=\"who-table\"><tr class=\"who-header\"></tr></table><div id=\"how-many-connected\"></div></body></html>"
   );
   dome.buffer = document.querySelector("#buffer");
-  dome.preferences = { performanceBuffer: 2, imagePreview: false };
+  dome.preferences = { performanceBuffer: 2, imagePreview: false, sdwcNowrapBlocks: false };
   dome.scrollBuffer = () => { dome.scrolled = true; };
   dome.urlPatterns = { images: /$a^/, videos: /$a^/ };
   dome.parseYouTubeID = () => null;
@@ -279,4 +279,76 @@ test("parseSocketData does not show fade text for SDWC meta lines", async (t) =>
 
   assert.equal(dome.setFadeText.mock.calls.length, 0);
   assert.equal(dome.buffer.innerHTML, "");
+});
+
+test("parseSocketData streams lines into sdwc-nowrap-block while marker mode is active", async (t) => {
+  await loadOutputParser(t);
+  dome.buffer.innerHTML = "";
+  dome.preferences.performanceBuffer = 0;
+  dome.preferences.sdwcNowrapBlocks = true;
+
+  dome.parseSocketData("#$# SDWC-START-NOWRAP\n");
+  dome.parseSocketData("line-one\nline-two\n");
+  dome.parseSocketData("#$# SDWC-END-NOWRAP\n");
+  dome.parseSocketData("line-three\n");
+
+  assert.equal(
+    dome.buffer.innerHTML,
+    "<div class=\"sdwc-nowrap-block\"><div>line-one</div><div>line-two</div></div><div>line-three</div>"
+  );
+});
+
+test("parseSocketData ignores nowrap markers when sdwc nowrap option is disabled", async (t) => {
+  await loadOutputParser(t);
+  dome.buffer.innerHTML = "";
+  dome.preferences.performanceBuffer = 0;
+  dome.preferences.sdwcNowrapBlocks = false;
+
+  dome.parseSocketData("#$# SDWC-START-NOWRAP\nline-a\n");
+  dome.parseSocketData("#$# SDWC-END-NOWRAP\nline-b\n");
+
+  assert.equal(dome.buffer.innerHTML, "<div>line-a</div><div>line-b</div>");
+});
+
+test("parseSocketData keeps nowrap mode active across chunks until END marker", async (t) => {
+  await loadOutputParser(t);
+  dome.buffer.innerHTML = "";
+  dome.preferences.performanceBuffer = 0;
+  dome.preferences.sdwcNowrapBlocks = true;
+
+  dome.parseSocketData("#$# SDWC-START-NOWRAP\nline-a\n");
+  dome.parseSocketData("line-b\n");
+  dome.parseSocketData("#$# SDWC-END-NOWRAP\n");
+
+  const block = dome.buffer.querySelector(".sdwc-nowrap-block");
+  assert.ok(block);
+  assert.equal(block?.innerHTML, "<div>line-a</div><div>line-b</div>");
+});
+
+test("parseSocketData keeps same-chunk nowrap content inside marker block", async (t) => {
+  await loadOutputParser(t);
+  dome.buffer.innerHTML = "";
+  dome.preferences.performanceBuffer = 0;
+  dome.preferences.sdwcNowrapBlocks = true;
+
+  dome.parseSocketData("#$# SDWC-START-NOWRAP\nline\n#$# SDWC-END-NOWRAP\n");
+
+  assert.equal(
+    dome.buffer.innerHTML,
+    "<div class=\"sdwc-nowrap-block\"><div>line</div></div>"
+  );
+});
+
+test("parseSocketData preserves target order around same-chunk nowrap markers", async (t) => {
+  await loadOutputParser(t);
+  dome.buffer.innerHTML = "";
+  dome.preferences.performanceBuffer = 0;
+  dome.preferences.sdwcNowrapBlocks = true;
+
+  dome.parseSocketData("before\n#$# SDWC-START-NOWRAP\ninside\n#$# SDWC-END-NOWRAP\nafter\n");
+
+  assert.equal(
+    dome.buffer.innerHTML,
+    "<div>before</div><div class=\"sdwc-nowrap-block\"><div>inside</div></div><div>after</div>"
+  );
 });

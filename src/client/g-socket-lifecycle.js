@@ -25,6 +25,7 @@ dome.setupSocket = function() {
     if (dome.activeEditor) {
       dome.activeEditor.readingContent = false;
     }
+    dome.resetSdwcNowrapState?.();
     if (dome.setFadeText && dome.statusDisplay) dome.setFadeText(dome.statusDisplay, "DISCONNECTED", true);
     dome.disconnectView.overlay.classList.remove("hide");
     dome.disconnectView.buttonGroup.classList.remove("hide");
@@ -46,6 +47,7 @@ dome.setupSocket = function() {
       onReconnectHandler();
     }
     dome.socketState = SOCKET_STATE_ENUM.CONNECTED;
+    dome.resetSdwcNowrapState?.();
     if (dome.inputReader) dome.inputReader.focus(); // focus the cursor in the input field
     if (dome.setFadeText && dome.statusDisplay) dome.setFadeText(dome.statusDisplay, "CONNECTED");
 

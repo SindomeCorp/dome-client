@@ -37,6 +37,19 @@ async function loadStatus(t, { fetchImpl, logger, skipInitialCheck = false } = {
   return { mod, runHealthCheck: intervalFn, runInitialCheck: timeoutFn };
 }
 
+function jsonResponse(body) {
+  return {
+    ok: true,
+    status: 200,
+    headers: {
+      get(name) {
+        return String(name).toLowerCase() === "content-type" ? "application/json" : "";
+      }
+    },
+    text: async () => JSON.stringify(body)
+  };
+}
+
 test("healthCheck updates lastStatus", async (t) => {
   const expected = {
     message: "moo ok",
@@ -49,9 +62,7 @@ test("healthCheck updates lastStatus", async (t) => {
   };
   const logger = { debug() {}, info: t.mock.fn(), warn() {}, error: t.mock.fn() };
   const { mod } = await loadStatus(t, {
-    fetchImpl: t.mock.fn(async () => ({
-      json: async () => expected
-    })),
+    fetchImpl: t.mock.fn(async () => jsonResponse(expected)),
     logger
   });
   const { get } = mod;
@@ -74,9 +85,7 @@ test("get returns default status before first check then updates after", async (
     state: "OK"
   };
   const { mod, runInitialCheck } = await loadStatus(t, {
-    fetchImpl: t.mock.fn(async () => ({
-      json: async () => expected
-    })),
+    fetchImpl: t.mock.fn(async () => jsonResponse(expected)),
     skipInitialCheck: true
   });
   const { get } = mod;
@@ -116,7 +125,7 @@ test("get returns latest status after subsequent check", async (t) => {
   const statuses = [first, second];
   const fetchImpl = t.mock.fn(async () => {
     const status = statuses.shift();
-    return { json: async () => status };
+    return jsonResponse(status);
   });
   const { mod, runHealthCheck } = await loadStatus(t, { fetchImpl });
   const { get } = mod;
@@ -136,10 +145,10 @@ for (const [code, message] of [
   ["ECONNREFUSED", "moo status unknown, status service is probably down (or restarting)"],
   ["ETIMEOUT", "moo status unknown, status service took too long to respond"],
   ["ENOTFOUND", "moo status unknown, status service host unreachable from webclient server"],
-  ["EUNKNOWN", "moo status unknown, unexpected error EUNKNOWN"]
+  ["EUNKNOWN", "moo status unknown, status service returned an unexpected response"]
 ]) {
   test(`healthCheck handles ${code}`, async (t) => {
-    const logger = { debug() {}, info() {}, warn() {}, error: t.mock.fn() };
+    const logger = { debug() {}, info() {}, warn: t.mock.fn(), error() {} };
     const { mod } = await loadStatus(t, {
       fetchImpl: async () => {
         const err = new Error("fail");
@@ -151,15 +160,22 @@ for (const [code, message] of [
     const { get } = mod;
     const status = get({}, { json() {} });
     assert.equal(status.message, message);
-    assert.equal(logger.error.mock.callCount(), 1);
+    assert.equal(logger.warn.mock.callCount(), 1);
   });
 }
 
 test("healthCheck handles json parse error", async (t) => {
-  const logger = { debug() {}, info() {}, warn() {}, error: t.mock.fn() };
+  const logger = { debug() {}, info() {}, warn: t.mock.fn(), error() {} };
   const { mod } = await loadStatus(t, {
     fetchImpl: async () => ({
-      json: async () => {
+      ok: true,
+      status: 200,
+      headers: {
+        get(name) {
+          return String(name).toLowerCase() === "content-type" ? "application/json" : "";
+        }
+      },
+      text: async () => {
         const err = new Error("fail");
         err.code = "ETIMEOUT";
         throw err;
@@ -170,5 +186,5 @@ test("healthCheck handles json parse error", async (t) => {
   const { get } = mod;
   const status = get({}, { json() {} });
   assert.equal(status.message, "moo status unknown, status service took too long to respond");
-  assert.equal(logger.error.mock.callCount(), 1);
+  assert.equal(logger.warn.mock.callCount(), 1);
 });

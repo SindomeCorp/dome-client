@@ -114,7 +114,26 @@ dome.setupOutputParser = function () {
   // Carry buffer for trailing partial line
   // ------------------------------
   let _carry = "";
+  let sdwcNowrapActive = false;
+  let activeSdwcNowrapBlock = null;
   const ansiRenderer = createAnsiRenderer();
+
+  const createSdwcNowrapBlock = () => {
+    if (!dome.buffer || typeof document === "undefined") {
+      return null;
+    }
+    const block = document.createElement("div");
+    block.className = "sdwc-nowrap-block";
+    dome.buffer.append(block);
+    return block;
+  };
+
+  const resetSdwcNowrapState = () => {
+    sdwcNowrapActive = false;
+    activeSdwcNowrapBlock = null;
+  };
+
+  dome.resetSdwcNowrapState = resetSdwcNowrapState;
   dome.resetAnsiRendererState = function() {
     ansiRenderer.resetState();
   };
@@ -124,6 +143,51 @@ dome.setupOutputParser = function () {
   // ------------------------------
   dome.parseSocketData = function (incomingSegmentRaw) {
     const startTime = nowMs();
+    let kidCount = dome.buffer.childNodes.length;
+
+    const appendOutputSegment = (rawSegment) => {
+      if (!rawSegment) return;
+      let outputSegment = ansiRenderer.renderChunk(rawSegment);
+
+      // ------------------ ANSI rendering, linkifying, host/ip linking ------------------
+      outputSegment = linkifyUrlsWithPreview(outputSegment);
+      outputSegment = linkifyHosts(outputSegment);
+
+      // ------------------ Small inline transforms ------------------
+      // Wrap obj# and $corified references for easy selection
+      outputSegment = outputSegment.replace(/(\#\d+\b)/g, "<span class=\"all-copy\">$1</span>");
+      outputSegment = outputSegment.replace(/(\$\w*)/g, "<span class=\"all-copy\">$1</span>");
+
+      // Alerts
+      if (dome.alert && dome.alert.active && dome.alert.pattern != null) {
+        const pattern = dome.alert.pattern;
+        let matched = false;
+        if (pattern instanceof RegExp) {
+          const flags = pattern.flags.includes("i") ? pattern.flags : pattern.flags + "i";
+          matched = new RegExp(pattern.source, flags).test(outputSegment);
+        } else {
+          matched = outputSegment.toLowerCase().includes(String(pattern).toLowerCase());
+        }
+        if (matched) {
+          dome.alert.tone.play();
+          dome.windowAlert();
+        }
+      }
+
+      // ------------------ NEWLINE HANDLING ------------------
+      // IMPORTANT: Do NOT “smart-merge” across newlines; just render each line.
+      const html = wrapLinesToDivs(outputSegment);
+
+      // Append to buffer
+      if (sdwcNowrapActive && activeSdwcNowrapBlock && !dome.buffer.contains(activeSdwcNowrapBlock)) {
+        resetSdwcNowrapState();
+      }
+      const outputTarget = sdwcNowrapActive && activeSdwcNowrapBlock
+        ? activeSdwcNowrapBlock
+        : dome.buffer;
+      outputTarget.insertAdjacentHTML("beforeend", html);
+      kidCount = dome.buffer.childNodes.length;
+    };
 
     // 1) Normalize newlines immediately
     let segment = normalizeNewlines(incomingSegmentRaw);
@@ -230,6 +294,43 @@ dome.setupOutputParser = function () {
         segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
         withFadeText("pinged");
       } else if (/^\s*SDWC\b/i.test(metaCommand)) {
+        const metaCommandNormalized = metaCommand.trim().toUpperCase();
+        if (metaCommandNormalized === "SDWC-START-NOWRAP") {
+          const nowrapEnabled = dome.preferences?.sdwcNowrapBlocks === true;
+          logger.info(nowrapEnabled
+            ? "Received SDWC-START-NOWRAP"
+            : "Received SDWC-START-NOWRAP (ignored: sdwcNowrapBlocks disabled)");
+          appendOutputSegment(segment.slice(0, metaIdx === 0 ? 0 : metaIdx + 1));
+          if (!nowrapEnabled) {
+            segment = segment.slice(lineEnd + 1);
+            continue;
+          }
+          if (sdwcNowrapActive) {
+            logger.warn("Received duplicate SDWC-START-NOWRAP while nowrap mode is active");
+          } else {
+            activeSdwcNowrapBlock = createSdwcNowrapBlock();
+            sdwcNowrapActive = Boolean(activeSdwcNowrapBlock);
+          }
+          segment = segment.slice(lineEnd + 1);
+          continue;
+        } else if (metaCommandNormalized === "SDWC-END-NOWRAP") {
+          const nowrapEnabled = dome.preferences?.sdwcNowrapBlocks === true;
+          logger.info(nowrapEnabled
+            ? "Received SDWC-END-NOWRAP"
+            : "Received SDWC-END-NOWRAP (ignored: sdwcNowrapBlocks disabled)");
+          appendOutputSegment(segment.slice(0, metaIdx === 0 ? 0 : metaIdx + 1));
+          if (!nowrapEnabled) {
+            segment = segment.slice(lineEnd + 1);
+            continue;
+          }
+          if (sdwcNowrapActive) {
+            resetSdwcNowrapState();
+          } else {
+            logger.warn("Received SDWC-END-NOWRAP without an active nowrap block");
+          }
+          segment = segment.slice(lineEnd + 1);
+          continue;
+        }
         const sdwcParts = metaCommand.trim().split("%%");
         if ((sdwcParts[0] || "").toUpperCase() === "SDWC") {
           const sdwcCommand = (sdwcParts[1] || "").trim().toLowerCase();
@@ -256,7 +357,7 @@ dome.setupOutputParser = function () {
             const overlayObject = String(overlayPayload?.object || "").trim();
             const overlayVerb = String(overlayPayload?.verb || "").trim();
             if (overlayObject && overlayVerb && dome.ideWindow && !dome.ideWindow.closed) {
-              console.log("[SDWC overlay parsed][verb]", {
+              logger.debug("[SDWC overlay parsed][verb]", {
                 objectId: overlayObject,
                 verbName: overlayVerb,
                 payload: overlayPayload
@@ -268,7 +369,7 @@ dome.setupOutputParser = function () {
                 payload: overlayPayload
               }, "*");
             } else {
-              console.log("[SDWC overlay parsed ignored][verb]", {
+              logger.debug("[SDWC overlay parsed ignored][verb]", {
                 hasObject: Boolean(overlayObject),
                 hasVerb: Boolean(overlayVerb),
                 hasIdeWindow: Boolean(dome.ideWindow && !dome.ideWindow.closed),
@@ -297,7 +398,7 @@ dome.setupOutputParser = function () {
             const overlayObject = String(overlayPayload?.object || "").trim();
             const overlayProp = String(overlayPayload?.property || "").trim();
             if (overlayObject && overlayProp && dome.ideWindow && !dome.ideWindow.closed) {
-              console.log("[SDWC overlay parsed][prop]", {
+              logger.debug("[SDWC overlay parsed][prop]", {
                 objectId: overlayObject,
                 propertyName: overlayProp,
                 payload: overlayPayload
@@ -309,7 +410,7 @@ dome.setupOutputParser = function () {
                 payload: overlayPayload
               }, "*");
             } else {
-              console.log("[SDWC overlay parsed ignored][prop]", {
+              logger.debug("[SDWC overlay parsed ignored][prop]", {
                 hasObject: Boolean(overlayObject),
                 hasProperty: Boolean(overlayProp),
                 hasIdeWindow: Boolean(dome.ideWindow && !dome.ideWindow.closed),
@@ -328,45 +429,12 @@ dome.setupOutputParser = function () {
       }
     }
 
-    if (!segment) return;
-
-    // ------------------ ANSI rendering, linkifying, host/ip linking ------------------
-    segment = ansiRenderer.renderChunk(segment);
-
-    segment = linkifyUrlsWithPreview(segment);
-    segment = linkifyHosts(segment);
-
-    // ------------------ Small inline transforms ------------------
-    // Wrap obj# and $corified references for easy selection
-    segment = segment.replace(/(\#\d+\b)/g, "<span class=\"all-copy\">$1</span>");
-    segment = segment.replace(/(\$\w*)/g, "<span class=\"all-copy\">$1</span>");
-
-    // Alerts
-    if (dome.alert && dome.alert.active && dome.alert.pattern != null) {
-      const pattern = dome.alert.pattern;
-      let matched = false;
-      if (pattern instanceof RegExp) {
-        const flags = pattern.flags.includes("i") ? pattern.flags : pattern.flags + "i";
-        matched = new RegExp(pattern.source, flags).test(segment);
-      } else {
-        matched = segment.toLowerCase().includes(String(pattern).toLowerCase());
-      }
-      if (matched) {
-        dome.alert.tone.play();
-        dome.windowAlert();
-      }
+    if (segment) {
+      appendOutputSegment(segment);
     }
-
-    // ------------------ NEWLINE HANDLING ------------------
-    // IMPORTANT: Do NOT “smart-merge” across newlines; just render each line.
-    const html = wrapLinesToDivs(segment);
-
-    // Append to buffer
-    dome.buffer.insertAdjacentHTML("beforeend", html);
 
     // ------------------ Perf logging and pruning ------------------
     const WARN_THRESHOLD = 10; // ms
-    let kidCount = dome.buffer.childNodes.length;
     const execDuration = nowMs() - startTime;
 
     if (execDuration > WARN_THRESHOLD) {

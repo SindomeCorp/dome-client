@@ -88,12 +88,13 @@ test("readPreferences returns defaults", async (t) => {
   assert.equal(prefs.autoScroll, "dbl");
   assert.equal(prefs.broadSearch, true);
   assert.equal(prefs.inlineLogCss, true);
+  assert.equal(prefs.sdwcNowrapBlocks, false);
   assert.equal(prefs.transparentOverlay, true);
   assert.equal(prefs.performanceBuffer, 0);
 });
 
 test("readPreferences parses url options", async (t) => {
-  const url = "https://example.com/?cs=false&su=false&pd=false&le=true&iv=true&lc=false&as=none&to=false&bs=false";
+  const url = "https://example.com/?cs=false&su=false&pd=false&le=true&iv=true&lc=false&nw=true&as=none&to=false&bs=false";
   const win = await setupWindow(t, url, "Chrome/78");
   const prefs = win.dome.readPreferences();
   assert.equal(prefs.commandSuggestions, false);
@@ -102,6 +103,7 @@ test("readPreferences parses url options", async (t) => {
   assert.equal(prefs.localEcho, true);
   assert.equal(prefs.imagePreview, true);
   assert.equal(prefs.inlineLogCss, false);
+  assert.equal(prefs.sdwcNowrapBlocks, true);
   assert.equal(prefs.autoScroll, "none");
   assert.equal(prefs.transparentOverlay, false);
   assert.equal(prefs.broadSearch, false);
