@@ -17,16 +17,21 @@
   opacity: 1;
   background-color: var(--almostBlack, @almostBlack);
   width: 300px;
-  margin: 0 auto;
+  max-width: calc(100vw - 24px);
+  margin: 0;
   padding: 10px;
   border: 1px dotted var(--grayDark, @grayDark);
   color: var(--offWhite, @offWhite);
   text-align: left;
-  position: absolute;
+  position: fixed;
   z-index: 10001;
-  top: 150px;
-  right: 150px;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
   border-radius: 8px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
 }
 #shortcuts-overlay .shortcuts-content h4 {
   margin-top: 0;
@@ -37,4 +42,11 @@
 }
 #shortcuts-overlay .shortcuts-content li {
   margin: 5px 0;
+}
+
+@media (max-width: @screen-xs-max) {
+  #shortcuts-overlay .shortcuts-content {
+    width: auto;
+    min-width: 0;
+  }
 }

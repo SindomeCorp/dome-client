@@ -108,6 +108,15 @@ dome.setupButtons = function() {
   dome.clearButton = toElement(dome.clearButton);
   if (dome.clearButton) {
     dome.clearButton.addEventListener("click", () => {
+      const isSmallScreen = typeof window !== "undefined"
+        && typeof window.matchMedia === "function"
+        && window.matchMedia("(max-width: 767px)").matches;
+      if (isSmallScreen) {
+        const confirmed = window.confirm("Clear the output buffer?");
+        if (!confirmed) {
+          return;
+        }
+      }
       dome.buffer.innerHTML = "";
       dome.resetSdwcNowrapState?.();
       dome.resetAnsiRendererState?.();
