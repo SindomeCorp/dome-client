@@ -104,6 +104,14 @@ test("persists state across chunks and handles split CSI tokens", () => {
   assert.equal(out3, `<span class="xterm256-${xterm256Colors[2]}"> text</span> done`);
 });
 
+test("handles split ESC and CSI bracket across chunks", () => {
+  const renderer = createAnsiRenderer();
+  const out1 = renderer.renderChunk("hello \u001b");
+  const out2 = renderer.renderChunk("[38;5;1mred\u001b[0m");
+  assert.equal(out1, "hello ");
+  assert.equal(out2, `<span class="xterm256-${xterm256Colors[1]}">red</span>`);
+});
+
 test("resets foreground and background independently", () => {
   const input = "\u001b[38;5;1;48;5;4mX\u001b[39mY\u001b[49mZ";
   const output = applyAnsi(input);

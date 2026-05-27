@@ -274,6 +274,19 @@ export function createAnsiRenderer() {
       };
 
       while (idx < source.length) {
+        if (source[idx] === ESC) {
+          if (idx + 1 >= source.length) {
+            flushTextTo(idx);
+            textStart = idx;
+            carry = ESC;
+            break;
+          }
+          if (source[idx + 1] !== "[") {
+            idx += 1;
+            continue;
+          }
+        }
+
         if (source.startsWith(CSI, idx)) {
           flushTextTo(idx);
           let term = idx + 2;
