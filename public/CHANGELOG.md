@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-05-27
+
+### Added
+- Added ANSI TrueColor rendering support for foreground/background sequences (`38;2;r;g;b` and `48;2;r;g;b`) using inline RGB styles in the line buffer and saved logs.
+
+### Fixed
+- Preserved existing xterm256 class-based color mapping behavior while adding TrueColor, so client color schemes continue overriding palette-based colors as before.
+- Fixed ANSI rendering for SGR reset/toggle sequences (`22m`, `25m`, `7m`, `27m`) so bold/blink/inverse styles stop correctly and raw escape codes are no longer shown in output.
+
 ## 2026-05-21
 
 ### Added
