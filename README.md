@@ -29,8 +29,8 @@ Open in Browser: http://localhost:8080
 
 ## Features
 
-- ANSI/Xterm256 color rendering with multiple color presets and readable monospace font options.
 - Browser-based MUD play over WebSocket with no installation.
+- Terminal-accurate ANSI rendering with a stateful parser (including reset/inverse handling), full Xterm256 support, and TrueColor (`38;2`/`48;2`) foreground/background rendering in both live output and exported logs.
 - HTTPS support.
 - Automatic URL linkification in output buffer.
 - Inline media previews for image/video/YouTube links with expand/collapse toggles.
@@ -41,12 +41,16 @@ Open in Browser: http://localhost:8080
 - Live health panel with hover/click detail view and rolling CPU/RAM/user charts (when status service is configured).
 - Input ergonomics: command history recall, long-input-friendly arrow behavior, and keyboard shortcuts (`Pause/Break`, `Home`, `Insert`, `Ctrl+R`).
 - Command history search overlay (`Ctrl+R`) with live filtering, de-duplicated exact matches, keyboard navigation, and one-key insert back into the input buffer.
-- Mobile-friendly small-screen input controls, including dedicated up/down history buttons and responsive input sizing for touch devices.
-- Rich client options: command hints, local echo, image preview, overlay transparency, buffer size, alert sound, font/theme choices, and editor mode selection.
+- Mobile-focused UX: plain-text keyboard hints for command entry (no autocorrect/caps), dedicated up/down history buttons, responsive input sizing, touch-friendly action toolbar, centered overlay dialogs, and guarded clear-buffer confirmation.
+- Rich client options: command hints, local echo, image preview, overlay transparency, buffer size, alert sound, font/theme choices, editor mode selection, separate input/output font sizing, configurable input text/background colors, and `Scroll Up to Pause` autoscroll behavior.
+- Client options Import/Export workflow: download all preferences as JSON, import recognized keys locally, validate ranges, normalize legacy values, and reset to defaults with explicit confirmation.
 - Session log export as HTML for preserving and sharing scrollback, with a client option to switch between default self-contained inline CSS and a lighter legacy linked stylesheet mode.
+- Better nowrap output handling via SDWC markers (`SDWC-START-NOWRAP` / `SDWC-END-NOWRAP`) and a mobile-friendly wrap option for long horizontal content.
 - Built-in keyboard shortcuts for both client and IDE workflows.
 - Optional URL-shortener integration.
 - Optional status-service integration.
+- Native bridge integration support (`window.DomeBridge` / `window.DomeNative`) for mobile wrappers, including queued startup event handling and native log-download routing when available.
+- Fully bundled client styling (local LESS/CSS and glyph assets), removing runtime dependency on external `dome.css` for consistent mobile/desktop rendering.
 
 ## IDE Features
 
