@@ -112,7 +112,7 @@ Needed on MOO:
 
 SDWC is the out-of-band (OOB) command channel used by the IDE to communicate with the MOO without interrupting the normal flow of player-entered commands. This lets the web client and MOO exchange IDE/browser metadata and responses asynchronously while regular gameplay command handling continues normally.
 
-For dedicated documentation of SDWC nowrap markers (`SDWC-START-NOWRAP` / `SDWC-END-NOWRAP`), see [SDWC OOB NOWRAP Markers](SDWC-OOB.md).
+For dedicated SDWC out-of-band marker documentation (nowrap, IDE payloads, and connection metadata markers), see [SDWC OOB Commands](SDWC-OOB.md).
 
 To support SDWC, several verbs may need to be added or modified.
 
@@ -406,6 +406,7 @@ As with other editor saves, the client sends the upload command first, then the 
 The web client sends this command as part of connection metadata flow (in response to the server marker `#$# dome-client-user`).
 
 If you want to register the actual IP/hostname connecting to your server, you can implement this command and hook it into `$player.all_connect_places` however you want.
+For detailed marker/response flow and MOO-side implementation examples, see [SDWC OOB Commands](SDWC-OOB.md) (includes `dome-client-user` metadata handshake notes).
 
 ## 7) Implementation Checklist
 

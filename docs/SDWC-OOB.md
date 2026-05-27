@@ -1,47 +1,55 @@
-# SDWC OOB: NOWRAP Markers
+# SDWC OOB Commands
 
-This document describes the SDWC out-of-band markers used to control "nowrap blocks" in the Dome Client output buffer:
+This document describes Dome Client out-of-band markers sent over MOO output lines (prefixed with `#$# `).
 
-- `SDWC-START-NOWRAP`
-- `SDWC-END-NOWRAP`
+SDWC markers are used for:
+- Output rendering control (nowrap blocks)
+- IDE/browser payload exchange
+- Connection metadata handshake
 
-These markers are intended for content that should stay visually unwrapped (for example, wide tables, aligned columns, or dense diagnostics) and be horizontally scrollable on small screens.
+## Marker Families
 
-## Marker Format
+There are two marker styles in active use:
 
-The client reads SDWC marker lines from MOO output lines that begin with `#$# `.
-
-Use these exact lines:
+1. Plain control marker lines:
 
 ```text
 #$# SDWC-START-NOWRAP
-... your output lines here ...
+#$# SDWC-END-NOWRAP
+#$# dome-client-user
+```
+
+2. SDWC payload lines using `%%` segments:
+
+```text
+#$# SDWC%%VERBS%%<json>
+#$# SDWC%%PROPS%%<json>
+#$# SDWC%%VERB-OVERLAY%%<json>
+#$# SDWC%%PROP-OVERLAY%%<json>
+```
+
+## NOWRAP Output Markers
+
+Use for width-sensitive text that should remain unwrapped and horizontally scrollable.
+
+```text
+#$# SDWC-START-NOWRAP
+... output lines ...
 #$# SDWC-END-NOWRAP
 ```
 
-## What The Client Does
-
-When the player has `Mobile Friendly Text Wrap` enabled in Client Options:
-
-- On `SDWC-START-NOWRAP`:
-  - The client starts a dedicated nowrap block (`.sdwc-nowrap-block`).
-  - Following lines render inside that block with horizontal scrolling.
-- On `SDWC-END-NOWRAP`:
-  - The client closes the active nowrap block.
-  - Subsequent output returns to normal wrapping.
-
-When that option is disabled:
-
-- The client ignores both markers and continues normal wrapped output.
+Client behavior:
+- If `Mobile Friendly Text Wrap` is enabled:
+  - Starts a nowrap block on `SDWC-START-NOWRAP`
+  - Ends it on `SDWC-END-NOWRAP`
+- If disabled:
+  - Markers are ignored and normal wrapping continues
 
 Safety behavior:
+- Duplicate start while active is ignored (warn-level log)
+- End without active block is ignored (warn-level log)
 
-- Duplicate `SDWC-START-NOWRAP` while already active is ignored with a warning.
-- `SDWC-END-NOWRAP` without an active block is ignored with a warning.
-
-## Sending Markers From MOO
-
-At minimum, send marker lines with `notify()`:
+MOO example:
 
 ```moo
 notify(player, "#$# SDWC-START-NOWRAP");
@@ -51,17 +59,75 @@ notify(player, "1002  WAITING  #456         2026-05-27 09:31:02");
 notify(player, "#$# SDWC-END-NOWRAP");
 ```
 
-You can use this from command verbs, diagnostics, or helper utilities that emit structured text.
+## IDE Payload Commands
 
-## Recommended Usage
+These are consumed by the web client IDE flows (object browser, overlays, etc.).
 
-- Emit both start and end markers in the same command flow whenever possible.
-- Reserve nowrap blocks for truly width-sensitive text.
-- Keep marker spelling exact; these are parsed as literal SDWC control commands.
+Response payloads from MOO to client:
 
-## Related Client Option
+- `#$# SDWC%%VERBS%%<json>`
+- `#$# SDWC%%PROPS%%<json>`
+- `#$# SDWC%%VERB-OVERLAY%%<json>`
+- `#$# SDWC%%PROP-OVERLAY%%<json>`
 
-Client Options -> Presentation -> `Mobile Friendly Text Wrap`
+Notes:
+- Payloads should be valid JSON strings.
+- The client parses and forwards these to IDE windows; malformed JSON is ignored with warning logs.
 
-- `Yes`: honors `SDWC-START-NOWRAP` / `SDWC-END-NOWRAP`
-- `No`: ignores nowrap markers and wraps output normally
+## Connection Metadata Marker (`dome-client-user`)
+
+This marker asks the client to send the MOO a host/IP metadata command. This will include the actual IP/host that the client is connected from, not the webclient's IP (which is what would be sent to the MOO on connection). 
+
+This is IMPORTANT because you don't want people using your webclient that are newted/toaded/banned/etc. So you may want to integrate the result of these values into various checks to make sure that a webclient user isn't a banned user.
+
+Marker flow:
+
+1. MOO emits:
+
+```text
+#$# dome-client-user
+```
+
+2. Client responds:
+
+```text
+@dome-client-user <hostname-or-ip>
+```
+
+`<hostname-or-ip>` is:
+- reverse-DNS hostname when available, or
+- client IP fallback
+
+MOO verb setup:
+
+```moo
+@verb <player parent>:@dome-client-user any any any rxd
+@program <player parent>:@dome-client-user
+```
+
+Example verb body:
+
+```moo
+"Record dome-client supplied host/ip metadata for this session.";
+set_task_perms(player);
+host_or_ip = argstr;
+if (!host_or_ip || host_or_ip == "")
+  return player:notify("[dome-client] missing host/ip payload.");
+endif
+
+player.all_connect_places = {@player.all_connect_places, host_or_ip};
+player:notify(tostr("[dome-client] connect host/ip registered: ", host_or_ip));
+```
+
+Trigger from connect/login flow:
+
+```moo
+notify(player, "#$# dome-client-user");
+```
+
+## Operational Recommendations
+
+- Keep marker spelling exact; matching is literal for control markers.
+- Emit start/end pairs in the same command flow when possible.
+- Use SDWC payload markers only for machine-readable client metadata (JSON).
+- Keep gameplay/player-visible text separate from SDWC marker lines.
