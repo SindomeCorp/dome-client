@@ -1,5 +1,5 @@
 <div class="moo-login-page">
-  <h1>Play <%=mooName%> Now</h1>
+  <h1><% if (connectAnywhere) { %>Play Now<% } else { %>Play <%=mooName%> Now<% } %></h1>
 
   <%
   var errorMsg = null;
@@ -31,90 +31,129 @@
       if (badChrome) document.getElementById('chrome-performance-warning').setAttribute('class', 'connect-error alert alert-danger');
   </script>
 
-  <div class="option-group guest-group centered right-seam hidden-xs hidden-sm">
-    <a class="btn btn-xlarge btn-primary btn-connect-guest" rel="nofollow" href="/player-client/">Connect as a Guest</a>
-    <br>
-    <br>
-    <a class="btn btn-xlarge btn-primary btn-connect-other" rel="nofollow" href="/player-client/">Connect Manually</a>
-    <br>
-    <br>
-    <% if (signupUrl) { %>
-    <a class="btn btn-primary" href="<%=signupUrl%>">Signup Now</a>
-    <% } %>
-  </div>
-  <% if ( session && session.user ) { %>
+  <% if (connectAnywhere) { %>
+  <input id="moo-username" type="hidden" name="username" value="">
+  <input id="moo-password" type="hidden" name="password" value="">
   <div class="option-group connect-as-group">
-    <h2 style="color: #eeeeee">Play As ...</h2>
+    <h2 style="color: #eeeeee">Connect To ...</h2>
     <div class="moo-login-box">
-      <label for="moo-username">CHARACTER NAME</label><br>
-      <div id="user-picker" class="btn-group hide">
-        <button class="btn btn-default user-picker-label">{character name}</button>
-        <button class="btn btn-default dropdown-toggle">
-          <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu">
-          <%
-             if ( session.user?.chars ) {
-               var chars = session.user.chars;
-
-               for ( var i = 0 ; i < chars.length; i++) {
-                 if (!chars[i] || !chars[i].name) {
-                   continue;
-                 }
-
-          %>
-          <li class="character" data-username="<%=chars[i].name%>"><%=chars[i].name%></li>
-          <% } } %>
-          <li class="divider"></li>
-          <li data-command="newChar" class="command">Add Character</li>
-          <li data-command="purgeAll" class="command">Forget All</li>
-        </ul>
-      </div>
-      <input id="moo-username" type="text" name="username"><br>
-      <label for="moo-password">PASSWORD</label><br>
-      <input id="moo-password" type="password" name="password"><br>
+      <label for="moo-hostname">HOSTNAME</label><br>
+      <input id="moo-hostname" type="text" name="hostname" value="<%= mooHostname %>" /><br>
+      <label for="moo-port">PORT</label><br>
+      <input id="moo-port" type="number" name="port" value="<%= mooPort %>" min="23" max="65535" step="1"/><br>
       <div class="relative-group">
-        <div class="pull-right">
-          <input class="btn btn-lg btn-primary" id="connect_as" type="submit" name="connect" value="Connect">
-        </div> </div> </div> </div>
-
-  <% } else if (showWebsiteAuth) { %>
-  <div class="option-group website-login-group">
-    <h2 style="color:#EEE"><%=mooName%> Website Login</h2>
-    <div class="website-login-box">
-      <form method="POST" action="/website-login/">
-      <label for="email">EMAIL ADDRESS</label><br>
-      <input type="email" id="email-address" name="email"><br> <br>
-      <label for="password">PASSWORD</label><br>
-      <input type="password" name="pass"><br>
-      <input type="checkbox" name="gogogo" checked="checked"/> <label class="gogogo" for="gogogo" title="You probably only have one account, so leave this checked. If you've connected before, you'll skip character selection.">Connect Immediately</label>
-
-        <input class="btn btn-lg btn-primary pull-right" id="login_btn" type="submit" name="login" value="Login">
-        <% if ( req.query[ 'return' ] ) { %>
-        <input type="hidden" name="return" value="<%=req.query.return%>">
-        <% } %>
-      </form>
+        <input class="btn btn-success pull-right" id="connect_now" type="submit" name="connect_now" value="Connect Now">
+      </div>
     </div>
   </div>
-
-  <% } %>
-
-  <div class="option-group guest-group centered hidden-md hidden-lg">
-    <a class="btn btn-xlarge btn-primary btn-connect-guest" rel="nofollow" href="/player-client/">Connect as a Guest</a>
-    <br>
-    <br>
-    <a class="btn btn-xlarge btn-primary btn-connect-other" rel="nofollow" href="/player-client/">Connect Manually</a>
-    <br>
-    <br>
-    <% if (signupUrl) { %>
-    <a class="btn btn-primary" href="<%=signupUrl%>">Signup Now</a>
-    <% } %>
+  <%
+    var stats = connected();
+    if (stats && stats.count > 0) {
+  %>
+  <div class="connection-stats hidden-sm hidden-xs">
+    <table>
+      <tr class="table-header"><td class="count-column"><%=stats.count%></td><td>Connections Since Restart</td></tr>
+      <% for (var j = 0; j < stats.games.length; j++) { %>
+        <% var gameinfo = stats.games[j]; %>
+        <% var addressParts = gameinfo.address.split(':'); %>
+        <% var gameHost = addressParts[0]; %>
+        <% var gamePort = addressParts[1]; %>
+        <tr>
+          <td class="count-column"><%=gameinfo.count%></td>
+          <td><a target="_blank" href="/player-client/?gh=<%=gameHost%>&gp=<%=gamePort%>" class="game-address"><%=gameinfo.address%></a></td>
+        </tr>
+      <% } %>
+    </table>
   </div>
+  <% } %>
+  <% } else { %>
+    <input id="moo-hostname" type="hidden" name="hostname" value="<%= mooHostname %>" />
+    <input id="moo-port" type="hidden" name="port" value="<%= mooPort %>" />
+    <div class="option-group guest-group centered right-seam hidden-xs hidden-sm">
+      <a class="btn btn-xlarge btn-primary btn-connect-guest" rel="nofollow" href="/player-client/">Connect as a Guest</a>
+      <br>
+      <br>
+      <a class="btn btn-xlarge btn-primary btn-connect-other" rel="nofollow" href="/player-client/">Connect Manually</a>
+      <br>
+      <br>
+      <% if (signupUrl) { %>
+      <a class="btn btn-primary" href="<%=signupUrl%>">Signup Now</a>
+      <% } %>
+    </div>
+    <% if ( session && session.user ) { %>
+    <div class="option-group connect-as-group">
+      <h2 style="color: #eeeeee">Play As ...</h2>
+      <div class="moo-login-box">
+        <label for="moo-username">CHARACTER NAME</label><br>
+        <div id="user-picker" class="btn-group hide">
+          <button class="btn btn-default user-picker-label">{character name}</button>
+          <button class="btn btn-default dropdown-toggle">
+            <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu">
+            <%
+               if ( session.user?.chars ) {
+                 var chars2 = session.user.chars;
+
+                 for ( var k = 0 ; k < chars2.length; k++) {
+                   if (!chars2[k] || !chars2[k].name) {
+                     continue;
+                   }
+
+            %>
+            <li class="character" data-username="<%=chars2[k].name%>"><%=chars2[k].name%></li>
+            <% } } %>
+            <li class="divider"></li>
+            <li data-command="newChar" class="command">Add Character</li>
+            <li data-command="purgeAll" class="command">Forget All</li>
+          </ul>
+        </div>
+        <input id="moo-username" type="text" name="username"><br>
+        <label for="moo-password">PASSWORD</label><br>
+        <input id="moo-password" type="password" name="password"><br>
+        <div class="relative-group">
+          <div class="pull-right">
+            <input class="btn btn-lg btn-primary" id="connect_as" type="submit" name="connect" value="Connect">
+          </div> </div> </div> </div>
+
+    <% } else if (showWebsiteAuth) { %>
+    <div class="option-group website-login-group">
+      <h2 style="color:#EEE"><%=mooName%> Website Login</h2>
+      <div class="website-login-box">
+        <form method="POST" action="/website-login/">
+        <label for="email">EMAIL ADDRESS</label><br>
+        <input type="email" id="email-address" name="email"><br> <br>
+        <label for="password">PASSWORD</label><br>
+        <input type="password" name="pass"><br>
+        <input type="checkbox" name="gogogo" checked="checked"/> <label class="gogogo" for="gogogo" title="You probably only have one account, so leave this checked. If you've connected before, you'll skip character selection.">Connect Immediately</label>
+
+          <input class="btn btn-lg btn-primary pull-right" id="login_btn" type="submit" name="login" value="Login">
+          <% if ( req.query[ 'return' ] ) { %>
+          <input type="hidden" name="return" value="<%=req.query.return%>">
+          <% } %>
+        </form>
+      </div>
+    </div>
+
+    <% } %>
+
+    <div class="option-group guest-group centered hidden-md hidden-lg">
+      <a class="btn btn-xlarge btn-primary btn-connect-guest" rel="nofollow" href="/player-client/">Connect as a Guest</a>
+      <br>
+      <br>
+      <a class="btn btn-xlarge btn-primary btn-connect-other" rel="nofollow" href="/player-client/">Connect Manually</a>
+      <br>
+      <br>
+      <% if (signupUrl) { %>
+      <a class="btn btn-primary" href="<%=signupUrl%>">Signup Now</a>
+      <% } %>
+    </div>
+  <% } %>
 
   <div class="version-wrap">
     <div class="version">
-      <span>Dome Client v<%=version%></span>
-      <span>&copy; The Sindome Corporation 1997-<%=new Date().getFullYear()%></span>
+      <a href="https://github.com/SindomeCorp/dome-client" target="_blank" rel="noopener noreferrer">Dome Client v<%=version%></a>
+      <span>&copy; <a href="https://www.sindome.org/" target="_blank" rel="noopener noreferrer">The Sindome Corporation</a> 1997-<%=new Date().getFullYear()%></span>
       <a href="/CHANGELOG.md">Changelog</a>
     </div>
   </div>

@@ -7,6 +7,8 @@ function getParameterByName(name) {
 }
 
 const gogo = getParameterByName("auto");
+const DEFAULT_MUD_HOST = "moo.sindome.org";
+const DEFAULT_MUD_PORT = "5555";
 
 const connectFunction = function() {
   const u = document.getElementById("moo-username").value;
@@ -25,7 +27,22 @@ const connectFunction = function() {
     //store.put('dc-password', p);
     store.put("dc-user-login", cmd);
   }
-  window.location = "/player-client/";
+  const hostField = document.getElementById("moo-hostname");
+  const portField = document.getElementById("moo-port");
+  let host = (hostField?.value || "").trim();
+  let port = (portField?.value || "").trim();
+  if (!host) {
+    host = DEFAULT_MUD_HOST;
+  }
+  if (!port) {
+    port = DEFAULT_MUD_PORT;
+  }
+  store.put("game-hostname", host);
+  store.put("game-port", port);
+  const params = new URLSearchParams();
+  params.set("gh", host);
+  params.set("gp", port);
+  window.location = `/player-client/?${params.toString()}`;
 };
 
 store.getUsernames = function() {
@@ -95,14 +112,25 @@ document.addEventListener("DOMContentLoaded", () => {
   store.remove("dc-password");
 
   const usernames = store.getUsernames();
+  const gameHostname = DEFAULT_MUD_HOST;
+  const gamePort = DEFAULT_MUD_PORT;
 
   const usernamePicker = document.getElementById("user-picker");
   const usernamePickerLabel = usernamePicker ? usernamePicker.querySelector(".user-picker-label") : null;
   const usernamePickerToggle = usernamePicker ? usernamePicker.querySelector(".dropdown-toggle") : null;
   const usernameField = document.getElementById("moo-username");
   const passwordField = document.getElementById("moo-password");
+  const hostnameField = document.getElementById("moo-hostname");
+  const portField = document.getElementById("moo-port");
   const chromeWarning = document.getElementById("chrome-performance-warning");
   const chromeWarningClose = chromeWarning ? chromeWarning.querySelector(".close") : null;
+
+  if (hostnameField) {
+    hostnameField.value = gameHostname;
+  }
+  if (portField) {
+    portField.value = gamePort;
+  }
 
   if (chromeWarning && chromeWarningClose) {
     const hideWarning = () => {
@@ -137,7 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
       passwordField.value = p;
     };
 
-    if (usernames.length > 0) {
+    if (usernames.length > 0 && usernamePicker && usernamePickerLabel) {
       // drop-down picker
       usernameField.style.display = "none";
 
@@ -246,9 +274,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      if (usernamePicker) {
-        usernamePicker.classList.remove("hide");
-      }
+      usernamePicker.classList.remove("hide");
     } else {
       // input field
     }
@@ -294,4 +320,31 @@ document.addEventListener("DOMContentLoaded", () => {
       window.location = "/player-client/";
     });
   });
+
+  const connectNow = document.getElementById("connect_now");
+  if (connectNow) {
+    connectNow.addEventListener("click", (event) => {
+      event.preventDefault();
+      connectFunction();
+    });
+  }
+
+  const contactPanel = document.getElementById("contact_panel");
+  const addressPanel = document.getElementById("address_panel");
+  const nextButton = document.getElementById("next_btn");
+  if (nextButton && contactPanel && addressPanel) {
+    nextButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      contactPanel.classList.remove("hidden-panel");
+      addressPanel.classList.add("hidden-panel");
+    });
+  }
+  const backButton = document.getElementById("back_btn");
+  if (backButton && contactPanel && addressPanel) {
+    backButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      addressPanel.classList.remove("hidden-panel");
+      contactPanel.classList.add("hidden-panel");
+    });
+  }
 });

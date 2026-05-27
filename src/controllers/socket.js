@@ -6,6 +6,7 @@ import config from "../config/index.js";
 import { named, inspect } from "../logger.js";
 import { urls as shortenUrls } from "../services/shorten.js";
 import { dnsErrorHandler } from "../services/socket-utils.js";
+import { recordConnection } from "../services/multi-mud-metrics.js";
 import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,6 +20,30 @@ export function error(err) {
 
 const SOCKET_PROXIED = config.node?.socketProxied ?? false;
 const SHORTEN_ENABLED = config.shorten?.enabled ?? true;
+const MULTI_MUD_ENABLED = config.node?.multiMud === true;
+
+function parseSocketPort(rawPort) {
+  const parsed = Number.parseInt(String(rawPort || ""), 10);
+  if (!Number.isFinite(parsed) || parsed < 23 || parsed > 65535) {
+    return null;
+  }
+  return parsed;
+}
+
+function resolveGameAddress(socket) {
+  const fallbackHost = config.moo.host;
+  const fallbackPort = config.moo.port;
+  if (!MULTI_MUD_ENABLED) {
+    return { host: fallbackHost, port: fallbackPort };
+  }
+  const query = socket.handshake?.query || {};
+  const host = String(query.host || "").trim();
+  const port = parseSocketPort(query.port);
+  if (!host || port == null) {
+    return { host: fallbackHost, port: fallbackPort };
+  }
+  return { host, port };
+}
 
 export function userIp(socket) {
   let handshakeAddress = socket.handshake.address;
@@ -53,10 +78,12 @@ export async function connection(socket) {
   socket.logger = logger;
   socket.logUser = logUser;
   socket.logError = logError;
+  const gameAddress = resolveGameAddress(socket);
+  socket.gameAddress = gameAddress;
   let moo;
   try {
     moo = await new Promise((resolve, reject) => {
-      const conn = net.connect({ port: config.moo.port, host: config.moo.host });
+      const conn = net.connect({ port: gameAddress.port, host: gameAddress.host });
       conn.once("connect", () => resolve(conn));
       conn.once("error", reject);
     });
@@ -68,6 +95,7 @@ export async function connection(socket) {
   }
 
   const onConnect = async () => {
+    recordConnection(gameAddress.host, gameAddress.port);
     const address = userIp(socket);
     const userAgent = parse(socket.handshake.headers["user-agent"]);
     logUser(socket, "HI ", [

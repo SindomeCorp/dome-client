@@ -145,10 +145,30 @@
 
       div#user-picker {
         margin-bottom: 10px;
+        width: 100%;
+
+        .user-picker-label {
+          width: calc(100% - 48px);
+          text-align: left;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .dropdown-toggle {
+          width: 48px;
+          min-height: 38px;
+        }
+
+        .btn {
+          min-height: 38px;
+          font-size: 15px;
+        }
 
         ul.dropdown-menu {
           background-color: #171717;
           border: 1px solid var(--black, @black);
+          min-width: 100%;
           padding: 0;
 
           .box-shadow {
@@ -177,6 +197,74 @@
         }
       }
     }
+  }
+
+  .tabbed-panel {
+    margin: 0 auto 14px;
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .tab-panel.hidden-panel {
+    display: none;
+  }
+
+  .connection-stats {
+    background-color: rgba(0, 0, 0, 0.56);
+    border: 2px solid rgba(0, 0, 0, 0.95);
+    border-radius: 10px;
+    margin: 6px auto 14px;
+    max-width: 640px;
+    padding: 10px 12px;
+    width: 100%;
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      color: var(--offWhite, @offWhite);
+    }
+
+    td {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 8px;
+      vertical-align: top;
+      word-break: break-word;
+    }
+
+    tr.table-header td {
+      border-top: 0;
+      font-weight: 700;
+      color: #d07c05;
+    }
+
+    .count-column {
+      width: 85px;
+      text-align: right;
+      font-weight: 700;
+      white-space: nowrap;
+      color: #d07c05;
+    }
+
+    .game-address {
+      color: var(--brightBlue, @brightBlue);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+  }
+
+  #moo-hostname,
+  #moo-port {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 16px;
+    margin-top: 6px;
+    margin-bottom: 14px;
+  }
+
+  label[for="moo-hostname"],
+  label[for="moo-port"] {
+    display: inline-block;
+    margin-top: 8px;
   }
 
   .centered {
@@ -216,13 +304,16 @@
     }
 
     a {
-      color: inherit;
+      color: var(--brightBlue, @brightBlue);
       display: inline-block;
       margin: 4px;
+      text-decoration: underline;
+      text-underline-offset: 2px;
 
       &:hover,
       &:focus {
-        color: #e28e18;
+        color: lighten(@brightBlue, 14%);
+        text-decoration-thickness: 2px;
       }
     }
   }

@@ -2,6 +2,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import fs from "node:fs/promises";
+import path from "node:path";
 import net from "node:net";
 import dns from "node:dns";
 import config from "../../src/config/index.js";
@@ -13,14 +15,24 @@ let importCounter = 0;
 async function loadRoute(options = {}) {
   const hadProxied = Object.prototype.hasOwnProperty.call(config.node, "socketProxied");
   const origProxied = config.node.socketProxied;
+  const hadMultiMud = Object.prototype.hasOwnProperty.call(config.node, "multiMud");
+  const origMultiMud = config.node.multiMud;
   if (Object.prototype.hasOwnProperty.call(options, "proxied")) {
     config.node.socketProxied = options.proxied;
+  }
+  if (Object.prototype.hasOwnProperty.call(options, "multiMud")) {
+    config.node.multiMud = options.multiMud;
   }
   const route = await import(`../../src/controllers/socket.js?cachebust=${importCounter++}`);
   if (hadProxied) {
     config.node.socketProxied = origProxied;
   } else {
     delete config.node.socketProxied;
+  }
+  if (hadMultiMud) {
+    config.node.multiMud = origMultiMud;
+  } else {
+    delete config.node.multiMud;
   }
   return route;
 }
@@ -94,6 +106,46 @@ test("userIp handles object and proxied addresses", async () => {
   proxiedSocket.handshake.address = "9.9.9.9";
   proxiedSocket.handshake.headers["x-forwarded-for"] = "5.6.7.8";
   assert.equal(proxiedRoute.userIp(proxiedSocket), "5.6.7.8");
+});
+
+test("connection uses query host/port only when multi-mud is enabled", async (t) => {
+  const moo = new EventEmitter();
+  moo.write = () => {};
+  moo.end = () => {};
+  const connectCalls = [];
+  const original = {
+    connect: net.connect,
+    reverse: dns.promises.reverse,
+  };
+  net.connect = (opts) => {
+    connectCalls.push(opts);
+    return moo;
+  };
+  dns.promises.reverse = async () => [];
+
+  const multiRoute = await loadRoute({ multiMud: true });
+  const { socket: multiSocket } = createSocket();
+  multiSocket.handshake.query = { host: "example.org", port: "7777" };
+  const p1 = multiRoute.connection(multiSocket);
+  moo.emit("connect");
+  await p1;
+  assert.equal(connectCalls[0]?.host, "example.org");
+  assert.equal(connectCalls[0]?.port, 7777);
+
+  const singleRoute = await loadRoute({ multiMud: false });
+  const { socket: singleSocket } = createSocket();
+  singleSocket.handshake.query = { host: "example.net", port: "8888" };
+  const p2 = singleRoute.connection(singleSocket);
+  moo.emit("connect");
+  await p2;
+  assert.equal(connectCalls[1]?.host, config.moo.host);
+  assert.equal(connectCalls[1]?.port, config.moo.port);
+
+  net.connect = original.connect;
+  dns.promises.reverse = original.reverse;
+
+  const metricsPath = path.join(process.cwd(), "data", "multi-mud-metrics.json");
+  await fs.rm(metricsPath, { force: true });
 });
 
 test("logUser formats info messages", async (t) => {
@@ -861,4 +913,3 @@ test("socket route connection lifecycle", async (t) => {
     }
   });
 });
-

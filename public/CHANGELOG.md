@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## 2026-05-27
 
 ### Added
+- Added `MULTI_MUD` mode (default off) to enable legacy-style host/port-first splash flow with multi-game connect support.
+- Added persistent multi-MUD connection analytics storage (`data/multi-mud-metrics.json`) so game usage counts survive restarts.
 - Added ANSI TrueColor rendering support for foreground/background sequences (`38;2;r;g;b` and `48;2;r;g;b`) using inline RGB styles in the line buffer and saved logs.
 - Added a `Scroll Up to Pause` client option that pauses auto-scroll when you scroll up and resumes when you return to the bottom.
 - Added `Input Font` and `Input Font Size (pt)` client options so command entry text can be customized independently from output/editor fonts.
@@ -15,6 +17,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Renamed the `SDWC No-Wrap Blocks` client option to `Mobile Friendly Text Wrap` for clearer user-facing wording.
+- Renamed backend connection environment variables from `MOO_HOST`/`MOO_PORT` to `MUD_HOST`/`MUD_PORT` across app config, docs, examples, and tests.
+- Renamed the game-name environment variable to `MUD_NAME` across env validation, config wiring, docs, and tests.
 - Updated the main client command input to request plain text mobile keyboards without autocapitalize, autocomplete, or autocorrect.
 - Organized Client Options into General, Presentation, and Local Editor tabs, renamed `Output Colors` to `Theme`, and removed admin-only wording from editor options.
 - Tightened Client Options dropdown widths to a consistent medium size, widened option labels, and left-aligned Presentation color/size controls for cleaner mobile layout.
@@ -28,6 +32,9 @@ All notable changes to this project will be documented in this file.
 - Improved small-screen mini-controls usability by switching to text-forward buttons (showing labels like Settings/Shortcuts/Clear Buffer/Log) with larger touch targets.
 - Replaced browser-native small-screen clear-buffer confirmation with an in-app overlay dialog that includes explicit Cancel and Clear Buffer actions.
 - Scoped small-screen text-heavy mini-controls to touch devices so narrow desktop windows keep compact icon controls and avoid clipping the Log button.
+- Updated footer version/corporate/changelog link styling on the connect screen so those links render with clear link color and underlines.
+- Simplified `MULTI_MUD` splash flow to host/port direct connect only (removed Next/back and character/password entry in that mode).
+- Improved connect-page character picker sizing and dropdown width so the selector no longer appears undersized or cramped.
 - Preserved existing xterm256 class-based color mapping behavior while adding TrueColor, so client color schemes continue overriding palette-based colors as before.
 - Fixed ANSI rendering for SGR reset/toggle sequences (`22m`, `25m`, `7m`, `27m`) so bold/blink/inverse styles stop correctly and raw escape codes are no longer shown in output.
 - Replaced regex ANSI rendering with a stateful stream parser so SGR resets, inverse fg/bg swapping, xterm256 themed colors, TrueColor, and split escape sequences render consistently with terminal behavior.
