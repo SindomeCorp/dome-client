@@ -138,6 +138,55 @@ dome.setupOutputParser = function () {
   // ------------------------------
   dome.parseSocketData = function (incomingSegmentRaw) {
     const startTime = nowMs();
+    let kidCount = dome.buffer.childNodes.length;
+
+    const appendOutputSegment = (rawSegment) => {
+      if (!rawSegment) return;
+      let outputSegment = rawSegment;
+
+      // ------------------ Substitutions, linkifying, host/ip linking ------------------
+      subs.forEach((sub) => {
+        outputSegment = outputSegment.replace(sub.pattern, sub.replacement);
+      });
+
+      outputSegment = linkifyUrlsWithPreview(outputSegment);
+      outputSegment = linkifyHosts(outputSegment);
+
+      // ------------------ Small inline transforms ------------------
+      // Wrap obj# and $corified references for easy selection
+      outputSegment = outputSegment.replace(/(\#\d+\b)/g, "<span class=\"all-copy\">$1</span>");
+      outputSegment = outputSegment.replace(/(\$\w*)/g, "<span class=\"all-copy\">$1</span>");
+
+      // Alerts
+      if (dome.alert && dome.alert.active && dome.alert.pattern != null) {
+        const pattern = dome.alert.pattern;
+        let matched = false;
+        if (pattern instanceof RegExp) {
+          const flags = pattern.flags.includes("i") ? pattern.flags : pattern.flags + "i";
+          matched = new RegExp(pattern.source, flags).test(outputSegment);
+        } else {
+          matched = outputSegment.toLowerCase().includes(String(pattern).toLowerCase());
+        }
+        if (matched) {
+          dome.alert.tone.play();
+          dome.windowAlert();
+        }
+      }
+
+      // ------------------ NEWLINE HANDLING ------------------
+      // IMPORTANT: Do NOT “smart-merge” across newlines; just render each line.
+      const html = wrapLinesToDivs(outputSegment);
+
+      // Append to buffer
+      if (sdwcNowrapActive && activeSdwcNowrapBlock && !dome.buffer.contains(activeSdwcNowrapBlock)) {
+        resetSdwcNowrapState();
+      }
+      const outputTarget = sdwcNowrapActive && activeSdwcNowrapBlock
+        ? activeSdwcNowrapBlock
+        : dome.buffer;
+      outputTarget.insertAdjacentHTML("beforeend", html);
+      kidCount = dome.buffer.childNodes.length;
+    };
 
     // 1) Normalize newlines immediately
     let segment = normalizeNewlines(incomingSegmentRaw);
@@ -250,8 +299,9 @@ dome.setupOutputParser = function () {
           logger.info(nowrapEnabled
             ? "Received SDWC-START-NOWRAP"
             : "Received SDWC-START-NOWRAP (ignored: sdwcNowrapBlocks disabled)");
+          appendOutputSegment(segment.slice(0, metaIdx === 0 ? 0 : metaIdx + 1));
           if (!nowrapEnabled) {
-            segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
+            segment = segment.slice(lineEnd + 1);
             continue;
           }
           if (sdwcNowrapActive) {
@@ -260,15 +310,16 @@ dome.setupOutputParser = function () {
             activeSdwcNowrapBlock = createSdwcNowrapBlock();
             sdwcNowrapActive = Boolean(activeSdwcNowrapBlock);
           }
-          segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
+          segment = segment.slice(lineEnd + 1);
           continue;
         } else if (metaCommandNormalized === "SDWC-END-NOWRAP") {
           const nowrapEnabled = dome.preferences?.sdwcNowrapBlocks === true;
           logger.info(nowrapEnabled
             ? "Received SDWC-END-NOWRAP"
             : "Received SDWC-END-NOWRAP (ignored: sdwcNowrapBlocks disabled)");
+          appendOutputSegment(segment.slice(0, metaIdx === 0 ? 0 : metaIdx + 1));
           if (!nowrapEnabled) {
-            segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
+            segment = segment.slice(lineEnd + 1);
             continue;
           }
           if (sdwcNowrapActive) {
@@ -276,7 +327,7 @@ dome.setupOutputParser = function () {
           } else {
             logger.warn("Received SDWC-END-NOWRAP without an active nowrap block");
           }
-          segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
+          segment = segment.slice(lineEnd + 1);
           continue;
         }
         const sdwcParts = metaCommand.trim().split("%%");
@@ -377,53 +428,12 @@ dome.setupOutputParser = function () {
       }
     }
 
-    if (!segment) return;
-
-    // ------------------ Substitutions, linkifying, host/ip linking ------------------
-    subs.forEach((sub) => {
-      segment = segment.replace(sub.pattern, sub.replacement);
-    });
-
-    segment = linkifyUrlsWithPreview(segment);
-    segment = linkifyHosts(segment);
-
-    // ------------------ Small inline transforms ------------------
-    // Wrap obj# and $corified references for easy selection
-    segment = segment.replace(/(\#\d+\b)/g, "<span class=\"all-copy\">$1</span>");
-    segment = segment.replace(/(\$\w*)/g, "<span class=\"all-copy\">$1</span>");
-
-    // Alerts
-    if (dome.alert && dome.alert.active && dome.alert.pattern != null) {
-      const pattern = dome.alert.pattern;
-      let matched = false;
-      if (pattern instanceof RegExp) {
-        const flags = pattern.flags.includes("i") ? pattern.flags : pattern.flags + "i";
-        matched = new RegExp(pattern.source, flags).test(segment);
-      } else {
-        matched = segment.toLowerCase().includes(String(pattern).toLowerCase());
-      }
-      if (matched) {
-        dome.alert.tone.play();
-        dome.windowAlert();
-      }
+    if (segment) {
+      appendOutputSegment(segment);
     }
-
-    // ------------------ NEWLINE HANDLING ------------------
-    // IMPORTANT: Do NOT “smart-merge” across newlines; just render each line.
-    const html = wrapLinesToDivs(segment);
-
-    // Append to buffer
-    if (sdwcNowrapActive && activeSdwcNowrapBlock && !dome.buffer.contains(activeSdwcNowrapBlock)) {
-      resetSdwcNowrapState();
-    }
-    const outputTarget = sdwcNowrapActive && activeSdwcNowrapBlock
-      ? activeSdwcNowrapBlock
-      : dome.buffer;
-    outputTarget.insertAdjacentHTML("beforeend", html);
 
     // ------------------ Perf logging and pruning ------------------
     const WARN_THRESHOLD = 10; // ms
-    let kidCount = dome.buffer.childNodes.length;
     const execDuration = nowMs() - startTime;
 
     if (execDuration > WARN_THRESHOLD) {

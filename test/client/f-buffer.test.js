@@ -301,3 +301,31 @@ test("parseSocketData keeps nowrap mode active across chunks until END marker", 
   assert.ok(block);
   assert.equal(block?.innerHTML, "<div>line-a</div><div>line-b</div>");
 });
+
+test("parseSocketData keeps same-chunk nowrap content inside marker block", async (t) => {
+  await loadOutputParser(t);
+  dome.buffer.innerHTML = "";
+  dome.preferences.performanceBuffer = 0;
+  dome.preferences.sdwcNowrapBlocks = true;
+
+  dome.parseSocketData("#$# SDWC-START-NOWRAP\nline\n#$# SDWC-END-NOWRAP\n");
+
+  assert.equal(
+    dome.buffer.innerHTML,
+    "<div class=\"sdwc-nowrap-block\"><div>line</div></div>"
+  );
+});
+
+test("parseSocketData preserves target order around same-chunk nowrap markers", async (t) => {
+  await loadOutputParser(t);
+  dome.buffer.innerHTML = "";
+  dome.preferences.performanceBuffer = 0;
+  dome.preferences.sdwcNowrapBlocks = true;
+
+  dome.parseSocketData("before\n#$# SDWC-START-NOWRAP\ninside\n#$# SDWC-END-NOWRAP\nafter\n");
+
+  assert.equal(
+    dome.buffer.innerHTML,
+    "<div>before</div><div class=\"sdwc-nowrap-block\"><div>inside</div></div><div>after</div>"
+  );
+});
