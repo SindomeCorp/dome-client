@@ -96,7 +96,7 @@ for (const file of files) {
     if (file === "views/partials/client-options-overlay.ejs") {
       assert.match(html, /role="tablist"/);
       assert.match(html, />General</);
-      assert.match(html, />Fonts</);
+      assert.match(html, />Presentation</);
       assert.match(html, />Local Editor</);
       assert.match(html, />Theme</);
       assert.match(html, />Input Font</);

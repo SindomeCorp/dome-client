@@ -146,6 +146,7 @@ test("setClientOption applies input font and size to input reader", async (t) =>
   win.dome.setClientOption("inputFont", "lucida");
   win.dome.setClientOption("inputFontSizePt", 13);
 
+  assert.equal(input.classList.contains("lucidaText"), true);
   assert.match(input.style.fontFamily, /Lucida Console/i);
   assert.equal(input.style.fontSize, "13pt");
 });

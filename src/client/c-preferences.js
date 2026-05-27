@@ -234,15 +234,6 @@ dome.readPreferences = function() {
     preferences.editorFont = preferences.lineBufferFont;
     store.put(clientOptions.prefix + "editorfont", preferences.editorFont);
   }
-  // Backward compatibility for previously saved temporary keys.
-  const legacyInputFg = normalizeHexColor(store.get(clientOptions.prefix + "inputfg"));
-  if (legacyInputFg) {
-    preferences.inputFontColor = legacyInputFg;
-  }
-  const legacyInputBg = normalizeHexColor(store.get(clientOptions.prefix + "inputbg"));
-  if (legacyInputBg) {
-    preferences.inputBackgroundColor = legacyInputBg;
-  }
   if (!shortenFeatureEnabled) {
     preferences.shortenUrls = false;
     store.put(clientOptions.prefix + "shorten", false);
@@ -358,6 +349,7 @@ const INPUT_FONT_FAMILIES = {
   "ubuntu-mono": "\"Ubuntu Mono\", monospace",
   consolas: "\"Consolas\", monospace",
 };
+const INPUT_FONT_CLASSES = FONT_CHOICES.map((font) => `${font}Text`);
 
 const normalizeHexColor = function(value) {
   if (typeof value !== "string") return null;
@@ -375,6 +367,8 @@ const applyInputReaderTextPreferences = function() {
   const fontName = FONT_CHOICES.includes(prefFont) ? prefFont : "standard";
   const prefSize = Number(dome.preferences?.inputFontSizePt);
   const fontSizePt = !Number.isNaN(prefSize) && prefSize >= 8 && prefSize <= 24 ? prefSize : 11;
+  dome.inputReader.classList.remove(...INPUT_FONT_CLASSES);
+  dome.inputReader.classList.add(`${fontName}Text`);
   dome.inputReader.style.fontFamily = INPUT_FONT_FAMILIES[fontName] || INPUT_FONT_FAMILIES.standard;
   dome.inputReader.style.fontSize = `${fontSizePt}pt`;
 };

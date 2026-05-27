@@ -81,7 +81,7 @@ test("client options tabs show one panel at a time", async () => {
   const html = `<!doctype html><html><body>
   <div class="client-options-page">
     <button class="client-options-tab active" data-tab="general" aria-selected="true">General</button>
-    <button class="client-options-tab" data-tab="fonts" aria-selected="false">Fonts</button>
+    <button class="client-options-tab" data-tab="fonts" aria-selected="false">Presentation</button>
     <button class="client-options-tab" data-tab="editor" aria-selected="false">Local Editor</button>
     <div class="client-options-panel" data-tab-panel="general"></div>
     <div class="client-options-panel hide" data-tab-panel="fonts"></div>
