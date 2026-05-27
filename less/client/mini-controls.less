@@ -118,3 +118,11 @@
     }
   }
 }
+
+@media (max-width: @screen-xs-max), (hover: none) and (pointer: coarse) {
+  #browser-client .mini-controls {
+    position: absolute;
+    top: max(0px, env(safe-area-inset-top, 0px));
+    right: 8px;
+  }
+}

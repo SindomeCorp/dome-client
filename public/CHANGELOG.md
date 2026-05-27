@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file.
 - Client options JSON import now applies recognized keys, skips unknown keys, and reports invalid JSON errors in the client output buffer.
 
 ### Fixed
+- Fixed real-device mobile top control behavior by anchoring mini-controls to the client container on touch devices so output-area icons remain pinned while scrolling.
 - Preserved existing xterm256 class-based color mapping behavior while adding TrueColor, so client color schemes continue overriding palette-based colors as before.
 - Fixed ANSI rendering for SGR reset/toggle sequences (`22m`, `25m`, `7m`, `27m`) so bold/blink/inverse styles stop correctly and raw escape codes are no longer shown in output.
 - Replaced regex ANSI rendering with a stateful stream parser so SGR resets, inverse fg/bg swapping, xterm256 themed colors, TrueColor, and split escape sequences render consistently with terminal behavior.

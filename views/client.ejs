@@ -27,11 +27,11 @@ var useMinified = !debugMode;
       <div id="gameHealthDetail"></div>
     <% } %>
   </div>
+  <%- include('partials/mini-controls') %>
 </div>
 <%- include('partials/overlays') %>
 <%- include('partials/shortcuts-overlay') %>
 <%- include('partials/history-search-overlay') %>
 <%- include('partials/client-options-overlay') %>
 <%- include('partials/disconnect-buttons') %>
-<%- include('partials/mini-controls') %>
   <script defer src="<%=decache('/js/player-client' + (useMinified ? '.min' : '') + '.js')%>"></script>
