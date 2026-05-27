@@ -5,7 +5,16 @@ var useMinified = !debugMode;
 <div id="browser-client">
   <div id="lineBuffer" class="standardText" aria-live="polite"></div>
   <div class="input-buffer-row">
-    <textarea data-lpignore="true" id="inputBuffer" rows="4" cols="50"></textarea>
+    <textarea
+      data-lpignore="true"
+      id="inputBuffer"
+      rows="4"
+      cols="50"
+      inputmode="text"
+      autocapitalize="none"
+      autocomplete="off"
+      autocorrect="off"
+    ></textarea>
     <div class="input-history-nav hidden-sm hidden-md hidden-lg" aria-label="Input history controls">
       <button type="button" id="button-input-history-up" class="btn btn-default btn-xs" aria-label="Previous command">▲</button>
       <button type="button" id="button-input-history-down" class="btn btn-default btn-xs" aria-label="Next command">▼</button>
