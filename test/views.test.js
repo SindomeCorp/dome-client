@@ -100,6 +100,7 @@ for (const file of files) {
       assert.match(html, />Local Editor</);
       assert.match(html, />Theme</);
       assert.match(html, />Input Font</);
+      assert.match(html, />Output Font Size \(pt\)</);
       assert.match(html, />Input Font Size \(pt\)</);
       assert.match(html, />Input Font Color</);
       assert.match(html, />Input Background Color</);

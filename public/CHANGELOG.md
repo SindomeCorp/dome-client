@@ -9,11 +9,12 @@ All notable changes to this project will be documented in this file.
 - Added a `Scroll Up to Pause` client option that pauses auto-scroll when you scroll up and resumes when you return to the bottom.
 - Added `Input Font` and `Input Font Size (pt)` client options so command entry text can be customized independently from output/editor fonts.
 - Added `Input Font Color` and `Input Background Color` options with mobile-friendly color pickers and hex inputs for precise command-entry styling.
+- Added `Output Font Size (pt)` as a separate client option so output text size can be adjusted independently, defaulting to the legacy output size.
 
 ### Changed
 - Renamed the `SDWC No-Wrap Blocks` client option to `Mobile Friendly Text Wrap` for clearer user-facing wording.
 - Updated the main client command input to request plain text mobile keyboards without autocapitalize, autocomplete, or autocorrect.
-- Organized Client Options into General, Fonts, and Local Editor tabs, renamed `Output Colors` to `Theme`, and removed admin-only wording from editor options.
+- Organized Client Options into General, Presentation, and Local Editor tabs, renamed `Output Colors` to `Theme`, and removed admin-only wording from editor options.
 
 ### Fixed
 - Preserved existing xterm256 class-based color mapping behavior while adding TrueColor, so client color schemes continue overriding palette-based colors as before.

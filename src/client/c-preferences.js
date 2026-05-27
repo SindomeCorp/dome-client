@@ -33,6 +33,7 @@ dome.readPreferences = function() {
     edittheme          : "twilight",
     editorType         : "ide",
     lineBufferFont     : "standard",
+    lineBufferFontSizePt: 9.75,
     inputFont          : "standard",
     inputFontSizePt    : 11,
     inputFontColor     : "#EEEEEE",
@@ -127,6 +128,19 @@ dome.readPreferences = function() {
         const font = inputFont.substr(3);
         if (FONT_CHOICES.includes(font)) {
           preferences.inputFont = font;
+        }
+      }
+    }
+
+    const ozIndex = options.indexOf("oz=");
+    if (ozIndex !== -1) {
+      let rest = options.substr(ozIndex);
+      const nIndex = rest.indexOf("&");
+      let outputSize = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
+      if (outputSize.length > 3) {
+        outputSize = Number(outputSize.substr(3));
+        if (!Number.isNaN(outputSize) && outputSize >= 8 && outputSize <= 24) {
+          preferences.lineBufferFontSizePt = outputSize;
         }
       }
     }
@@ -253,6 +267,7 @@ const PREFERENCE_ENUM = {
   "up" : { name: "scrollUpToPause", storeKey: "scrolluppause", def: false },
   "as" : { name: "autoScroll", storeKey: "scroll", def: "dbl", valid: ["dbl", "long", "none"] },
   "of" : { name: "lineBufferFont", storeKey: "outfont", def: "standard", valid: FONT_CHOICES },
+  "oz" : { name: "lineBufferFontSizePt", storeKey: "outfontsize", def: 9.75 },
   "if" : { name: "inputFont", storeKey: "inputfont", def: "standard", valid: FONT_CHOICES },
   "iz" : { name: "inputFontSizePt", storeKey: "inputfontsize", def: 11 },
   "ic" : { name: "inputFontColor", storeKey: "inputfontcolor", def: "#EEEEEE" },
@@ -375,6 +390,15 @@ const applyInputReaderTextPreferences = function() {
 
 dome.applyInputReaderTextPreferences = applyInputReaderTextPreferences;
 
+const applyOutputBufferTextPreferences = function() {
+  if (!dome.buffer) return;
+  const prefSize = Number(dome.preferences?.lineBufferFontSizePt);
+  const fontSizePt = !Number.isNaN(prefSize) && prefSize >= 8 && prefSize <= 24 ? prefSize : 9.75;
+  dome.buffer.style.fontSize = `${fontSizePt}pt`;
+};
+
+dome.applyOutputBufferTextPreferences = applyOutputBufferTextPreferences;
+
 const applyInputReaderColorPreferences = function() {
   if (!dome.inputReader) return;
   const fg = normalizeHexColor(dome.preferences?.inputFontColor) || "#EEEEEE";
@@ -450,6 +474,9 @@ const setClientOption = function(optionName, optionValue) {
     }
     if (optionName === "lineBufferFont") {
       dome.buffer?.classList.add(dome.preferences.lineBufferFont + "Text");
+    }
+    if (optionName === "lineBufferFontSizePt") {
+      applyOutputBufferTextPreferences();
     }
     if (optionName === "inputFont" || optionName === "inputFontSizePt") {
       applyInputReaderTextPreferences();

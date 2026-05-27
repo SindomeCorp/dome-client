@@ -112,11 +112,12 @@ test("readPreferences parses url options", async (t) => {
 });
 
 test("readPreferences parses additional url options", async (t) => {
-  const url = "https://example.com/?as=long&of=lucida&if=roboto&iz=12.5&ic=ffeeaa&ib=112233&ef=courier&et=chaos&cl=dim&pb=42";
+  const url = "https://example.com/?as=long&of=lucida&oz=10.5&if=roboto&iz=12.5&ic=ffeeaa&ib=112233&ef=courier&et=chaos&cl=dim&pb=42";
   const win = await setupWindow(t, url, "Chrome/78", ["standard", "lucida", "courier", "roboto"]);
   const prefs = win.dome.readPreferences();
   assert.equal(prefs.autoScroll, "long");
   assert.equal(prefs.lineBufferFont, "lucida");
+  assert.equal(prefs.lineBufferFontSizePt, 10.5);
   assert.equal(prefs.inputFont, "roboto");
   assert.equal(prefs.inputFontSizePt, 12.5);
   assert.equal(prefs.inputFontColor, "#FFEEAA");
@@ -125,6 +126,27 @@ test("readPreferences parses additional url options", async (t) => {
   assert.equal(prefs.edittheme, "chaos");
   assert.equal(prefs.colorSet, "dim");
   assert.equal(prefs.performanceBuffer, 42);
+});
+
+test("setClientOption applies output font size to line buffer", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const origSave = clientOptions.save;
+  clientOptions.save = () => {};
+  t.after(() => {
+    clientOptions.save = origSave;
+  });
+  const buffer = win.document.createElement("div");
+  buffer.id = "lineBuffer";
+  win.document.body.appendChild(buffer);
+  win.dome.buffer = buffer;
+  win.dome.inputReader = win.document.createElement("textarea");
+  win.dome.buffer.append = () => {};
+  win.dome.scrollBuffer = () => {};
+  win.dome.preferences = win.dome.readPreferences();
+
+  win.dome.setClientOption("lineBufferFontSizePt", 10.25);
+  assert.equal(buffer.style.fontSize, "10.25pt");
 });
 
 test("setClientOption applies input font and size to input reader", async (t) => {

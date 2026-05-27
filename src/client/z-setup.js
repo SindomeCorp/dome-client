@@ -61,6 +61,7 @@ const init = () => {
     dome.buffer.classList.add(`colorset-${preferences.colorSet}`);
     dome.inputReader?.classList.add(`colorset-${preferences.colorSet}`);
   }
+  dome.applyOutputBufferTextPreferences?.();
   dome.applyInputReaderTextPreferences?.();
   dome.applyInputReaderColorPreferences?.();
   if (dome.inputReader) {
