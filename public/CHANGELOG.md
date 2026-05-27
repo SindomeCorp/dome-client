@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 - Added a small-screen confirmation prompt before `Clear Buffer` clears output to reduce accidental buffer wipes on mobile.
 - Improved small-screen mini-controls usability by switching to text-forward buttons (showing labels like Settings/Shortcuts/Clear Buffer/Log) with larger touch targets.
 - Replaced browser-native small-screen clear-buffer confirmation with an in-app overlay dialog that includes explicit Cancel and Clear Buffer actions.
+- Scoped small-screen text-heavy mini-controls to touch devices so narrow desktop windows keep compact icon controls and avoid clipping the Log button.
 - Preserved existing xterm256 class-based color mapping behavior while adding TrueColor, so client color schemes continue overriding palette-based colors as before.
 - Fixed ANSI rendering for SGR reset/toggle sequences (`22m`, `25m`, `7m`, `27m`) so bold/blink/inverse styles stop correctly and raw escape codes are no longer shown in output.
 - Replaced regex ANSI rendering with a stateful stream parser so SGR resets, inverse fg/bg swapping, xterm256 themed colors, TrueColor, and split escape sequences render consistently with terminal behavior.

@@ -139,13 +139,19 @@
 
   #browser-client .mini-controls button,
   #browser-client .mini-controls A.btn {
-    font-size: 13px;
-    line-height: 1.25;
     margin-top: 0;
     margin-right: 0;
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: @screen-xs-max) and (hover: none) and (pointer: coarse) {
+  #browser-client .mini-controls button,
+  #browser-client .mini-controls A.btn {
+    font-size: 13px;
+    line-height: 1.25;
     min-height: 34px;
     padding: 7px 10px;
-    flex: 0 0 auto;
   }
 
   #browser-client .mini-controls .hidden-xs {
