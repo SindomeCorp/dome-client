@@ -149,6 +149,36 @@ test("setClientOption applies output font size to line buffer", async (t) => {
   assert.equal(buffer.style.fontSize, "10.25pt");
 });
 
+test("setClientOption rejects non-numeric and out-of-range font sizes", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const origSave = clientOptions.save;
+  clientOptions.save = () => {};
+  t.after(() => {
+    clientOptions.save = origSave;
+  });
+  const output = [];
+  const buffer = win.document.createElement("div");
+  buffer.id = "lineBuffer";
+  buffer.append = (text) => output.push(text);
+  win.document.body.appendChild(buffer);
+  const input = win.document.createElement("textarea");
+  input.id = "inputBuffer";
+  win.document.body.appendChild(input);
+  win.dome.buffer = buffer;
+  win.dome.inputReader = input;
+  win.dome.scrollBuffer = () => {};
+  win.dome.preferences = win.dome.readPreferences();
+
+  win.dome.setClientOption("lineBufferFontSizePt", "abc");
+  assert.equal(win.dome.preferences.lineBufferFontSizePt, 9.75);
+  assert.ok(output.some((line) => line.includes("must be a number between 8 and 24")));
+
+  win.dome.setClientOption("inputFontSizePt", 100);
+  assert.equal(win.dome.preferences.inputFontSizePt, 11);
+  assert.ok(output.some((line) => line.includes("must be between 8 and 24")));
+});
+
 test("setClientOption applies input font and size to input reader", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
   const { clientOptions } = await import("../../src/client/pages/client-options.js");
@@ -198,6 +228,39 @@ test("setClientOption applies input colors and validates hex", async (t) => {
   win.dome.setClientOption("inputFontColor", "bad");
   assert.ok(output.some((line) => line.includes("must be a hex color")));
   assert.equal(win.dome.preferences.inputFontColor, "#AABBCC");
+});
+
+test("setClientOption updates output/input font family and size immediately", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const origSave = clientOptions.save;
+  clientOptions.save = () => {};
+  t.after(() => {
+    clientOptions.save = origSave;
+  });
+  const output = win.document.createElement("div");
+  output.id = "lineBuffer";
+  output.classList.add("standardText");
+  const input = win.document.createElement("textarea");
+  input.id = "inputBuffer";
+  win.document.body.append(output, input);
+  win.dome.buffer = output;
+  win.dome.inputReader = input;
+  win.dome.scrollBuffer = () => {};
+  win.dome.preferences = win.dome.readPreferences();
+
+  win.dome.setClientOption("lineBufferFont", "lucida");
+  assert.equal(output.classList.contains("lucidaText"), true);
+  assert.equal(output.classList.contains("standardText"), false);
+
+  win.dome.setClientOption("lineBufferFontSizePt", 10.75);
+  assert.equal(output.style.fontSize, "10.75pt");
+
+  win.dome.setClientOption("inputFont", "lucida");
+  assert.equal(input.classList.contains("lucidaText"), true);
+
+  win.dome.setClientOption("inputFontSizePt", 12.5);
+  assert.equal(input.style.fontSize, "12.5pt");
 });
 
 test("readPreferences handles comic-mono font", async (t) => {

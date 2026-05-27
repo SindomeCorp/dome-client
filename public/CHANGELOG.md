@@ -31,10 +31,12 @@ All notable changes to this project will be documented in this file.
 - Fixed duplicate Client Options initialization that could bind repeated Import/Export handlers, causing multi-download behavior.
 - Fixed Import/Export theme compatibility by normalizing legacy editor theme values (`ambiance`/`tomorrow`) during import.
 - Fixed Import/Export options panel stability by ignoring non-option rows in options refresh/binding logic.
+- Enforced numeric validation and `8..24` range checks when writing `Output Font Size (pt)` and `Input Font Size (pt)` via client options/import/commands.
+- Removed duplicate standalone Client Options script loading so the options UI uses the same runtime preference instance as the main client, restoring immediate live updates for input/output font family, size, and input colors.
 
 ### Changed
 - Added Import/Export success/error toast messages in Client Options and a warning that import overwrites current settings, with guidance to export a backup first.
-- Made Import JSON and Download JSON buttons the same width for a consistent layout.
+- Made Import File and Export File buttons the same width for a consistent layout.
 - Renamed Import/Export action labels to `Export File` and `Import File`, moved feedback toast into the Import/Export panel, and changed Import/Reset confirmations to explicit destructive-action warnings.
 
 ## 2026-05-22

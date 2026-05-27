@@ -34,8 +34,4 @@ var useMinified = !debugMode;
 <%- include('partials/client-options-overlay') %>
 <%- include('partials/disconnect-buttons') %>
 <%- include('partials/mini-controls') %>
-  <script type="module">
-    import { clientOptions } from "<%=decache('/js/client-options.js')%>";
-    clientOptions["deviceType"] = "<%=req.device%>";
-  </script>
   <script defer src="<%=decache('/js/player-client' + (useMinified ? '.min' : '') + '.js')%>"></script>

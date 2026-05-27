@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { setupClientOptionsDom } from "./index.js";
 
-test("client-options updates state and persists to store", async () => {
+test("client-options updates state and persists to store", async (t) => {
   const html = `<!doctype html><html><body>
   <div class="client-options-page">
     <div class="option-row" id="commands-option">
@@ -34,6 +34,10 @@ test("client-options updates state and persists to store", async () => {
   const options = await import("../../src/client/pages/client-options.js");
   Object.assign(options.store, store);
   const { clientOptions } = options;
+  const originalOptions = clientOptions.options;
+  t.after(() => {
+    clientOptions.options = originalOptions;
+  });
   clientOptions.options = {
     commands: { param: "cs", def: true, ok: [true, false] },
     scrolluppause: { param: "up", def: false, ok: [true, false] },

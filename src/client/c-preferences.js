@@ -445,6 +445,15 @@ const setClientOption = function(optionName, optionValue) {
     }
   }
 
+  if (optionName === "lineBufferFontSizePt" || optionName === "inputFontSizePt") {
+    if (typeof optionValue !== "number" || Number.isNaN(optionValue)) {
+      return dome.buffer?.append("Invalid @client-option value, must be a number between 8 and 24\n");
+    }
+    if (optionValue < 8 || optionValue > 24) {
+      return dome.buffer?.append("Invalid @client-option value, must be between 8 and 24\n");
+    }
+  }
+
   const validValues = PREFERENCE_ENUM[ optionName ].valid || (typeof prefDef === "boolean" ? [true, false] : null);
 
   if (optionName === "inputFontColor" || optionName === "inputBackgroundColor") {
