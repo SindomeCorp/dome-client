@@ -112,13 +112,15 @@ test("readPreferences parses url options", async (t) => {
 });
 
 test("readPreferences parses additional url options", async (t) => {
-  const url = "https://example.com/?as=long&of=lucida&if=roboto&iz=12.5&ef=courier&et=chaos&cl=dim&pb=42";
+  const url = "https://example.com/?as=long&of=lucida&if=roboto&iz=12.5&ic=ffeeaa&ib=112233&ef=courier&et=chaos&cl=dim&pb=42";
   const win = await setupWindow(t, url, "Chrome/78", ["standard", "lucida", "courier", "roboto"]);
   const prefs = win.dome.readPreferences();
   assert.equal(prefs.autoScroll, "long");
   assert.equal(prefs.lineBufferFont, "lucida");
   assert.equal(prefs.inputFont, "roboto");
   assert.equal(prefs.inputFontSizePt, 12.5);
+  assert.equal(prefs.inputFontColor, "#FFEEAA");
+  assert.equal(prefs.inputBackgroundColor, "#112233");
   assert.equal(prefs.editorFont, "courier");
   assert.equal(prefs.edittheme, "chaos");
   assert.equal(prefs.colorSet, "dim");
@@ -146,6 +148,33 @@ test("setClientOption applies input font and size to input reader", async (t) =>
 
   assert.match(input.style.fontFamily, /Lucida Console/i);
   assert.equal(input.style.fontSize, "13pt");
+});
+
+test("setClientOption applies input colors and validates hex", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const origSave = clientOptions.save;
+  clientOptions.save = () => {};
+  t.after(() => {
+    clientOptions.save = origSave;
+  });
+  const output = [];
+  const input = win.document.createElement("textarea");
+  input.id = "inputBuffer";
+  win.document.body.appendChild(input);
+  win.dome.inputReader = input;
+  win.dome.buffer = { append: (text) => output.push(text) };
+  win.dome.scrollBuffer = () => {};
+  win.dome.preferences = win.dome.readPreferences();
+
+  win.dome.setClientOption("inputFontColor", "aabbcc");
+  win.dome.setClientOption("inputBackgroundColor", "#102030");
+  assert.equal(input.style.getPropertyValue("--inputCustomFG"), "#AABBCC");
+  assert.equal(input.style.getPropertyValue("--inputCustomBG"), "#102030");
+
+  win.dome.setClientOption("inputFontColor", "bad");
+  assert.ok(output.some((line) => line.includes("must be a hex color")));
+  assert.equal(win.dome.preferences.inputFontColor, "#AABBCC");
 });
 
 test("readPreferences handles comic-mono font", async (t) => {

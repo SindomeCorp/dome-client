@@ -56,6 +56,28 @@
   margin-left: auto;
 }
 
+#client-options-overlay .color-choice {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+#client-options-overlay .color-choice input[type="color"] {
+  border: 1px solid var(--grayDark, @grayDark);
+  border-radius: 4px;
+  cursor: pointer;
+  height: 34px;
+  padding: 2px;
+  width: 48px;
+}
+
+#client-options-overlay .color-choice input[data-color-hex="true"] {
+  font-family: "Source Code Pro", monospace;
+  text-transform: uppercase;
+  width: 110px;
+}
+
 #client-options-overlay .client-options-tabs {
   display: flex;
   gap: 4px;
@@ -106,5 +128,15 @@
 
   #client-options-overlay .client-options-panel {
     min-width: 0;
+  }
+
+  #client-options-overlay .color-choice {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  #client-options-overlay .color-choice input[data-color-hex="true"] {
+    flex: 1 1 auto;
+    max-width: 140px;
   }
 }

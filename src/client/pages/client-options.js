@@ -38,6 +38,8 @@ const clientOptions = {
     outfont: { param: "of", def: "standard", ok: FONT_CHOICES },
     inputfont: { param: "if", def: "standard", ok: FONT_CHOICES },
     inputfontsize: { param: "iz", def: 11 },
+    inputfg: { param: "ic", def: "#EEEEEE" },
+    inputbg: { param: "ib", def: "#333333" },
     editorfont: { param: "ef", def: "standard", ok: FONT_CHOICES },
     playding: { param: "pd", def: true, ok: [true, false] },
     localecho: { param: "le", def: false, ok: [true, false] },
@@ -101,6 +103,8 @@ const PREF_NAME = {
   outfont: "lineBufferFont",
   inputfont: "inputFont",
   inputfontsize: "inputFontSizePt",
+  inputfg: "inputFontColor",
+  inputbg: "inputBackgroundColor",
   editorfont: "editorFont",
   playding: "playDing",
   localecho: "localEcho",
@@ -140,9 +144,11 @@ function refreshClientOptions() {
       }
     }
 
-    const input = row.querySelector("input");
-    if (input) {
-      input.value = option.state;
+    const inputs = row.querySelectorAll("input");
+    if (inputs.length > 0) {
+      inputs.forEach((input) => {
+        input.value = option.state;
+      });
     }
   });
 }
@@ -275,6 +281,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     self.addEventListener("change", () => {
       let fieldValue = self.value;
+      if (self.dataset.colorHex === "true") {
+        fieldValue = fieldValue.trim();
+        if (!fieldValue.startsWith("#")) fieldValue = `#${fieldValue}`;
+      }
       if (self.getAttribute("type") == "number") {
         fieldValue = fieldValue.indexOf(".") != -1 ? parseFloat(fieldValue) : parseInt(fieldValue);
       }
@@ -282,6 +292,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const prefName = PREF_NAME[name];
       if (prefName && dome.setClientOption) {
         dome.setClientOption(prefName, fieldValue);
+        if (self.getAttribute("type") === "color" || self.dataset.colorHex === "true") {
+          const updated = dome.preferences?.[prefName];
+          if (typeof updated === "string") {
+            row.querySelectorAll("input").forEach((input) => {
+              input.value = updated;
+            });
+          }
+        }
       } else {
         clientOptions.save(name, fieldValue);
       }

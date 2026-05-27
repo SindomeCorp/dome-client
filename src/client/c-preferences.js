@@ -35,6 +35,8 @@ dome.readPreferences = function() {
     lineBufferFont     : "standard",
     inputFont          : "standard",
     inputFontSizePt    : 11,
+    inputFontColor     : "#EEEEEE",
+    inputBackgroundColor: "#333333",
     editorFont         : "standard",
     imagePreview       : false,
     inlineLogCss       : true,
@@ -142,6 +144,32 @@ dome.readPreferences = function() {
       }
     }
 
+    const icIndex = options.indexOf("ic=");
+    if (icIndex !== -1) {
+      let rest = options.substr(icIndex);
+      const nIndex = rest.indexOf("&");
+      const inputColor = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
+      if (inputColor.length > 3) {
+        const normalized = normalizeHexColor(inputColor.substr(3));
+        if (normalized) {
+          preferences.inputFontColor = normalized;
+        }
+      }
+    }
+
+    const ibIndex = options.indexOf("ib=");
+    if (ibIndex !== -1) {
+      let rest = options.substr(ibIndex);
+      const nIndex = rest.indexOf("&");
+      const inputBg = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
+      if (inputBg.length > 3) {
+        const normalized = normalizeHexColor(inputBg.substr(3));
+        if (normalized) {
+          preferences.inputBackgroundColor = normalized;
+        }
+      }
+    }
+
     const etIndex = options.indexOf("et=");
     if (etIndex !== -1) {
       let rest = options.substr(etIndex);
@@ -227,6 +255,8 @@ const PREFERENCE_ENUM = {
   "of" : { name: "lineBufferFont", storeKey: "outfont", def: "standard", valid: FONT_CHOICES },
   "if" : { name: "inputFont", storeKey: "inputfont", def: "standard", valid: FONT_CHOICES },
   "iz" : { name: "inputFontSizePt", storeKey: "inputfontsize", def: 11 },
+  "ic" : { name: "inputFontColor", storeKey: "inputfontcolor", def: "#EEEEEE" },
+  "ib" : { name: "inputBackgroundColor", storeKey: "inputbgcolor", def: "#333333" },
   "ef" : { name: "editorFont", storeKey: "editorfont", def: "standard", valid: FONT_CHOICES },
   "et" : { name: "edittheme", storeKey: "edittheme", def: "twilight", valid: EDIT_THEMES },
   "ed" : { name: "editorType", storeKey: "edittype", def: "ide", valid: ["ide", "windows"] },
@@ -320,6 +350,16 @@ const INPUT_FONT_FAMILIES = {
   consolas: "\"Consolas\", monospace",
 };
 
+const normalizeHexColor = function(value) {
+  if (typeof value !== "string") return null;
+  let hex = value.trim();
+  if (!hex.startsWith("#")) {
+    hex = `#${hex}`;
+  }
+  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return null;
+  return hex.toUpperCase();
+};
+
 const applyInputReaderTextPreferences = function() {
   if (!dome.inputReader) return;
   const prefFont = dome.preferences?.inputFont;
@@ -331,6 +371,16 @@ const applyInputReaderTextPreferences = function() {
 };
 
 dome.applyInputReaderTextPreferences = applyInputReaderTextPreferences;
+
+const applyInputReaderColorPreferences = function() {
+  if (!dome.inputReader) return;
+  const fg = normalizeHexColor(dome.preferences?.inputFontColor) || "#EEEEEE";
+  const bg = normalizeHexColor(dome.preferences?.inputBackgroundColor) || "#333333";
+  dome.inputReader.style.setProperty("--inputCustomFG", fg);
+  dome.inputReader.style.setProperty("--inputCustomBG", bg);
+};
+
+dome.applyInputReaderColorPreferences = applyInputReaderColorPreferences;
 
 const setupCommandSuggestions = function() {
   if (!dome.autoComplete || !dome.inputReader) return;
@@ -368,6 +418,14 @@ const setClientOption = function(optionName, optionValue) {
 
   const validValues = PREFERENCE_ENUM[ optionName ].valid || (typeof prefDef === "boolean" ? [true, false] : null);
 
+  if (optionName === "inputFontColor" || optionName === "inputBackgroundColor") {
+    const normalized = normalizeHexColor(optionValue);
+    if (!normalized) {
+      return dome.buffer?.append("Invalid @client-option value, must be a hex color like #AABBCC\n");
+    }
+    optionValue = normalized;
+  }
+
   if (validValues && !validValues.includes(optionValue)) {
     return dome.buffer?.append(CLIENT_OPTION_VALUE_ERROR + validValues.toString() + "\n");
   }
@@ -390,6 +448,9 @@ const setClientOption = function(optionName, optionValue) {
     }
     if (optionName === "inputFont" || optionName === "inputFontSizePt") {
       applyInputReaderTextPreferences();
+    }
+    if (optionName === "inputFontColor" || optionName === "inputBackgroundColor") {
+      applyInputReaderColorPreferences();
     }
     if (optionName === "editorFont") {
       Object.values(dome.spawned || {}).forEach((w) => {

@@ -101,6 +101,8 @@ for (const file of files) {
       assert.match(html, />Theme</);
       assert.match(html, />Input Font</);
       assert.match(html, />Input Font Size \(pt\)</);
+      assert.match(html, />Input Font Color</);
+      assert.match(html, />Input Background Color</);
       assert.match(html, />Editor Type</);
       assert.match(html, />Editor Theme</);
       assert.doesNotMatch(html, /admin only/);

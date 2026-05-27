@@ -62,6 +62,7 @@ const init = () => {
     dome.inputReader?.classList.add(`colorset-${preferences.colorSet}`);
   }
   dome.applyInputReaderTextPreferences?.();
+  dome.applyInputReaderColorPreferences?.();
   if (dome.inputReader) {
     if (dome.setupInputReader) dome.setupInputReader();
     if (preferences.commandSuggestions && dome.autoComplete != null) {
