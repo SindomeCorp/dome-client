@@ -378,6 +378,8 @@ const applyInputReaderColorPreferences = function() {
   const bg = normalizeHexColor(dome.preferences?.inputBackgroundColor) || "#333333";
   dome.inputReader.style.setProperty("--inputCustomFG", fg);
   dome.inputReader.style.setProperty("--inputCustomBG", bg);
+  dome.inputReader.style.color = fg;
+  dome.inputReader.style.backgroundColor = bg;
 };
 
 dome.applyInputReaderColorPreferences = applyInputReaderColorPreferences;
