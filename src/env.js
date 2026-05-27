@@ -30,7 +30,7 @@ const env = cleanEnv(process.env, {
   SSL_KEY: str({ default: "" }),
   SSL_CERT: str({ default: "" }),
   SSL_PASSPHRASE: str({ default: "" }),
-  MOO_NAME: str({ default: "Sindome" }),
+  MUD_NAME: str({ default: "Sindome" }),
   MUD_HOST: str({ default: "moo.sindome.org" }),
   MUD_PORT: num({ default: 5555 }),
   WEBSITE_SIGNUP_URL: str({ default: "" }),

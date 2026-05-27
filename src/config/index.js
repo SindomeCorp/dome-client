@@ -14,7 +14,7 @@ const config = {
     }
   },
   moo: {
-    name: env.MOO_NAME,
+    name: env.MUD_NAME,
     host: env.MUD_HOST,
     port: env.MUD_PORT
   },

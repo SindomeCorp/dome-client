@@ -19,7 +19,7 @@ const defaults = {
   SSL_KEY: "",
   SSL_CERT: "",
   SSL_PASSPHRASE: "",
-  MOO_NAME: "Sindome",
+  MUD_NAME: "Sindome",
   MUD_HOST: "moo.sindome.org",
   MUD_PORT: 5555,
   WEBSITE_SIGNUP_URL: "",

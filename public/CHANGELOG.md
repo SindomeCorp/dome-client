@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Renamed the `SDWC No-Wrap Blocks` client option to `Mobile Friendly Text Wrap` for clearer user-facing wording.
 - Renamed backend connection environment variables from `MOO_HOST`/`MOO_PORT` to `MUD_HOST`/`MUD_PORT` across app config, docs, examples, and tests.
+- Renamed the game-name environment variable to `MUD_NAME` across env validation, config wiring, docs, and tests.
 - Updated the main client command input to request plain text mobile keyboards without autocapitalize, autocomplete, or autocorrect.
 - Organized Client Options into General, Presentation, and Local Editor tabs, renamed `Output Colors` to `Theme`, and removed admin-only wording from editor options.
 - Tightened Client Options dropdown widths to a consistent medium size, widened option labels, and left-aligned Presentation color/size controls for cleaner mobile layout.

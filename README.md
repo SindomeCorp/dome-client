@@ -89,7 +89,7 @@ In this mode, the splash page is host/port-first and users can connect to differ
 ### Single-MUD Mode (`MULTI_MUD=false`)
 
 - Intended for game-specific deployments where the client should always connect to one configured game.
-- Splash and metadata are game-name centric (`MOO_NAME` is shown in heading/copy).
+- Splash and metadata are game-name centric (`MUD_NAME` is shown in heading/copy).
 - Backend socket connections use `MUD_HOST` and `MUD_PORT` directly.
 
 ### Multi-MUD Mode (`MULTI_MUD=true`)
