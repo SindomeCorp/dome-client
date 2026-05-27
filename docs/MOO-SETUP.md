@@ -112,6 +112,8 @@ Needed on MOO:
 
 SDWC is the out-of-band (OOB) command channel used by the IDE to communicate with the MOO without interrupting the normal flow of player-entered commands. This lets the web client and MOO exchange IDE/browser metadata and responses asynchronously while regular gameplay command handling continues normally.
 
+For dedicated documentation of SDWC nowrap markers (`SDWC-START-NOWRAP` / `SDWC-END-NOWRAP`), see [SDWC OOB NOWRAP Markers](SDWC-OOB.md).
+
 To support SDWC, several verbs may need to be added or modified.
 
 ### 1) Modify `#0:do_out_of_band_command`
