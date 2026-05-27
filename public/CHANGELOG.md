@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Added ANSI TrueColor rendering support for foreground/background sequences (`38;2;r;g;b` and `48;2;r;g;b`) using inline RGB styles in the line buffer and saved logs.
+- Added a `Scroll Up to Pause` client option that pauses auto-scroll when you scroll up and resumes when you return to the bottom.
 
 ### Changed
 - Renamed the `SDWC No-Wrap Blocks` client option to `Mobile Friendly Text Wrap` for clearer user-facing wording.
@@ -15,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - Fixed ANSI rendering for SGR reset/toggle sequences (`22m`, `25m`, `7m`, `27m`) so bold/blink/inverse styles stop correctly and raw escape codes are no longer shown in output.
 - Replaced regex ANSI rendering with a stateful stream parser so SGR resets, inverse fg/bg swapping, xterm256 themed colors, TrueColor, and split escape sequences render consistently with terminal behavior.
 - Updated default-color inverse rendering to use explicit inverse foreground/background colors (instead of CSS filter inversion) for closer terminal visual parity.
+- Fixed `Scroll Up to Pause` so enabling or disabling it from Client Options takes effect immediately without requiring a reload.
 
 ## 2026-05-22
 

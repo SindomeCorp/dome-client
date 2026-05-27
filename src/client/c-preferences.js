@@ -37,6 +37,7 @@ dome.readPreferences = function() {
     imagePreview       : false,
     inlineLogCss       : true,
     sdwcNowrapBlocks   : false,
+    scrollUpToPause    : false,
     transparentOverlay : true,
     broadSearch        : true,
     performanceBuffer  : dome.weakBrowser() ? 1750 : 0 // set to 0 for unlimited buffer / weak browsers get defaulted to 1750
@@ -76,6 +77,9 @@ dome.readPreferences = function() {
     }
     if (options.indexOf("nw=true") != -1) {
       preferences.sdwcNowrapBlocks = true;
+    }
+    if (options.indexOf("up=true") != -1) {
+      preferences.scrollUpToPause = true;
     }
 
     if (options.indexOf("as=long") != -1) {
@@ -190,6 +194,7 @@ const PREFERENCE_ENUM = {
   "iv" : { name: "imagePreview", storeKey: "imageview", def: false },
   "lc" : { name: "inlineLogCss", storeKey: "logcss", def: true },
   "nw" : { name: "sdwcNowrapBlocks", storeKey: "sdwcnowrap", def: false },
+  "up" : { name: "scrollUpToPause", storeKey: "scrolluppause", def: false },
   "as" : { name: "autoScroll", storeKey: "scroll", def: "dbl", valid: ["dbl", "long", "none"] },
   "of" : { name: "lineBufferFont", storeKey: "outfont", def: "standard", valid: FONT_CHOICES },
   "ef" : { name: "editorFont", storeKey: "editorfont", def: "standard", valid: FONT_CHOICES },
@@ -326,7 +331,7 @@ const setClientOption = function(optionName, optionValue) {
         if (dome.inputReader) dome.inputReader.commandSuggestions( "destroy" );
       }
     }
-    if (optionName === "autoScroll") {
+    if (optionName === "autoScroll" || optionName === "scrollUpToPause") {
       dome.setupAutoscroll?.();
     }
     if (optionName === "shortenUrls" && optionValue === true) {

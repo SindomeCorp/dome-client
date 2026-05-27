@@ -89,12 +89,13 @@ test("readPreferences returns defaults", async (t) => {
   assert.equal(prefs.broadSearch, true);
   assert.equal(prefs.inlineLogCss, true);
   assert.equal(prefs.sdwcNowrapBlocks, false);
+  assert.equal(prefs.scrollUpToPause, false);
   assert.equal(prefs.transparentOverlay, true);
   assert.equal(prefs.performanceBuffer, 0);
 });
 
 test("readPreferences parses url options", async (t) => {
-  const url = "https://example.com/?cs=false&su=false&pd=false&le=true&iv=true&lc=false&nw=true&as=none&to=false&bs=false";
+  const url = "https://example.com/?cs=false&su=false&pd=false&le=true&iv=true&lc=false&nw=true&up=true&as=none&to=false&bs=false";
   const win = await setupWindow(t, url, "Chrome/78");
   const prefs = win.dome.readPreferences();
   assert.equal(prefs.commandSuggestions, false);
@@ -104,6 +105,7 @@ test("readPreferences parses url options", async (t) => {
   assert.equal(prefs.imagePreview, true);
   assert.equal(prefs.inlineLogCss, false);
   assert.equal(prefs.sdwcNowrapBlocks, true);
+  assert.equal(prefs.scrollUpToPause, true);
   assert.equal(prefs.autoScroll, "none");
   assert.equal(prefs.transparentOverlay, false);
   assert.equal(prefs.broadSearch, false);
@@ -147,6 +149,14 @@ test("readPreferences loads saved colorSet from localStorage", async (t) => {
   clientOptions.save("colorset", "acid");
   const prefs = win.dome.readPreferences();
   assert.equal(prefs.colorSet, "acid");
+});
+
+test("readPreferences loads saved scrollUpToPause from localStorage", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  clientOptions.save("scrolluppause", true);
+  const prefs = win.dome.readPreferences();
+  assert.equal(prefs.scrollUpToPause, true);
 });
 
 test("parseClientOptionCommand persists preference", async (t) => {
@@ -199,4 +209,18 @@ test("@client-option pb accepts numeric values", async (t) => {
   win.dome.parseClientOptionCommand("@client-option pb 100");
   assert.equal(win.dome.preferences.performanceBuffer, 100);
   assert.ok(output.some((line) => line.includes("changing @client-option performanceBuffer to 100")));
+});
+
+test("parseClientOptionCommand refreshes autoscroll when scrollUpToPause changes", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  let setupCount = 0;
+  win.dome.buffer = { append() {} };
+  win.dome.scrollBuffer = () => {};
+  win.dome.setupAutoscroll = () => {
+    setupCount++;
+  };
+  win.dome.preferences = win.dome.readPreferences();
+  win.dome.parseClientOptionCommand("@client-option scrollUpToPause true");
+  assert.equal(win.dome.preferences.scrollUpToPause, true);
+  assert.equal(setupCount, 1);
 });
