@@ -1,9 +1,16 @@
 import config from "../config/index.js";
+import { connectedStats } from "../services/multi-mud-metrics.js";
 
 export function connect(req, res) {
   const gameName = config.moo.name;
+  const isMultiMud = config.node.multiMud === true;
+  const stats = isMultiMud ? connectedStats() : { count: 0, games: [] };
   res.render("connect-as", {
     mooName: config.moo.name,
+    connectAnywhere: isMultiMud,
+    mooHostname: config.moo.host,
+    mooPort: config.moo.port,
+    connected: () => stats,
     showWebsiteAuth: config.remoteAuth.enabled,
     signupUrl: config.website.signupUrl,
     "meta": {

@@ -7,6 +7,7 @@ const config = {
     socketUrl: env.NODE_SOCKET_URL,
     socketUrlSSL: env.NODE_SOCKET_URL_SSL,
     socketProxied: env.NODE_SOCKET_PROXIED,
+    multiMud: env.MULTI_MUD,
     poweredBy: env.NODE_POWERED_BY,
     session: {
       secret: env.SESSION_SECRET
@@ -14,8 +15,8 @@ const config = {
   },
   moo: {
     name: env.MOO_NAME,
-    host: env.MOO_HOST,
-    port: env.MOO_PORT
+    host: env.MUD_HOST,
+    port: env.MUD_PORT
   },
   website: {
     signupUrl: env.WEBSITE_SIGNUP_URL

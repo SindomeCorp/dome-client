@@ -80,8 +80,20 @@ dome.setupSocket = function() {
     initialCommand = true;
   };
 
+  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search || "") : new URLSearchParams();
+  const queryHost = (searchParams.get("gh") || "").trim();
+  const queryPort = (searchParams.get("gp") || "").trim();
+  const socketQuery = {};
+  if (queryHost) {
+    socketQuery.host = queryHost;
+  }
+  if (queryPort) {
+    socketQuery.port = queryPort;
+  }
+
   const ioSocket = io("https:" == document.location.protocol ? socketUrlSSL : socketUrl, {
-    "sync disconnect on unload": true // send 'disconnect' event when the page is left
+    "sync disconnect on unload": true, // send 'disconnect' event when the page is left
+    query: socketQuery
   });
   setSocket(ioSocket);
   dome.socket = ioSocket;

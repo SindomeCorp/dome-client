@@ -89,3 +89,39 @@ test("manual connect clears guest command", async (t) => {
   assert.ok(removed.includes("dc-initial-command"));
   assert.ok(removed.includes("dc-user-login"));
 });
+
+test("connect_now stores selected host and port before navigation", async (t) => {
+  t.mock.timers.enable();
+  const html = "<!doctype html><html><body>"
+    + "<input id=\"moo-username\" value=\"char\" />"
+    + "<input id=\"moo-password\" value=\"pass\" />"
+    + "<input id=\"moo-hostname\" value=\"example.org\" />"
+    + "<input id=\"moo-port\" value=\"7777\" />"
+    + "<button id=\"connect_now\"></button>"
+    + "</body></html>";
+  const { window } = setupDom(t, html);
+  const { store } = await import("../../src/client/store.js");
+  const putMock = t.mock.fn();
+  Object.assign(store, {
+    get: () => null,
+    put: putMock,
+    remove: () => {},
+    getUsernames: () => [],
+    getUser: () => null,
+    addUser: () => {},
+    purge: () => {}
+  });
+
+  await import(`../../src/client/pages/client-connect.js?connect-now=${Math.random()}`);
+  window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
+  t.mock.timers.tick(10);
+  const button = window.document.getElementById("connect_now");
+  try {
+    button.dispatchEvent(new window.Event("click", { cancelable: true }));
+  } catch (err) {
+    void err;
+  }
+  const writes = putMock.mock.calls.map((c) => [c.arguments[0], c.arguments[1]]);
+  assert.ok(writes.some(([key, val]) => key === "game-hostname" && val === "example.org"));
+  assert.ok(writes.some(([key, val]) => key === "game-port" && val === "7777"));
+});

@@ -66,6 +66,7 @@ test("config/env applies defaults for node configuration", async (t) => {
     NODE_SOCKET_URL: "http://localhost:8080",
     NODE_SOCKET_URL_SSL: "",
     NODE_SOCKET_PROXIED: false,
+    MULTI_MUD: false,
     NODE_POWERED_BY: "Dome Client",
     SESSION_SECRET: "dev-session-secret-change-me"
   };
@@ -91,6 +92,7 @@ test("config/env applies defaults for node configuration", async (t) => {
     socketUrl: "http://localhost:8080",
     socketUrlSSL: "",
     socketProxied: false,
+    multiMud: false,
     poweredBy: "Dome Client",
     session: { secret: "dev-session-secret-change-me" }
   });
@@ -104,6 +106,7 @@ test("config/env uses overrides for node configuration", async (t) => {
     NODE_SOCKET_URL: "http://example",
     NODE_SOCKET_URL_SSL: "https://secure",
     NODE_SOCKET_PROXIED: "true",
+    MULTI_MUD: "true",
     NODE_POWERED_BY: "Overridden",
     SESSION_SECRET: "shhh"
   };
@@ -129,6 +132,7 @@ test("config/env uses overrides for node configuration", async (t) => {
     socketUrl: "http://example",
     socketUrlSSL: "https://secure",
     socketProxied: true,
+    multiMud: true,
     poweredBy: "Overridden",
     session: { secret: "shhh" }
   });

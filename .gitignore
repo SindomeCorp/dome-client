@@ -20,3 +20,7 @@ npm-debug.log
 nohup.out
 play.sindome.org.pem
 play.sindome.org.crt
+data/multi-mud-metrics.json
+data/multi-mud-metrics.json.tmp
+data/multi-moo-metrics.json
+data/multi-moo-metrics.json.tmp

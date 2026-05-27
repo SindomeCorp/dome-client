@@ -1,6 +1,7 @@
 /* eslint indent: ["error", 2], quotes: ["error", "double"], semi: ["error", "always"] */
 import test from "node:test";
 import assert from "node:assert/strict";
+import config from "../../src/config/index.js";
 
 import * as screens from "../../src/controllers/screens.js";
 
@@ -28,12 +29,25 @@ test("connect renders connect-as with metadata", () => {
   const { res, result } = createRes();
   screens.connect({}, res);
   assert.equal(result.template, "connect-as");
+  assert.equal(result.locals.connectAnywhere, false);
   const gameName = result.locals.mooName;
   assert.deepEqual(result.locals.meta, {
     title: "Connect - Modern Gaming Client",
     description: `Connect to ${gameName} using its state of the art Modern Gaming Client. No flash, no plugins, just a modern browser. Play with your iPad or check in from the company computer. There's nothing to install.`,
     keywords: `moo-client, telnet client, modern gaming client, play ${gameName.toLowerCase()}, text-based game, websocket-telnet`
   });
+});
+
+test("connect enables multi-mud locals when configured", () => {
+  const original = config.node.multiMud;
+  config.node.multiMud = true;
+  const { res, result } = createRes();
+  screens.connect({}, res);
+  config.node.multiMud = original;
+  assert.equal(result.locals.connectAnywhere, true);
+  assert.equal(result.locals.mooHostname, config.moo.host);
+  assert.equal(result.locals.mooPort, config.moo.port);
+  assert.equal(typeof result.locals.connected, "function");
 });
 
 test("client renders client with metadata", () => {

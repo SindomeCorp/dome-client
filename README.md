@@ -11,7 +11,7 @@ Dome Client is the maintained successor to the [Legacy Dome Client](https://gith
 
 It is a browser-based MUD client built with Node.js, Express, and Socket.io. It bridges browser WebSocket connections to traditional telnet-based MUD servers, so players can connect without installing anything.
 
-## Quick Start
+## Single-MUD Quick Start
 ```
 git clone git@github.com:SindomeCorp/dome-client.git
 cd dome-client
@@ -19,6 +19,34 @@ npm i
 npm start
 ```
 Open in Browser: http://localhost:8080
+
+This mode uses your configured `MUD_HOST`/`MUD_PORT` as the fixed game to connect to.
+
+## Multi-MUD Quick Start
+```bash
+git clone git@github.com:SindomeCorp/dome-client.git
+cd dome-client
+npm i
+cp .env-example-local .env
+```
+
+Set the following in `.env`:
+
+```env
+MULTI_MUD=true
+MUD_HOST=default-game-if-user-does-not-enter-one.com
+MUD_PORT=default-port
+```
+
+Then start:
+
+```bash
+npm start
+```
+
+Open in Browser: http://localhost:8080
+
+In this mode, the splash page is host/port-first and users can connect to different games; successful connections are tracked in persisted multi-MUD metrics.
 
 **Quick links:** [Installation](#installation) · [Setup Guides](#setup-guides) · [Contributing](#contributing)
 
@@ -30,6 +58,9 @@ Open in Browser: http://localhost:8080
 ## Features
 
 - Browser-based MUD play over WebSocket with no installation.
+- Two connection modes:
+  - Single-MUD mode (`MULTI_MUD=false`): fixed game from `MUD_HOST`/`MUD_PORT`.
+  - Multi-MUD mode (`MULTI_MUD=true`): user enters host/port to enter connect flow with per-game analytics.
 - Terminal-accurate ANSI rendering with a stateful parser (including reset/inverse handling), full Xterm256 support, and TrueColor (`38;2`/`48;2`) foreground/background rendering in both live output and exported logs.
 - HTTPS support.
 - Automatic URL linkification in output buffer.
@@ -51,6 +82,23 @@ Open in Browser: http://localhost:8080
 - Optional status-service integration.
 - Native bridge integration support (`window.DomeBridge` / `window.DomeNative`) for mobile wrappers, including queued startup event handling and native log-download routing when available.
 - Fully bundled client styling (local LESS/CSS and glyph assets), removing runtime dependency on external `dome.css` for consistent mobile/desktop rendering.
+- Optional multi-game landing mode (`MULTI_MUD`) with host/port-first connect flow and persisted per-game connection analytics.
+
+## Connection Modes
+
+### Single-MUD Mode (`MULTI_MUD=false`)
+
+- Intended for game-specific deployments where the client should always connect to one configured game.
+- Splash and metadata are game-name centric (`MOO_NAME` is shown in heading/copy).
+- Backend socket connections use `MUD_HOST` and `MUD_PORT` directly.
+
+### Multi-MUD Mode (`MULTI_MUD=true`)
+
+- Intended for hub/public client deployments where users choose host/port at connect time.
+- Splash switches to generic **Play Now** with a host/port connect form.
+- Client passes selected host/port to the backend per connection.
+- `MUD_HOST`/`MUD_PORT` still serve as fallback defaults for empty/invalid user input.
+- Successful connections are counted and persisted across restarts in `data/multi-mud-metrics.json`.
 
 ## IDE Features
 
