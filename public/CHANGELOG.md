@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - Renamed the `SDWC No-Wrap Blocks` client option to `Mobile Friendly Text Wrap` for clearer user-facing wording.
 - Updated the main client command input to request plain text mobile keyboards without autocapitalize, autocomplete, or autocorrect.
 - Organized Client Options into General, Presentation, and Local Editor tabs, renamed `Output Colors` to `Theme`, and removed admin-only wording from editor options.
+- Tightened Client Options dropdown widths to a consistent medium size, widened option labels, and left-aligned Presentation color/size controls for cleaner mobile layout.
 
 ### Fixed
 - Preserved existing xterm256 class-based color mapping behavior while adding TrueColor, so client color schemes continue overriding palette-based colors as before.
