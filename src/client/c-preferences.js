@@ -339,15 +339,15 @@ const applyTransparentOverlayPreference = function(transparentOverlay = dome.pre
 dome.applyTransparentOverlayPreference = applyTransparentOverlayPreference;
 
 const INPUT_FONT_FAMILIES = {
-  standard: "\"Source Code Pro\", monospace",
-  lucida: "\"Lucida Console\", monospace",
-  courier: "\"Courier New\", monospace",
-  roboto: "\"Roboto Mono\", monospace",
-  "comic-mono": "\"Comic Mono\", monospace",
-  monaco: "\"Monaco\", monospace",
-  menlo: "\"Menlo\", monospace",
-  "ubuntu-mono": "\"Ubuntu Mono\", monospace",
-  consolas: "\"Consolas\", monospace",
+  standard: "\"Source Code Pro\"",
+  lucida: "\"Lucida Console\"",
+  courier: "\"Courier New\"",
+  roboto: "\"Roboto Mono\"",
+  "comic-mono": "\"Comic Mono\"",
+  monaco: "\"Monaco\"",
+  menlo: "\"Menlo\"",
+  "ubuntu-mono": "\"Ubuntu Mono\"",
+  consolas: "\"Consolas\"",
 };
 const INPUT_FONT_CLASSES = FONT_CHOICES.map((font) => `${font}Text`);
 
