@@ -5,12 +5,17 @@
   bottom: 0;
   left: 0;
   z-index: 1001;
-  background-color: var(--black, @black);
-  opacity: 0.8;
+  background-color: rgba(0, 0, 0, 0.8);
   display: flex;
   justify-content: center;
   align-items: flex-start;
   padding-top: 1vh;
+  &.ui-transparent-overlay {
+    background-color: rgba(0, 0, 0, 0.55);
+  }
+  &.ui-opaque-overlay {
+    background-color: rgba(0, 0, 0, 0.9);
+  }
 }
 
 #client-options-overlay .client-options-page {

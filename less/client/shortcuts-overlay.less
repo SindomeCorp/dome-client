@@ -5,8 +5,13 @@
   bottom: 0;
   left: 0;
   z-index: 998;
-  background-color: var(--black, @black);
-  opacity: 0.8;
+  background-color: rgba(0, 0, 0, 0.8);
+  &.ui-transparent-overlay {
+    background-color: rgba(0, 0, 0, 0.55);
+  }
+  &.ui-opaque-overlay {
+    background-color: rgba(0, 0, 0, 0.88);
+  }
 }
 #shortcuts-overlay .shortcuts-content {
   opacity: 1;

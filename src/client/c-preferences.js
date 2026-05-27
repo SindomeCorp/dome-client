@@ -257,6 +257,23 @@ const applyTransparentOverlayPreference = function(transparentOverlay = dome.pre
       ac.classList.add("ui-opaque-overlay");
     }
   });
+
+  [
+    "#shortcuts-overlay",
+    "#history-search-overlay",
+    "#client-options-overlay",
+    "#gameHealthDetail",
+  ].forEach((selector) => {
+    const overlay = document.querySelector(selector);
+    if (!overlay) return;
+    if (transparentOverlay) {
+      overlay.classList.add("ui-transparent-overlay");
+      overlay.classList.remove("ui-opaque-overlay");
+    } else {
+      overlay.classList.remove("ui-transparent-overlay");
+      overlay.classList.add("ui-opaque-overlay");
+    }
+  });
 };
 
 dome.applyTransparentOverlayPreference = applyTransparentOverlayPreference;

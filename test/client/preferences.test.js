@@ -189,8 +189,20 @@ test("parseClientOptionCommand sets overlay classes", async (t) => {
   ac.className = "ui-autocomplete ui-opaque-overlay";
   const secondAc = win.document.createElement("div");
   secondAc.className = "ui-autocomplete ui-opaque-overlay";
+  const shortcuts = win.document.createElement("div");
+  shortcuts.id = "shortcuts-overlay";
+  const historySearch = win.document.createElement("div");
+  historySearch.id = "history-search-overlay";
+  const clientOptionsOverlay = win.document.createElement("div");
+  clientOptionsOverlay.id = "client-options-overlay";
+  const gameHealthDetail = win.document.createElement("div");
+  gameHealthDetail.id = "gameHealthDetail";
   win.document.body.appendChild(ac);
   win.document.body.appendChild(secondAc);
+  win.document.body.appendChild(shortcuts);
+  win.document.body.appendChild(historySearch);
+  win.document.body.appendChild(clientOptionsOverlay);
+  win.document.body.appendChild(gameHealthDetail);
   win.dome.buffer = { append() {} };
   win.dome.scrollBuffer = () => {};
   win.dome.preferences = win.dome.readPreferences();
@@ -200,11 +212,19 @@ test("parseClientOptionCommand sets overlay classes", async (t) => {
   assert.equal(ac.classList.contains("ui-opaque-overlay"), false);
   assert.equal(secondAc.classList.contains("ui-transparent-overlay"), true);
   assert.equal(secondAc.classList.contains("ui-opaque-overlay"), false);
+  assert.equal(shortcuts.classList.contains("ui-transparent-overlay"), true);
+  assert.equal(historySearch.classList.contains("ui-transparent-overlay"), true);
+  assert.equal(clientOptionsOverlay.classList.contains("ui-transparent-overlay"), true);
+  assert.equal(gameHealthDetail.classList.contains("ui-transparent-overlay"), true);
   win.dome.parseClientOptionCommand("@client-option transparentOverlay false");
   assert.equal(ac.classList.contains("ui-transparent-overlay"), false);
   assert.equal(ac.classList.contains("ui-opaque-overlay"), true);
   assert.equal(secondAc.classList.contains("ui-transparent-overlay"), false);
   assert.equal(secondAc.classList.contains("ui-opaque-overlay"), true);
+  assert.equal(shortcuts.classList.contains("ui-opaque-overlay"), true);
+  assert.equal(historySearch.classList.contains("ui-opaque-overlay"), true);
+  assert.equal(clientOptionsOverlay.classList.contains("ui-opaque-overlay"), true);
+  assert.equal(gameHealthDetail.classList.contains("ui-opaque-overlay"), true);
 });
 
 test("parseClientOptionCommand reapplies overlay classes after autocomplete rebuild", async (t) => {

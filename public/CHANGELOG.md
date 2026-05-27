@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - Updated default-color inverse rendering to use explicit inverse foreground/background colors (instead of CSS filter inversion) for closer terminal visual parity.
 - Fixed `Scroll Up to Pause` so enabling or disabling it from Client Options takes effect immediately without requiring a reload.
 - Fixed the `Transparent Overlays` option so autocomplete overlays keep the selected transparency when toggled or rebuilt.
+- Expanded `Transparent Overlays` so it now also affects shortcuts, history search, client options, and the MOO status detail overlay.
 
 ## 2026-05-22
 
