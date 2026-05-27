@@ -11,6 +11,7 @@ dome.setupButtons = function() {
     dome.reconnectButton.addEventListener("click", () => {
       dome.socket?.disconnect?.();
       dome.resetSdwcNowrapState?.();
+      dome.resetAnsiRendererState?.();
       dome.socket?.off?.("data", dome.parseSocketData);
       dome.socket = dome.setupSocket();
       dome.socket.on("data", dome.parseSocketData);
@@ -109,6 +110,7 @@ dome.setupButtons = function() {
     dome.clearButton.addEventListener("click", () => {
       dome.buffer.innerHTML = "";
       dome.resetSdwcNowrapState?.();
+      dome.resetAnsiRendererState?.();
     });
   }
 

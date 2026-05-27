@@ -1,5 +1,6 @@
-import { dome, logger, subs } from "./b-variables.js";
+import { dome, logger } from "./b-variables.js";
 import * as replacements from "./e-replacements.js";
+import { createAnsiRenderer } from "./ansi-renderer.js";
 
 dome.setupOutputParser = function () {
   // ------------------------------
@@ -115,6 +116,7 @@ dome.setupOutputParser = function () {
   let _carry = "";
   let sdwcNowrapActive = false;
   let activeSdwcNowrapBlock = null;
+  const ansiRenderer = createAnsiRenderer();
 
   const createSdwcNowrapBlock = () => {
     if (!dome.buffer || typeof document === "undefined") {
@@ -132,6 +134,9 @@ dome.setupOutputParser = function () {
   };
 
   dome.resetSdwcNowrapState = resetSdwcNowrapState;
+  dome.resetAnsiRendererState = function() {
+    ansiRenderer.resetState();
+  };
 
   // ------------------------------
   // Main parser
@@ -142,13 +147,9 @@ dome.setupOutputParser = function () {
 
     const appendOutputSegment = (rawSegment) => {
       if (!rawSegment) return;
-      let outputSegment = rawSegment;
+      let outputSegment = ansiRenderer.renderChunk(rawSegment);
 
-      // ------------------ Substitutions, linkifying, host/ip linking ------------------
-      subs.forEach((sub) => {
-        outputSegment = outputSegment.replace(sub.pattern, sub.replacement);
-      });
-
+      // ------------------ ANSI rendering, linkifying, host/ip linking ------------------
       outputSegment = linkifyUrlsWithPreview(outputSegment);
       outputSegment = linkifyHosts(outputSegment);
 
@@ -356,7 +357,7 @@ dome.setupOutputParser = function () {
             const overlayObject = String(overlayPayload?.object || "").trim();
             const overlayVerb = String(overlayPayload?.verb || "").trim();
             if (overlayObject && overlayVerb && dome.ideWindow && !dome.ideWindow.closed) {
-              console.log("[SDWC overlay parsed][verb]", {
+              logger.debug("[SDWC overlay parsed][verb]", {
                 objectId: overlayObject,
                 verbName: overlayVerb,
                 payload: overlayPayload
@@ -368,7 +369,7 @@ dome.setupOutputParser = function () {
                 payload: overlayPayload
               }, "*");
             } else {
-              console.log("[SDWC overlay parsed ignored][verb]", {
+              logger.debug("[SDWC overlay parsed ignored][verb]", {
                 hasObject: Boolean(overlayObject),
                 hasVerb: Boolean(overlayVerb),
                 hasIdeWindow: Boolean(dome.ideWindow && !dome.ideWindow.closed),
@@ -397,7 +398,7 @@ dome.setupOutputParser = function () {
             const overlayObject = String(overlayPayload?.object || "").trim();
             const overlayProp = String(overlayPayload?.property || "").trim();
             if (overlayObject && overlayProp && dome.ideWindow && !dome.ideWindow.closed) {
-              console.log("[SDWC overlay parsed][prop]", {
+              logger.debug("[SDWC overlay parsed][prop]", {
                 objectId: overlayObject,
                 propertyName: overlayProp,
                 payload: overlayPayload
@@ -409,7 +410,7 @@ dome.setupOutputParser = function () {
                 payload: overlayPayload
               }, "*");
             } else {
-              console.log("[SDWC overlay parsed ignored][prop]", {
+              logger.debug("[SDWC overlay parsed ignored][prop]", {
                 hasObject: Boolean(overlayObject),
                 hasProperty: Boolean(overlayProp),
                 hasIdeWindow: Boolean(dome.ideWindow && !dome.ideWindow.closed),

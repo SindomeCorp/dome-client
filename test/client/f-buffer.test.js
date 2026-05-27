@@ -100,6 +100,29 @@ test("parseSocketData handles color codes on empty lines", async (t) => {
   assert.equal(dome.buffer.innerHTML, "<div>line1</div><div><br></div><div>line2</div>");
 });
 
+test("parseSocketData renders truecolor and reset sequences", async (t) => {
+  await loadOutputParser(t);
+  dome.buffer.innerHTML = "";
+  dome.preferences.performanceBuffer = 0;
+  const ESC = "\u001b";
+  dome.parseSocketData(`${ESC}[38;2;12;34;56mcolor${ESC}[0m plain\n`);
+  assert.equal(
+    dome.buffer.innerHTML,
+    "<div><span style=\"color: rgb(12 34 56)\">color</span> plain</div>"
+  );
+});
+
+test("parseSocketData keeps xterm256 class mapping intact with truecolor", async (t) => {
+  await loadOutputParser(t);
+  dome.buffer.innerHTML = "";
+  dome.preferences.performanceBuffer = 0;
+  const ESC = "\u001b";
+  dome.parseSocketData(`${ESC}[38;5;1mred ${ESC}[38;2;10;20;30mrgb\n`);
+  const html = dome.buffer.innerHTML;
+  assert.ok(html.includes("xterm256-Red"));
+  assert.ok(html.includes("style=\"color: rgb(10 20 30)\""));
+});
+
 test("parseSocketData renders UUID split across lines separately", async (t) => {
   await loadOutputParser(t);
   dome.buffer.innerHTML = "";

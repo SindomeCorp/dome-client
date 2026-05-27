@@ -1,12 +1,5 @@
-import { subs } from "./b-variables.js";
-import { xterm256Colors } from "./xterm-colors.js";
-import { createReplacements } from "./replacements-data.js";
-
 // basic regex for any url
 export const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\(\)\/%?=~_|!:,.;]*[-A-Z0-9+&\(\)@#\/%=~_|])/ig;
-
-const ESC = String.fromCharCode(27);
-const replacements = createReplacements(xterm256Colors, ESC);
 
 // regex that matches IPv4 and IPv6 addresses
 const v4 = "(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}";
@@ -29,8 +22,3 @@ export const ipRegex = new RegExp(`(?:${v4})|(?:${v6})(?:%[0-9a-zA-Z]{1,})?`, "g
 // - TLD: letters 2–63 OR punycode xn--*
 // - word boundaries around it; don't start right after @ or # (common in MOO text)
 export const hostnameRegex = /(?<![@#])\b(?![^\s@]*@)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})\b/gi;
-
-for (const sub of replacements) {
-  subs.push(sub);
-}
-
