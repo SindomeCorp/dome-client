@@ -9,6 +9,10 @@ test("client-options updates state and persists to store", async () => {
       <button class="enabled-state btn-primary" data-val="true">on</button>
       <button class="disabled-state" data-val="false">off</button>
     </div>
+    <div class="option-row" id="scrolluppause-option">
+      <button class="enabled-state" data-val="true">on</button>
+      <button class="disabled-state btn-primary" data-val="false">off</button>
+    </div>
     <div class="option-row" id="scroll-option">
       <select>
         <option value="dbl">dbl</option>
@@ -32,6 +36,7 @@ test("client-options updates state and persists to store", async () => {
   const { clientOptions } = options;
   clientOptions.options = {
     commands: { param: "cs", def: true, ok: [true, false] },
+    scrolluppause: { param: "up", def: false, ok: [true, false] },
     scroll: { param: "as", def: "dbl", ok: ["dbl", "long", "none"] }
   };
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
@@ -39,6 +44,10 @@ test("client-options updates state and persists to store", async () => {
   offBtn.click();
   assert.equal(store.get("dc-toggle-commands"), false);
   assert.equal(clientOptions.get("commands").state, false);
+  const scrollUpOnBtn = window.document.querySelector("#scrolluppause-option .enabled-state");
+  scrollUpOnBtn.click();
+  assert.equal(store.get("dc-toggle-scrolluppause"), true);
+  assert.equal(clientOptions.get("scrolluppause").state, true);
   const select = window.document.querySelector("#scroll-option select");
   select.value = "none";
   select.dispatchEvent(new window.Event("change"));
@@ -55,4 +64,15 @@ test("clientOptions throws on invalid option", async () => {
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
   assert.throws(() => clientOptions.get("nope"), /invalid option name/);
   assert.throws(() => clientOptions.save("nope", true), /invalid option name/);
+});
+
+test("clientOptions query string includes scroll up to pause", async () => {
+  const html = "<!doctype html><html><body><div class=\"client-options-page\"></div></body></html>";
+  const { window, store } = setupClientOptionsDom(html);
+  const options = await import("../../src/client/pages/client-options.js?scrolluppause");
+  Object.assign(options.store, store);
+  const { clientOptions } = options;
+  window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
+  clientOptions.save("scrolluppause", true);
+  assert.ok(clientOptions.buildQueryString().includes("up=true"));
 });

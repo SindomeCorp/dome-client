@@ -1,5 +1,11 @@
 import { dome } from "./b-variables.js";
 
+const BOTTOM_THRESHOLD_PX = 24;
+
+const isAtBottom = (buffer) => {
+  return buffer.scrollHeight - buffer.scrollTop - buffer.clientHeight <= BOTTOM_THRESHOLD_PX;
+};
+
 const setScrollBuffer = dome => {
   dome.scrollBuffer = () => {
     if (dome.pauseBuffer) {
@@ -8,7 +14,11 @@ const setScrollBuffer = dome => {
         dome.setFadeText(dome.statusDisplay, `${dome.pausedLines} UNREAD LINES`);
       }
     } else {
+      dome._autoScrollProgrammatic = true;
       dome.buffer.scrollTop = dome.buffer.scrollHeight;
+      Promise.resolve().then(() => {
+        dome._autoScrollProgrammatic = false;
+      });
     }
   };
 };
@@ -16,9 +26,46 @@ const setScrollBuffer = dome => {
 const pauseIconMarkup = "<span class=\"mini-glyph\" aria-hidden=\"true\"><svg class=\"mini-glyph-svg\" viewBox=\"0 0 14 14\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"2\" y=\"2\" width=\"3.5\" height=\"10\" rx=\"0.9\"></rect><rect x=\"8.5\" y=\"2\" width=\"3.5\" height=\"10\" rx=\"0.9\"></rect></svg></span>";
 const playIconMarkup = "<span class=\"mini-glyph\" aria-hidden=\"true\"><svg class=\"mini-glyph-svg\" viewBox=\"0 0 14 14\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M3 2.2L11.5 7L3 11.8Z\"></path></svg></span>";
 
+const setPauseUi = (dome, paused) => {
+  const button = dome.scrollButton;
+  if (paused) {
+    dome.buffer.classList.add("scroll-disabled");
+    if (button) {
+      button.innerHTML = `${playIconMarkup}<span class="hidden-xs">RESUME SCROLL</span>`;
+      button.classList.add("btn-danger");
+      button.classList.remove("btn-primary");
+    }
+  } else {
+    dome.buffer.classList.remove("scroll-disabled");
+    if (button) {
+      button.innerHTML = `${pauseIconMarkup}<span class="hidden-xs">PAUSE SCROLL</span>`;
+      button.classList.add("btn-primary");
+      button.classList.remove("btn-danger");
+    }
+  }
+};
+
+const setPaused = (dome, paused, message = null) => {
+  if (dome.pauseBuffer === paused) {
+    return;
+  }
+  dome.pauseBuffer = paused;
+  if (!paused) {
+    dome.pausedLines = 0;
+  }
+  if (message && dome.setFadeText) {
+    dome.setFadeText(dome.statusDisplay, message);
+  }
+  setPauseUi(dome, paused);
+};
+
 export function setupAutoscroll(dome, win = window) {
 
   // remove previous bindings
+  if (dome._autoScrollPosition) {
+    dome.buffer.removeEventListener("scroll", dome._autoScrollPosition);
+    dome._autoScrollPosition = null;
+  }
   if (dome._autoScrollDbl) {
     dome.buffer.removeEventListener("dblclick", dome._autoScrollDbl);
     dome._autoScrollDbl = null;
@@ -44,31 +91,33 @@ export function setupAutoscroll(dome, win = window) {
   dome._longClickTimeout = null;
   dome.onToggleAutoScroll = () => {
     dome._longClickTimeout = null;
-    const button = dome.scrollButton;
     if (dome.pauseBuffer) {
-      dome.pauseBuffer = false;
-      dome.pausedLines = 0;
-      if (dome.setFadeText) {
-        dome.setFadeText(dome.statusDisplay, "SCROLLING RESUMED");
-      }
+      setPaused(dome, false, "SCROLLING RESUMED");
+      dome._autoScrollProgrammatic = true;
       dome.buffer.scrollTop = dome.buffer.scrollHeight;
-      dome.buffer.classList.remove("scroll-disabled");
-      button.innerHTML = `${pauseIconMarkup}<span class="hidden-xs">PAUSE SCROLL</span>`;
-      button.classList.add("btn-primary");
-      button.classList.remove("btn-danger");
+      Promise.resolve().then(() => {
+        dome._autoScrollProgrammatic = false;
+      });
       document.querySelector("#inputBuffer").focus();
     } else {
-      dome.pauseBuffer = true;
-      if (dome.setFadeText) {
-        dome.setFadeText(dome.statusDisplay, "SCROLLING PAUSED");
-      }
-      dome.buffer.classList.add("scroll-disabled");
-      button.innerHTML = `${playIconMarkup}<span class="hidden-xs">RESUME SCROLL</span>`;
-      button.classList.add("btn-danger");
-      button.classList.remove("btn-primary");
+      setPaused(dome, true, "SCROLLING PAUSED");
       document.querySelector("#lineBuffer").focus();
     }
   };
+
+  if (dome.preferences.scrollUpToPause !== false) {
+    dome._autoScrollPosition = () => {
+      if (dome._autoScrollProgrammatic) {
+        return;
+      }
+      if (isAtBottom(dome.buffer)) {
+        setPaused(dome, false, "SCROLLING RESUMED");
+        return;
+      }
+      setPaused(dome, true, "SCROLLING PAUSED");
+    };
+    dome.buffer.addEventListener("scroll", dome._autoScrollPosition);
+  }
 
   if (dome.preferences.autoScroll === "dbl") {
     dome._autoScrollDbl = (e) => {

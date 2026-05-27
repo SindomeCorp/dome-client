@@ -185,3 +185,95 @@ test("long mode scroll calculation and user scroll disables auto-scroll", async 
   assert.equal(domeLocal.buffer.scrollTop, 200);
 
 });
+
+test("scroll up to pause stops autoscroll until user returns to bottom", async () => {
+  const dom = new JSDOM(html, { pretendToBeVisual: true });
+  const { window } = dom;
+  const { document } = window;
+  globalThis.window = window;
+  globalThis.document = document;
+  const domeLocal = {
+    buffer: document.querySelector("#buffer"),
+    scrollButton: document.querySelector("#scrollButton"),
+    statusDisplay: document.querySelector("#status"),
+    preferences: { autoScroll: "none", scrollUpToPause: true }
+  };
+
+  const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
+  setupAutoscroll(domeLocal, window);
+
+  Object.defineProperty(domeLocal.buffer, "scrollHeight", { value: 300, configurable: true });
+  Object.defineProperty(domeLocal.buffer, "clientHeight", { value: 100, configurable: true });
+  domeLocal.buffer.scrollTop = 50;
+  domeLocal.buffer.dispatchEvent(new window.Event("scroll"));
+
+  assert.equal(domeLocal.pauseBuffer, true);
+  assert.ok(domeLocal.buffer.classList.contains("scroll-disabled"));
+  assert.ok(domeLocal.scrollButton.classList.contains("btn-danger"));
+  assert.equal(domeLocal.scrollButton.querySelector("span.hidden-xs").textContent, "RESUME SCROLL");
+
+  domeLocal.scrollBuffer();
+  assert.equal(domeLocal.buffer.scrollTop, 50);
+  assert.equal(domeLocal.pausedLines, 1);
+
+  domeLocal.buffer.scrollTop = 276;
+  domeLocal.buffer.dispatchEvent(new window.Event("scroll"));
+
+  assert.equal(domeLocal.pauseBuffer, false);
+  assert.equal(domeLocal.pausedLines, 0);
+  assert.ok(!domeLocal.buffer.classList.contains("scroll-disabled"));
+  assert.ok(domeLocal.scrollButton.classList.contains("btn-primary"));
+  assert.equal(domeLocal.scrollButton.querySelector("span.hidden-xs").textContent, "PAUSE SCROLL");
+
+  domeLocal.scrollBuffer();
+  assert.equal(domeLocal.buffer.scrollTop, 300);
+});
+
+test("scroll up to pause can be disabled", async () => {
+  const dom = new JSDOM(html, { pretendToBeVisual: true });
+  const { window } = dom;
+  const { document } = window;
+  globalThis.window = window;
+  globalThis.document = document;
+  const domeLocal = {
+    buffer: document.querySelector("#buffer"),
+    scrollButton: document.querySelector("#scrollButton"),
+    statusDisplay: document.querySelector("#status"),
+    preferences: { autoScroll: "none", scrollUpToPause: false }
+  };
+
+  const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
+  setupAutoscroll(domeLocal, window);
+
+  Object.defineProperty(domeLocal.buffer, "scrollHeight", { value: 300, configurable: true });
+  Object.defineProperty(domeLocal.buffer, "clientHeight", { value: 100, configurable: true });
+  domeLocal.buffer.scrollTop = 50;
+  domeLocal.buffer.dispatchEvent(new window.Event("scroll"));
+
+  assert.equal(domeLocal.pauseBuffer, false);
+  assert.ok(!domeLocal.buffer.classList.contains("scroll-disabled"));
+});
+
+test("programmatic scroll does not trigger scroll up pause", async () => {
+  const dom = new JSDOM(html, { pretendToBeVisual: true });
+  const { window } = dom;
+  const { document } = window;
+  globalThis.window = window;
+  globalThis.document = document;
+  const domeLocal = {
+    buffer: document.querySelector("#buffer"),
+    scrollButton: document.querySelector("#scrollButton"),
+    statusDisplay: document.querySelector("#status"),
+    preferences: { autoScroll: "none", scrollUpToPause: true }
+  };
+
+  const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
+  setupAutoscroll(domeLocal, window);
+
+  Object.defineProperty(domeLocal.buffer, "scrollHeight", { value: 300, configurable: true });
+  Object.defineProperty(domeLocal.buffer, "clientHeight", { value: 100, configurable: true });
+  domeLocal.scrollBuffer();
+  domeLocal.buffer.dispatchEvent(new window.Event("scroll"));
+
+  assert.equal(domeLocal.pauseBuffer, false);
+});

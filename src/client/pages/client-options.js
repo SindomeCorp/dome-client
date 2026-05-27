@@ -42,6 +42,7 @@ const clientOptions = {
     imageview: { param: "iv", def: false, ok: [true, false] },
     logcss: { param: "lc", def: true, ok: [true, false] },
     sdwcnowrap: { param: "nw", def: false, ok: [true, false] },
+    scrolluppause: { param: "up", def: false, ok: [true, false] },
     transparent: { param: "to", def: true, ok: [true, false] },
     broadly: { param: "bs", def: true, ok: [true, false] },
     buffer: { param: "pb", def: weakBrowser() ? 1750 : 0 }
@@ -102,6 +103,7 @@ const PREF_NAME = {
   imageview: "imagePreview",
   logcss: "inlineLogCss",
   sdwcnowrap: "sdwcNowrapBlocks",
+  scrolluppause: "scrollUpToPause",
   transparent: "transparentOverlay",
   broadly: "broadSearch",
   buffer: "performanceBuffer"
