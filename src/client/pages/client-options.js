@@ -143,6 +143,45 @@ function refreshClientOptions() {
   });
 }
 
+function activateClientOptionsTab(tabName) {
+  document.querySelectorAll(".client-options-tab").forEach((tab) => {
+    const active = tab.dataset.tab === tabName;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", active ? "true" : "false");
+    tab.setAttribute("tabindex", active ? "0" : "-1");
+  });
+
+  document.querySelectorAll(".client-options-panel").forEach((panel) => {
+    panel.classList.toggle("hide", panel.dataset.tabPanel !== tabName);
+  });
+}
+
+function setupClientOptionsTabs() {
+  const tabs = Array.from(document.querySelectorAll(".client-options-tab"));
+  if (tabs.length === 0) return;
+
+  tabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => {
+      activateClientOptionsTab(tab.dataset.tab);
+    });
+    tab.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      let nextIndex = index;
+      if (event.key === "ArrowLeft") nextIndex = index === 0 ? tabs.length - 1 : index - 1;
+      if (event.key === "ArrowRight") nextIndex = index === tabs.length - 1 ? 0 : index + 1;
+      if (event.key === "Home") nextIndex = 0;
+      if (event.key === "End") nextIndex = tabs.length - 1;
+      const nextTab = tabs[nextIndex];
+      activateClientOptionsTab(nextTab.dataset.tab);
+      nextTab.focus();
+    });
+  });
+
+  const activeTab = tabs.find((tab) => tab.classList.contains("active")) ?? tabs[0];
+  activateClientOptionsTab(activeTab.dataset.tab);
+}
+
 export { store, clientOptions, EDIT_THEMES, FONT_CHOICES, COLORSET_CHOICES, refreshClientOptions };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -155,6 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.head.appendChild(hideScrollbar);
 
   refreshClientOptions();
+  setupClientOptionsTabs();
 
   document.querySelectorAll("DIV.client-options-page DIV.option-row SELECT").forEach((self) => {
     const id = self.parentElement.getAttribute("id").replace("-option", "");

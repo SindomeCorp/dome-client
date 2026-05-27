@@ -39,6 +39,10 @@ const init = () => {
   const preferences = dome.readPreferences();
   dome.preferences = preferences;
   const setOverlayClass = () => {
+    if (dome.applyTransparentOverlayPreference) {
+      dome.applyTransparentOverlayPreference();
+      return;
+    }
     document.querySelectorAll(".ui-autocomplete").forEach((ac) => {
       if (dome.preferences.transparentOverlay) {
         ac.classList.add("ui-transparent-overlay");

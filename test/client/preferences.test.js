@@ -187,7 +187,10 @@ test("parseClientOptionCommand sets overlay classes", async (t) => {
   });
   const ac = win.document.createElement("div");
   ac.className = "ui-autocomplete ui-opaque-overlay";
+  const secondAc = win.document.createElement("div");
+  secondAc.className = "ui-autocomplete ui-opaque-overlay";
   win.document.body.appendChild(ac);
+  win.document.body.appendChild(secondAc);
   win.dome.buffer = { append() {} };
   win.dome.scrollBuffer = () => {};
   win.dome.preferences = win.dome.readPreferences();
@@ -195,7 +198,50 @@ test("parseClientOptionCommand sets overlay classes", async (t) => {
   win.dome.parseClientOptionCommand("@client-option transparentOverlay true");
   assert.equal(ac.classList.contains("ui-transparent-overlay"), true);
   assert.equal(ac.classList.contains("ui-opaque-overlay"), false);
+  assert.equal(secondAc.classList.contains("ui-transparent-overlay"), true);
+  assert.equal(secondAc.classList.contains("ui-opaque-overlay"), false);
   win.dome.parseClientOptionCommand("@client-option transparentOverlay false");
+  assert.equal(ac.classList.contains("ui-transparent-overlay"), false);
+  assert.equal(ac.classList.contains("ui-opaque-overlay"), true);
+  assert.equal(secondAc.classList.contains("ui-transparent-overlay"), false);
+  assert.equal(secondAc.classList.contains("ui-opaque-overlay"), true);
+});
+
+test("parseClientOptionCommand reapplies overlay classes after autocomplete rebuild", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const origSave = clientOptions.save;
+  clientOptions.save = () => {};
+  t.after(() => {
+    clientOptions.save = origSave;
+  });
+  let destroyed = false;
+  win.dome.buffer = { append() {} };
+  win.dome.scrollBuffer = () => {};
+  win.dome.inputReader = {
+    commandSuggestions(arg) {
+      if (arg === "destroy") destroyed = true;
+    }
+  };
+  win.dome.userType = "p";
+  win.dome.preferences = win.dome.readPreferences();
+  win.dome.preferences.transparentOverlay = false;
+  win.dome.preferences.commandSuggestions = true;
+  win.dome.preferences.broadSearch = true;
+  win.dome.autoComplete = () => {};
+  win.dome.setupAutoComplete = () => Promise.resolve().then(() => {
+    const ac = win.document.createElement("div");
+    ac.className = "ui-autocomplete ui-transparent-overlay";
+    win.document.body.appendChild(ac);
+  });
+
+  win.dome.parseClientOptionCommand("@client-option broadSearch false");
+  await Promise.resolve();
+  await Promise.resolve();
+
+  const ac = win.document.querySelector(".ui-autocomplete");
+  assert.equal(destroyed, true);
+  assert.ok(ac);
   assert.equal(ac.classList.contains("ui-transparent-overlay"), false);
   assert.equal(ac.classList.contains("ui-opaque-overlay"), true);
 });

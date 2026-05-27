@@ -247,6 +247,31 @@ const showClientOption = function(optionName) {
   });
 };
 
+const applyTransparentOverlayPreference = function(transparentOverlay = dome.preferences?.transparentOverlay) {
+  document.querySelectorAll(".ui-autocomplete").forEach((ac) => {
+    if (transparentOverlay) {
+      ac.classList.add("ui-transparent-overlay");
+      ac.classList.remove("ui-opaque-overlay");
+    } else {
+      ac.classList.remove("ui-transparent-overlay");
+      ac.classList.add("ui-opaque-overlay");
+    }
+  });
+};
+
+dome.applyTransparentOverlayPreference = applyTransparentOverlayPreference;
+
+const setupCommandSuggestions = function() {
+  if (!dome.autoComplete || !dome.inputReader) return;
+  dome.autoComplete();
+  const acSetup = dome.setupAutoComplete(dome.inputReader, dome.userType);
+  if (acSetup && typeof acSetup.then === "function") {
+    acSetup.then(() => applyTransparentOverlayPreference());
+  } else {
+    applyTransparentOverlayPreference();
+  }
+};
+
 const setClientOption = function(optionName, optionValue) {
   if (optionName === "shortenUrls" && !shortenFeatureEnabled) {
     clientOptions.save("shorten", false);
@@ -303,30 +328,15 @@ const setClientOption = function(optionName, optionValue) {
       dome.inputReader?.classList.add("colorset-" + dome.preferences.colorSet);
     }
     if (optionName === "transparentOverlay") {
-      const ac = document.querySelector(".ui-autocomplete");
-      if (ac != null) {
-        if (optionValue === true) {
-          ac.classList.add("ui-transparent-overlay");
-          ac.classList.remove("ui-opaque-overlay");
-        } else {
-          ac.classList.remove("ui-transparent-overlay");
-          ac.classList.add("ui-opaque-overlay");
-        }
-      }
+      applyTransparentOverlayPreference(optionValue);
     }
     if ( optionName === "broadSearch" && dome.preferences.commandSuggestions) {
       if (dome.inputReader) dome.inputReader.commandSuggestions( "destroy" );
-      if (dome.autoComplete) {
-        dome.autoComplete();
-        dome.setupAutoComplete( dome.inputReader, dome.userType );
-      }
+      setupCommandSuggestions();
     }
     if ( optionName === "commandSuggestions") {
       if (dome.preferences.commandSuggestions) {
-        if (dome.autoComplete) {
-          dome.autoComplete();
-          dome.setupAutoComplete( dome.inputReader, dome.userType );
-        }
+        setupCommandSuggestions();
       } else {
         if (dome.inputReader) dome.inputReader.commandSuggestions( "destroy" );
       }

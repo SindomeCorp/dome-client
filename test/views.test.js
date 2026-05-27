@@ -93,6 +93,17 @@ for (const file of files) {
       assert.match(inputBuffer, /autocorrect="off"/);
       assert.doesNotMatch(inputBuffer, /spellcheck=/);
     }
+    if (file === "views/partials/client-options-overlay.ejs") {
+      assert.match(html, /role="tablist"/);
+      assert.match(html, />General</);
+      assert.match(html, />Fonts</);
+      assert.match(html, />Local Editor</);
+      assert.match(html, />Theme</);
+      assert.match(html, />Editor Type</);
+      assert.match(html, />Editor Theme</);
+      assert.doesNotMatch(html, /admin only/);
+      assert.doesNotMatch(html, /Output Colors/);
+    }
     if (file === "views/layouts/main.ejs") {
       assert.match(html, /href="\/css\/client\.css"/);
       assert.doesNotMatch(html, /dome-extract\.css/);

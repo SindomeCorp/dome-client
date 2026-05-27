@@ -76,3 +76,27 @@ test("clientOptions query string includes scroll up to pause", async () => {
   clientOptions.save("scrolluppause", true);
   assert.ok(clientOptions.buildQueryString().includes("up=true"));
 });
+
+test("client options tabs show one panel at a time", async () => {
+  const html = `<!doctype html><html><body>
+  <div class="client-options-page">
+    <button class="client-options-tab active" data-tab="general" aria-selected="true">General</button>
+    <button class="client-options-tab" data-tab="fonts" aria-selected="false">Fonts</button>
+    <button class="client-options-tab" data-tab="editor" aria-selected="false">Local Editor</button>
+    <div class="client-options-panel" data-tab-panel="general"></div>
+    <div class="client-options-panel hide" data-tab-panel="fonts"></div>
+    <div class="client-options-panel hide" data-tab-panel="editor"></div>
+  </div>
+  </body></html>`;
+  const { window, store } = setupClientOptionsDom(html);
+  const options = await import("../../src/client/pages/client-options.js?tabs");
+  Object.assign(options.store, store);
+  window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
+
+  const fontsTab = window.document.querySelector("[data-tab=\"fonts\"]");
+  fontsTab.click();
+
+  assert.equal(fontsTab.getAttribute("aria-selected"), "true");
+  assert.ok(!window.document.querySelector("[data-tab-panel=\"fonts\"]").classList.contains("hide"));
+  assert.ok(window.document.querySelector("[data-tab-panel=\"general\"]").classList.contains("hide"));
+});

@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Renamed the `SDWC No-Wrap Blocks` client option to `Mobile Friendly Text Wrap` for clearer user-facing wording.
 - Updated the main client command input to request plain text mobile keyboards without autocapitalize, autocomplete, or autocorrect.
+- Organized Client Options into General, Fonts, and Local Editor tabs, renamed `Output Colors` to `Theme`, and removed admin-only wording from editor options.
 
 ### Fixed
 - Preserved existing xterm256 class-based color mapping behavior while adding TrueColor, so client color schemes continue overriding palette-based colors as before.
@@ -18,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - Replaced regex ANSI rendering with a stateful stream parser so SGR resets, inverse fg/bg swapping, xterm256 themed colors, TrueColor, and split escape sequences render consistently with terminal behavior.
 - Updated default-color inverse rendering to use explicit inverse foreground/background colors (instead of CSS filter inversion) for closer terminal visual parity.
 - Fixed `Scroll Up to Pause` so enabling or disabling it from Client Options takes effect immediately without requiring a reload.
+- Fixed the `Transparent Overlays` option so autocomplete overlays keep the selected transparency when toggled or rebuilt.
 
 ## 2026-05-22
 
