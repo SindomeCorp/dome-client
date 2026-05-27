@@ -99,6 +99,8 @@ for (const file of files) {
       assert.match(html, />Fonts</);
       assert.match(html, />Local Editor</);
       assert.match(html, />Theme</);
+      assert.match(html, />Input Font</);
+      assert.match(html, />Input Font Size \(pt\)</);
       assert.match(html, />Editor Type</);
       assert.match(html, />Editor Theme</);
       assert.doesNotMatch(html, /admin only/);

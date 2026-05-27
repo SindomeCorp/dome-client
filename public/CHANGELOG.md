@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Added ANSI TrueColor rendering support for foreground/background sequences (`38;2;r;g;b` and `48;2;r;g;b`) using inline RGB styles in the line buffer and saved logs.
 - Added a `Scroll Up to Pause` client option that pauses auto-scroll when you scroll up and resumes when you return to the bottom.
+- Added `Input Font` and `Input Font Size (pt)` client options so command entry text can be customized independently from output/editor fonts.
 
 ### Changed
 - Renamed the `SDWC No-Wrap Blocks` client option to `Mobile Friendly Text Wrap` for clearer user-facing wording.

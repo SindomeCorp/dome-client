@@ -33,6 +33,8 @@ dome.readPreferences = function() {
     edittheme          : "twilight",
     editorType         : "ide",
     lineBufferFont     : "standard",
+    inputFont          : "standard",
+    inputFontSizePt    : 11,
     editorFont         : "standard",
     imagePreview       : false,
     inlineLogCss       : true,
@@ -110,6 +112,32 @@ dome.readPreferences = function() {
         const font = ef.substr(3);
         if (FONT_CHOICES.includes(font)) {
           preferences.editorFont = font;
+        }
+      }
+    }
+
+    const ifIndex = options.indexOf("if=");
+    if (ifIndex !== -1) {
+      let rest = options.substr(ifIndex);
+      const nIndex = rest.indexOf("&");
+      const inputFont = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
+      if (inputFont.length > 3) {
+        const font = inputFont.substr(3);
+        if (FONT_CHOICES.includes(font)) {
+          preferences.inputFont = font;
+        }
+      }
+    }
+
+    const izIndex = options.indexOf("iz=");
+    if (izIndex !== -1) {
+      let rest = options.substr(izIndex);
+      const nIndex = rest.indexOf("&");
+      let inputSize = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
+      if (inputSize.length > 3) {
+        inputSize = Number(inputSize.substr(3));
+        if (!Number.isNaN(inputSize) && inputSize >= 8 && inputSize <= 24) {
+          preferences.inputFontSizePt = inputSize;
         }
       }
     }
@@ -197,6 +225,8 @@ const PREFERENCE_ENUM = {
   "up" : { name: "scrollUpToPause", storeKey: "scrolluppause", def: false },
   "as" : { name: "autoScroll", storeKey: "scroll", def: "dbl", valid: ["dbl", "long", "none"] },
   "of" : { name: "lineBufferFont", storeKey: "outfont", def: "standard", valid: FONT_CHOICES },
+  "if" : { name: "inputFont", storeKey: "inputfont", def: "standard", valid: FONT_CHOICES },
+  "iz" : { name: "inputFontSizePt", storeKey: "inputfontsize", def: 11 },
   "ef" : { name: "editorFont", storeKey: "editorfont", def: "standard", valid: FONT_CHOICES },
   "et" : { name: "edittheme", storeKey: "edittheme", def: "twilight", valid: EDIT_THEMES },
   "ed" : { name: "editorType", storeKey: "edittype", def: "ide", valid: ["ide", "windows"] },
@@ -278,6 +308,30 @@ const applyTransparentOverlayPreference = function(transparentOverlay = dome.pre
 
 dome.applyTransparentOverlayPreference = applyTransparentOverlayPreference;
 
+const INPUT_FONT_FAMILIES = {
+  standard: "\"Source Code Pro\", monospace",
+  lucida: "\"Lucida Console\", monospace",
+  courier: "\"Courier New\", monospace",
+  roboto: "\"Roboto Mono\", monospace",
+  "comic-mono": "\"Comic Mono\", monospace",
+  monaco: "\"Monaco\", monospace",
+  menlo: "\"Menlo\", monospace",
+  "ubuntu-mono": "\"Ubuntu Mono\", monospace",
+  consolas: "\"Consolas\", monospace",
+};
+
+const applyInputReaderTextPreferences = function() {
+  if (!dome.inputReader) return;
+  const prefFont = dome.preferences?.inputFont;
+  const fontName = FONT_CHOICES.includes(prefFont) ? prefFont : "standard";
+  const prefSize = Number(dome.preferences?.inputFontSizePt);
+  const fontSizePt = !Number.isNaN(prefSize) && prefSize >= 8 && prefSize <= 24 ? prefSize : 11;
+  dome.inputReader.style.fontFamily = INPUT_FONT_FAMILIES[fontName] || INPUT_FONT_FAMILIES.standard;
+  dome.inputReader.style.fontSize = `${fontSizePt}pt`;
+};
+
+dome.applyInputReaderTextPreferences = applyInputReaderTextPreferences;
+
 const setupCommandSuggestions = function() {
   if (!dome.autoComplete || !dome.inputReader) return;
   dome.autoComplete();
@@ -333,6 +387,9 @@ const setClientOption = function(optionName, optionValue) {
     }
     if (optionName === "lineBufferFont") {
       dome.buffer?.classList.add(dome.preferences.lineBufferFont + "Text");
+    }
+    if (optionName === "inputFont" || optionName === "inputFontSizePt") {
+      applyInputReaderTextPreferences();
     }
     if (optionName === "editorFont") {
       Object.values(dome.spawned || {}).forEach((w) => {
