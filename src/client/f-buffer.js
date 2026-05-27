@@ -1,5 +1,6 @@
-import { dome, logger, subs } from "./b-variables.js";
+import { dome, logger } from "./b-variables.js";
 import * as replacements from "./e-replacements.js";
+import { createAnsiRenderer } from "./ansi-renderer.js";
 
 dome.setupOutputParser = function () {
   // ------------------------------
@@ -113,6 +114,10 @@ dome.setupOutputParser = function () {
   // Carry buffer for trailing partial line
   // ------------------------------
   let _carry = "";
+  const ansiRenderer = createAnsiRenderer();
+  dome.resetAnsiRendererState = function() {
+    ansiRenderer.resetState();
+  };
 
   // ------------------------------
   // Main parser
@@ -325,10 +330,8 @@ dome.setupOutputParser = function () {
 
     if (!segment) return;
 
-    // ------------------ Substitutions, linkifying, host/ip linking ------------------
-    subs.forEach((sub) => {
-      segment = segment.replace(sub.pattern, sub.replacement);
-    });
+    // ------------------ ANSI rendering, linkifying, host/ip linking ------------------
+    segment = ansiRenderer.renderChunk(segment);
 
     segment = linkifyUrlsWithPreview(segment);
     segment = linkifyHosts(segment);
