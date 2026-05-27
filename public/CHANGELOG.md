@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - Fixed ANSI rendering for SGR reset/toggle sequences (`22m`, `25m`, `7m`, `27m`) so bold/blink/inverse styles stop correctly and raw escape codes are no longer shown in output.
 - Replaced regex ANSI rendering with a stateful stream parser so SGR resets, inverse fg/bg swapping, xterm256 themed colors, TrueColor, and split escape sequences render consistently with terminal behavior.
 - Updated default-color inverse rendering to use explicit inverse foreground/background colors (instead of CSS filter inversion) for closer terminal visual parity.
+- Fixed `Scroll Up to Pause` so enabling or disabling it from Client Options takes effect immediately without requiring a reload.
 
 ## 2026-05-22
 

@@ -331,7 +331,7 @@ const setClientOption = function(optionName, optionValue) {
         if (dome.inputReader) dome.inputReader.commandSuggestions( "destroy" );
       }
     }
-    if (optionName === "autoScroll") {
+    if (optionName === "autoScroll" || optionName === "scrollUpToPause") {
       dome.setupAutoscroll?.();
     }
     if (optionName === "shortenUrls" && optionValue === true) {

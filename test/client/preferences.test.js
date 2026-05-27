@@ -210,3 +210,17 @@ test("@client-option pb accepts numeric values", async (t) => {
   assert.equal(win.dome.preferences.performanceBuffer, 100);
   assert.ok(output.some((line) => line.includes("changing @client-option performanceBuffer to 100")));
 });
+
+test("parseClientOptionCommand refreshes autoscroll when scrollUpToPause changes", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  let setupCount = 0;
+  win.dome.buffer = { append() {} };
+  win.dome.scrollBuffer = () => {};
+  win.dome.setupAutoscroll = () => {
+    setupCount++;
+  };
+  win.dome.preferences = win.dome.readPreferences();
+  win.dome.parseClientOptionCommand("@client-option scrollUpToPause true");
+  assert.equal(win.dome.preferences.scrollUpToPause, true);
+  assert.equal(setupCount, 1);
+});
