@@ -98,10 +98,13 @@ for (const file of files) {
       assert.match(html, />General</);
       assert.match(html, />Presentation</);
       assert.match(html, />Local Editor</);
+      assert.match(html, />Import\/Export</);
       assert.match(html, />Theme</);
       assert.match(html, />Input Font</);
       assert.match(html, />Output Font Size \(pt\)</);
       assert.match(html, />Input Font Size \(pt\)</);
+      assert.match(html, />Download JSON</);
+      assert.match(html, />Import JSON</);
       assert.match(html, />Input Font Color</);
       assert.match(html, />Input Background Color</);
       assert.match(html, />Editor Type</);

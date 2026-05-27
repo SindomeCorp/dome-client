@@ -10,6 +10,7 @@
         <button type="button" id="client-options-tab-general" class="client-options-tab active" role="tab" aria-selected="true" aria-controls="client-options-panel-general" data-tab="general">General</button>
         <button type="button" id="client-options-tab-fonts" class="client-options-tab" role="tab" aria-selected="false" aria-controls="client-options-panel-fonts" data-tab="fonts">Presentation</button>
         <button type="button" id="client-options-tab-editor" class="client-options-tab" role="tab" aria-selected="false" aria-controls="client-options-panel-editor" data-tab="editor">Local Editor</button>
+        <button type="button" id="client-options-tab-importexport" class="client-options-tab" role="tab" aria-selected="false" aria-controls="client-options-panel-importexport" data-tab="importexport">Import/Export</button>
       </div>
       <div id="client-options-panel-general" class="client-options-panel" role="tabpanel" aria-labelledby="client-options-tab-general" data-tab-panel="general">
         <div class="option-row" id="localecho-option">
@@ -222,6 +223,21 @@
             <option value="vibrant_ink">vibrant_ink</option>
             <option value="xcode">xcode</option>
           </select>
+        </div>
+      </div>
+      <div id="client-options-panel-importexport" class="client-options-panel hide" role="tabpanel" aria-labelledby="client-options-tab-importexport" data-tab-panel="importexport">
+        <div class="option-row" id="options-export-row">
+          <span class="option-label">Export Preferences</span>
+          <div class="option-choices pull-right">
+            <button id="client-options-export" class="btn btn-primary" type="button">Download JSON</button>
+          </div>
+        </div>
+        <div class="option-row" id="options-import-row">
+          <span class="option-label">Import Preferences</span>
+          <div class="option-choices pull-right">
+            <input id="client-options-import-file" type="file" accept=".json,application/json" class="hide" />
+            <button id="client-options-import" class="btn" type="button">Import JSON</button>
+          </div>
         </div>
       </div>
     </div>

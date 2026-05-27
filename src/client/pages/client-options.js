@@ -194,6 +194,116 @@ function setupClientOptionsTabs() {
   activateClientOptionsTab(activeTab.dataset.tab);
 }
 
+function applyOptionValue(name, value) {
+  const prefName = PREF_NAME[name];
+  if (prefName && dome.setClientOption) {
+    dome.setClientOption(prefName, value);
+  } else {
+    clientOptions.save(name, value);
+    if (name === "scroll") {
+      if (dome.preferences) {
+        dome.preferences.autoScroll = value;
+      }
+      dome.setupAutoscroll?.();
+    } else if (name === "colorset") {
+      dome.parseClientOptionCommand?.(`@client-option cl ${value}`);
+    }
+  }
+}
+
+function buildExportPayload() {
+  const preferences = {};
+  Object.keys(clientOptions.options).forEach((name) => {
+    preferences[name] = clientOptions.get(name).state;
+  });
+  return {
+    type: "dome-client-options",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    preferences,
+  };
+}
+
+function downloadClientOptionsJson() {
+  if (typeof document === "undefined" || typeof Blob === "undefined") {
+    dome.buffer?.append("Client options export is not supported in this environment.\n");
+    dome.scrollBuffer?.();
+    return;
+  }
+  const payload = buildExportPayload();
+  const filename = `dome-client-options-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+
+  const nav = typeof navigator !== "undefined" ? navigator : null;
+  if (nav?.msSaveOrOpenBlob) {
+    nav.msSaveOrOpenBlob(blob, filename);
+    return;
+  }
+
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function importClientOptionsJson(file) {
+  if (!file) return;
+  let parsed;
+  try {
+    const text = await file.text();
+    parsed = JSON.parse(text);
+  } catch {
+    dome.buffer?.append("Client options import error: invalid JSON file.\n");
+    dome.scrollBuffer?.();
+    return;
+  }
+
+  const source = parsed && typeof parsed === "object" && parsed.preferences && typeof parsed.preferences === "object"
+    ? parsed.preferences
+    : parsed;
+
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    dome.buffer?.append("Client options import error: JSON must be an object of option keys.\n");
+    dome.scrollBuffer?.();
+    return;
+  }
+
+  let applied = 0;
+  Object.entries(source).forEach(([name, value]) => {
+    if (!Object.prototype.hasOwnProperty.call(clientOptions.options, name)) return;
+    applyOptionValue(name, value);
+    applied++;
+  });
+  refreshClientOptions();
+  dome.scrollBuffer?.();
+  dome.buffer?.append(`Imported ${applied} client option${applied === 1 ? "" : "s"}.\n`);
+}
+
+function setupImportExportControls() {
+  const exportButton = document.getElementById("client-options-export");
+  const importButton = document.getElementById("client-options-import");
+  const importFileInput = document.getElementById("client-options-import-file");
+  if (!exportButton || !importButton || !importFileInput) return;
+
+  exportButton.addEventListener("click", () => {
+    downloadClientOptionsJson();
+  });
+
+  importButton.addEventListener("click", () => {
+    importFileInput.click();
+  });
+
+  importFileInput.addEventListener("change", async () => {
+    const [file] = importFileInput.files || [];
+    await importClientOptionsJson(file);
+    importFileInput.value = "";
+  });
+}
+
 export { store, clientOptions, EDIT_THEMES, FONT_CHOICES, COLORSET_CHOICES, refreshClientOptions };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -207,30 +317,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   refreshClientOptions();
   setupClientOptionsTabs();
+  setupImportExportControls();
 
   document.querySelectorAll("DIV.client-options-page DIV.option-row SELECT").forEach((self) => {
     const id = self.parentElement.getAttribute("id").replace("-option", "");
     self.addEventListener("change", () => {
       const value = self.value;
-      const prefName = PREF_NAME[id];
-      if (prefName && dome.setClientOption) {
-        dome.setClientOption(prefName, value);
-      } else {
-        clientOptions.save(id, value);
-        if (id === "scroll") {
-          if (dome.preferences) {
-            dome.preferences.autoScroll = value;
-          }
-          dome.setupAutoscroll?.();
-        } else if (id === "colorset") {
-          dome.parseClientOptionCommand?.(`@client-option cl ${value}`);
-        }
-      }
+      applyOptionValue(id, value);
       dome.scrollBuffer?.();
     });
   });
 
-  document.querySelectorAll("DIV.client-options-page DIV.option-row BUTTON").forEach((self) => {
+  document.querySelectorAll("DIV.client-options-page DIV.option-row BUTTON.enabled-state, DIV.client-options-page DIV.option-row BUTTON.disabled-state").forEach((self) => {
     self.addEventListener("click", () => {
       const btn = self;
 
@@ -258,21 +356,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         btn.classList.add("btn-primary");
       }
-      const prefName = PREF_NAME[name];
-      if (prefName && dome.setClientOption) {
-        dome.setClientOption(prefName, val);
-      } else {
-        if (name === "transparent" && dome.parseClientOptionCommand) {
-          dome.parseClientOptionCommand(`@client-option transparentOverlay ${val}`);
-        } else {
-          clientOptions.save(name, val);
-        }
-        if (name === "localecho") {
-          if (dome.preferences) {
-            dome.preferences.localEcho = val;
-          }
-        }
-      }
+      applyOptionValue(name, val);
       dome.scrollBuffer?.();
     });
   });
@@ -291,11 +375,10 @@ document.addEventListener("DOMContentLoaded", () => {
         fieldValue = fieldValue.indexOf(".") != -1 ? parseFloat(fieldValue) : parseInt(fieldValue);
       }
       logger.debug("" + typeof(fieldValue) + ": " + fieldValue);
-      const prefName = PREF_NAME[name];
-      if (prefName && dome.setClientOption) {
-        dome.setClientOption(prefName, fieldValue);
+      if (PREF_NAME[name] && dome.setClientOption) {
+        applyOptionValue(name, fieldValue);
         if (self.getAttribute("type") === "color" || self.dataset.colorHex === "true") {
-          const updated = dome.preferences?.[prefName];
+          const updated = dome.preferences?.[PREF_NAME[name]];
           if (typeof updated === "string") {
             row.querySelectorAll("input").forEach((input) => {
               input.value = updated;
@@ -303,7 +386,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
       } else {
-        clientOptions.save(name, fieldValue);
+        applyOptionValue(name, fieldValue);
       }
       dome.scrollBuffer?.();
     });
