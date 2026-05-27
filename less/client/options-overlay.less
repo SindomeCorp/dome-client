@@ -47,6 +47,10 @@
   color: var(--ansiBrGreen, @ansiBrGreen);
 }
 
+#client-options-save-indicator.is-error {
+  color: var(--ansiBrRed, @ansiBrRed);
+}
+
 #button-client-options-close {
   background: none;
   border: none;
@@ -119,6 +123,20 @@
 
 #client-options-overlay .client-options-panel {
   min-width: 360px;
+}
+
+#client-options-overlay .import-export-action {
+  min-width: 140px;
+}
+
+#client-options-import-export-indicator {
+  color: var(--ansiBrGreen, @ansiBrGreen);
+  margin: 4px 5px 8px;
+  min-height: 18px;
+}
+
+#client-options-import-export-indicator.is-error {
+  color: var(--ansiBrRed, @ansiBrRed);
 }
 
 @media (max-width: @screen-xs-max) {

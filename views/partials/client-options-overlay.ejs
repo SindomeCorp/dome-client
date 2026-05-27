@@ -192,7 +192,7 @@
         <div class="option-row" id="edittheme-option">
           <span class="option-label">Editor Theme</span>
           <select name="editor-theme-choice">
-            <option value="ambiance">ambiance</option>
+            <option value="ambience">ambience</option>
             <option value="chaos">chaos</option>
             <option value="chrome">chrome</option>
             <option value="clouds">clouds</option>
@@ -214,7 +214,6 @@
             <option value="solarized_light">solarized_light</option>
             <option value="terminal">terminal</option>
             <option value="textmate">textmate</option>
-            <option value="tomorrow">tomorrow</option>
             <option value="tomorrow_night">tomorrow_night</option>
             <option value="tomorrow_night_blue">tomorrow_night_blue</option>
             <option value="tomorrow_night_bright">tomorrow_night_bright</option>
@@ -226,17 +225,24 @@
         </div>
       </div>
       <div id="client-options-panel-importexport" class="client-options-panel hide" role="tabpanel" aria-labelledby="client-options-tab-importexport" data-tab-panel="importexport">
+        <div id="client-options-import-export-indicator" class="hide" aria-live="polite">Saved</div>
         <div class="option-row" id="options-export-row">
           <span class="option-label">Export Preferences</span>
           <div class="option-choices pull-right">
-            <button id="client-options-export" class="btn btn-primary" type="button">Download JSON</button>
+            <button id="client-options-export" class="btn btn-primary import-export-action" type="button">Export File</button>
           </div>
         </div>
         <div class="option-row" id="options-import-row">
           <span class="option-label">Import Preferences</span>
           <div class="option-choices pull-right">
             <input id="client-options-import-file" type="file" accept=".json,application/json" class="hide" />
-            <button id="client-options-import" class="btn" type="button">Import JSON</button>
+            <button id="client-options-import" class="btn import-export-action" type="button">Import File</button>
+          </div>
+        </div>
+        <div class="option-row" id="options-reset-row">
+          <span class="option-label">Reset Preferences</span>
+          <div class="option-choices pull-right">
+            <button id="client-options-reset-defaults" class="btn import-export-action" type="button">Reset to Defaults</button>
           </div>
         </div>
       </div>

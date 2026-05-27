@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Added `Input Font Color` and `Input Background Color` options with mobile-friendly color pickers and hex inputs for precise command-entry styling.
 - Added `Output Font Size (pt)` as a separate client option so output text size can be adjusted independently, defaulting to the legacy output size.
 - Added an `Import/Export` Client Options tab for downloading all preferences as JSON and importing them locally without server upload.
+- Added a `Reset to Defaults` action in Client Options Import/Export with a confirmation warning before overwriting current settings.
 
 ### Changed
 - Renamed the `SDWC No-Wrap Blocks` client option to `Mobile Friendly Text Wrap` for clearer user-facing wording.
@@ -27,6 +28,14 @@ All notable changes to this project will be documented in this file.
 - Fixed `Scroll Up to Pause` so enabling or disabling it from Client Options takes effect immediately without requiring a reload.
 - Fixed the `Transparent Overlays` option so autocomplete overlays keep the selected transparency when toggled or rebuilt.
 - Expanded `Transparent Overlays` so it now also affects shortcuts, history search, client options, and the MOO status detail overlay.
+- Fixed duplicate Client Options initialization that could bind repeated Import/Export handlers, causing multi-download behavior.
+- Fixed Import/Export theme compatibility by normalizing legacy editor theme values (`ambiance`/`tomorrow`) during import.
+- Fixed Import/Export options panel stability by ignoring non-option rows in options refresh/binding logic.
+
+### Changed
+- Added Import/Export success/error toast messages in Client Options and a warning that import overwrites current settings, with guidance to export a backup first.
+- Made Import JSON and Download JSON buttons the same width for a consistent layout.
+- Renamed Import/Export action labels to `Export File` and `Import File`, moved feedback toast into the Import/Export panel, and changed Import/Reset confirmations to explicit destructive-action warnings.
 
 ## 2026-05-22
 
