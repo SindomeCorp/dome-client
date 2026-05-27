@@ -6,174 +6,246 @@
         <button id="button-client-options-close" class="options-close" aria-label="Close">&times;</button>
       </div>
       <h1>Client Options</h1>
-			<div class="option-row" id="localecho-option">
-				<span class="option-label">Enable Local Echo</span>
-				<div class="option-choices pull-right">
-					<button class="btn enabled-state" data-val="true">Yes</button>
-					<button class="btn disabled-state" data-val="false">No</button>
-				</div>
-			</div>
-			<div class="option-row" id="commands-option">
-				<span class="option-label">Use Command Hints</span>
-				<div class="option-choices pull-right">
-				  <button class="btn enabled-state" data-val="true">Yes</button>
-				  <button class="btn disabled-state" data-val="false">No</button>
-				</div>
-			</div>
-                        <div class="option-row" id="buffer-option">
-                                <span class="option-label">Scroll Buffer Size <i class="glyphicon glyphicon-question-sign" title="This defines the length of your buffer. 0 is infinite (best for logging). Adjust this to a lower number if you are having performance issues. Warning: Your current buffer is saved with the 'Log' button, so lower numbers mean a shorter log."></i></span>
-                                <div class="option-choices pull-right">
-                                        <input name="buffer-size" placeholder="0" type="number" min="0" max="96000" value="0" />
-                                </div>
-                        </div>
-                        <div class="option-row" id="transparent-option">
-				<span class="option-label">Transparent Overlays</span>
-				<div class="option-choices pull-right">
-					<button class="btn enabled-state" data-val="true" title="Make dialogs for autocomplete, help, etc transparent enough to see MOO text underneath.">Yes</button>
-					<button class="btn disabled-state" data-val="false" title="Make dialogs for autocomplete, help, etc opaque. This can be helpful for performance.">No</button>
-				</div>
-			</div>
-		<div class="option-row" id="broadly-option">
-			<span class="option-label">Search Command Help</span>
-			<div class="option-choices pull-right">
-				<button class="btn enabled-state" data-val="true" title="Search command instructions and requirements when Command Hints are enabled.">Yes</button>
-				<button class="btn disabled-state" data-val="false" title="Just search command syntax when Command Hints are enabled. This can be helpful for performance.">No</button>
-			</div>
-		</div>
-      <% if (shortenEnabled) { %>
-			<div class="option-row" id="shorten-option">
-				<span class="option-label">Shorten Long Web Links</span>
-				<div class="option-choices pull-right">
-				  <button class="btn enabled-state" data-val="true">Yes</button>
-				  <button class="btn disabled-state" data-val="false">No</button>
-				</div>
-			</div>
-      <% } %>
-      <div class="option-row" id="imageview-option">
-        <span class="option-label">Show Preview of Images</span>
-        <div class="option-choices pull-right">
-          <button class="btn enabled-state" data-val="true">Yes</button>
-          <button class="btn disabled-state" data-val="false">No</button>
+      <div class="client-options-tabs" role="tablist" aria-label="Client options sections">
+        <button type="button" id="client-options-tab-general" class="client-options-tab active" role="tab" aria-selected="true" aria-controls="client-options-panel-general" data-tab="general">General</button>
+        <button type="button" id="client-options-tab-fonts" class="client-options-tab" role="tab" aria-selected="false" aria-controls="client-options-panel-fonts" data-tab="fonts">Presentation</button>
+        <button type="button" id="client-options-tab-editor" class="client-options-tab" role="tab" aria-selected="false" aria-controls="client-options-panel-editor" data-tab="editor">Local Editor</button>
+        <button type="button" id="client-options-tab-importexport" class="client-options-tab" role="tab" aria-selected="false" aria-controls="client-options-panel-importexport" data-tab="importexport">Import/Export</button>
+      </div>
+      <div id="client-options-panel-general" class="client-options-panel" role="tabpanel" aria-labelledby="client-options-tab-general" data-tab-panel="general">
+        <div class="option-row" id="localecho-option">
+          <span class="option-label">Enable Local Echo</span>
+          <div class="option-choices pull-right">
+            <button class="btn enabled-state" data-val="true">Yes</button>
+            <button class="btn disabled-state" data-val="false">No</button>
+          </div>
+        </div>
+        <div class="option-row" id="commands-option">
+          <span class="option-label">Use Command Hints</span>
+          <div class="option-choices pull-right">
+            <button class="btn enabled-state" data-val="true">Yes</button>
+            <button class="btn disabled-state" data-val="false">No</button>
+          </div>
+        </div>
+        <div class="option-row" id="buffer-option">
+          <span class="option-label">Scroll Buffer Size <i class="glyphicon glyphicon-question-sign" title="This defines the length of your buffer. 0 is infinite (best for logging). Adjust this to a lower number if you are having performance issues. Warning: Your current buffer is saved with the 'Log' button, so lower numbers mean a shorter log."></i></span>
+          <div class="option-choices pull-right">
+            <input name="buffer-size" placeholder="0" type="number" min="0" max="96000" value="0" />
+          </div>
+        </div>
+        <div class="option-row" id="broadly-option">
+          <span class="option-label">Search Command Help</span>
+          <div class="option-choices pull-right">
+            <button class="btn enabled-state" data-val="true" title="Search command instructions and requirements when Command Hints are enabled.">Yes</button>
+            <button class="btn disabled-state" data-val="false" title="Just search command syntax when Command Hints are enabled. This can be helpful for performance.">No</button>
+          </div>
+        </div>
+        <% if (shortenEnabled) { %>
+        <div class="option-row" id="shorten-option">
+          <span class="option-label">Shorten Long Web Links</span>
+          <div class="option-choices pull-right">
+            <button class="btn enabled-state" data-val="true">Yes</button>
+            <button class="btn disabled-state" data-val="false">No</button>
+          </div>
+        </div>
+        <% } %>
+        <div class="option-row" id="imageview-option">
+          <span class="option-label">Show Preview of Images</span>
+          <div class="option-choices pull-right">
+            <button class="btn enabled-state" data-val="true">Yes</button>
+            <button class="btn disabled-state" data-val="false">No</button>
+          </div>
+        </div>
+        <div class="option-row" id="playding-option">
+          <span class="option-label">Play Sound on Name</span>
+          <div class="option-choices pull-right">
+            <button class="btn enabled-state" title="When the window is out of focus, play a notification sound when your login name is seen in the scrollback." data-val="true">Yes</button>
+            <button class="btn disabled-state" data-val="false">No</button>
+          </div>
+        </div>
+        <div class="option-row" id="scroll-option">
+          <span class="option-label pull-left">Toggle Scroll & Auto Scroll</span>
+          <select name="auto-scroll-toggle">
+            <option value="dbl" selected="selected">Double Click</option>
+            <option value="long">Long Click</option>
+            <option value="none">Pause Button Only</option>
+          </select>
+        </div>
+        <div class="option-row" id="scrolluppause-option">
+          <span class="option-label">Scroll Up to Pause <i class="glyphicon glyphicon-question-sign" title="When enabled, scrolling up in the output buffer pauses automatic scroll-to-bottom so new text does not pull you away from what you are reading. Scroll back to the bottom to resume normal automatic scrolling."></i></span>
+          <div class="option-choices pull-right">
+            <button class="btn enabled-state" data-val="true" title="Pause automatic scrolling when you scroll up in the output buffer.">Yes</button>
+            <button class="btn disabled-state" data-val="false" title="Keep automatic scrolling behavior controlled only by the pause/resume controls.">No</button>
+          </div>
+        </div>
+        <div class="option-row" id="transparent-option">
+          <span class="option-label">Transparent Overlays</span>
+          <div class="option-choices pull-right">
+            <button class="btn enabled-state" data-val="true" title="Make dialogs for autocomplete, help, etc transparent enough to see MOO text underneath.">Yes</button>
+            <button class="btn disabled-state" data-val="false" title="Make dialogs for autocomplete, help, etc opaque. This can be helpful for performance.">No</button>
+          </div>
+        </div>
+        <div class="option-row" id="logcss-option">
+          <span class="option-label">Embed CSS In Saved Logs</span>
+          <div class="option-choices pull-right">
+            <button class="btn enabled-state" data-val="true" title="Default: save logs with inline stylesheet for fully self-contained files.">Yes</button>
+            <button class="btn disabled-state" data-val="false" title="Legacy mode: save logs that link to https://sindome.org/css/dome.css for smaller files.">No</button>
+          </div>
+        </div>
+        <div class="option-row" id="sdwcnowrap-option">
+          <span class="option-label">Mobile Friendly Text Wrap <i class="glyphicon glyphicon-question-sign" title="With this option enabled, the client will create non-wrapped content that can be horizontally scrolled for text that the MOO deems should be visually presented as is, and not wrapped on small screens."></i></span>
+          <div class="option-choices pull-right">
+            <button class="btn enabled-state" data-val="true" title="Render SDWC-START-NOWRAP/SDWC-END-NOWRAP sections in a horizontal-scroll block without text wrapping.">Yes</button>
+            <button class="btn disabled-state" data-val="false" title="Ignore SDWC nowrap markers and keep normal line wrapping.">No</button>
+          </div>
         </div>
       </div>
-      <div class="option-row" id="logcss-option">
-        <span class="option-label">Embed CSS In Saved Logs</span>
-        <div class="option-choices pull-right">
-          <button class="btn enabled-state" data-val="true" title="Default: save logs with inline stylesheet for fully self-contained files.">Yes</button>
-          <button class="btn disabled-state" data-val="false" title="Legacy mode: save logs that link to https://sindome.org/css/dome.css for smaller files.">No</button>
+      <div id="client-options-panel-fonts" class="client-options-panel hide" role="tabpanel" aria-labelledby="client-options-tab-fonts" data-tab-panel="fonts">
+        <div class="option-row" id="outfont-option">
+          <span class="option-label">Output Font</span>
+          <select name="output-font-choice">
+            <option value="standard" style="font-family: 'Source Code Pro'" selected="selected">Source Code Pro</option>
+            <option value="lucida" style="font-family: 'Lucida Console'">Lucida Console</option>
+            <option value="courier" style="font-family: 'Courier New'">Courier New</option>
+            <option value="roboto" style="font-family: 'Roboto Mono'">Roboto Mono</option>
+            <option value="comic-mono" style="font-family: 'Comic Mono'">Comic Mono</option>
+            <option value="monaco" style="font-family: 'Monaco'">Monaco</option>
+            <option value="menlo" style="font-family: 'Menlo'">Menlo</option>
+            <option value="ubuntu-mono" style="font-family: 'Ubuntu Mono'">Ubuntu Mono</option>
+            <option value="consolas" style="font-family: 'Consolas'">Consolas</option>
+          </select>
+        </div>
+        <div class="option-row" id="outfontsize-option">
+          <span class="option-label">Output Font Size (pt)</span>
+          <div class="option-choices pull-right">
+            <input name="output-font-size" type="number" min="8" max="24" step="0.25" value="9.75" />
+          </div>
+        </div>
+        <div class="option-row" id="editorfont-option">
+          <span class="option-label">Editor Font</span>
+          <select name="editor-font-choice">
+            <option value="standard" style="font-family: 'Source Code Pro'" selected="selected">Source Code Pro</option>
+            <option value="lucida" style="font-family: 'Lucida Console'">Lucida Console</option>
+            <option value="courier" style="font-family: 'Courier New'">Courier New</option>
+            <option value="roboto" style="font-family: 'Roboto Mono'">Roboto Mono</option>
+            <option value="comic-mono" style="font-family: 'Comic Mono'">Comic Mono</option>
+            <option value="monaco" style="font-family: 'Monaco'">Monaco</option>
+            <option value="menlo" style="font-family: 'Menlo'">Menlo</option>
+            <option value="ubuntu-mono" style="font-family: 'Ubuntu Mono'">Ubuntu Mono</option>
+            <option value="consolas" style="font-family: 'Consolas'">Consolas</option>
+          </select>
+        </div>
+        <div class="option-row" id="inputfont-option">
+          <span class="option-label">Input Font</span>
+          <select name="input-font-choice">
+            <option value="standard" style="font-family: 'Source Code Pro'" selected="selected">Source Code Pro</option>
+            <option value="lucida" style="font-family: 'Lucida Console'">Lucida Console</option>
+            <option value="courier" style="font-family: 'Courier New'">Courier New</option>
+            <option value="roboto" style="font-family: 'Roboto Mono'">Roboto Mono</option>
+            <option value="comic-mono" style="font-family: 'Comic Mono'">Comic Mono</option>
+            <option value="monaco" style="font-family: 'Monaco'">Monaco</option>
+            <option value="menlo" style="font-family: 'Menlo'">Menlo</option>
+            <option value="ubuntu-mono" style="font-family: 'Ubuntu Mono'">Ubuntu Mono</option>
+            <option value="consolas" style="font-family: 'Consolas'">Consolas</option>
+          </select>
+        </div>
+        <div class="option-row" id="inputfontsize-option">
+          <span class="option-label">Input Font Size (pt)</span>
+          <div class="option-choices pull-right">
+            <input name="input-font-size" type="number" min="8" max="24" step="0.5" value="11" />
+          </div>
+        </div>
+        <div class="option-row" id="inputfontcolor-option">
+          <span class="option-label">Input Font Color</span>
+          <div class="option-choices pull-right color-choice">
+            <input name="input-font-color-picker" type="color" value="#EEEEEE" aria-label="Input font color picker" />
+            <input name="input-font-color-hex" type="text" value="#EEEEEE" maxlength="7" data-color-hex="true" inputmode="text" autocapitalize="none" autocomplete="off" autocorrect="off" aria-label="Input font color hex" />
+          </div>
+        </div>
+        <div class="option-row" id="inputbgcolor-option">
+          <span class="option-label">Input Background Color</span>
+          <div class="option-choices pull-right color-choice">
+            <input name="input-bg-color-picker" type="color" value="#333333" aria-label="Input background color picker" />
+            <input name="input-bg-color-hex" type="text" value="#333333" maxlength="7" data-color-hex="true" inputmode="text" autocapitalize="none" autocomplete="off" autocorrect="off" aria-label="Input background color hex" />
+          </div>
+        </div>
+        <div class="option-row" id="colorset-option">
+          <span class="option-label">Theme</span>
+          <select name="colorset-choice">
+            <option value="normal" selected="selected">Normal Colors</option>
+            <option value="dim">Not So Bright</option>
+            <option value="slither">Switch Bright White/Green</option>
+            <option value="acid">Dystopia is Pretty</option>
+            <option value="corpie">Privileged Class</option>
+            <option value="snow">Office Documents</option>
+          </select>
         </div>
       </div>
-      <div class="option-row" id="sdwcnowrap-option">
-        <span class="option-label">Mobile Friendly Text Wrap <i class="glyphicon glyphicon-question-sign" title="With this option enabled, the client will create non-wrapped content that can be horizontally scrolled for text that the MOO deems should be visually presented as is, and not wrapped on small screens."></i></span>
-        <div class="option-choices pull-right">
-          <button class="btn enabled-state" data-val="true" title="Render SDWC-START-NOWRAP/SDWC-END-NOWRAP sections in a horizontal-scroll block without text wrapping.">Yes</button>
-          <button class="btn disabled-state" data-val="false" title="Ignore SDWC nowrap markers and keep normal line wrapping.">No</button>
+      <div id="client-options-panel-editor" class="client-options-panel hide" role="tabpanel" aria-labelledby="client-options-tab-editor" data-tab-panel="editor">
+        <div class="option-row" id="edittype-option">
+          <span class="option-label">Editor Type</span>
+          <select name="editor-type-choice">
+            <option value="ide" selected="selected">IDE</option>
+            <option value="windows">Individual Windows</option>
+          </select>
+        </div>
+        <div class="option-row" id="edittheme-option">
+          <span class="option-label">Editor Theme</span>
+          <select name="editor-theme-choice">
+            <option value="ambience">ambience</option>
+            <option value="chaos">chaos</option>
+            <option value="chrome">chrome</option>
+            <option value="clouds">clouds</option>
+            <option value="clouds_midnight">clouds_midnight</option>
+            <option value="cobalt">cobalt</option>
+            <option value="crimson_editor">crimson_editor</option>
+            <option value="dawn">dawn</option>
+            <option value="dreamweaver">dreamweaver</option>
+            <option value="eclipse">eclipse</option>
+            <option value="github">github</option>
+            <option value="idle_fingers">idle_fingers</option>
+            <option value="kr_theme">kr_theme</option>
+            <option value="merbivore">merbivore</option>
+            <option value="merbivore_soft">merbivore_soft</option>
+            <option value="mono_industrial">mono_industrial</option>
+            <option value="monokai">monokai</option>
+            <option value="pastel_on_dark">pastel_on_dark</option>
+            <option value="solarized_dark">solarized_dark</option>
+            <option value="solarized_light">solarized_light</option>
+            <option value="terminal">terminal</option>
+            <option value="textmate">textmate</option>
+            <option value="tomorrow_night">tomorrow_night</option>
+            <option value="tomorrow_night_blue">tomorrow_night_blue</option>
+            <option value="tomorrow_night_bright">tomorrow_night_bright</option>
+            <option value="tomorrow_night_eighties">tomorrow_night_eighties</option>
+            <option value="twilight" selected="selected">twilight</option>
+            <option value="vibrant_ink">vibrant_ink</option>
+            <option value="xcode">xcode</option>
+          </select>
         </div>
       </div>
-      <div class="option-row" id="scrolluppause-option">
-        <span class="option-label">Scroll Up to Pause <i class="glyphicon glyphicon-question-sign" title="When enabled, scrolling up in the output buffer pauses automatic scroll-to-bottom so new text does not pull you away from what you are reading. Scroll back to the bottom to resume normal automatic scrolling."></i></span>
-        <div class="option-choices pull-right">
-          <button class="btn enabled-state" data-val="true" title="Pause automatic scrolling when you scroll up in the output buffer.">Yes</button>
-          <button class="btn disabled-state" data-val="false" title="Keep automatic scrolling behavior controlled only by the pause/resume controls.">No</button>
+      <div id="client-options-panel-importexport" class="client-options-panel hide" role="tabpanel" aria-labelledby="client-options-tab-importexport" data-tab-panel="importexport">
+        <div id="client-options-import-export-indicator" class="hide" aria-live="polite">Saved</div>
+        <div class="option-row" id="options-export-row">
+          <span class="option-label">Export Preferences</span>
+          <div class="option-choices pull-right">
+            <button id="client-options-export" class="btn btn-primary import-export-action" type="button">Export File</button>
+          </div>
+        </div>
+        <div class="option-row" id="options-import-row">
+          <span class="option-label">Import Preferences</span>
+          <div class="option-choices pull-right">
+            <input id="client-options-import-file" type="file" accept=".json,application/json" class="hide" />
+            <button id="client-options-import" class="btn import-export-action" type="button">Import File</button>
+          </div>
+        </div>
+        <div class="option-row" id="options-reset-row">
+          <span class="option-label">Reset Preferences</span>
+          <div class="option-choices pull-right">
+            <button id="client-options-reset-defaults" class="btn import-export-action" type="button">Reset to Defaults</button>
+          </div>
         </div>
       </div>
-      <div class="option-row" id="playding-option">
-				<span class="option-label">Play Sound on Name</span>
-				<div class="option-choices pull-right">
-					<button class="btn enabled-state" title="When the window is out of focus, play a notification sound when your login name is seen in the scrollback." data-val="true">Yes</button>
-					<button class="btn disabled-state" data-val="false">No</button>
-				</div>
-			</div>
-			<div class="option-row" id="scroll-option">
-				<span class="option-label pull-left">Toggle Auto Scroll With</span>
-                <select name="auto-scroll-toggle">
-                    <option value="dbl" selected="selected">Double Click</option>
-                    <option value="long">Long Click</option>
-                    <option value="none">Pause Button Only</option>
-                </select>
-			</div>
-                        <div class="option-row" id="outfont-option">
-                                <span class="option-label">Output Font</span>
-                                <select name="editor-theme-choice">
-                                        <option value="standard" style="font-family: 'Source Code Pro'" selected="selected">Source Code Pro</option>
-                                        <option value="lucida" style="font-family: 'Lucida Console'">Lucida Console</option>
-                                        <option value="courier" style="font-family: 'Courier New'">Courier New</option>
-                                        <option value="roboto" style="font-family: 'Roboto Mono'">Roboto Mono</option>
-                                        <option value="comic-mono" style="font-family: 'Comic Mono'">Comic Mono</option>
-                                        <option value="monaco" style="font-family: 'Monaco'">Monaco</option>
-                                        <option value="menlo" style="font-family: 'Menlo'">Menlo</option>
-                                        <option value="ubuntu-mono" style="font-family: 'Ubuntu Mono'">Ubuntu Mono</option>
-                                        <option value="consolas" style="font-family: 'Consolas'">Consolas</option>
-                                </select>
-                        </div>
-                        <div class="option-row" id="editorfont-option">
-                                <span class="option-label">Editor Font</span>
-                                <select name="editor-font-choice">
-                                        <option value="standard" style="font-family: 'Source Code Pro'" selected="selected">Source Code Pro</option>
-                                        <option value="lucida" style="font-family: 'Lucida Console'">Lucida Console</option>
-                                        <option value="courier" style="font-family: 'Courier New'">Courier New</option>
-                                        <option value="roboto" style="font-family: 'Roboto Mono'">Roboto Mono</option>
-                                        <option value="comic-mono" style="font-family: 'Comic Mono'">Comic Mono</option>
-                                        <option value="monaco" style="font-family: 'Monaco'">Monaco</option>
-                                        <option value="menlo" style="font-family: 'Menlo'">Menlo</option>
-                                        <option value="ubuntu-mono" style="font-family: 'Ubuntu Mono'">Ubuntu Mono</option>
-                                        <option value="consolas" style="font-family: 'Consolas'">Consolas</option>
-                                </select>
-                        </div>
-      <div class="option-row" id="colorset-option">
-        <span class="option-label">Output Colors</span>
-        <select name="colorset-choice">
-          <option value="normal" selected="selected">Normal Colors</option>
-          <option value="dim">Not So Bright</option>
-          <option value="slither">Switch Bright White/Green</option>
-          <option value="acid">Dystopia is Pretty</option>
-                  <option value="corpie">Privileged Class</option>
-                  <option value="snow">Office Documents</option>
-        </select>
-      </div>
-                        <div class="option-row" id="edittype-option">
-                                <span class="option-label">Editor Type (admin only)</span>
-                                <select name="editor-type-choice">
-                                        <option value="ide" selected="selected">IDE</option>
-                                        <option value="windows">Individual Windows</option>
-                                </select>
-                        </div>
-                        <div class="option-row" id="edittheme-option">
-                                <span class="option-label">Editor Theme (admin only)</span>
-                                <select name="editor-theme-choice">
-					<option value="ambiance">ambiance</option>
-					<option value="chaos">chaos</option>
-					<option value="chrome">chrome</option>
-					<option value="clouds">clouds</option>
-					<option value="clouds_midnight">clouds_midnight</option>
-					<option value="cobalt">cobalt</option>
-					<option value="crimson_editor">crimson_editor</option>
-					<option value="dawn">dawn</option>
-					<option value="dreamweaver">dreamweaver</option>
-					<option value="eclipse">eclipse</option>
-					<option value="github">github</option>
-					<option value="idle_fingers">idle_fingers</option>
-					<option value="kr_theme">kr_theme</option>
-					<option value="merbivore">merbivore</option>
-					<option value="merbivore_soft">merbivore_soft</option>
-					<option value="mono_industrial">mono_industrial</option>
-					<option value="monokai">monokai</option>
-					<option value="pastel_on_dark">pastel_on_dark</option>
-					<option value="solarized_dark">solarized_dark</option>
-					<option value="solarized_light">solarized_light</option>
-					<option value="terminal">terminal</option>
-					<option value="textmate">textmate</option>
-					<option value="tomorrow">tomorrow</option>
-					<option value="tomorrow_night">tomorrow_night</option>
-					<option value="tomorrow_night_blue">tomorrow_night_blue</option>
-					<option value="tomorrow_night_bright">tomorrow_night_bright</option>
-					<option value="tomorrow_night_eighties">tomorrow_night_eighties</option>
-					<option value="twilight" selected="selected">twilight</option>
-					<option value="vibrant_ink">vibrant_ink</option>
-					<option value="xcode">xcode</option>
-				</select>
-			</div>
     </div>
   </div>
-  <script type="module" src="/js/client-options.js"></script>
 </div>

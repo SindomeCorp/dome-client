@@ -5,12 +5,17 @@
   bottom: 0;
   left: 0;
   z-index: 1001;
-  background-color: var(--black, @black);
-  opacity: 0.8;
+  background-color: rgba(0, 0, 0, 0.8);
   display: flex;
   justify-content: center;
   align-items: flex-start;
   padding-top: 1vh;
+  &.ui-transparent-overlay {
+    background-color: rgba(0, 0, 0, 0.55);
+  }
+  &.ui-opaque-overlay {
+    background-color: rgba(0, 0, 0, 0.9);
+  }
 }
 
 #client-options-overlay .client-options-page {
@@ -42,6 +47,10 @@
   color: var(--ansiBrGreen, @ansiBrGreen);
 }
 
+#client-options-save-indicator.is-error {
+  color: var(--ansiBrRed, @ansiBrRed);
+}
+
 #button-client-options-close {
   background: none;
   border: none;
@@ -49,4 +58,111 @@
   font-size: 1.5em;
   cursor: pointer;
   margin-left: auto;
+}
+
+#client-options-overlay .color-choice {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+#client-options-overlay #client-options-panel-fonts .option-choices.pull-right {
+  float: none !important;
+}
+
+#client-options-overlay #client-options-panel-fonts .option-row input[type="number"] {
+  width: 110px;
+}
+
+#client-options-overlay .color-choice input[type="color"] {
+  border: 1px solid var(--grayDark, @grayDark);
+  border-radius: 4px;
+  cursor: pointer;
+  height: 34px;
+  padding: 2px;
+  width: 48px;
+}
+
+#client-options-overlay .color-choice input[data-color-hex="true"] {
+  font-family: "Source Code Pro", monospace;
+  text-transform: uppercase;
+  width: 110px;
+}
+
+#client-options-overlay .client-options-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 8px 0 10px;
+  border-bottom: 1px solid var(--grayDark, @grayDark);
+}
+
+#client-options-overlay .client-options-tab {
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  color: var(--grayLight, @grayLight);
+  cursor: pointer;
+  font-family: "Source Code Pro", monospace;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 6px 10px;
+}
+
+#client-options-overlay .client-options-tab:hover,
+#client-options-overlay .client-options-tab:focus {
+  color: var(--offWhite, @offWhite);
+  outline: none;
+}
+
+#client-options-overlay .client-options-tab.active {
+  background-color: rgba(0, 68, 204, 0.35);
+  border-color: var(--grayDark, @grayDark);
+  color: var(--offWhite, @offWhite);
+}
+
+#client-options-overlay .client-options-panel {
+  min-width: 360px;
+}
+
+#client-options-overlay .import-export-action {
+  min-width: 140px;
+}
+
+#client-options-import-export-indicator {
+  color: var(--ansiBrGreen, @ansiBrGreen);
+  margin: 4px 5px 8px;
+  min-height: 18px;
+}
+
+#client-options-import-export-indicator.is-error {
+  color: var(--ansiBrRed, @ansiBrRed);
+}
+
+@media (max-width: @screen-xs-max) {
+  #client-options-overlay .client-options-page .well {
+    width: 96vw;
+  }
+
+  #client-options-overlay .client-options-tabs {
+    flex-wrap: wrap;
+  }
+
+  #client-options-overlay .client-options-tab {
+    flex: 1 1 auto;
+  }
+
+  #client-options-overlay .client-options-panel {
+    min-width: 0;
+  }
+
+  #client-options-overlay .color-choice {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  #client-options-overlay .color-choice input[data-color-hex="true"] {
+    flex: 1 1 auto;
+    max-width: 140px;
+  }
 }

@@ -7,16 +7,44 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Added ANSI TrueColor rendering support for foreground/background sequences (`38;2;r;g;b` and `48;2;r;g;b`) using inline RGB styles in the line buffer and saved logs.
 - Added a `Scroll Up to Pause` client option that pauses auto-scroll when you scroll up and resumes when you return to the bottom.
+- Added `Input Font` and `Input Font Size (pt)` client options so command entry text can be customized independently from output/editor fonts.
+- Added `Input Font Color` and `Input Background Color` options with mobile-friendly color pickers and hex inputs for precise command-entry styling.
+- Added `Output Font Size (pt)` as a separate client option so output text size can be adjusted independently, defaulting to the legacy output size.
+- Added an `Import/Export` Client Options tab for downloading all preferences as JSON and importing them locally without server upload.
+- Added a `Reset to Defaults` action in Client Options Import/Export with a confirmation warning before overwriting current settings.
 
 ### Changed
 - Renamed the `SDWC No-Wrap Blocks` client option to `Mobile Friendly Text Wrap` for clearer user-facing wording.
+- Updated the main client command input to request plain text mobile keyboards without autocapitalize, autocomplete, or autocorrect.
+- Organized Client Options into General, Presentation, and Local Editor tabs, renamed `Output Colors` to `Theme`, and removed admin-only wording from editor options.
+- Tightened Client Options dropdown widths to a consistent medium size, widened option labels, and left-aligned Presentation color/size controls for cleaner mobile layout.
+- Client options JSON import now applies recognized keys, skips unknown keys, and reports invalid JSON errors in the client output buffer.
 
 ### Fixed
+- Fixed real-device mobile top control behavior by anchoring mini-controls to the client container on touch devices so output-area icons remain pinned while scrolling.
+- Fixed very small-screen controls by converting mini-controls into an in-layout toolbar above the input buffer so actions remain accessible while output scrolls.
+- Fixed shortcuts overlay positioning on mobile by centering the dialog within the viewport and constraining width/height to avoid left-edge clipping.
+- Added a small-screen confirmation prompt before `Clear Buffer` clears output to reduce accidental buffer wipes on mobile.
+- Improved small-screen mini-controls usability by switching to text-forward buttons (showing labels like Settings/Shortcuts/Clear Buffer/Log) with larger touch targets.
+- Replaced browser-native small-screen clear-buffer confirmation with an in-app overlay dialog that includes explicit Cancel and Clear Buffer actions.
+- Scoped small-screen text-heavy mini-controls to touch devices so narrow desktop windows keep compact icon controls and avoid clipping the Log button.
 - Preserved existing xterm256 class-based color mapping behavior while adding TrueColor, so client color schemes continue overriding palette-based colors as before.
 - Fixed ANSI rendering for SGR reset/toggle sequences (`22m`, `25m`, `7m`, `27m`) so bold/blink/inverse styles stop correctly and raw escape codes are no longer shown in output.
 - Replaced regex ANSI rendering with a stateful stream parser so SGR resets, inverse fg/bg swapping, xterm256 themed colors, TrueColor, and split escape sequences render consistently with terminal behavior.
 - Updated default-color inverse rendering to use explicit inverse foreground/background colors (instead of CSS filter inversion) for closer terminal visual parity.
 - Fixed `Scroll Up to Pause` so enabling or disabling it from Client Options takes effect immediately without requiring a reload.
+- Fixed the `Transparent Overlays` option so autocomplete overlays keep the selected transparency when toggled or rebuilt.
+- Expanded `Transparent Overlays` so it now also affects shortcuts, history search, client options, and the MOO status detail overlay.
+- Fixed duplicate Client Options initialization that could bind repeated Import/Export handlers, causing multi-download behavior.
+- Fixed Import/Export theme compatibility by normalizing legacy editor theme values (`ambiance`/`tomorrow`) during import.
+- Fixed Import/Export options panel stability by ignoring non-option rows in options refresh/binding logic.
+- Enforced numeric validation and `8..24` range checks when writing `Output Font Size (pt)` and `Input Font Size (pt)` via client options/import/commands.
+- Removed duplicate standalone Client Options script loading so the options UI uses the same runtime preference instance as the main client, restoring immediate live updates for input/output font family, size, and input colors.
+
+### Changed
+- Added Import/Export success/error toast messages in Client Options and a warning that import overwrites current settings, with guidance to export a backup first.
+- Made Import File and Export File buttons the same width for a consistent layout.
+- Renamed Import/Export action labels to `Export File` and `Import File`, moved feedback toast into the Import/Export panel, and changed Import/Reset confirmations to explicit destructive-action warnings.
 
 ## 2026-05-22
 

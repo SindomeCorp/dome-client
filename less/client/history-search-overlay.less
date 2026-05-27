@@ -5,8 +5,13 @@
   bottom: 0;
   left: 0;
   z-index: 999;
-  background-color: var(--black, @black);
   background-color: rgba(0, 0, 0, 0.82);
+  &.ui-transparent-overlay {
+    background-color: rgba(0, 0, 0, 0.55);
+  }
+  &.ui-opaque-overlay {
+    background-color: rgba(0, 0, 0, 0.9);
+  }
 }
 
 #history-search-overlay .history-search-content {

@@ -118,3 +118,51 @@
     }
   }
 }
+
+@media (max-width: @screen-xs-max) {
+  #browser-client .mini-controls {
+    position: relative;
+    top: auto;
+    right: auto;
+    z-index: 2;
+    height: auto;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding: 4px 6px;
+    background-color: RGBA(0, 0, 0, 0.7);
+    border-top: 1px solid var(--frameColor, @frameColor);
+    border-bottom: 1px solid var(--frameColor, @frameColor);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  #browser-client .mini-controls button,
+  #browser-client .mini-controls A.btn {
+    margin-top: 0;
+    margin-right: 0;
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: @screen-xs-max) and (hover: none) and (pointer: coarse) {
+  #browser-client .mini-controls button,
+  #browser-client .mini-controls A.btn {
+    font-size: 13px;
+    line-height: 1.25;
+    min-height: 34px;
+    padding: 7px 10px;
+  }
+
+  #browser-client .mini-controls .hidden-xs {
+    display: inline !important;
+  }
+
+  #browser-client .mini-controls .icon-cog,
+  #browser-client .mini-controls .icon-th-list,
+  #browser-client .mini-controls .icon-remove,
+  #browser-client .mini-controls .icon-download-alt,
+  #browser-client .mini-controls .mini-glyph {
+    display: none !important;
+  }
+}

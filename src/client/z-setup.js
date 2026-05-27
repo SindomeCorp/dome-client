@@ -21,6 +21,9 @@ const init = () => {
     saveButton      : document.querySelectorAll("#button-save, #button-save-mini"),
     scrollButton    : document.querySelector("#button-auto-scroll"),
     clearButton     : document.querySelector("#button-clear-buffer"),
+    clearBufferOverlay: document.querySelector("#clear-buffer-overlay"),
+    clearBufferConfirmButton: document.querySelector("#button-clear-buffer-confirm"),
+    clearBufferCancelButton: document.querySelector("#button-clear-buffer-cancel"),
     shortcutsButton : document.querySelector("#button-shortcuts"),
     shortcutsOverlay: document.querySelector("#shortcuts-overlay"),
     clientOptionsButton: document.querySelector("#button-client-options"),
@@ -39,6 +42,10 @@ const init = () => {
   const preferences = dome.readPreferences();
   dome.preferences = preferences;
   const setOverlayClass = () => {
+    if (dome.applyTransparentOverlayPreference) {
+      dome.applyTransparentOverlayPreference();
+      return;
+    }
     document.querySelectorAll(".ui-autocomplete").forEach((ac) => {
       if (dome.preferences.transparentOverlay) {
         ac.classList.add("ui-transparent-overlay");
@@ -57,6 +64,9 @@ const init = () => {
     dome.buffer.classList.add(`colorset-${preferences.colorSet}`);
     dome.inputReader?.classList.add(`colorset-${preferences.colorSet}`);
   }
+  dome.applyOutputBufferTextPreferences?.();
+  dome.applyInputReaderTextPreferences?.();
+  dome.applyInputReaderColorPreferences?.();
   if (dome.inputReader) {
     if (dome.setupInputReader) dome.setupInputReader();
     if (preferences.commandSuggestions && dome.autoComplete != null) {

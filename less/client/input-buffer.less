@@ -40,8 +40,8 @@
     height: 50px;
     line-height: 16px;
     width: 100%;
-    background-color: var(--inputBG, @inputBG);
-    color: var(--inputFG, @inputFG);
+    background-color: var(--inputCustomBG, var(--inputBG, @inputBG));
+    color: var(--inputCustomFG, var(--inputFG, @inputFG));
     font-family: "Source Code Pro", monospace;
     font-weight: normal;
     font-size: 14px;
@@ -57,12 +57,39 @@
       border-top-color: var(--frameColor, @frameColor);
     }
     &.colorset-snow {
-      background-color: var(--inputFG, @inputFG);
-      color: var(--inputBG, @inputBG);
+      background-color: var(--inputCustomBG, var(--inputFG, @inputFG));
+      color: var(--inputCustomFG, var(--inputBG, @inputBG));
       border-color: #222;
       &:focus {
         border-top-color: #222;
       }
+    }
+    &.standardText {
+      font-family: "Source Code Pro", monospace;
+    }
+    &.courierText {
+      font-family: "Courier New", monospace;
+    }
+    &.lucidaText {
+      font-family: "Lucida Console", monospace;
+    }
+    &.robotoText {
+      font-family: "Roboto Mono", monospace;
+    }
+    &.comic-monoText {
+      font-family: "Comic Mono", monospace;
+    }
+    &.monacoText {
+      font-family: "Monaco", monospace;
+    }
+    &.menloText {
+      font-family: "Menlo", monospace;
+    }
+    &.ubuntu-monoText {
+      font-family: "Ubuntu Mono", monospace;
+    }
+    &.consolasText {
+      font-family: "Consolas", monospace;
     }
   }
 }

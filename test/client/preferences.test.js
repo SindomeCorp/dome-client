@@ -112,15 +112,155 @@ test("readPreferences parses url options", async (t) => {
 });
 
 test("readPreferences parses additional url options", async (t) => {
-  const url = "https://example.com/?as=long&of=lucida&ef=courier&et=chaos&cl=dim&pb=42";
-  const win = await setupWindow(t, url, "Chrome/78", ["standard", "lucida", "courier"]);
+  const url = "https://example.com/?as=long&of=lucida&oz=10.5&if=roboto&iz=12.5&ic=ffeeaa&ib=112233&ef=courier&et=chaos&cl=dim&pb=42";
+  const win = await setupWindow(t, url, "Chrome/78", ["standard", "lucida", "courier", "roboto"]);
   const prefs = win.dome.readPreferences();
   assert.equal(prefs.autoScroll, "long");
   assert.equal(prefs.lineBufferFont, "lucida");
+  assert.equal(prefs.lineBufferFontSizePt, 10.5);
+  assert.equal(prefs.inputFont, "roboto");
+  assert.equal(prefs.inputFontSizePt, 12.5);
+  assert.equal(prefs.inputFontColor, "#FFEEAA");
+  assert.equal(prefs.inputBackgroundColor, "#112233");
   assert.equal(prefs.editorFont, "courier");
   assert.equal(prefs.edittheme, "chaos");
   assert.equal(prefs.colorSet, "dim");
   assert.equal(prefs.performanceBuffer, 42);
+});
+
+test("setClientOption applies output font size to line buffer", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const origSave = clientOptions.save;
+  clientOptions.save = () => {};
+  t.after(() => {
+    clientOptions.save = origSave;
+  });
+  const buffer = win.document.createElement("div");
+  buffer.id = "lineBuffer";
+  win.document.body.appendChild(buffer);
+  win.dome.buffer = buffer;
+  win.dome.inputReader = win.document.createElement("textarea");
+  win.dome.buffer.append = () => {};
+  win.dome.scrollBuffer = () => {};
+  win.dome.preferences = win.dome.readPreferences();
+
+  win.dome.setClientOption("lineBufferFontSizePt", 10.25);
+  assert.equal(buffer.style.fontSize, "10.25pt");
+});
+
+test("setClientOption rejects non-numeric and out-of-range font sizes", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const origSave = clientOptions.save;
+  clientOptions.save = () => {};
+  t.after(() => {
+    clientOptions.save = origSave;
+  });
+  const output = [];
+  const buffer = win.document.createElement("div");
+  buffer.id = "lineBuffer";
+  buffer.append = (text) => output.push(text);
+  win.document.body.appendChild(buffer);
+  const input = win.document.createElement("textarea");
+  input.id = "inputBuffer";
+  win.document.body.appendChild(input);
+  win.dome.buffer = buffer;
+  win.dome.inputReader = input;
+  win.dome.scrollBuffer = () => {};
+  win.dome.preferences = win.dome.readPreferences();
+
+  win.dome.setClientOption("lineBufferFontSizePt", "abc");
+  assert.equal(win.dome.preferences.lineBufferFontSizePt, 9.75);
+  assert.ok(output.some((line) => line.includes("must be a number between 8 and 24")));
+
+  win.dome.setClientOption("inputFontSizePt", 100);
+  assert.equal(win.dome.preferences.inputFontSizePt, 11);
+  assert.ok(output.some((line) => line.includes("must be between 8 and 24")));
+});
+
+test("setClientOption applies input font and size to input reader", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const origSave = clientOptions.save;
+  clientOptions.save = () => {};
+  t.after(() => {
+    clientOptions.save = origSave;
+  });
+  const input = win.document.createElement("textarea");
+  input.id = "inputBuffer";
+  win.document.body.appendChild(input);
+  win.dome.inputReader = input;
+  win.dome.buffer = { append() {} };
+  win.dome.scrollBuffer = () => {};
+  win.dome.preferences = win.dome.readPreferences();
+
+  win.dome.setClientOption("inputFont", "lucida");
+  win.dome.setClientOption("inputFontSizePt", 13);
+
+  assert.equal(input.classList.contains("lucidaText"), true);
+  assert.match(input.style.fontFamily, /Lucida Console/i);
+  assert.equal(input.style.fontSize, "13pt");
+});
+
+test("setClientOption applies input colors and validates hex", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const origSave = clientOptions.save;
+  clientOptions.save = () => {};
+  t.after(() => {
+    clientOptions.save = origSave;
+  });
+  const output = [];
+  const input = win.document.createElement("textarea");
+  input.id = "inputBuffer";
+  win.document.body.appendChild(input);
+  win.dome.inputReader = input;
+  win.dome.buffer = { append: (text) => output.push(text) };
+  win.dome.scrollBuffer = () => {};
+  win.dome.preferences = win.dome.readPreferences();
+
+  win.dome.setClientOption("inputFontColor", "aabbcc");
+  win.dome.setClientOption("inputBackgroundColor", "#102030");
+  assert.equal(input.style.getPropertyValue("--inputCustomFG"), "#AABBCC");
+  assert.equal(input.style.getPropertyValue("--inputCustomBG"), "#102030");
+
+  win.dome.setClientOption("inputFontColor", "bad");
+  assert.ok(output.some((line) => line.includes("must be a hex color")));
+  assert.equal(win.dome.preferences.inputFontColor, "#AABBCC");
+});
+
+test("setClientOption updates output/input font family and size immediately", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const origSave = clientOptions.save;
+  clientOptions.save = () => {};
+  t.after(() => {
+    clientOptions.save = origSave;
+  });
+  const output = win.document.createElement("div");
+  output.id = "lineBuffer";
+  output.classList.add("standardText");
+  const input = win.document.createElement("textarea");
+  input.id = "inputBuffer";
+  win.document.body.append(output, input);
+  win.dome.buffer = output;
+  win.dome.inputReader = input;
+  win.dome.scrollBuffer = () => {};
+  win.dome.preferences = win.dome.readPreferences();
+
+  win.dome.setClientOption("lineBufferFont", "lucida");
+  assert.equal(output.classList.contains("lucidaText"), true);
+  assert.equal(output.classList.contains("standardText"), false);
+
+  win.dome.setClientOption("lineBufferFontSizePt", 10.75);
+  assert.equal(output.style.fontSize, "10.75pt");
+
+  win.dome.setClientOption("inputFont", "lucida");
+  assert.equal(input.classList.contains("lucidaText"), true);
+
+  win.dome.setClientOption("inputFontSizePt", 12.5);
+  assert.equal(input.style.fontSize, "12.5pt");
 });
 
 test("readPreferences handles comic-mono font", async (t) => {
@@ -187,7 +327,22 @@ test("parseClientOptionCommand sets overlay classes", async (t) => {
   });
   const ac = win.document.createElement("div");
   ac.className = "ui-autocomplete ui-opaque-overlay";
+  const secondAc = win.document.createElement("div");
+  secondAc.className = "ui-autocomplete ui-opaque-overlay";
+  const shortcuts = win.document.createElement("div");
+  shortcuts.id = "shortcuts-overlay";
+  const historySearch = win.document.createElement("div");
+  historySearch.id = "history-search-overlay";
+  const clientOptionsOverlay = win.document.createElement("div");
+  clientOptionsOverlay.id = "client-options-overlay";
+  const gameHealthDetail = win.document.createElement("div");
+  gameHealthDetail.id = "gameHealthDetail";
   win.document.body.appendChild(ac);
+  win.document.body.appendChild(secondAc);
+  win.document.body.appendChild(shortcuts);
+  win.document.body.appendChild(historySearch);
+  win.document.body.appendChild(clientOptionsOverlay);
+  win.document.body.appendChild(gameHealthDetail);
   win.dome.buffer = { append() {} };
   win.dome.scrollBuffer = () => {};
   win.dome.preferences = win.dome.readPreferences();
@@ -195,7 +350,58 @@ test("parseClientOptionCommand sets overlay classes", async (t) => {
   win.dome.parseClientOptionCommand("@client-option transparentOverlay true");
   assert.equal(ac.classList.contains("ui-transparent-overlay"), true);
   assert.equal(ac.classList.contains("ui-opaque-overlay"), false);
+  assert.equal(secondAc.classList.contains("ui-transparent-overlay"), true);
+  assert.equal(secondAc.classList.contains("ui-opaque-overlay"), false);
+  assert.equal(shortcuts.classList.contains("ui-transparent-overlay"), true);
+  assert.equal(historySearch.classList.contains("ui-transparent-overlay"), true);
+  assert.equal(clientOptionsOverlay.classList.contains("ui-transparent-overlay"), true);
+  assert.equal(gameHealthDetail.classList.contains("ui-transparent-overlay"), true);
   win.dome.parseClientOptionCommand("@client-option transparentOverlay false");
+  assert.equal(ac.classList.contains("ui-transparent-overlay"), false);
+  assert.equal(ac.classList.contains("ui-opaque-overlay"), true);
+  assert.equal(secondAc.classList.contains("ui-transparent-overlay"), false);
+  assert.equal(secondAc.classList.contains("ui-opaque-overlay"), true);
+  assert.equal(shortcuts.classList.contains("ui-opaque-overlay"), true);
+  assert.equal(historySearch.classList.contains("ui-opaque-overlay"), true);
+  assert.equal(clientOptionsOverlay.classList.contains("ui-opaque-overlay"), true);
+  assert.equal(gameHealthDetail.classList.contains("ui-opaque-overlay"), true);
+});
+
+test("parseClientOptionCommand reapplies overlay classes after autocomplete rebuild", async (t) => {
+  const win = await setupWindow(t, "https://example.com/", "Chrome/78");
+  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const origSave = clientOptions.save;
+  clientOptions.save = () => {};
+  t.after(() => {
+    clientOptions.save = origSave;
+  });
+  let destroyed = false;
+  win.dome.buffer = { append() {} };
+  win.dome.scrollBuffer = () => {};
+  win.dome.inputReader = {
+    commandSuggestions(arg) {
+      if (arg === "destroy") destroyed = true;
+    }
+  };
+  win.dome.userType = "p";
+  win.dome.preferences = win.dome.readPreferences();
+  win.dome.preferences.transparentOverlay = false;
+  win.dome.preferences.commandSuggestions = true;
+  win.dome.preferences.broadSearch = true;
+  win.dome.autoComplete = () => {};
+  win.dome.setupAutoComplete = () => Promise.resolve().then(() => {
+    const ac = win.document.createElement("div");
+    ac.className = "ui-autocomplete ui-transparent-overlay";
+    win.document.body.appendChild(ac);
+  });
+
+  win.dome.parseClientOptionCommand("@client-option broadSearch false");
+  await Promise.resolve();
+  await Promise.resolve();
+
+  const ac = win.document.querySelector(".ui-autocomplete");
+  assert.equal(destroyed, true);
+  assert.ok(ac);
   assert.equal(ac.classList.contains("ui-transparent-overlay"), false);
   assert.equal(ac.classList.contains("ui-opaque-overlay"), true);
 });

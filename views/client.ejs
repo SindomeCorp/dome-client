@@ -4,8 +4,18 @@ var useMinified = !debugMode;
 <% req.bodyClass = 'client'; %>
 <div id="browser-client">
   <div id="lineBuffer" class="standardText" aria-live="polite"></div>
+  <%- include('partials/mini-controls') %>
   <div class="input-buffer-row">
-    <textarea data-lpignore="true" id="inputBuffer" rows="4" cols="50"></textarea>
+    <textarea
+      data-lpignore="true"
+      id="inputBuffer"
+      rows="4"
+      cols="50"
+      inputmode="text"
+      autocapitalize="none"
+      autocomplete="off"
+      autocorrect="off"
+    ></textarea>
     <div class="input-history-nav hidden-sm hidden-md hidden-lg" aria-label="Input history controls">
       <button type="button" id="button-input-history-up" class="btn btn-default btn-xs" aria-label="Previous command">▲</button>
       <button type="button" id="button-input-history-down" class="btn btn-default btn-xs" aria-label="Next command">▼</button>
@@ -24,9 +34,4 @@ var useMinified = !debugMode;
 <%- include('partials/history-search-overlay') %>
 <%- include('partials/client-options-overlay') %>
 <%- include('partials/disconnect-buttons') %>
-<%- include('partials/mini-controls') %>
-  <script type="module">
-    import { clientOptions } from "<%=decache('/js/client-options.js')%>";
-    clientOptions["deviceType"] = "<%=req.device%>";
-  </script>
   <script defer src="<%=decache('/js/player-client' + (useMinified ? '.min' : '') + '.js')%>"></script>

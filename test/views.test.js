@@ -85,6 +85,33 @@ for (const file of files) {
     const html = await renderFile(file, data);
     if (file === "views/client.ejs") {
       assert.match(html, /id="editor-list-view"/);
+      const inputBuffer = html.match(/<textarea[^>]*id="inputBuffer"[^>]*>/s)?.[0] ?? "";
+      assert.match(inputBuffer, /id="inputBuffer"/);
+      assert.match(inputBuffer, /inputmode="text"/);
+      assert.match(inputBuffer, /autocapitalize="none"/);
+      assert.match(inputBuffer, /autocomplete="off"/);
+      assert.match(inputBuffer, /autocorrect="off"/);
+      assert.doesNotMatch(inputBuffer, /spellcheck=/);
+    }
+    if (file === "views/partials/client-options-overlay.ejs") {
+      assert.match(html, /role="tablist"/);
+      assert.match(html, />General</);
+      assert.match(html, />Presentation</);
+      assert.match(html, />Local Editor</);
+      assert.match(html, />Import\/Export</);
+      assert.match(html, />Theme</);
+      assert.match(html, />Input Font</);
+      assert.match(html, />Output Font Size \(pt\)</);
+      assert.match(html, />Input Font Size \(pt\)</);
+      assert.match(html, />Export File</);
+      assert.match(html, />Import File</);
+      assert.match(html, />Reset to Defaults</);
+      assert.match(html, />Input Font Color</);
+      assert.match(html, />Input Background Color</);
+      assert.match(html, />Editor Type</);
+      assert.match(html, />Editor Theme</);
+      assert.doesNotMatch(html, /admin only/);
+      assert.doesNotMatch(html, /Output Colors/);
     }
     if (file === "views/layouts/main.ejs") {
       assert.match(html, /href="\/css\/client\.css"/);

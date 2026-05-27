@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { setupClientOptionsDom } from "./index.js";
 
-test("client-options updates state and persists to store", async () => {
+test("client-options updates state and persists to store", async (t) => {
   const html = `<!doctype html><html><body>
   <div class="client-options-page">
     <div class="option-row" id="commands-option">
@@ -34,6 +34,10 @@ test("client-options updates state and persists to store", async () => {
   const options = await import("../../src/client/pages/client-options.js");
   Object.assign(options.store, store);
   const { clientOptions } = options;
+  const originalOptions = clientOptions.options;
+  t.after(() => {
+    clientOptions.options = originalOptions;
+  });
   clientOptions.options = {
     commands: { param: "cs", def: true, ok: [true, false] },
     scrolluppause: { param: "up", def: false, ok: [true, false] },
@@ -75,4 +79,30 @@ test("clientOptions query string includes scroll up to pause", async () => {
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
   clientOptions.save("scrolluppause", true);
   assert.ok(clientOptions.buildQueryString().includes("up=true"));
+});
+
+test("client options tabs show one panel at a time", async () => {
+  const html = `<!doctype html><html><body>
+  <div class="client-options-page">
+    <button class="client-options-tab active" data-tab="general" aria-selected="true">General</button>
+    <button class="client-options-tab" data-tab="fonts" aria-selected="false">Presentation</button>
+    <button class="client-options-tab" data-tab="editor" aria-selected="false">Local Editor</button>
+    <button class="client-options-tab" data-tab="importexport" aria-selected="false">Import/Export</button>
+    <div class="client-options-panel" data-tab-panel="general"></div>
+    <div class="client-options-panel hide" data-tab-panel="fonts"></div>
+    <div class="client-options-panel hide" data-tab-panel="editor"></div>
+    <div class="client-options-panel hide" data-tab-panel="importexport"></div>
+  </div>
+  </body></html>`;
+  const { window, store } = setupClientOptionsDom(html);
+  const options = await import("../../src/client/pages/client-options.js?tabs");
+  Object.assign(options.store, store);
+  window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
+
+  const fontsTab = window.document.querySelector("[data-tab=\"fonts\"]");
+  fontsTab.click();
+
+  assert.equal(fontsTab.getAttribute("aria-selected"), "true");
+  assert.ok(!window.document.querySelector("[data-tab-panel=\"fonts\"]").classList.contains("hide"));
+  assert.ok(window.document.querySelector("[data-tab-panel=\"general\"]").classList.contains("hide"));
 });
