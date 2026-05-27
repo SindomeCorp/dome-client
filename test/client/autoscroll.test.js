@@ -51,13 +51,13 @@ test("none mode toggle updates DOM and state", async () => {
   assert.equal(dome.pauseBuffer, true);
   assert.ok(dome.buffer.classList.contains("scroll-disabled"));
   assert.ok(dome.scrollButton.classList.contains("btn-danger"));
-  assert.equal(dome.scrollButton.querySelector("span").textContent, "RESUME SCROLL");
+  assert.equal(dome.scrollButton.querySelector("span.hidden-xs").textContent, "RESUME SCROLL");
 
   dome.onToggleAutoScroll();
   assert.equal(dome.pauseBuffer, false);
   assert.ok(!dome.buffer.classList.contains("scroll-disabled"));
   assert.ok(dome.scrollButton.classList.contains("btn-primary"));
-  assert.equal(dome.scrollButton.querySelector("span").textContent, "PAUSE SCROLL");
+  assert.equal(dome.scrollButton.querySelector("span.hidden-xs").textContent, "PAUSE SCROLL");
 });
 
 test("changing autoScroll to none removes dblclick handler", async () => {
@@ -185,4 +185,3 @@ test("long mode scroll calculation and user scroll disables auto-scroll", async 
   assert.equal(domeLocal.buffer.scrollTop, 200);
 
 });
-

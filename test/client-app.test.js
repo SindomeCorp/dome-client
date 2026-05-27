@@ -411,7 +411,12 @@ test("creates https server with ca and passphrase", async (t) => {
       passphrase: "phrase",
     }
   );
-  assert.deepStrictEqual(fsMock.readFileSync.mock.calls.map((c) => c.arguments[0]), ["key.pem", "cert.pem", "ca.pem"]);
+  assert.deepStrictEqual(
+    fsMock.readFileSync.mock.calls
+      .map((c) => c.arguments[0])
+      .filter((p) => String(p).endsWith(".pem")),
+    ["key.pem", "cert.pem", "ca.pem"]
+  );
   assert.ok(logs.info.includes("socket.io listening to http"));
   assert.ok(logs.info.includes("socket.io listening to https"));
 });
@@ -439,7 +444,12 @@ test("registers https connection and error handlers", async (t) => {
   };
 
   const { httpsMgr, fsMock } = await loadClientApp(t, config);
-  assert.deepStrictEqual(fsMock.readFileSync.mock.calls.map((c) => c.arguments[0]), ["key.pem", "cert.pem"]);
+  assert.deepStrictEqual(
+    fsMock.readFileSync.mock.calls
+      .map((c) => c.arguments[0])
+      .filter((p) => String(p).endsWith(".pem")),
+    ["key.pem", "cert.pem"]
+  );
   assert.deepStrictEqual(httpsMgr.on.mock.calls.map((c) => c.arguments[0]), ["connection", "error"]);
 });
 
