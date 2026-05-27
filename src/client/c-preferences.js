@@ -234,6 +234,15 @@ dome.readPreferences = function() {
     preferences.editorFont = preferences.lineBufferFont;
     store.put(clientOptions.prefix + "editorfont", preferences.editorFont);
   }
+  // Backward compatibility for previously saved temporary keys.
+  const legacyInputFg = normalizeHexColor(store.get(clientOptions.prefix + "inputfg"));
+  if (legacyInputFg) {
+    preferences.inputFontColor = legacyInputFg;
+  }
+  const legacyInputBg = normalizeHexColor(store.get(clientOptions.prefix + "inputbg"));
+  if (legacyInputBg) {
+    preferences.inputBackgroundColor = legacyInputBg;
+  }
   if (!shortenFeatureEnabled) {
     preferences.shortenUrls = false;
     store.put(clientOptions.prefix + "shorten", false);
