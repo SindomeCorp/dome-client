@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 - Added a multi-MUD connect-page `Game Owner? Got Questions?` box between the connect form and connection stats, linking to a new game-owner guide page.
 - Added a multi-MUD-only `/game-owner-questions/` page explaining the `#$# dome-client-user` marker flow, the `@dome-client-user <hostname-or-ip>` response behavior, and where to find more details in the Dome Client GitHub repository.
 
+### Fixed
+- Fixed mobile Enter-key handling in the client input buffer so pressing Enter reliably submits even when the field is empty or whitespace-only.
+
 ## 2026-05-27
 
 ### Added
