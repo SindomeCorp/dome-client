@@ -336,64 +336,51 @@ dome.setupInputReader = () => {
       return false;
     };
 
-    let lastEnterHandledAt = 0;
-    const handleEnterSubmit = (event) => {
-      if ( event.key !== "Enter" || event.shiftKey ) {
-        return false;
-      }
-      const now = Date.now();
-      if ( now - lastEnterHandledAt < 30 ) {
-        event.preventDefault();
-        return false;
-      }
-      lastEnterHandledAt = now;
-      if (
-        dome.autoComplete &&
-        typeof inputReader.commandSuggestions === "function"
-      ) {
-        try {
-          inputReader.commandSuggestions("close");
-        } catch (e) {
-          logger.error(e);
-        }
-      }
-      event.preventDefault();
-      const command = inputReader.value;
-      if (command.trim() === "") {
-        sendCommand("");
-        inputReader.value = "";
-        return false;
-      }
-      sendCommand(command);
-      commandBuffer[ commandBuffer.length ] = command;
-      if ( commandBuffer.length > 2000 ) {
-        commandBuffer.shift();
-      }
-      commandPointer = commandBuffer.length;
-      store.put( "my-input-buffer", commandBuffer ); // localStore deals in strings, this won't work as an array Chad. - Future Chad
-      inputReader.value = "";
-      return false;
-    };
-
     inputReader.addEventListener("keydown", (event) => {
       if ((event.key === "ArrowUp" || event.key === "ArrowDown") && applyHistoryNavigation(event.key)) {
         event.preventDefault();
         return false;
       }
       if ( event.key === "Enter" && !event.shiftKey ) {
-        return handleEnterSubmit(event);
+        if (
+          dome.autoComplete &&
+          typeof inputReader.commandSuggestions === "function"
+        ) {
+          try {
+            inputReader.commandSuggestions("close");
+          } catch (e) {
+            logger.error(e);
+          }
+        }
+        // enter key
+        event.preventDefault();
+        const command = inputReader.value;
+        if (command.trim() === "") {
+          sendCommand("");
+          inputReader.value = "";
+          return false;
+        }
+        sendCommand(command);
+
+        commandBuffer[ commandBuffer.length ] = command;
+        if ( commandBuffer.length > 2000 ) {
+          commandBuffer.shift();
+        }
+        commandPointer = commandBuffer.length;
+        store.put( "my-input-buffer", commandBuffer ); // localStore deals in strings, this won't work as an array Chad. - Future Chad
+        inputReader.value = "";
+        return false;
       }
     });
     inputReader.addEventListener("keypress", (event) => {
       if ( event.key === "Backspace" ) {
 
       }
-      if ( event.key === "Enter" && !event.shiftKey ) {
-        return handleEnterSubmit(event);
+      if ( event.key !== "Enter" ) {
+        setTimeout( () => {
+          lastInput = inputReader.value;
+        }, 5 );
       }
-      setTimeout( () => {
-        lastInput = inputReader.value;
-      }, 5 );
     });
     inputReader.addEventListener("focus", () => {
     });

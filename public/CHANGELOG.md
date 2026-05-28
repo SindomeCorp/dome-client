@@ -10,7 +10,6 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed mobile Enter-key handling in the client input buffer so pressing Enter reliably submits even when the field is empty or whitespace-only.
-- Fixed mobile soft-keyboard compatibility for command submit by restoring an Enter `keypress` fallback when `keydown` is not emitted.
 
 ## 2026-05-27
 
