@@ -77,6 +77,18 @@ test("enter emits command and echoes", async (t) => {
   assert.equal(input.value, "");
 });
 
+test("enter keypress fallback emits command once", async (t) => {
+  const { window, store } = await loadInputReader(t);
+  const input = dome.inputReader;
+  input.value = "say hi";
+  input.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
+  assert.equal(socket.events.length, 1);
+  assert.deepEqual(socket.events[0], { event: "input", cmd: "say hi" });
+  assert.equal(dome.buffer.appended[0], "<span class=\"input-echo\">&gt;say hi</span>\n");
+  assert.equal(store.history.at(-1), "say hi");
+  assert.equal(input.value, "");
+});
+
 test("enter with command suggestions disabled does not log error", async (t) => {
   const { window } = await loadInputReader(t);
   const origAuto = dome.autoComplete;
