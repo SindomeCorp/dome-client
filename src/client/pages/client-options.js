@@ -21,12 +21,6 @@ if (typeof window !== "undefined" && !window.COLORSET_CHOICES) {
   window.COLORSET_CHOICES = COLORSET_CHOICES;
 }
 
-function weakBrowser() {
-  const chromeVersion = navigator?.appVersion?.match(/Chrome\/(\d+)/);
-  const badChrome = chromeVersion != null && parseInt(chromeVersion[1]) >= 79;
-  return badChrome;
-}
-
 const clientOptions = {
   options: {
     commands: { param: "cs", def: true, ok: [true, false] },
@@ -50,7 +44,7 @@ const clientOptions = {
     scrolluppause: { param: "up", def: false, ok: [true, false] },
     transparent: { param: "to", def: true, ok: [true, false] },
     broadly: { param: "bs", def: true, ok: [true, false] },
-    buffer: { param: "pb", def: weakBrowser() ? 1750 : 0 }
+    buffer: { param: "pb", def: 0 }
   },
   prefix: "dc-toggle-", // namespacing options in localStorage
   get(name) {

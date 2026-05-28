@@ -7,7 +7,7 @@ export function connect(req, res) {
   const stats = isMultiMud ? connectedStats() : { count: 0, games: [] };
   res.render("connect-as", {
     mooName: config.moo.name,
-    connectAnywhere: isMultiMud,
+    isMultiMud,
     mooHostname: config.moo.host,
     mooPort: config.moo.port,
     connected: () => stats,

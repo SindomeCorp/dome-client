@@ -38,7 +38,7 @@ const sampleData = {
     req: { query: {} },
     session: { user: { chars: [] } },
     mooName: "Anaconda",
-    connectAnywhere: false,
+    isMultiMud: false,
     mooHostname: "moo.sindome.org",
     mooPort: 5555,
     connected: () => ({ count: 0, games: [] }),

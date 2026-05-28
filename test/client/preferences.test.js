@@ -73,13 +73,6 @@ const setupWindow = async (
   return window;
 };
 
-test("weakBrowser detects Chrome version", async (t) => {
-  const win = await setupWindow(t, "https://example.com/", "Chrome/80");
-  assert.equal(win.dome.weakBrowser(), true);
-  Object.defineProperty(win.navigator, "appVersion", { value: "Chrome/78", configurable: true });
-  assert.equal(win.dome.weakBrowser(), false);
-});
-
 test("readPreferences returns defaults", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
   const prefs = win.dome.readPreferences();
@@ -277,10 +270,10 @@ test("readPreferences handles monaco font", async (t) => {
   assert.equal(prefs.lineBufferFont, "monaco");
 });
 
-test("readPreferences defaults performanceBuffer for weak browsers", async (t) => {
+test("readPreferences defaults performanceBuffer to unlimited", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/80");
   const prefs = win.dome.readPreferences();
-  assert.equal(prefs.performanceBuffer, 1750);
+  assert.equal(prefs.performanceBuffer, 0);
 });
 
 test("readPreferences loads saved colorSet from localStorage", async (t) => {

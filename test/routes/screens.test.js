@@ -29,7 +29,7 @@ test("connect renders connect-as with metadata", () => {
   const { res, result } = createRes();
   screens.connect({}, res);
   assert.equal(result.template, "connect-as");
-  assert.equal(result.locals.connectAnywhere, config.node.multiMud);
+  assert.equal(result.locals.isMultiMud, config.node.multiMud);
   const gameName = result.locals.mooName;
   assert.deepEqual(result.locals.meta, {
     title: "Connect - Modern Gaming Client",
@@ -44,7 +44,7 @@ test("connect enables multi-mud locals when configured", () => {
   const { res, result } = createRes();
   screens.connect({}, res);
   config.node.multiMud = original;
-  assert.equal(result.locals.connectAnywhere, true);
+  assert.equal(result.locals.isMultiMud, true);
   assert.equal(result.locals.mooHostname, config.moo.host);
   assert.equal(result.locals.mooPort, config.moo.port);
   assert.equal(typeof result.locals.connected, "function");

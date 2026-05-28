@@ -9,16 +9,6 @@ import {
 
 const shortenFeatureEnabled = typeof window === "undefined" ? true : window.shortenEnabled !== false;
 
-// Preference utilities
-dome.weakBrowser = function() {
-  if (typeof navigator === "undefined" || typeof navigator.appVersion !== "string") {
-    return false;
-  }
-  const chromeVersion = navigator.appVersion.match(/Chrome\/(\d+)/);
-  const badChrome = chromeVersion != null && parseInt(chromeVersion[1], 10) >= 79;
-  return badChrome;
-};
-
 dome.readPreferences = function() {
   const options = window.location.search || null;
 
@@ -45,7 +35,7 @@ dome.readPreferences = function() {
     scrollUpToPause    : false,
     transparentOverlay : true,
     broadSearch        : true,
-    performanceBuffer  : dome.weakBrowser() ? 1750 : 0 // set to 0 for unlimited buffer / weak browsers get defaulted to 1750
+    performanceBuffer  : 0 // set to 0 for unlimited buffer
   };
   // load saved preferences from localStorage
   for (const shortCode in PREFERENCE_ENUM) {
@@ -278,7 +268,7 @@ const PREFERENCE_ENUM = {
   "cl" : { name: "colorSet", storeKey: "colorset", def: "normal", valid: COLORSET_CHOICES },
   "to" : { name: "transparentOverlay", storeKey: "transparent", def: true },
   "bs" : { name: "broadSearch", storeKey: "broadly", def: true },
-  "pb" : { name: "performanceBuffer", storeKey: "buffer", def: ( dome.weakBrowser() ? 1750 : 0 ) }
+  "pb" : { name: "performanceBuffer", storeKey: "buffer", def: 0 }
 };
 
 const helpDocs = [
