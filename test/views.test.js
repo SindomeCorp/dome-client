@@ -49,6 +49,9 @@ const sampleData = {
     meta: { title: "", description: "", keywords: "" },
     shortenEnabled: false,
   },
+  "views/game-owner-questions.ejs": {
+    meta: { title: "", description: "", keywords: "" },
+  },
   "views/editors/verb.ejs": {
     req: { query: {} },
     editor: { readonly: true },

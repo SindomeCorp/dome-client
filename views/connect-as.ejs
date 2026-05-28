@@ -46,13 +46,21 @@
       </div>
     </div>
   </div>
+  <div class="connection-stats hidden-sm hidden-xs">
+    <table>
+      <tr class="table-header"><td colspan="2">Game Owner? Got Questions?</td></tr>
+      <tr>
+        <td colspan="2">If you run a game and want the client to pass through IP/Host info for those connecting, see this quick guide: <a href="/game-owner-questions/" class="game-address">Game Owner Guide</a></td>
+      </tr>
+    </table>
+  </div>
   <%
     var stats = connected();
     if (stats && stats.count > 0) {
   %>
   <div class="connection-stats hidden-sm hidden-xs">
     <table>
-      <tr class="table-header"><td class="count-column"><%=stats.count%></td><td>Connections Since Restart</td></tr>
+      <tr class="table-header"><td class="count-column"><%=stats.count%></td><td>All Time Connections</td></tr>
       <% for (var j = 0; j < stats.games.length; j++) { %>
         <% var gameinfo = stats.games[j]; %>
         <% var addressParts = gameinfo.address.split(':'); %>

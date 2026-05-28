@@ -35,6 +35,21 @@ export function client(req, res) {
   });
 }
 
+export function gameOwnerQuestions(req, res) {
+  if (config.node.multiMud !== true) {
+    res.status(404).send("Not Found");
+    return;
+  }
+
+  res.render("game-owner-questions", {
+    "meta": {
+      "title": "Game Owner Questions - Modern Gaming Client",
+      "description": "How game owners can use this web-based client and request player host/IP metadata during login.",
+      "keywords": "mud client, game owner, dome-client-user, connection metadata"
+    }
+  });
+}
+
 export function editor(req, res) {
   const gameName = config.moo.name;
   const editorType = req.params.type;
