@@ -11,6 +11,12 @@ Dome Client is the maintained successor to the [Legacy Dome Client](https://gith
 
 It is a browser-based MUD client built with Node.js, Express, and Socket.io. It bridges browser WebSocket connections to traditional telnet-based MUD servers, so players can connect without installing anything.
 
+## Try It Live
+
+Sindome provides a hosted version of the client that can connect to any MUD. You are free to use this version to check out the features, or to connect to a game you like to play.
+
+[Sindome Public Client](https://pubclient.sindome.org)
+
 ## Single-MUD Quick Start
 ```
 git clone git@github.com:SindomeCorp/dome-client.git
