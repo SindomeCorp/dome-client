@@ -13,6 +13,7 @@ const sampleData = {
     socketUrlSSL: "",
     poweredBy: "",
     gameName: "",
+    isMultiMud: false,
     guestConnectCommand: "",
     shortenEnabled: false,
     decache: (v) => v,
@@ -38,7 +39,7 @@ const sampleData = {
     req: { query: {} },
     session: { user: { chars: [] } },
     mooName: "Anaconda",
-    connectAnywhere: false,
+    isMultiMud: false,
     mooHostname: "moo.sindome.org",
     mooPort: 5555,
     connected: () => ({ count: 0, games: [] }),
@@ -48,6 +49,9 @@ const sampleData = {
     decache: (v) => v,
     meta: { title: "", description: "", keywords: "" },
     shortenEnabled: false,
+  },
+  "views/game-owner-questions.ejs": {
+    meta: { title: "", description: "", keywords: "" },
   },
   "views/editors/verb.ejs": {
     req: { query: {} },

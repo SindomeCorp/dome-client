@@ -29,7 +29,7 @@ test("connect renders connect-as with metadata", () => {
   const { res, result } = createRes();
   screens.connect({}, res);
   assert.equal(result.template, "connect-as");
-  assert.equal(result.locals.connectAnywhere, false);
+  assert.equal(result.locals.isMultiMud, config.node.multiMud);
   const gameName = result.locals.mooName;
   assert.deepEqual(result.locals.meta, {
     title: "Connect - Modern Gaming Client",
@@ -44,7 +44,7 @@ test("connect enables multi-mud locals when configured", () => {
   const { res, result } = createRes();
   screens.connect({}, res);
   config.node.multiMud = original;
-  assert.equal(result.locals.connectAnywhere, true);
+  assert.equal(result.locals.isMultiMud, true);
   assert.equal(result.locals.mooHostname, config.moo.host);
   assert.equal(result.locals.mooPort, config.moo.port);
   assert.equal(typeof result.locals.connected, "function");
@@ -59,6 +59,40 @@ test("client renders client with metadata", () => {
     title: `${gameName}'s Modern Gaming Client`,
     description: `Someone playing ${gameName} via ${gameName}'s Modern Gaming Client`,
     keywords: `moo-client, telnet client, modern gaming client, play ${gameName.toLowerCase()}, text-based game, websocket-telnet`
+  });
+});
+
+test("gameOwnerQuestions returns 404 outside multi-mud mode", () => {
+  const original = config.node.multiMud;
+  config.node.multiMud = false;
+  const result = {};
+  const res = {
+    status: (code) => {
+      result.statusCode = code;
+      return {
+        send: (body) => {
+          result.body = body;
+        }
+      };
+    }
+  };
+  screens.gameOwnerQuestions({}, res);
+  config.node.multiMud = original;
+  assert.equal(result.statusCode, 404);
+  assert.equal(result.body, "Not Found");
+});
+
+test("gameOwnerQuestions renders page in multi-mud mode", () => {
+  const original = config.node.multiMud;
+  config.node.multiMud = true;
+  const { res, result } = createRes();
+  screens.gameOwnerQuestions({}, res);
+  config.node.multiMud = original;
+  assert.equal(result.template, "game-owner-questions");
+  assert.deepEqual(result.locals.meta, {
+    title: "Game Owner Questions - Modern Gaming Client",
+    description: "How game owners can use this web-based client and request player host/IP metadata during login.",
+    keywords: "mud client, game owner, dome-client-user, connection metadata"
   });
 });
 

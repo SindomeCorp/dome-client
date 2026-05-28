@@ -122,38 +122,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const passwordField = document.getElementById("moo-password");
   const hostnameField = document.getElementById("moo-hostname");
   const portField = document.getElementById("moo-port");
-  const chromeWarning = document.getElementById("chrome-performance-warning");
-  const chromeWarningClose = chromeWarning ? chromeWarning.querySelector(".close") : null;
-
-  if (hostnameField) {
+  if (hostnameField && !hostnameField.value) {
     hostnameField.value = gameHostname;
   }
-  if (portField) {
+  if (portField && !portField.value) {
     portField.value = gamePort;
-  }
-
-  if (chromeWarning && chromeWarningClose) {
-    const hideWarning = () => {
-      chromeWarning.classList.add("hidden");
-      (usernamePickerLabel || usernameField || document.querySelector(".btn-connect-guest"))?.focus();
-      document.removeEventListener("keydown", escWarning);
-    };
-    const escWarning = (e) => {
-      if (e.key === "Escape") {
-        hideWarning();
-      }
-    };
-    chromeWarningClose.addEventListener("click", (e) => {
-      e.preventDefault();
-      hideWarning();
-    });
-    chromeWarningClose.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        hideWarning();
-      }
-    });
-    document.addEventListener("keydown", escWarning);
   }
 
   if (usernameField && passwordField) {

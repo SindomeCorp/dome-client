@@ -1,5 +1,5 @@
 <div class="moo-login-page">
-  <h1><% if (connectAnywhere) { %>Play Now<% } else { %>Play <%=mooName%> Now<% } %></h1>
+  <h1><% if (isMultiMud) { %>Play Now<% } else { %>Play <%=mooName%> Now<% } %></h1>
 
   <%
   var errorMsg = null;
@@ -20,18 +20,7 @@
 
   <% } %>
 
-  <div id="chrome-performance-warning" class="hidden connect-error alert alert-danger" style="display: flow-root; margin-bottom: 0">
-    <button type="button" class="close">×</button>
-    <strong>Warning!</strong> The version of Google Chrome you are using has a serious issue causing TERRIBLE performance for our community. We recommend using the new Firefox until we overcome this issue. You can continue to use Google Chrome but your buffer will be limited (which will limit your ability to download logs).</br>
-    <div class="pull-right">Thank you and apologies!</div>
-  </div>
-  <script language="JavaScript">
-      var chromeVersion = navigator.appVersion.match(/Chrome\/(\d+)/); 
-      var badChrome = (chromeVersion != null && parseInt(chromeVersion[1]) >= 79);
-      if (badChrome) document.getElementById('chrome-performance-warning').setAttribute('class', 'connect-error alert alert-danger');
-  </script>
-
-  <% if (connectAnywhere) { %>
+  <% if (isMultiMud) { %>
   <input id="moo-username" type="hidden" name="username" value="">
   <input id="moo-password" type="hidden" name="password" value="">
   <div class="option-group connect-as-group">
@@ -46,13 +35,21 @@
       </div>
     </div>
   </div>
+  <div class="connection-stats hidden-sm hidden-xs">
+    <table>
+      <tr class="table-header"><td colspan="2">Game Owner? Got Questions?</td></tr>
+      <tr>
+        <td colspan="2">If you run a game and want the client to pass through IP/Host info for those connecting, see this quick guide: <a href="/game-owner-questions/" class="game-address">Game Owner Guide</a></td>
+      </tr>
+    </table>
+  </div>
   <%
     var stats = connected();
     if (stats && stats.count > 0) {
   %>
   <div class="connection-stats hidden-sm hidden-xs">
     <table>
-      <tr class="table-header"><td class="count-column"><%=stats.count%></td><td>Connections Since Restart</td></tr>
+      <tr class="table-header"><td class="count-column"><%=stats.count%></td><td>All Time Connections</td></tr>
       <% for (var j = 0; j < stats.games.length; j++) { %>
         <% var gameinfo = stats.games[j]; %>
         <% var addressParts = gameinfo.address.split(':'); %>

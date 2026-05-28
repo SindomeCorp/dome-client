@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-05-28
+
+### Added
+- Added a multi-MUD connect-page `Game Owner? Got Questions?` box between the connect form and connection stats, linking to a new game-owner guide page.
+- Added a multi-MUD-only `/game-owner-questions/` page explaining the `#$# dome-client-user` marker flow, the `@dome-client-user <hostname-or-ip>` response behavior, and where to find more details in the Dome Client GitHub repository.
+
+### Fixed
+- Removed the outdated Chrome performance warning from the connect splash page now that the prior Chrome-specific issue is no longer affecting users.
+- Removed legacy Chrome `weak browser` detection for scrollback defaults and now default to unlimited scrollback (`performanceBuffer=0`) across browsers.
+- Multi-MUD mode log downloads now use a consistent `dome-client` filename prefix instead of the configured game name.
+
 ## 2026-05-27
 
 ### Added

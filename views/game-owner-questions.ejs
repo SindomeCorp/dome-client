@@ -1,0 +1,28 @@
+<div class="moo-login-page">
+  <h1>Game Owner Questions</h1>
+
+  <div class="option-group connect-as-group">
+    <div class="moo-login-box">
+      <p>This is a web-based client for connecting to text-based games over the web.</p>
+      <p>It is open to all and can be used to connect to different games.</p>
+
+      <h3>How Host/IP Metadata Works</h3>
+      <p>Because players connect through this web client, your game server initially sees the web client connection rather than the player's direct address.</p>
+      <p>If your game needs the player's real host/IP metadata for policy or security checks, your game can send the exact marker <code>#$# dome-client-user</code> during connect/login flow.</p>
+      <p>When the client receives that marker, it sends back <code>@dome-client-user &lt;hostname-or-ip&gt;</code>.</p>
+      <p>The returned value is the best available client origin value: reverse-DNS hostname when available, otherwise IP.</p>
+      <p>You can then store or validate that value in your own game-specific login or anti-abuse flow.</p>
+
+      <h3>Implementation Notes</h3>
+      <p>At a high level, your game should emit the marker at the point where you want metadata, then handle the returned command in your own command/parser layer.</p>
+
+      <p>
+        More client details and setup notes are available in the repository:
+        <a href="https://github.com/SindomeCorp/dome-client" target="_blank" rel="noopener noreferrer">https://github.com/SindomeCorp/dome-client</a>
+      </p>
+
+      <a class="btn btn-primary pull-right" href="/">Back to Connect</a>
+      <div style="clear: both;"></div>
+    </div>
+  </div>
+</div>

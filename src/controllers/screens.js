@@ -7,7 +7,7 @@ export function connect(req, res) {
   const stats = isMultiMud ? connectedStats() : { count: 0, games: [] };
   res.render("connect-as", {
     mooName: config.moo.name,
-    connectAnywhere: isMultiMud,
+    isMultiMud,
     mooHostname: config.moo.host,
     mooPort: config.moo.port,
     connected: () => stats,
@@ -31,6 +31,21 @@ export function client(req, res) {
       "title": `${gameName}'s Modern Gaming Client`,
       "description": `Someone playing ${gameName} via ${gameName}'s Modern Gaming Client`,
       "keywords": `moo-client, telnet client, modern gaming client, play ${gameName.toLowerCase()}, text-based game, websocket-telnet`
+    }
+  });
+}
+
+export function gameOwnerQuestions(req, res) {
+  if (config.node.multiMud !== true) {
+    res.status(404).send("Not Found");
+    return;
+  }
+
+  res.render("game-owner-questions", {
+    "meta": {
+      "title": "Game Owner Questions - Modern Gaming Client",
+      "description": "How game owners can use this web-based client and request player host/IP metadata during login.",
+      "keywords": "mud client, game owner, dome-client-user, connection metadata"
     }
   });
 }
