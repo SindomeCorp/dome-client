@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Removed the outdated Chrome performance warning from the connect splash page now that the prior Chrome-specific issue is no longer affecting users.
 - Removed legacy Chrome `weak browser` detection for scrollback defaults and now default to unlimited scrollback (`performanceBuffer=0`) across browsers.
+- Multi-MUD mode log downloads now use a consistent `dome-client` filename prefix instead of the configured game name.
 
 ## 2026-05-27
 

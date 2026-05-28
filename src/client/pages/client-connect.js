@@ -122,10 +122,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const passwordField = document.getElementById("moo-password");
   const hostnameField = document.getElementById("moo-hostname");
   const portField = document.getElementById("moo-port");
-  if (hostnameField) {
+  if (hostnameField && !hostnameField.value) {
     hostnameField.value = gameHostname;
   }
-  if (portField) {
+  if (portField && !portField.value) {
     portField.value = gamePort;
   }
 

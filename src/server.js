@@ -111,6 +111,7 @@ app.use(function(req, res, next) {
   res.locals.poweredBy = config.node.poweredBy;
   res.locals.gameName = config.moo.name;
   res.locals.guestConnectCommand = config.guest.connectCommand;
+  res.locals.isMultiMud = config.node.multiMud === true;
   res.locals.shortenEnabled = config.shorten.enabled;
   res.locals.logExportCss = getLogExportCss();
   res.locals.showReporter = function(req) {

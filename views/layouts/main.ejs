@@ -17,6 +17,7 @@
       var ip = "<%=req.ip%>";
       var poweredBy = "<%=poweredBy%>";
       var gameName = "<%=gameName%>";
+      var isMultiMud = <%= isMultiMud ? "true" : "false" %>;
       var guestConnectCommand = "<%=guestConnectCommand%>";
       var shortenEnabled = <%= shortenEnabled ? "true" : "false" %>;
       window.__LOG_EXPORT_CSS__ = <%- JSON.stringify(typeof logExportCss === "string" ? logExportCss : "") %>;

@@ -42,7 +42,8 @@ dome.setupButtons = function() {
         warnUnsupported();
         return;
       }
-      const baseName = String(globalThis.gameName || "game")
+      const rawBaseName = globalThis.isMultiMud ? "dome-client" : (globalThis.gameName || "game");
+      const baseName = String(rawBaseName)
         .trim()
         .replace(/\s+/g, "-")
         .replace(/[^a-zA-Z0-9._-]/g, "")

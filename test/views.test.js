@@ -13,6 +13,7 @@ const sampleData = {
     socketUrlSSL: "",
     poweredBy: "",
     gameName: "",
+    isMultiMud: false,
     guestConnectCommand: "",
     shortenEnabled: false,
     decache: (v) => v,

@@ -22,7 +22,8 @@ const setupWindow = async (t) => {
     window: globalThis.window,
     document: globalThis.document,
     URL: globalThis.URL,
-    navigator: globalThis.navigator
+    navigator: globalThis.navigator,
+    isMultiMud: globalThis.isMultiMud
   };
   globalThis.window = window;
   globalThis.document = window.document;
@@ -41,6 +42,7 @@ const setupWindow = async (t) => {
     if (navigatorAssigned) {
       globalThis.navigator = orig.navigator;
     }
+    globalThis.isMultiMud = orig.isMultiMud;
   });
   await import("../../src/client/u-buttons.js");
   return { window, dome };
@@ -144,6 +146,7 @@ test("options overlay closes on escape key", async () => {
 
 test("save button downloads HTML log", async (t) => {
   const { window, dome } = await setupWindow(t);
+  globalThis.isMultiMud = false;
   window.__LOG_EXPORT_CSS__ = "body { background: #000; }";
   const btn = window.document.createElement("button");
   window.document.body.appendChild(btn);
@@ -191,6 +194,35 @@ test("save button downloads HTML log", async (t) => {
 
   assert.equal(revokeObjectURL.mock.calls[0]?.arguments[0], "blob:mock");
   assert.equal(btn.disabled, false);
+});
+
+test("save button uses dome-client prefix in multi-mud mode", async (t) => {
+  const { window, dome } = await setupWindow(t);
+  globalThis.isMultiMud = true;
+  const btn = window.document.createElement("button");
+  window.document.body.appendChild(btn);
+  dome.saveButton = btn;
+  dome.buffer.innerHTML = "<p>log</p>";
+
+  window.URL.createObjectURL = () => "blob:mock";
+  window.URL.revokeObjectURL = () => {};
+
+  const appendedAnchors = [];
+  const originalAppend = window.document.body.appendChild;
+  t.mock.method(window.document.body, "appendChild", function(element) {
+    if (element.tagName === "A") {
+      t.mock.method(element, "click");
+      appendedAnchors.push(element);
+    }
+    return originalAppend.call(this, element);
+  });
+
+  dome.setupButtons();
+  btn.click();
+
+  assert.equal(appendedAnchors.length, 1);
+  const anchor = appendedAnchors[0];
+  assert.ok(anchor.download.startsWith("dome-client.log."));
 });
 
 test("save button supports legacy linked stylesheet log mode", async (t) => {
