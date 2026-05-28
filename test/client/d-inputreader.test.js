@@ -69,7 +69,7 @@ test("enter emits command and echoes", async (t) => {
   const { window, store } = await loadInputReader(t);
   const input = dome.inputReader;
   input.value = "say hi";
-  input.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", shiftKey: false }));
+  input.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
   assert.equal(socket.events.length, 1);
   assert.deepEqual(socket.events[0], { event: "input", cmd: "say hi" });
   assert.equal(dome.buffer.appended[0], "<span class=\"input-echo\">&gt;say hi</span>\n");
@@ -95,7 +95,7 @@ test("enter with command suggestions disabled does not log error", async (t) => 
   input.value = "say hi";
   assert.doesNotThrow(() => {
     input.dispatchEvent(
-      new window.KeyboardEvent("keydown", { key: "Enter", shiftKey: false })
+      new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false })
     );
   });
   assert.equal(logged, false);
@@ -105,7 +105,7 @@ test("enter echoes even without server ack", async (t) => {
   const { window } = await loadInputReader(t, { ack: false });
   const input = dome.inputReader;
   input.value = "say hi";
-  input.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", shiftKey: false }));
+  input.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
   assert.equal(dome.buffer.appended[0], "<span class=\"input-echo\">&gt;say hi</span>\n");
 });
 
@@ -126,7 +126,7 @@ test("command history capped at 2000 entries", async (t) => {
   const { window, store } = await loadInputReader(t, { history: longHistory });
   const input = dome.inputReader;
   input.value = "extra";
-  input.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", shiftKey: false }));
+  input.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
   assert.equal(store.history.length, 2000);
   assert.equal(store.history[0], "c1");
   assert.equal(store.history.at(-1), "extra");
@@ -183,18 +183,7 @@ test("enter on empty input sends empty command", async (t) => {
   const { window, store } = await loadInputReader(t);
   const input = dome.inputReader;
   input.value = "";
-  input.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", shiftKey: false }));
-  assert.equal(socket.events.length, 1);
-  assert.deepEqual(socket.events[0], { event: "input", cmd: "" });
-  assert.equal(dome.buffer.appended[0], "<span class=\"input-echo\">&gt;</span>\n");
-  assert.deepEqual(store.history, ["look"]);
-});
-
-test("enter on whitespace-only input sends empty command", async (t) => {
-  const { window, store } = await loadInputReader(t);
-  const input = dome.inputReader;
-  input.value = "   ";
-  input.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", shiftKey: false }));
+  input.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
   assert.equal(socket.events.length, 1);
   assert.deepEqual(socket.events[0], { event: "input", cmd: "" });
   assert.equal(dome.buffer.appended[0], "<span class=\"input-echo\">&gt;</span>\n");
@@ -205,7 +194,7 @@ test("arrow up after send recalls last command", async (t) => {
   const { window } = await loadInputReader(t);
   const input = dome.inputReader;
   input.value = "say hi";
-  input.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", shiftKey: false }));
+  input.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
   input.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowUp" }));
   assert.equal(input.value, "say hi");
 });

@@ -341,6 +341,11 @@ dome.setupInputReader = () => {
         event.preventDefault();
         return false;
       }
+    });
+    inputReader.addEventListener("keypress", (event) => {
+      if ( event.key === "Backspace" ) {
+
+      }
       if ( event.key === "Enter" && !event.shiftKey ) {
         if (
           dome.autoComplete &&
@@ -370,13 +375,7 @@ dome.setupInputReader = () => {
         store.put( "my-input-buffer", commandBuffer ); // localStore deals in strings, this won't work as an array Chad. - Future Chad
         inputReader.value = "";
         return false;
-      }
-    });
-    inputReader.addEventListener("keypress", (event) => {
-      if ( event.key === "Backspace" ) {
-
-      }
-      if ( event.key !== "Enter" ) {
+      } else {
         setTimeout( () => {
           lastInput = inputReader.value;
         }, 5 );
