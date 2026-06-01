@@ -458,3 +458,338 @@ test("integration: multi-mud handshake uses query host/port, falls back on inval
   assert.ok(writes.some((line) => line === "@dome-client-user resolved.example.test\r\n"));
   t.mock.restoreAll();
 });
+
+test("integration: socketProxied uses x-forwarded-for for dome-client-user marker flow", async (t) => {
+  const moduleMock = typeof t.mock.module === "function"
+    ? t.mock.module.bind(t.mock)
+    : t.mock.import.bind(t.mock);
+
+  const writes = [];
+  const conn = new EventEmitter();
+  conn.write = (data, _encoding, cb) => {
+    writes.push(String(data));
+    if (typeof cb === "function") {
+      cb();
+    }
+    return true;
+  };
+  conn.end = () => {};
+
+  moduleMock("node:net", {
+    namedExports: {
+      connect() {
+        process.nextTick(() => conn.emit("connect"));
+        return conn;
+      }
+    }
+  });
+  moduleMock("node:dns", {
+    namedExports: {
+      promises: {
+        reverse: async () => []
+      }
+    }
+  });
+  moduleMock("../../src/config/index.js", {
+    defaultExport: {
+      node: { socketProxied: true, multiMud: false, poweredBy: "Dome Client" },
+      moo: { host: "moo.test", port: 5555 },
+      shorten: { enabled: false },
+    }
+  });
+  moduleMock("../../src/logger.js", {
+    namedExports: {
+      named: () => ({ info() {}, warn() {}, error() {}, debug() {} }),
+      inspect() {}
+    }
+  });
+
+  const socketController = await import(`../../src/controllers/socket.js?proxied-ip=${Date.now()}`);
+  const { socket } = createSocket();
+  socket.handshake.address = "127.0.0.1";
+  socket.handshake.headers["x-forwarded-for"] = "203.0.113.7";
+  await socketController.connection(socket);
+  conn.emit("data", Buffer.from("#$# dome-client-user"));
+
+  assert.ok(writes.includes("@dome-client-user 203.0.113.7\r\n"));
+  t.mock.restoreAll();
+});
+
+test("integration: moo connect failure emits socket error event", async (t) => {
+  const moduleMock = typeof t.mock.module === "function"
+    ? t.mock.module.bind(t.mock)
+    : t.mock.import.bind(t.mock);
+
+  const config = {
+    node: {
+      mode: "test",
+      port: 0,
+      socketUrl: "",
+      socketUrlSSL: "",
+      socketProxied: false,
+      multiMud: false,
+      poweredBy: "Dome Client",
+      session: { secret: "integration-test-secret" }
+    },
+    moo: { name: "Integration MUD", host: "moo.test", port: 5555 },
+    website: { signupUrl: "" },
+    guest: { connectCommand: "connect guest" },
+    autocomplete: { enabled: false, p: "data/autocomplete/player.txt" },
+    editor: {
+      localSaveNodeMaxLines: 200,
+      localSaveNodeAdminMaxLines: 800,
+      localSaveNoteMaxLines: 20,
+      ideEditOpenParent: false,
+      ideVmsNoteEnabled: false
+    },
+    shorten: { enabled: false, host: "localhost", port: 5549, path: "/interface/v1/shorten/", domain: "", minimum: 50 },
+    remoteAuth: { enabled: false, host: "http://remoteauth.test", path: "/session/authenticate/", remoteSecret: "sekret" },
+    status: { serviceUrl: "" }
+  };
+
+  moduleMock("../../src/config/index.js", { defaultExport: config });
+  moduleMock("../../src/logger.js", {
+    namedExports: {
+      named: () => ({ info() {}, warn() {}, error() {}, debug() {} }),
+      inspect() {}
+    }
+  });
+  moduleMock("node:net", {
+    namedExports: {
+      connect() {
+        const failConn = new EventEmitter();
+        failConn.write = () => true;
+        failConn.end = () => {};
+        process.nextTick(() => failConn.emit("error", new Error("connect fail")));
+        return failConn;
+      }
+    }
+  });
+  moduleMock("node:dns", {
+    namedExports: {
+      promises: { reverse: async () => [] }
+    }
+  });
+  moduleMock("../../src/services/shorten.js", {
+    namedExports: { urls: async (text) => text }
+  });
+
+  const socketController = await import(`../../src/controllers/socket.js?moo-fail=${Date.now()}`);
+  const { socket, events } = createSocket();
+  await socketController.connection(socket);
+  const errorEvent = events.find((entry) => entry[0] === "error");
+  assert.ok(errorEvent);
+  assert.match(String(errorEvent[1]), /connect fail/i);
+  t.mock.restoreAll();
+});
+
+test("integration: null socket input emits no input error and does not write to moo", async (t) => {
+  const moduleMock = typeof t.mock.module === "function"
+    ? t.mock.module.bind(t.mock)
+    : t.mock.import.bind(t.mock);
+  const moo = new EventEmitter();
+  const writes = [];
+  moo.write = (data, _encoding, cb) => {
+    writes.push(String(data));
+    if (typeof cb === "function") {
+      cb();
+    }
+    return true;
+  };
+  moo.end = () => {};
+
+  moduleMock("node:net", {
+    namedExports: {
+      connect() {
+        process.nextTick(() => moo.emit("connect"));
+        return moo;
+      }
+    }
+  });
+  moduleMock("node:dns", {
+    namedExports: {
+      promises: { reverse: async () => [] }
+    }
+  });
+  moduleMock("../../src/config/index.js", {
+    defaultExport: {
+      node: { socketProxied: false, multiMud: false, poweredBy: "Dome Client" },
+      moo: { host: "moo.test", port: 5555 },
+      shorten: { enabled: false },
+    }
+  });
+  moduleMock("../../src/logger.js", {
+    namedExports: {
+      named: () => ({ info() {}, warn() {}, error() {}, debug() {} }),
+      inspect() {}
+    }
+  });
+
+  const socketController = await import(`../../src/controllers/socket.js?null-input=${Date.now()}`);
+  const { socket, events } = createSocket();
+  await socketController.connection(socket);
+  socket.emit("input", null);
+
+  const errorEvent = events.find((entry) => entry[0] === "error");
+  assert.ok(errorEvent);
+  assert.match(String(errorEvent[1]?.message || errorEvent[1]), /no input/i);
+  assert.equal(writes.length, 0);
+  t.mock.restoreAll();
+});
+
+test("integration: moo end event emits a single disconnected event", async (t) => {
+  const moduleMock = typeof t.mock.module === "function"
+    ? t.mock.module.bind(t.mock)
+    : t.mock.import.bind(t.mock);
+
+  const moo = new EventEmitter();
+  moo.write = (_data, _encoding, cb) => {
+    if (typeof cb === "function") {
+      cb();
+    }
+    return true;
+  };
+  moo.end = () => {};
+
+  moduleMock("node:net", {
+    namedExports: {
+      connect() {
+        process.nextTick(() => moo.emit("connect"));
+        return moo;
+      }
+    }
+  });
+  moduleMock("node:dns", {
+    namedExports: {
+      promises: { reverse: async () => [] }
+    }
+  });
+  moduleMock("../../src/config/index.js", {
+    defaultExport: {
+      node: { socketProxied: false, multiMud: false, poweredBy: "Dome Client" },
+      moo: { host: "moo.test", port: 5555 },
+      shorten: { enabled: false },
+    }
+  });
+  moduleMock("../../src/logger.js", {
+    namedExports: {
+      named: () => ({ info() {}, warn() {}, error() {}, debug() {} }),
+      inspect() {}
+    }
+  });
+
+  const socketController = await import(`../../src/controllers/socket.js?moo-end=${Date.now()}`);
+  const { socket, events } = createSocket();
+  await socketController.connection(socket);
+  moo.emit("end");
+  moo.emit("end");
+
+  const disconnectedEvents = events.filter((entry) => entry[0] === "disconnected");
+  assert.equal(disconnectedEvents.length, 1);
+  t.mock.restoreAll();
+});
+
+test("integration: moo runtime error after connect emits socket error", async (t) => {
+  const moduleMock = typeof t.mock.module === "function"
+    ? t.mock.module.bind(t.mock)
+    : t.mock.import.bind(t.mock);
+
+  const moo = new EventEmitter();
+  moo.write = (_data, _encoding, cb) => {
+    if (typeof cb === "function") {
+      cb();
+    }
+    return true;
+  };
+  moo.end = () => {};
+
+  moduleMock("node:net", {
+    namedExports: {
+      connect() {
+        process.nextTick(() => moo.emit("connect"));
+        return moo;
+      }
+    }
+  });
+  moduleMock("node:dns", {
+    namedExports: {
+      promises: { reverse: async () => [] }
+    }
+  });
+  moduleMock("../../src/config/index.js", {
+    defaultExport: {
+      node: { socketProxied: false, multiMud: false, poweredBy: "Dome Client" },
+      moo: { host: "moo.test", port: 5555 },
+      shorten: { enabled: false },
+    }
+  });
+  moduleMock("../../src/logger.js", {
+    namedExports: {
+      named: () => ({ info() {}, warn() {}, error() {}, debug() {} }),
+      inspect() {}
+    }
+  });
+
+  const socketController = await import(`../../src/controllers/socket.js?moo-runtime-error=${Date.now()}`);
+  const { socket, events } = createSocket();
+  await socketController.connection(socket);
+  moo.emit("error", new Error("runtime moo failure"));
+
+  const errEvent = events.find((entry) => entry[0] === "error");
+  assert.ok(errEvent);
+  assert.match(String(errEvent[1]?.message || errEvent[1]), /runtime moo failure/i);
+  t.mock.restoreAll();
+});
+
+test("integration: socketProxied handles x-forwarded-for proxy chains consistently", async (t) => {
+  const moduleMock = typeof t.mock.module === "function"
+    ? t.mock.module.bind(t.mock)
+    : t.mock.import.bind(t.mock);
+
+  const writes = [];
+  const moo = new EventEmitter();
+  moo.write = (data, _encoding, cb) => {
+    writes.push(String(data));
+    if (typeof cb === "function") {
+      cb();
+    }
+    return true;
+  };
+  moo.end = () => {};
+
+  moduleMock("node:net", {
+    namedExports: {
+      connect() {
+        process.nextTick(() => moo.emit("connect"));
+        return moo;
+      }
+    }
+  });
+  moduleMock("node:dns", {
+    namedExports: {
+      promises: { reverse: async () => [] }
+    }
+  });
+  moduleMock("../../src/config/index.js", {
+    defaultExport: {
+      node: { socketProxied: true, multiMud: false, poweredBy: "Dome Client" },
+      moo: { host: "moo.test", port: 5555 },
+      shorten: { enabled: false },
+    }
+  });
+  moduleMock("../../src/logger.js", {
+    namedExports: {
+      named: () => ({ info() {}, warn() {}, error() {}, debug() {} }),
+      inspect() {}
+    }
+  });
+
+  const socketController = await import(`../../src/controllers/socket.js?proxy-chain=${Date.now()}`);
+  const { socket } = createSocket();
+  socket.handshake.headers["x-forwarded-for"] = "203.0.113.9, 10.0.0.4, 10.0.0.5";
+  await socketController.connection(socket);
+  moo.emit("data", Buffer.from("#$# dome-client-user"));
+
+  assert.ok(writes.includes("@dome-client-user 203.0.113.9, 10.0.0.4, 10.0.0.5\r\n"));
+  t.mock.restoreAll();
+});

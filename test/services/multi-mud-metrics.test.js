@@ -4,12 +4,14 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 test("multi-mud metrics record and persist game counts", async () => {
-  const metricsPath = path.join(process.cwd(), "data", "multi-mud-metrics.json");
+  const metricsPath = path.join(process.cwd(), "data", `multi-mud-metrics.test.${process.pid}.json`);
   const tempPath = `${metricsPath}.tmp`;
   await fs.rm(metricsPath, { force: true });
   await fs.rm(tempPath, { force: true });
 
-  const svc = await import(`../../src/services/multi-mud-metrics.js?cache=${Math.random()}`);
+  const svc = await import("../../src/services/multi-mud-metrics.js");
+  svc.setMetricsPathForTests(metricsPath);
+  svc.resetMetricsForTests();
   svc.recordConnection("moo.sindome.org", 5555);
   svc.recordConnection("moo.sindome.org", 5555);
   svc.recordConnection("example.org", 7777);
@@ -29,5 +31,6 @@ test("multi-mud metrics record and persist game counts", async () => {
 
   await fs.rm(metricsPath, { force: true });
   await fs.rm(tempPath, { force: true });
+  svc.setMetricsPathForTests();
+  svc.resetMetricsForTests();
 });
-

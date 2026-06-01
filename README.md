@@ -226,19 +226,7 @@ npm run lint
 
 ## Testing
 
-Run the test suite with Node's built-in test runner:
-
-```bash
-npm test
-```
-
-To enforce 80% line and function coverage with [c8](https://github.com/bcoe/c8):
-
-```bash
-npm run coverage
-```
-
-The test suite also renders each EJS view to verify templates compile. If you add a template that requires locals, extend the sample-data map in [`test/views.test.js`](test/views.test.js) with representative values.
+See the dedicated testing guide: [docs/TESTING.md](docs/TESTING.md).
 
 ## Contributing
 

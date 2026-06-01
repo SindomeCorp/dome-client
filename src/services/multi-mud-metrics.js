@@ -5,7 +5,8 @@ import { named } from "../logger.js";
 
 const logger = named("services/multi-mud-metrics");
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const metricsPath = path.join(__dirname, "..", "..", "data", "multi-mud-metrics.json");
+const defaultMetricsPath = path.join(__dirname, "..", "..", "data", "multi-mud-metrics.json");
+let metricsPath = defaultMetricsPath;
 
 const metrics = {
   count: 0,
@@ -67,7 +68,12 @@ function loadMetrics() {
     }
     metrics.games = normalizedGames;
   } catch (err) {
-    logger.warn("Unable to load multi-mud metrics from disk", err);
+    const warn = typeof logger.warn === "function"
+      ? logger.warn.bind(logger)
+      : typeof logger.error === "function"
+        ? logger.error.bind(logger)
+        : () => {};
+    warn("Unable to load multi-mud metrics from disk", err);
   }
 }
 
@@ -81,7 +87,12 @@ function saveMetrics() {
     fs.writeFileSync(tempPath, JSON.stringify(metrics, null, 2), "utf8");
     fs.renameSync(tempPath, metricsPath);
   } catch (err) {
-    logger.warn("Unable to persist multi-mud metrics to disk", err);
+    const warn = typeof logger.warn === "function"
+      ? logger.warn.bind(logger)
+      : typeof logger.error === "function"
+        ? logger.error.bind(logger)
+        : () => {};
+    warn("Unable to persist multi-mud metrics to disk", err);
   }
 }
 
@@ -107,3 +118,14 @@ export function connectedStats() {
   };
 }
 
+// Test hook for integration/unit isolation.
+export function resetMetricsForTests() {
+  metrics.count = 0;
+  metrics.games = {};
+  loaded = false;
+}
+
+export function setMetricsPathForTests(nextPath) {
+  metricsPath = nextPath || defaultMetricsPath;
+  resetMetricsForTests();
+}

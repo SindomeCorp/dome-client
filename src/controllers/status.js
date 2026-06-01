@@ -111,9 +111,19 @@ async function healthCheck() {
   return lastStatus;
 }
 
+export async function refreshStatus() {
+  return healthCheck();
+}
+
 if (STATUS_ENABLED) {
-  setInterval(healthCheck, CHECK_INTERVAL);
-  setTimeout(healthCheck, 1000);
+  const intervalHandle = setInterval(healthCheck, CHECK_INTERVAL);
+  const timeoutHandle = setTimeout(healthCheck, 1000);
+  if (typeof intervalHandle?.unref === "function") {
+    intervalHandle.unref();
+  }
+  if (typeof timeoutHandle?.unref === "function") {
+    timeoutHandle.unref();
+  }
 }
 
 export function get(req, res) {

@@ -777,6 +777,24 @@ test("integration: status endpoint maps invalid-json upstream response to degrad
   assert.match(res.body.message || "", /status service/i);
 });
 
+test("integration: status endpoint maps timeout-like upstream failure to degraded timeout message", async (t) => {
+  nock.disableNetConnect();
+  nock.enableNetConnect("127.0.0.1");
+
+  nock("http://status.test")
+    .persist()
+    .get("/moo/status/")
+    .replyWithError({ code: "ETIMEOUT", message: "status timed out" });
+
+  const { baseUrl } = await bootServer(t);
+  const { refreshStatus } = await import("../../src/controllers/status.js");
+  const http = request(baseUrl);
+  await refreshStatus();
+  const res = await http.get("/moo/status/").expect(200);
+  assert.equal(res.body.state, "SITE_DOWN");
+  assert.match(String(res.body.message || ""), /status service/i);
+});
+
 test("integration: status endpoint transitions ok to degraded and recovers to ok", async (t) => {
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
@@ -1067,6 +1085,87 @@ test("integration: website login malformed upstream responses set session errors
   assert.equal(malformedUser.headers.location, "/");
   const malformedHome = await agent.get("/").expect(200);
   assert.match(malformedHome.text, /Connect/i);
+});
+
+test("integration: failed auth then successful auth in same session clears error and shows play-as", async (t) => {
+  nock.disableNetConnect();
+  nock.enableNetConnect("127.0.0.1");
+
+  nock("http://remoteauth.test")
+    .post("/session/authenticate/")
+    .reply(200, { status: "error", message: "Invalid credentials" });
+  nock("http://remoteauth.test")
+    .post("/session/authenticate/")
+    .reply(200, { status: "ok", user: { perms: [1], chars: [{ name: "hero" }] } });
+  nock("http://status.test")
+    .persist()
+    .get("/moo/status/")
+    .reply(200, {
+      message: "moo ok",
+      cpu: 0,
+      memory: 0,
+      checked: Date.now(),
+      users: 0,
+      interval: 15,
+      state: "OK"
+    }, { "Content-Type": "application/json" });
+
+  const { baseUrl } = await bootServer(t);
+  const agent = request.agent(baseUrl);
+
+  await agent
+    .post("/website-login/")
+    .type("form")
+    .send({ email: "player@test", pass: "wrong-pass" })
+    .expect(302);
+  const failedHome = await agent.get("/").expect(200);
+  assert.match(failedHome.text, /Invalid credentials/i);
+
+  await agent
+    .post("/website-login/")
+    .type("form")
+    .send({ email: "player@test", pass: "secret" })
+    .expect(302);
+  const successHome = await agent.get("/").expect(200);
+  assert.match(successHome.text, /Play As/i);
+  assert.doesNotMatch(successHome.text, /Invalid credentials/i);
+});
+
+test("integration: concurrent failed and successful auth in one session ends in deterministic final state", async (t) => {
+  nock.disableNetConnect();
+  nock.enableNetConnect("127.0.0.1");
+
+  nock("http://remoteauth.test")
+    .post("/session/authenticate/")
+    .delay(50)
+    .reply(200, { status: "error", message: "Invalid credentials" });
+  nock("http://remoteauth.test")
+    .post("/session/authenticate/")
+    .delay(120)
+    .reply(200, { status: "ok", user: { perms: [1], chars: [{ name: "hero" }] } });
+  nock("http://status.test")
+    .persist()
+    .get("/moo/status/")
+    .reply(200, {
+      message: "moo ok",
+      cpu: 0,
+      memory: 0,
+      checked: Date.now(),
+      users: 0,
+      interval: 15,
+      state: "OK"
+    }, { "Content-Type": "application/json" });
+
+  const { baseUrl } = await bootServer(t);
+  const agent = request.agent(baseUrl);
+
+  await Promise.all([
+    agent.post("/website-login/").type("form").send({ email: "player@test", pass: "wrong-pass" }).expect(302),
+    agent.post("/website-login/").type("form").send({ email: "player@test", pass: "secret" }).expect(302)
+  ]);
+
+  const home = await agent.get("/").expect(200);
+  assert.match(home.text, /Play As/i);
 });
 
 test("integration: website login session persists across socket connect-disconnect flow", async (t) => {
