@@ -1,0 +1,21 @@
+const DEFAULT_LOCAL_SAVE_NODE_MAX_LINES = 200;
+const DEFAULT_LOCAL_SAVE_NODE_ADMIN_MAX_LINES = 800;
+const DEFAULT_LOCAL_SAVE_NOTE_MAX_LINES = 20;
+
+export function useIdeConfig() {
+  const rootEl = document.getElementById("root");
+  return {
+    editorTheme: rootEl?.getAttribute("data-editor-theme") || "twilight",
+    localSaveNodeMaxLines:
+      Number(rootEl?.getAttribute("data-local-save-node-max-lines")) ||
+      DEFAULT_LOCAL_SAVE_NODE_MAX_LINES,
+    localSaveNodeAdminMaxLines:
+      Number(rootEl?.getAttribute("data-local-save-node-admin-max-lines")) ||
+      DEFAULT_LOCAL_SAVE_NODE_ADMIN_MAX_LINES,
+    localSaveNoteMaxLines:
+      Number(rootEl?.getAttribute("data-local-save-note-max-lines")) ||
+      DEFAULT_LOCAL_SAVE_NOTE_MAX_LINES,
+    ideEditOpenParent: rootEl?.getAttribute("data-ide-edit-open-parent") === "true",
+    ideVmsNoteEnabled: rootEl?.getAttribute("data-ide-vms-note-enabled") === "true"
+  };
+}

@@ -1,28 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
-import ace from "ace-builds/src-noconflict/ace.js";
-import "ace-builds/src-noconflict/theme-tomorrow_night_blue.js";
-import "../ace/keybinding-vim.js";
-import "../ace/mode-moo.js";
-import "ace-builds/src-noconflict/mode-text.js";
-import { getSocket } from "../s-editor.js";
 import { parseCommand, getCommandLabel } from "../command-utils.js";
-import { getPreferredFont, getFontFamily } from "../ace/fonts.js";
+import { getPreferredFont } from "../ace/fonts.js";
 import {
   PROPERTY_EDIT_COMMANDS,
-  getDefinitionTargetAtPosition,
-  getEditingObjectId,
-  parseObjectPropertyTarget,
-  resolveThisReference,
-  splitReferenceTarget
+  parseObjectPropertyTarget
 } from "./editor-ide/targets.js";
 import {
   formatEditPropertyCommand,
   formatEditVerbCommand,
-  formatOpenReferenceCommand,
   formatPropertyListCommand,
-  formatPropertyOverlayCommand,
   formatVerbListCommand,
-  formatVerbOverlayCommand,
   getSaveMessages
 } from "./editor-ide/protocol.js";
 import {
@@ -42,28 +29,23 @@ import {
   createPropertyBrowserTab,
   pinBrowserTabs
 } from "./editor-ide/tabs.js";
+import { emitInput } from "./editor-ide/socketAdapter.js";
+import { useAceEditors } from "./editor-ide/useAceEditors.js";
+import { useIdeConfig } from "./editor-ide/useIdeConfig.js";
+import { useIdeMessages } from "./editor-ide/useIdeMessages.js";
+import { usePersistentPreference } from "./editor-ide/usePersistentPreference.js";
 
-ace.config.set("basePath", "/js/ace");
-
-const DEFAULT_LOCAL_SAVE_NODE_MAX_LINES = 200;
-const DEFAULT_LOCAL_SAVE_NODE_ADMIN_MAX_LINES = 800;
-const DEFAULT_LOCAL_SAVE_NOTE_MAX_LINES = 20;
 const EMPTY_VMS_PROMPT_STATE = { open: false, tabId: null, value: "" };
 
 export default function EditorIDE() {
-  const rootEl = document.getElementById("root");
-  const editorTheme = rootEl.getAttribute("data-editor-theme") || "twilight";
-  const localSaveNodeMaxLines =
-    Number(rootEl.getAttribute("data-local-save-node-max-lines")) ||
-    DEFAULT_LOCAL_SAVE_NODE_MAX_LINES;
-  const localSaveNodeAdminMaxLines =
-    Number(rootEl.getAttribute("data-local-save-node-admin-max-lines")) ||
-    DEFAULT_LOCAL_SAVE_NODE_ADMIN_MAX_LINES;
-  const localSaveNoteMaxLines =
-    Number(rootEl.getAttribute("data-local-save-note-max-lines")) ||
-    DEFAULT_LOCAL_SAVE_NOTE_MAX_LINES;
-  const ideEditOpenParent = rootEl.getAttribute("data-ide-edit-open-parent") === "true";
-  const ideVmsNoteEnabled = rootEl.getAttribute("data-ide-vms-note-enabled") === "true";
+  const {
+    editorTheme,
+    ideEditOpenParent,
+    ideVmsNoteEnabled,
+    localSaveNodeAdminMaxLines,
+    localSaveNodeMaxLines,
+    localSaveNoteMaxLines
+  } = useIdeConfig();
 
   const [tabs, setTabs] = useState([]);
   const [objectGraph, setObjectGraph] = useState({});
@@ -72,19 +54,54 @@ export default function EditorIDE() {
   const [collapsedProperties, setCollapsedProperties] = useState({});
   const [propertyObjectMeta, setPropertyObjectMeta] = useState({});
   const [active, setActive] = useState(null);
-  const [darkMode, setDarkMode] = useState(localStorage.getItem("ide-dark") === "true");
-  const [orientation, setOrientation] = useState(localStorage.getItem("ide-orientation") || "top");
+  const [darkMode, setDarkMode] = usePersistentPreference(
+    "ide-dark",
+    false,
+    (value) => value === "true"
+  );
+  const [orientation, setOrientation] = usePersistentPreference("ide-orientation", "top");
   const [vimMode, setVimMode] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [vmsPrompt, setVmsPrompt] = useState(EMPTY_VMS_PROMPT_STATE);
   const [editorFont, setEditorFont] = useState(getPreferredFont());
   const [wordWrap, setWordWrap] = useState(false);
   const [hoverOverlay, setHoverOverlay] = useState(null);
-  const editors = useRef({});
   const recentTabIds = useRef([]);
   const overlayCache = useRef({ verb: new Map(), prop: new Map() });
   const pendingOverlayKey = useRef("");
   const vmsPromptInputRef = useRef(null);
+  const {
+    destroyEditor,
+    getEditorValue,
+    resizeActiveEditor,
+    setEditorRef
+  } = useAceEditors({
+    active,
+    editorFont,
+    editorTheme,
+    ideEditOpenParent,
+    lineLimits: {
+      localSaveNodeAdminMaxLines,
+      localSaveNodeMaxLines,
+      localSaveNoteMaxLines
+    },
+    onContentChange: (id, val) => {
+      setTabs((ts) =>
+        ts.map((t) =>
+          t.id === id ? { ...t, content: val, dirty: val !== t.savedContent } : t
+        )
+      );
+    },
+    onHoverOverlay: setHoverOverlay,
+    onHoverOverlayClear: (id) => {
+      setHoverOverlay((state) => (state && state.tabId === id ? null : state));
+    },
+    orientation,
+    overlayCache,
+    pendingOverlayKey,
+    vimMode,
+    wordWrap
+  });
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -221,9 +238,7 @@ export default function EditorIDE() {
       const existing = prev.find((t) => t.name === name);
       if (existing) {
         setActive(existing.id);
-        const socket = getSocket();
-        socket?.emit(
-          "input",
+        emitInput(
           "@@editor-message There was already a tab with that information open so we have switched the view to that. We did not update the contents."
         );
         return pinBrowserTabs(prev);
@@ -257,58 +272,43 @@ export default function EditorIDE() {
   };
 
   const viewSavedScratch = () => {
-    const socket = getSocket();
-    socket.emit("input", "@edit me.scratch");
+    emitInput("@edit me.scratch");
   };
 
-  useEffect(() => {
-    const msg = (e) => {
-      if (e.data && e.data.type === "ide-open-tab") {
-        addTab(e.data.editor);
-      } else if (e.data && e.data.type === "ide-object-verbs") {
-        applyObjectVerbsPayload(e.data.payload);
-      } else if (e.data && e.data.type === "ide-object-props") {
-        applyObjectPropsPayload(e.data.payload);
-      } else if (e.data && e.data.type === "ide-verb-overlay") {
-        const objectId = String(e.data.objectId || "").trim();
-        const itemName = String(e.data.verbName || "").trim();
-        if (!objectId || !itemName) return;
-        console.log("[SDWC overlay response][ide-editor][verb]", { objectId, itemName, payload: e.data.payload });
-        const keys = getOverlayCacheKeys(objectId, itemName, e.data.payload);
-        keys.forEach((key) => overlayCache.current.verb.set(key, e.data.payload ?? {}));
-        setHoverOverlay((state) =>
-          state && state.kind === "verb" && state.objectId === objectId && state.itemName === itemName
-            ? { ...state, loading: false, payload: e.data.payload ?? {} }
-            : state
-        );
-      } else if (e.data && e.data.type === "ide-prop-overlay") {
-        const objectId = String(e.data.objectId || "").trim();
-        const itemName = String(e.data.propertyName || "").trim();
-        if (!objectId || !itemName) return;
-        console.log("[SDWC overlay response][ide-editor][prop]", { objectId, itemName, payload: e.data.payload });
-        const keys = getOverlayCacheKeys(objectId, itemName, e.data.payload);
-        keys.forEach((key) => overlayCache.current.prop.set(key, e.data.payload ?? {}));
-        setHoverOverlay((state) =>
-          state && state.kind === "prop" && state.objectId === objectId && state.itemName === itemName
-            ? { ...state, loading: false, payload: e.data.payload ?? {} }
-            : state
-        );
-      }
-    };
-    window.addEventListener("message", msg);
-    window.opener?.postMessage({ type: "ide-ready" }, "*");
-    return () => window.removeEventListener("message", msg);
-  }, []);
+  const handleVerbOverlayPayload = (data) => {
+    const objectId = String(data.objectId || "").trim();
+    const itemName = String(data.verbName || "").trim();
+    if (!objectId || !itemName) return;
+    const keys = getOverlayCacheKeys(objectId, itemName, data.payload);
+    keys.forEach((key) => overlayCache.current.verb.set(key, data.payload ?? {}));
+    setHoverOverlay((state) =>
+      state && state.kind === "verb" && state.objectId === objectId && state.itemName === itemName
+        ? { ...state, loading: false, payload: data.payload ?? {} }
+        : state
+    );
+  };
 
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.data && (e.data.type === "ide-set-font" || e.data.type === "set-editor-font")) {
-        setEditorFont(e.data.font);
-      }
-    };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, []);
+  const handlePropOverlayPayload = (data) => {
+    const objectId = String(data.objectId || "").trim();
+    const itemName = String(data.propertyName || "").trim();
+    if (!objectId || !itemName) return;
+    const keys = getOverlayCacheKeys(objectId, itemName, data.payload);
+    keys.forEach((key) => overlayCache.current.prop.set(key, data.payload ?? {}));
+    setHoverOverlay((state) =>
+      state && state.kind === "prop" && state.objectId === objectId && state.itemName === itemName
+        ? { ...state, loading: false, payload: data.payload ?? {} }
+        : state
+    );
+  };
+
+  useIdeMessages({
+    addTab,
+    applyObjectPropsPayload,
+    applyObjectVerbsPayload,
+    handlePropOverlayPayload,
+    handleVerbOverlayPayload,
+    setEditorFont
+  });
 
   useEffect(() => {
     const handler = (e) => {
@@ -321,160 +321,13 @@ export default function EditorIDE() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [tabs]);
 
-  // Ensure Ace resizes when orientation changes or active tab switches
-  useEffect(() => {
-    const id = setTimeout(() => editors.current[active]?.resize(), 0);
-    return () => clearTimeout(id);
-  }, [orientation, active]);
-
-  // NEW: Resize Ace when the window size changes (so left dock % width changes are reflected)
-  useEffect(() => {
-    const onWinResize = () => {
-      // Give layout a beat to settle, then resize
-      requestAnimationFrame(() => editors.current[active]?.resize());
-    };
-    window.addEventListener("resize", onWinResize);
-    return () => window.removeEventListener("resize", onWinResize);
-  }, [active]);
-
-  useEffect(() => {
-    Object.values(editors.current).forEach((ed) => {
-      ed.setKeyboardHandler(vimMode ? "ace/keyboard/vim" : "");
-    });
-  }, [vimMode]);
-
-  useEffect(() => {
-    const family = getFontFamily(editorFont);
-    Object.values(editors.current).forEach((ed) => {
-      ed.setOption("fontFamily", family);
-    });
-  }, [editorFont]);
-
   const toggleWordWrap = () => {
     setWordWrap((w) => !w);
   };
 
   useEffect(() => {
-    Object.values(editors.current).forEach((ed) => {
-      const session = ed.getSession();
-      session.setUseWrapMode(wordWrap);
-      ed.setOption("wrap", wordWrap ? "free" : "off");
-      ed.renderer.updateFull();
-    });
-  }, [wordWrap]);
-
-  useEffect(() => {
     document.title = `Dome-Client Developer IDE [${tabs.length}]`;
   }, [tabs.length]);
-
-  const setEditorRef = (id, node, content, command, commandTarget = "") => {
-    if (node && !editors.current[id]) {
-      const ed = ace.edit(node);
-      const isProgram = command === "@program";
-      const editingObjectId = getEditingObjectId(command, commandTarget);
-      const isLocalSaveNode = command === "@local-save-node";
-      const isLocalSaveNodeAdmin = command === "@local-save-node-admin";
-      const isLocalSaveNote = command === "@local-save-note";
-      let lineLimit = null;
-      if (isLocalSaveNode) {
-        lineLimit = localSaveNodeMaxLines;
-      } else if (isLocalSaveNodeAdmin) {
-        lineLimit = localSaveNodeAdminMaxLines;
-      } else if (isLocalSaveNote) {
-        lineLimit = localSaveNoteMaxLines;
-      }
-      if (editorTheme) ed.setTheme(`ace/theme/${editorTheme}`);
-      ed.getSession().setMode(isProgram ? "ace/mode/moo" : "ace/mode/text");
-      if (vimMode) ed.setKeyboardHandler("ace/keyboard/vim");
-      ed.setOption("fontFamily", getFontFamily(editorFont));
-      ed.setOption("printMarginColumn", 120);
-      const session = ed.getSession();
-      session.setUseWrapMode(wordWrap);
-      ed.setOption("wrap", wordWrap ? "free" : "off");
-      ed.renderer.updateFull();
-      ed.setValue(content, -1);
-      ed.on("change", () => {
-        if (lineLimit) {
-          const session = ed.getSession();
-          const lineCount = session.getLength();
-          if (lineCount > lineLimit) {
-            const cursor = ed.getCursorPosition();
-            ed.undo();
-            ed.moveCursorTo(
-              Math.min(cursor.row, lineLimit - 1),
-              cursor.column
-            );
-            ed.clearSelection();
-            return;
-          }
-        }
-        const val = ed.getValue();
-        setTabs((ts) =>
-          ts.map((t) =>
-            t.id === id ? { ...t, content: val, dirty: val !== t.savedContent } : t
-          )
-        );
-      });
-      ed.on("click", (event) => {
-        if (!isProgram) return;
-        const domEvent = event?.domEvent;
-        if (!domEvent || !(domEvent.metaKey || domEvent.ctrlKey)) return;
-        const pos = event?.getDocumentPosition?.();
-        if (!pos) return;
-        const line = ed.getSession()?.getLine?.(pos.row) || "";
-        const target = resolveThisReference(getDefinitionTargetAtPosition(line, pos.column), editingObjectId);
-        if (!target) return;
-        domEvent.preventDefault?.();
-        domEvent.stopPropagation?.();
-        const socket = getSocket();
-        const command = formatOpenReferenceCommand(target, { openParent: ideEditOpenParent });
-        if (command) socket?.emit("input", command);
-      });
-      ed.on("mousemove", (event) => {
-        const pos = event?.getDocumentPosition?.();
-        const domEvent = event?.domEvent;
-        if (!pos || !domEvent) return;
-        const line = ed.getSession()?.getLine?.(pos.row) || "";
-        const target = resolveThisReference(getDefinitionTargetAtPosition(line, pos.column), editingObjectId);
-        const parsed = splitReferenceTarget(target);
-        if (!parsed) {
-          setHoverOverlay((state) => (state && state.tabId === id ? null : state));
-          pendingOverlayKey.current = "";
-          return;
-        }
-        const key = `${parsed.objectId}::${parsed.itemName}`;
-        const cached = overlayCache.current[parsed.kind].get(key);
-        setHoverOverlay({
-          tabId: id,
-          kind: parsed.kind,
-          objectId: parsed.objectId,
-          itemName: parsed.itemName,
-          x: (domEvent.clientX || 0) + 12,
-          y: (domEvent.clientY || 0) + 12,
-          loading: !cached,
-          payload: cached || null
-        });
-        if (cached) {
-          console.log("[SDWC overlay cache hit][ide-editor]", { kind: parsed.kind, key });
-          return;
-        }
-        if (pendingOverlayKey.current === `${parsed.kind}:${key}`) return;
-        pendingOverlayKey.current = `${parsed.kind}:${key}`;
-        const socket = getSocket();
-        if (!socket) return;
-        const cmd = parsed.kind === "verb"
-          ? formatVerbOverlayCommand(parsed.objectId, parsed.itemName)
-          : formatPropertyOverlayCommand(parsed.objectId, parsed.itemName);
-        console.log("[SDWC overlay request][ide-editor]", { cmd });
-        socket.emit("input", cmd);
-      });
-      ed.on("mouseout", () => {
-        setHoverOverlay((state) => (state && state.tabId === id ? null : state));
-        pendingOverlayKey.current = "";
-      });
-      editors.current[id] = ed;
-    }
-  };
 
   const onSave = () => {
     const tab = tabs.find((t) => t.id === active);
@@ -492,11 +345,10 @@ export default function EditorIDE() {
   };
 
   const runSave = (tab, vmsNoteLine = null) => {
-    const socket = getSocket();
-    const ed = editors.current[tab.id];
-    if (!socket || !ed) return false;
-    const val = ed.getValue();
-    getSaveMessages(tab, val, vmsNoteLine).forEach((message) => socket.emit("input", message));
+    const val = getEditorValue(tab.id);
+    if (typeof val !== "string") return false;
+    const messages = getSaveMessages(tab, val, vmsNoteLine);
+    if (!messages.every((message) => emitInput(message))) return false;
     setTabs((ts) => ts.map((t) => (t.id === tab.id ? { ...t, savedContent: val, dirty: false } : t)));
     return true;
   };
@@ -521,32 +373,24 @@ export default function EditorIDE() {
 
   const onLoadVerbs = (objectId) => {
     setCollapsedObjects((prev) => ({ ...prev, [objectId]: false }));
-    const socket = getSocket();
-    if (!socket) return;
-    socket.emit("input", formatVerbListCommand(objectId));
+    emitInput(formatVerbListCommand(objectId));
   };
 
   const onLoadProps = (objectId) => {
     setCollapsedProperties((prev) => ({ ...prev, [objectId]: false }));
-    const socket = getSocket();
-    if (!socket) return;
-    socket.emit("input", formatPropertyListCommand(objectId));
+    emitInput(formatPropertyListCommand(objectId));
   };
 
   const onEditVerb = (objectId, rawVerbName) => {
     const command = formatEditVerbCommand(objectId, rawVerbName);
     if (!command) return;
-    const socket = getSocket();
-    if (!socket) return;
-    socket.emit("input", command);
+    emitInput(command);
   };
 
   const onEditProperty = (objectId, rawPropertyName) => {
     const command = formatEditPropertyCommand(objectId, rawPropertyName);
     if (!command) return;
-    const socket = getSocket();
-    if (!socket) return;
-    socket.emit("input", command);
+    emitInput(command);
   };
 
   const toggleObjectCollapsed = (objectId) => {
@@ -558,8 +402,7 @@ export default function EditorIDE() {
   };
 
   const closeTab = (id) => {
-    editors.current[id]?.destroy();
-    delete editors.current[id];
+    destroyEditor(id);
     setTabs((ts) => {
       const next = ts.filter((t) => t.id !== id);
       recentTabIds.current = recentTabIds.current.filter((tabId) => tabId !== id);
@@ -667,15 +510,12 @@ export default function EditorIDE() {
   }, [active, onSave, onClose, tabs, showShortcuts, orientation, toggleWordWrap, ideVmsNoteEnabled, vmsPrompt]);
 
   const toggleTheme = () => {
-    const m = !darkMode;
-    setDarkMode(m);
-    localStorage.setItem("ide-dark", String(m));
+    setDarkMode((currentValue) => !currentValue);
   };
 
   const setOrientationPersist = (o) => {
     setOrientation(o);
-    localStorage.setItem("ide-orientation", o);
-    setTimeout(() => editors.current[active]?.resize(), 0);
+    resizeActiveEditor();
   };
 
   const activeTab = tabs.find((t) => t.id === active);
