@@ -28,6 +28,7 @@ import {
   sortByPropertyLabel
 } from "../../src/client/react/editor-ide/payloads.js";
 import {
+  buildIdeTabs,
   buildTitle,
   createEditableTab,
   createObjectBrowserTab,
@@ -182,8 +183,8 @@ test("editor IDE overlay payload helpers preserve display behavior", () => {
 });
 
 test("editor IDE tab helpers build editable and pinned browser tabs", () => {
-  const objectBrowser = createObjectBrowserTab(1);
-  const propertyBrowser = createPropertyBrowserTab(2);
+  const objectBrowser = createObjectBrowserTab();
+  const propertyBrowser = createPropertyBrowserTab();
   const editable = createEditableTab({
     id: 3,
     editor: {
@@ -199,6 +200,11 @@ test("editor IDE tab helpers build editable and pinned browser tabs", () => {
   });
 
   assert.equal(buildTitle({ obj: "#12", verb: "look" }), "#12:look");
+  assert.deepEqual(buildIdeTabs([editable], { objectBrowser: true, propertyBrowser: true }).map((tab) => tab.title), [
+    "Object Browser",
+    "Property Browser",
+    "Look"
+  ]);
   assert.deepEqual(pinBrowserTabs([editable, propertyBrowser, objectBrowser]).map((tab) => tab.title), [
     "Object Browser",
     "Property Browser",
@@ -217,4 +223,22 @@ test("editor IDE tab helpers build editable and pinned browser tabs", () => {
     dirty: false,
     vmsNote: ""
   });
+  assert.deepEqual(objectBrowser, {
+    id: "object-browser",
+    name: "object-browser",
+    title: "Object Browser",
+    editorName: "Object Browser",
+    tabType: "object-browser"
+  });
+  assert.deepEqual(propertyBrowser, {
+    id: "property-browser",
+    name: "property-browser",
+    title: "Property Browser",
+    editorName: "Property Browser",
+    tabType: "property-browser"
+  });
+  assert.equal(Object.prototype.hasOwnProperty.call(objectBrowser, "content"), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(objectBrowser, "savedContent"), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(objectBrowser, "dirty"), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(objectBrowser, "uploadCommand"), false);
 });

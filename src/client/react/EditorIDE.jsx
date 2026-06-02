@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { parseCommand, getCommandLabel } from "../command-utils.js";
 import { getPreferredFont } from "../ace/fonts.js";
 import {
@@ -21,10 +21,10 @@ import {
 } from "./editor-ide/payloads.js";
 import {
   buildTitle,
+  buildIdeTabs,
   createEditableTab,
-  createObjectBrowserTab,
-  createPropertyBrowserTab,
-  pinBrowserTabs
+  OBJECT_BROWSER_TAB,
+  PROPERTY_BROWSER_TAB
 } from "./editor-ide/tabs.js";
 import { emitInput } from "./editor-ide/socketAdapter.js";
 import { useAceEditors } from "./editor-ide/useAceEditors.js";
@@ -50,7 +50,8 @@ export default function EditorIDE() {
     localSaveNoteMaxLines
   } = useIdeConfig();
 
-  const [tabs, setTabs] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [panels, setPanels] = useState({ objectBrowser: false, propertyBrowser: false });
   const [objectGraph, setObjectGraph] = useState({});
   const [collapsedObjects, setCollapsedObjects] = useState({});
   const [propertyGraph, setPropertyGraph] = useState({});
@@ -73,6 +74,7 @@ export default function EditorIDE() {
   const overlayCache = useRef({ verb: new Map(), prop: new Map() });
   const pendingOverlayKey = useRef("");
   const vmsPromptInputRef = useRef(null);
+  const tabs = useMemo(() => buildIdeTabs(documents, panels), [documents, panels]);
   const {
     destroyEditor,
     getEditorValue,
@@ -89,9 +91,9 @@ export default function EditorIDE() {
       localSaveNoteMaxLines
     },
     onContentChange: (id, val) => {
-      setTabs((ts) =>
-        ts.map((t) =>
-          t.id === id ? { ...t, content: val, dirty: val !== t.savedContent } : t
+      setDocuments((items) =>
+        items.map((item) =>
+          item.id === id ? { ...item, content: val, dirty: val !== item.savedContent } : item
         )
       );
     },
@@ -237,32 +239,26 @@ export default function EditorIDE() {
       }
     }
 
-    setTabs((prev) => {
+    setDocuments((prev) => {
       const existing = prev.find((t) => t.name === name);
       if (existing) {
         setActive(existing.id);
         emitInput(
           "@@editor-message There was already a tab with that information open so we have switched the view to that. We did not update the contents."
         );
-        return pinBrowserTabs(prev);
+        return prev;
       }
       const id = Date.now() + Math.random();
       setActive(id);
       const nextTab = createEditableTab({ id, editor, title, command, commandTarget, name, isProgramCommand });
-      const tabsToAdd = [];
-      const hasObjectBrowser = prev.some((t) => t.name === "object-browser");
-      const hasPropertyBrowser = prev.some((t) => t.name === "property-browser");
-
-      if (isVerbContext && !hasObjectBrowser) {
-        tabsToAdd.push(createObjectBrowserTab(Date.now() + Math.random()));
-      }
-
-      if (isPropertyContext && !hasPropertyBrowser) {
-        tabsToAdd.push(createPropertyBrowserTab(Date.now() + Math.random()));
-      }
-
-      return pinBrowserTabs([...prev, ...tabsToAdd, nextTab]);
+      return [...prev, nextTab];
     });
+    if (isVerbContext || isPropertyContext) {
+      setPanels((prev) => ({
+        objectBrowser: prev.objectBrowser || isVerbContext,
+        propertyBrowser: prev.propertyBrowser || isPropertyContext
+      }));
+    }
   };
 
   const addScratch = () => {
@@ -352,7 +348,7 @@ export default function EditorIDE() {
     if (typeof val !== "string") return false;
     const messages = getSaveMessages(tab, val, vmsNoteLine);
     if (!messages.every((message) => emitInput(message))) return false;
-    setTabs((ts) => ts.map((t) => (t.id === tab.id ? { ...t, savedContent: val, dirty: false } : t)));
+    setDocuments((items) => items.map((item) => (item.id === tab.id ? { ...item, savedContent: val, dirty: false } : item)));
     return true;
   };
 
@@ -370,7 +366,7 @@ export default function EditorIDE() {
     const nextNote = vmsPrompt.value || "";
     const didSave = runSave({ ...targetTab, vmsNote: nextNote }, nextNote);
     if (!didSave) return;
-    setTabs((ts) => ts.map((t) => (t.id === targetTab.id ? { ...t, vmsNote: nextNote } : t)));
+    setDocuments((items) => items.map((item) => (item.id === targetTab.id ? { ...item, vmsNote: nextNote } : item)));
     setVmsPrompt(EMPTY_VMS_PROMPT_STATE);
   };
 
@@ -405,19 +401,27 @@ export default function EditorIDE() {
   };
 
   const closeTab = (id) => {
-    destroyEditor(id);
-    setTabs((ts) => {
-      const next = ts.filter((t) => t.id !== id);
-      recentTabIds.current = recentTabIds.current.filter((tabId) => tabId !== id);
-      if (active === id) {
-        const fallbackId = [...recentTabIds.current].reverse().find((tabId) => next.some((t) => t.id === tabId));
-        setActive(fallbackId || next[0]?.id || null);
-      }
-      if (next.length === 0) {
-        setTimeout(() => window.close(), 0);
-      }
-      return next;
-    });
+    const isPanel = id === OBJECT_BROWSER_TAB.id || id === PROPERTY_BROWSER_TAB.id;
+    if (!isPanel) {
+      destroyEditor(id);
+    }
+    if (isPanel) {
+      setPanels((currentPanels) => ({
+        objectBrowser: id === OBJECT_BROWSER_TAB.id ? false : currentPanels.objectBrowser,
+        propertyBrowser: id === PROPERTY_BROWSER_TAB.id ? false : currentPanels.propertyBrowser
+      }));
+    } else {
+      setDocuments((items) => items.filter((item) => item.id !== id));
+    }
+    const next = tabs.filter((t) => t.id !== id);
+    recentTabIds.current = recentTabIds.current.filter((tabId) => tabId !== id);
+    if (active === id) {
+      const fallbackId = [...recentTabIds.current].reverse().find((tabId) => next.some((t) => t.id === tabId));
+      setActive(fallbackId || next[0]?.id || null);
+    }
+    if (next.length === 0) {
+      setTimeout(() => window.close(), 0);
+    }
   };
 
   const onClose = (id) => {
@@ -427,6 +431,13 @@ export default function EditorIDE() {
       closeTab(id);
     }
   };
+
+  useEffect(() => {
+    if (active == null) return;
+    if (tabs.some((tab) => tab.id === active)) return;
+    const fallbackId = [...recentTabIds.current].reverse().find((tabId) => tabs.some((tab) => tab.id === tabId));
+    setActive(fallbackId || tabs[0]?.id || null);
+  }, [active, tabs]);
 
   useEffect(() => {
     if (!ideVmsNoteEnabled) return;
@@ -590,7 +601,7 @@ export default function EditorIDE() {
                   }}
                   ideVmsNoteEnabled={ideVmsNoteEnabled}
                   onUpdateVmsNote={(tabId, vmsNote) => {
-                    setTabs((ts) => ts.map((item) => (item.id === tabId ? { ...item, vmsNote } : item)));
+                    setDocuments((items) => items.map((item) => (item.id === tabId ? { ...item, vmsNote } : item)));
                   }}
                   setEditorRef={setEditorRef}
                   tab={tab}

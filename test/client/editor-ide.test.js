@@ -328,6 +328,27 @@ test("EditorIDE pins the property browser before editable property tabs", async 
   assert.doesNotMatch(window.document.querySelector("[role='tab']").textContent, /Saved|Unsaved/);
 });
 
+test("EditorIDE closes browser panels without destroying editable documents", async (t) => {
+  const { window, emit } = await renderEditorIde(t);
+
+  await openTab(window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "initial"
+  });
+  await click(window, window.document.querySelector("button[aria-label='Close Object Browser']"));
+
+  assert.deepEqual(getTabs(window), ["Look"]);
+  assert.equal(globalThis.__editorIdeAceEditors[0].destroyed, false);
+
+  await click(window, getButtonByText(window, "Save"));
+
+  assert.deepEqual(emit.mock.calls.slice(-2).map((call) => call.arguments), [
+    ["input", "@program #12:look"],
+    ["input", "initial\n."]
+  ]);
+});
+
 test("EditorIDE prompts for VMS notes before saving program tabs when enabled", async (t) => {
   const { window, emit } = await renderEditorIde(t, { "data-ide-vms-note-enabled": "true" });
 

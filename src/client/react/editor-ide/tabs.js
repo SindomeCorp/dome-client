@@ -1,26 +1,16 @@
 export const OBJECT_BROWSER_TAB = {
+  id: "object-browser",
   name: "object-browser",
   title: "Object Browser",
-  uploadCommand: "none",
   editorName: "Object Browser",
-  command: "",
-  commandTarget: "none",
-  content: "",
-  savedContent: "",
-  dirty: false,
   tabType: "object-browser"
 };
 
 export const PROPERTY_BROWSER_TAB = {
+  id: "property-browser",
   name: "property-browser",
   title: "Property Browser",
-  uploadCommand: "none",
   editorName: "Property Browser",
-  command: "",
-  commandTarget: "none",
-  content: "",
-  savedContent: "",
-  dirty: false,
   tabType: "property-browser"
 };
 
@@ -40,6 +30,13 @@ export function pinBrowserTabs(list) {
   if (objectBrowser) pinned.push(objectBrowser);
   if (propertyBrowser) pinned.push(propertyBrowser);
   return [...pinned, ...otherTabs];
+}
+
+export function buildIdeTabs(documents, panels) {
+  const tabs = [];
+  if (panels.objectBrowser) tabs.push(OBJECT_BROWSER_TAB);
+  if (panels.propertyBrowser) tabs.push(PROPERTY_BROWSER_TAB);
+  return [...tabs, ...documents];
 }
 
 export function createEditableTab({
@@ -67,9 +64,9 @@ export function createEditableTab({
 }
 
 export function createObjectBrowserTab(id) {
-  return { ...OBJECT_BROWSER_TAB, id };
+  return { ...OBJECT_BROWSER_TAB, id: id || OBJECT_BROWSER_TAB.id };
 }
 
 export function createPropertyBrowserTab(id) {
-  return { ...PROPERTY_BROWSER_TAB, id };
+  return { ...PROPERTY_BROWSER_TAB, id: id || PROPERTY_BROWSER_TAB.id };
 }
