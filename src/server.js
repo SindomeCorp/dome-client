@@ -17,6 +17,7 @@ import { getLogExportCss } from "./services/log-export-style.js";
 import router from "./routes/index.js";
 import * as socket from "./controllers/socket.js";
 import { fileURLToPath } from "node:url";
+import { CLIENT_OPTION_LABELS } from "./client/client-option-schema.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const logger = named("client-app");
@@ -113,6 +114,7 @@ app.use(function(req, res, next) {
   res.locals.guestConnectCommand = config.guest.connectCommand;
   res.locals.isMultiMud = config.node.multiMud === true;
   res.locals.shortenEnabled = config.shorten.enabled;
+  res.locals.clientOptionLabels = CLIENT_OPTION_LABELS;
   res.locals.logExportCss = getLogExportCss();
   res.locals.showReporter = function(req) {
     let ua = req.headers["user-agent"];

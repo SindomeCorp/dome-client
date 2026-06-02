@@ -15,28 +15,28 @@ export const FONT_CHOICES = [
 export const COLORSET_CHOICES = ["normal", "dim", "slither", "acid", "corpie", "snow"];
 
 export const CLIENT_OPTION_DEFINITIONS = [
-  { key: "commands", param: "cs", preferenceName: "commandSuggestions", def: true, ok: [true, false] },
-  { key: "shorten", param: "su", preferenceName: "shortenUrls", def: true, ok: [true, false] },
-  { key: "scroll", param: "as", preferenceName: "autoScroll", def: "dbl", ok: ["dbl", "long", "none"] },
-  { key: "edittheme", param: "et", preferenceName: "edittheme", def: "twilight", ok: EDIT_THEMES },
-  { key: "edittype", param: "ed", preferenceName: "editorType", def: "ide", ok: ["ide", "windows"] },
-  { key: "colorset", param: "cl", preferenceName: "colorSet", def: "normal", ok: COLORSET_CHOICES },
-  { key: "outfont", param: "of", preferenceName: "lineBufferFont", def: "standard", ok: FONT_CHOICES },
-  { key: "outfontsize", param: "oz", preferenceName: "lineBufferFontSizePt", def: 9.75, min: 8, max: 24 },
-  { key: "inputfont", param: "if", preferenceName: "inputFont", def: "standard", ok: FONT_CHOICES },
-  { key: "inputfontsize", param: "iz", preferenceName: "inputFontSizePt", def: 11, min: 8, max: 24 },
-  { key: "inputfontcolor", param: "ic", preferenceName: "inputFontColor", def: "#EEEEEE", type: "color" },
-  { key: "inputbgcolor", param: "ib", preferenceName: "inputBackgroundColor", def: "#333333", type: "color" },
-  { key: "editorfont", param: "ef", preferenceName: "editorFont", def: "standard", ok: FONT_CHOICES },
-  { key: "playding", param: "pd", preferenceName: "playDing", def: true, ok: [true, false] },
-  { key: "localecho", param: "le", preferenceName: "localEcho", def: false, ok: [true, false] },
-  { key: "imageview", param: "iv", preferenceName: "imagePreview", def: false, ok: [true, false] },
-  { key: "logcss", param: "lc", preferenceName: "inlineLogCss", def: true, ok: [true, false] },
-  { key: "sdwcnowrap", param: "nw", preferenceName: "sdwcNowrapBlocks", def: false, ok: [true, false] },
-  { key: "scrolluppause", param: "up", preferenceName: "scrollUpToPause", def: false, ok: [true, false] },
-  { key: "transparent", param: "to", preferenceName: "transparentOverlay", def: true, ok: [true, false] },
-  { key: "broadly", param: "bs", preferenceName: "broadSearch", def: true, ok: [true, false] },
-  { key: "buffer", param: "pb", preferenceName: "performanceBuffer", def: 0 }
+  { key: "commands", label: "Use Command Hints", param: "cs", preferenceName: "commandSuggestions", def: true, ok: [true, false] },
+  { key: "shorten", label: "Shorten Long Web Links", param: "su", preferenceName: "shortenUrls", def: true, ok: [true, false] },
+  { key: "scroll", label: "Toggle Scroll & Auto Scroll", param: "as", preferenceName: "autoScroll", def: "dbl", ok: ["dbl", "long", "none"] },
+  { key: "edittheme", label: "Editor Theme", param: "et", preferenceName: "edittheme", def: "twilight", ok: EDIT_THEMES },
+  { key: "edittype", label: "Editor Type", param: "ed", preferenceName: "editorType", def: "ide", ok: ["ide", "windows"] },
+  { key: "colorset", label: "Theme", param: "cl", preferenceName: "colorSet", def: "normal", ok: COLORSET_CHOICES },
+  { key: "outfont", label: "Output Font", param: "of", preferenceName: "lineBufferFont", def: "standard", ok: FONT_CHOICES },
+  { key: "outfontsize", label: "Output Font Size (pt)", param: "oz", preferenceName: "lineBufferFontSizePt", def: 9.75, min: 8, max: 24 },
+  { key: "inputfont", label: "Input Font", param: "if", preferenceName: "inputFont", def: "standard", ok: FONT_CHOICES },
+  { key: "inputfontsize", label: "Input Font Size (pt)", param: "iz", preferenceName: "inputFontSizePt", def: 11, min: 8, max: 24 },
+  { key: "inputfontcolor", label: "Input Font Color", param: "ic", preferenceName: "inputFontColor", def: "#EEEEEE", type: "color" },
+  { key: "inputbgcolor", label: "Input Background Color", param: "ib", preferenceName: "inputBackgroundColor", def: "#333333", type: "color" },
+  { key: "editorfont", label: "Editor Font", param: "ef", preferenceName: "editorFont", def: "standard", ok: FONT_CHOICES },
+  { key: "playding", label: "Play Sound on Name", param: "pd", preferenceName: "playDing", def: true, ok: [true, false] },
+  { key: "localecho", label: "Enable Local Echo", param: "le", preferenceName: "localEcho", def: false, ok: [true, false] },
+  { key: "imageview", label: "Show Preview of Images", param: "iv", preferenceName: "imagePreview", def: false, ok: [true, false] },
+  { key: "logcss", label: "Embed CSS In Saved Logs", param: "lc", preferenceName: "inlineLogCss", def: true, ok: [true, false] },
+  { key: "sdwcnowrap", label: "Mobile Friendly Text Wrap", param: "nw", preferenceName: "sdwcNowrapBlocks", def: false, ok: [true, false] },
+  { key: "scrolluppause", label: "Scroll Up to Pause", param: "up", preferenceName: "scrollUpToPause", def: false, ok: [true, false] },
+  { key: "transparent", label: "Transparent Overlays", param: "to", preferenceName: "transparentOverlay", def: true, ok: [true, false] },
+  { key: "broadly", label: "Search Command Help", param: "bs", preferenceName: "broadSearch", def: true, ok: [true, false] },
+  { key: "buffer", label: "Scroll Buffer Size", param: "pb", preferenceName: "performanceBuffer", def: 0 }
 ];
 
 export const CLIENT_OPTION_BY_KEY = Object.fromEntries(
@@ -55,11 +55,16 @@ export const PREF_NAME = Object.fromEntries(
   CLIENT_OPTION_DEFINITIONS.map((option) => [option.key, option.preferenceName])
 );
 
+export const CLIENT_OPTION_LABELS = Object.fromEntries(
+  CLIENT_OPTION_DEFINITIONS.map((option) => [option.key, option.label])
+);
+
 export function buildClientOptionState() {
   return Object.fromEntries(CLIENT_OPTION_DEFINITIONS.map((option) => [
     option.key,
     {
       param: option.param,
+      label: option.label,
       def: option.def,
       ...(option.ok ? { ok: option.ok } : {}),
       ...(option.min != null ? { min: option.min } : {}),

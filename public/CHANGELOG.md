@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Replaced the Editor IDE technical debt plan with a roadmap focused on tab planning, save flow, shortcuts, overlays, and orchestration cleanup.
 - Refactored the Editor IDE internals into focused planning, save-flow, shortcut, overlay, browser command, recent-tab, and label helpers while preserving existing behavior.
+- Centralized client option display names in the shared option schema so option UI labels stay aligned with command and preference metadata.
+- Extracted client option preference parsing, command parsing, and validation into pure helpers to reduce client options side-effect coupling.
 - Split socket output rendering from protocol side effects so buffer rendering, SDWC nowrap handling, IDE messages, alerts, and scrollback pruning are easier to maintain.
 - Introduced an explicit client composition initializer so browser setup can be wired with injectable setup hooks while preserving existing startup behavior.
 - Decomposed server socket handling into focused address resolution, MUD connection, data flow, and session event helpers while preserving connection behavior.

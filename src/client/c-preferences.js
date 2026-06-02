@@ -4,78 +4,39 @@ import {
   clientOptions
 } from "./pages/client-options.js";
 import {
-  CLIENT_OPTION_BY_PARAM,
-  CLIENT_OPTION_BY_PREFERENCE,
-  CLIENT_OPTION_DEFINITIONS,
   FONT_CHOICES,
-  buildPreferenceDefaults,
-  coerceOptionValue,
   normalizeHexColor
 } from "./client-option-schema.js";
+import {
+  CLIENT_OPTION_NAME_ERROR,
+  CLIENT_OPTION_VALUE_ERROR,
+  buildClientOptionsHelp,
+  getClientOptionDefinition,
+  parseClientOptionCommandIntent,
+  readClientPreferences,
+  validateClientOptionValue
+} from "./client-option-parser.js";
 
 const shortenFeatureEnabled = typeof window === "undefined" ? true : window.shortenEnabled !== false;
 
 dome.readPreferences = function() {
-  const options = window.location.search || "";
-
-  const preferences = buildPreferenceDefaults();
-  // load saved preferences from localStorage
-  CLIENT_OPTION_DEFINITIONS.forEach((pref) => {
-    const key = clientOptions.prefix + pref.key;
-    const saved = store.get(key);
-    if (saved !== null) {
-      preferences[pref.preferenceName] = saved;
-    }
+  const { preferences, persistenceUpdates } = readClientPreferences({
+    locationSearch: window.location.search || "",
+    getStoredValue: (key) => store.get(key),
+    storagePrefix: clientOptions.prefix,
+    shortenFeatureEnabled
   });
-  if (options) {
-    const searchParams = new URLSearchParams(options);
-    CLIENT_OPTION_DEFINITIONS.forEach((option) => {
-      if (!searchParams.has(option.param)) return;
-      const rawValue = searchParams.get(option.param);
-      const coerced = coerceOptionValue(option, rawValue);
-      if (coerced.valid && !(option.key === "buffer" && coerced.value <= 0)) {
-        preferences[option.preferenceName] = coerced.value;
-      }
-    });
-  }
-  if (store.get(clientOptions.prefix + "editorfont") === null && !(options && options.indexOf("ef=") !== -1)) {
-    preferences.editorFont = preferences.lineBufferFont;
-    store.put(clientOptions.prefix + "editorfont", preferences.editorFont);
-  }
-  if (!shortenFeatureEnabled) {
-    preferences.shortenUrls = false;
-    store.put(clientOptions.prefix + "shorten", false);
-  }
+  persistenceUpdates.forEach(({ key, value }) => {
+    store.put(key, value);
+  });
 
   return preferences;
 };
 
-const PREFERENCE_ENUM = { ...CLIENT_OPTION_BY_PARAM, ...CLIENT_OPTION_BY_PREFERENCE };
-
-const helpDocs = [
-  "Help on @client-option:\n",
-  "  @client-options\n",
-  "  @client-option &lt;option name&gt; [&lt;new value&gt;]\n",
-  "\n",
-  "  Options Include:\n"
-];
-
-CLIENT_OPTION_DEFINITIONS.forEach((option) => {
-  helpDocs[helpDocs.length] = "   [" + option.param + "] " + option.preferenceName + "\n";
-});
-
-const CLIENT_OPTION_NAME_ERROR = "Unknown @client-option specified, check @client-options" + "\n";
-const CLIENT_OPTION_VALUE_ERROR = "Invalid @client-option value, must be one of ";
-const CLIENT_OPTIONS_HELP = helpDocs;
+const CLIENT_OPTIONS_HELP = buildClientOptionsHelp();
 
 const showClientOptionHelp = function() {
   dome.buffer.append(CLIENT_OPTIONS_HELP);
-};
-const translateClientOptionName = function(optionName) {
-  if (PREFERENCE_ENUM[ optionName ] != null) {
-    return PREFERENCE_ENUM[ optionName ].preferenceName;
-  }
-  return optionName;
 };
 const showClientOption = function(optionName) {
   let opts = Object.keys(dome.preferences);
@@ -191,34 +152,12 @@ const setClientOption = function(optionName, optionValue) {
     return dome.buffer?.append(CLIENT_OPTION_NAME_ERROR);
   }
 
-  if (optionValue === "true") {
-    optionValue = true;
-  } else if (optionValue === "false") {
-    optionValue = false;
+  const validation = validateClientOptionValue(optionName, optionValue);
+  if (!validation.valid) {
+    return dome.buffer?.append(validation.error || CLIENT_OPTION_VALUE_ERROR + "\n");
   }
-  const optionDef = PREFERENCE_ENUM[ optionName ];
-  const coerced = coerceOptionValue(optionDef, optionValue);
-  optionValue = coerced.value;
-
-  if (optionName === "lineBufferFontSizePt" || optionName === "inputFontSizePt") {
-    if (typeof optionValue !== "number" || Number.isNaN(optionValue)) {
-      return dome.buffer?.append("Invalid @client-option value, must be a number between 8 and 24\n");
-    }
-    if (optionValue < 8 || optionValue > 24) {
-      return dome.buffer?.append("Invalid @client-option value, must be between 8 and 24\n");
-    }
-  }
-
-  if (optionName === "inputFontColor" || optionName === "inputBackgroundColor") {
-    if (!coerced.valid) {
-      return dome.buffer?.append("Invalid @client-option value, must be a hex color like #AABBCC\n");
-    }
-  }
-
-  const validValues = optionDef.ok || (typeof optionDef.def === "boolean" ? [true, false] : null);
-  if (!coerced.valid && validValues) {
-    return dome.buffer?.append(CLIENT_OPTION_VALUE_ERROR + validValues.toString() + "\n");
-  }
+  const optionDef = validation.optionDef || getClientOptionDefinition(optionName);
+  optionValue = validation.value;
 
   clientOptions.save( optionDef.key, optionValue );
 
@@ -282,23 +221,17 @@ dome.setClientOption = setClientOption;
 
 dome.parseClientOptionCommand = function( command ) {
   logger.debug( command );
-  if (command === "@client-options") {
+  const intent = parseClientOptionCommandIntent(command);
+  if (intent.type === "list") {
     showClientOption();
+  } else if (intent.type === "help") {
+    showClientOptionHelp();
+  } else if (intent.type === "read") {
+    showClientOption(intent.optionName);
+  } else if (intent.type === "write") {
+    setClientOption(intent.optionName, intent.value);
   } else {
-    const commandParts = command.split(" ");
-    if (commandParts.length < 2) {
-      showClientOptionHelp();
-    } else {
-      const optionName = translateClientOptionName(commandParts[1]);
-
-      if (commandParts.length < 3) {
-        // read
-        showClientOption(optionName);
-      } else {
-        // write
-        setClientOption( optionName, commandParts[ 2 ]);
-      }
-    }
+    showClientOptionHelp();
   }
   if (dome.scrollBuffer) dome.scrollBuffer();
 };
