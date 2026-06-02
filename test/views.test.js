@@ -3,7 +3,7 @@ import assert from "node:assert";
 import { renderFile } from "ejs";
 import { glob } from "glob";
 import fs from "node:fs/promises";
-import { CLIENT_OPTION_LABELS } from "../src/client/client-option-schema.js";
+import { CLIENT_OPTION_LABELS, CLIENT_OPTION_VIEW } from "../src/client/client-option-schema.js";
 
 const sampleData = {
   "views/layouts/main.ejs": {
@@ -18,6 +18,7 @@ const sampleData = {
     guestConnectCommand: "",
     shortenEnabled: false,
     clientOptionLabels: CLIENT_OPTION_LABELS,
+    clientOptionView: CLIENT_OPTION_VIEW,
     decache: (v) => v,
     mainWebsite: "",
     body: "",
@@ -37,6 +38,7 @@ const sampleData = {
     showReporter: () => false,
     shortenEnabled: false,
     clientOptionLabels: CLIENT_OPTION_LABELS,
+    clientOptionView: CLIENT_OPTION_VIEW,
   },
   "views/connect-as.ejs": {
     req: { query: {} },
@@ -53,6 +55,7 @@ const sampleData = {
     meta: { title: "", description: "", keywords: "" },
     shortenEnabled: false,
     clientOptionLabels: CLIENT_OPTION_LABELS,
+    clientOptionView: CLIENT_OPTION_VIEW,
   },
   "views/game-owner-questions.ejs": {
     meta: { title: "", description: "", keywords: "" },
@@ -86,6 +89,7 @@ const sampleData = {
   "views/partials/client-options-overlay.ejs": {
     shortenEnabled: false,
     clientOptionLabels: CLIENT_OPTION_LABELS,
+    clientOptionView: CLIENT_OPTION_VIEW,
   },
 };
 

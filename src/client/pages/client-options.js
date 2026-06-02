@@ -6,9 +6,13 @@ import {
   EDIT_THEMES,
   FONT_CHOICES,
   PREF_NAME,
-  buildClientOptionState,
-  coerceOptionValue
+  buildClientOptionState
 } from "../client-option-schema.js";
+import {
+  buildClientOptionsExportFilename,
+  buildClientOptionsExportPayload,
+  buildClientOptionsImportPlan
+} from "../client-options-import-export.js";
 
 // Expose color set choices for modules that read from the window object.
 if (typeof window !== "undefined" && !window.COLORSET_CHOICES) {
@@ -194,16 +198,10 @@ function showImportExportToast(message, isError = false) {
 }
 
 function buildExportPayload() {
-  const preferences = {};
-  Object.keys(clientOptions.options).forEach((name) => {
-    preferences[name] = clientOptions.get(name).state;
+  return buildClientOptionsExportPayload({
+    optionNames: Object.keys(clientOptions.options),
+    getOptionState: (name) => clientOptions.get(name).state
   });
-  return {
-    type: "dome-client-options",
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    preferences,
-  };
 }
 
 function downloadClientOptionsJson() {
@@ -213,7 +211,7 @@ function downloadClientOptionsJson() {
     return;
   }
   const payload = buildExportPayload();
-  const filename = `dome-client-options-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+  const filename = buildClientOptionsExportFilename();
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
 
   const nav = typeof navigator !== "undefined" ? navigator : null;
@@ -234,14 +232,6 @@ function downloadClientOptionsJson() {
   showImportExportToast("Preferences exported.");
 }
 
-function normalizeImportedValue(name, value) {
-  if (name === "edittheme" && value === "ambiance") return "ambience";
-  if (name === "edittheme" && value === "tomorrow") return "tomorrow_night";
-  if (value === "true") return true;
-  if (value === "false") return false;
-  return value;
-}
-
 async function importClientOptionsJson(file) {
   if (!file) return;
   let parsed;
@@ -255,33 +245,24 @@ async function importClientOptionsJson(file) {
     return;
   }
 
-  const source = parsed && typeof parsed === "object" && parsed.preferences && typeof parsed.preferences === "object"
-    ? parsed.preferences
-    : parsed;
-
-  if (!source || typeof source !== "object" || Array.isArray(source)) {
-    dome.buffer?.append("Client options import error: JSON must be an object of option keys.\n");
+  const plan = buildClientOptionsImportPlan({
+    parsed,
+    options: clientOptions.options
+  });
+  if (!plan.valid) {
+    dome.buffer?.append(`Client options import error: ${plan.error}\n`);
     dome.scrollBuffer?.();
     showImportExportToast("Import failed.", true);
     return;
   }
 
-  let applied = 0;
-  let skipped = 0;
-  Object.entries(source).forEach(([name, value]) => {
-    if (!Object.prototype.hasOwnProperty.call(clientOptions.options, name)) return;
-    const normalized = normalizeImportedValue(name, value);
-    const optionDef = clientOptions.options[name];
-    const coerced = coerceOptionValue(optionDef, normalized);
-    if (!coerced.valid) {
-      skipped++;
-      return;
-    }
-    applyOptionValue(name, coerced.value);
-    applied++;
+  plan.applied.forEach(({ name, value }) => {
+    applyOptionValue(name, value);
   });
   refreshClientOptions();
   dome.scrollBuffer?.();
+  const applied = plan.applied.length;
+  const skipped = plan.skipped;
   dome.buffer?.append(`Imported ${applied} client option${applied === 1 ? "" : "s"}.\n`);
   if (skipped > 0) {
     dome.buffer?.append(`Skipped ${skipped} invalid imported option value${skipped === 1 ? "" : "s"}.\n`);
@@ -289,7 +270,7 @@ async function importClientOptionsJson(file) {
   showImportExportToast("Preferences imported.");
 }
 
-function setupImportExportControls() {
+function bindImportExportControls() {
   const exportButton = document.getElementById("client-options-export");
   const importButton = document.getElementById("client-options-import");
   const importFileInput = document.getElementById("client-options-import-file");
@@ -326,24 +307,8 @@ function setupImportExportControls() {
   });
 }
 
-export { store, clientOptions, EDIT_THEMES, FONT_CHOICES, COLORSET_CHOICES, refreshClientOptions };
-
-document.addEventListener("DOMContentLoaded", () => {
-  if (window.__domeClientOptionsInitialized) return;
-  window.__domeClientOptionsInitialized = true;
-  // allow scrolling without showing a scrollbar
-  document.body.style.overflowY = "auto";
-  document.body.style.msOverflowStyle = "none";
-  document.body.style.scrollbarWidth = "none";
-  const hideScrollbar = document.createElement("style");
-  hideScrollbar.textContent = "body::-webkit-scrollbar { display: none; }";
-  document.head.appendChild(hideScrollbar);
-
-  refreshClientOptions();
-  setupClientOptionsTabs();
-  setupImportExportControls();
-
-  document.querySelectorAll("DIV.client-options-page DIV.option-row SELECT").forEach((self) => {
+function bindOptionSelects({ root = document } = {}) {
+  root.querySelectorAll("DIV.client-options-page DIV.option-row SELECT").forEach((self) => {
     const id = getOptionNameFromRow(self.parentElement);
     if (!id) return;
     self.addEventListener("change", () => {
@@ -352,8 +317,10 @@ document.addEventListener("DOMContentLoaded", () => {
       dome.scrollBuffer?.();
     });
   });
+}
 
-  document.querySelectorAll("DIV.client-options-page DIV.option-row BUTTON.enabled-state, DIV.client-options-page DIV.option-row BUTTON.disabled-state").forEach((self) => {
+function bindOptionButtons({ root = document } = {}) {
+  root.querySelectorAll("DIV.client-options-page DIV.option-row BUTTON.enabled-state, DIV.client-options-page DIV.option-row BUTTON.disabled-state").forEach((self) => {
     self.addEventListener("click", () => {
       const btn = self;
 
@@ -386,37 +353,78 @@ document.addEventListener("DOMContentLoaded", () => {
       dome.scrollBuffer?.();
     });
   });
+}
 
-  document.querySelectorAll("DIV.client-options-page DIV.option-row INPUT").forEach((self) => {
+function readOptionInputValue(input) {
+  let fieldValue = input.value;
+  if (input.dataset.colorHex === "true") {
+    fieldValue = fieldValue.trim();
+    if (!fieldValue.startsWith("#")) fieldValue = `#${fieldValue}`;
+  }
+  if (input.getAttribute("type") == "number") {
+    fieldValue = fieldValue.indexOf(".") != -1 ? parseFloat(fieldValue) : parseInt(fieldValue);
+  }
+  return fieldValue;
+}
+
+function syncColorInputs(row, name) {
+  const updated = dome.preferences?.[PREF_NAME[name]];
+  if (typeof updated === "string") {
+    row.querySelectorAll("input").forEach((input) => {
+      input.value = updated;
+    });
+  }
+}
+
+function bindOptionInputs({ root = document } = {}) {
+  root.querySelectorAll("DIV.client-options-page DIV.option-row INPUT").forEach((self) => {
     if (self.getAttribute("type") === "file") return;
     const row = self.closest("DIV.option-row");
     const name = getOptionNameFromRow(row);
     if (!name) return;
 
     self.addEventListener("change", () => {
-      let fieldValue = self.value;
-      if (self.dataset.colorHex === "true") {
-        fieldValue = fieldValue.trim();
-        if (!fieldValue.startsWith("#")) fieldValue = `#${fieldValue}`;
-      }
-      if (self.getAttribute("type") == "number") {
-        fieldValue = fieldValue.indexOf(".") != -1 ? parseFloat(fieldValue) : parseInt(fieldValue);
-      }
+      const fieldValue = readOptionInputValue(self);
       logger.debug("" + typeof(fieldValue) + ": " + fieldValue);
-      if (PREF_NAME[name] && dome.setClientOption) {
-        applyOptionValue(name, fieldValue);
-        if (self.getAttribute("type") === "color" || self.dataset.colorHex === "true") {
-          const updated = dome.preferences?.[PREF_NAME[name]];
-          if (typeof updated === "string") {
-            row.querySelectorAll("input").forEach((input) => {
-              input.value = updated;
-            });
-          }
-        }
-      } else {
-        applyOptionValue(name, fieldValue);
+      applyOptionValue(name, fieldValue);
+      if (PREF_NAME[name] && dome.setClientOption && (self.getAttribute("type") === "color" || self.dataset.colorHex === "true")) {
+        syncColorInputs(row, name);
       }
       dome.scrollBuffer?.();
     });
   });
+}
+
+export {
+  store,
+  clientOptions,
+  EDIT_THEMES,
+  FONT_CHOICES,
+  COLORSET_CHOICES,
+  bindOptionButtons,
+  bindOptionInputs,
+  bindOptionSelects,
+  bindImportExportControls,
+  buildExportPayload,
+  importClientOptionsJson,
+  refreshClientOptions
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.__domeClientOptionsInitialized) return;
+  window.__domeClientOptionsInitialized = true;
+  // allow scrolling without showing a scrollbar
+  document.body.style.overflowY = "auto";
+  document.body.style.msOverflowStyle = "none";
+  document.body.style.scrollbarWidth = "none";
+  const hideScrollbar = document.createElement("style");
+  hideScrollbar.textContent = "body::-webkit-scrollbar { display: none; }";
+  document.head.appendChild(hideScrollbar);
+
+  refreshClientOptions();
+  setupClientOptionsTabs();
+  bindImportExportControls();
+  bindOptionSelects();
+  bindOptionButtons();
+  bindOptionInputs();
 });

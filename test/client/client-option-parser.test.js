@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   CLIENT_OPTION_DEFINITIONS,
   CLIENT_OPTION_LABELS,
+  CLIENT_OPTION_VIEW,
   buildClientOptionState,
   buildPreferenceDefaults
 } from "../../src/client/client-option-schema.js";
@@ -90,7 +91,18 @@ test("client option schema includes labels for every option surface", () => {
     assert.equal(typeof option.label, "string");
     assert.notEqual(option.label.trim(), "");
     assert.equal(CLIENT_OPTION_LABELS[option.key], option.label);
+    assert.equal(CLIENT_OPTION_VIEW[option.key].label, option.label);
     assert.equal(optionState[option.key].label, option.label);
     assert.ok(Object.prototype.hasOwnProperty.call(defaults, option.preferenceName));
+  });
+});
+
+test("client option schema exposes view choices for rendered select controls", () => {
+  const optionState = buildClientOptionState();
+
+  ["scroll", "edittheme", "edittype", "colorset", "outfont", "inputfont", "editorfont"].forEach((key) => {
+    assert.ok(Array.isArray(CLIENT_OPTION_VIEW[key].choices));
+    assert.ok(CLIENT_OPTION_VIEW[key].choices.length > 0);
+    assert.deepEqual(optionState[key].choices, CLIENT_OPTION_VIEW[key].choices);
   });
 });

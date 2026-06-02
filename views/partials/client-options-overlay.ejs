@@ -66,9 +66,9 @@
         <div class="option-row" id="scroll-option">
           <span class="option-label pull-left"><%= clientOptionLabels.scroll %></span>
           <select name="auto-scroll-toggle">
-            <option value="dbl" selected="selected">Double Click</option>
-            <option value="long">Long Click</option>
-            <option value="none">Pause Button Only</option>
+            <% clientOptionView.scroll.choices.forEach(function(choice) { %>
+            <option value="<%= choice.value %>"<% if (choice.value === "dbl") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <% }); %>
           </select>
         </div>
         <div class="option-row" id="scrolluppause-option">
@@ -104,15 +104,9 @@
         <div class="option-row" id="outfont-option">
           <span class="option-label"><%= clientOptionLabels.outfont %></span>
           <select name="output-font-choice">
-            <option value="standard" style="font-family: 'Source Code Pro'" selected="selected">Source Code Pro</option>
-            <option value="lucida" style="font-family: 'Lucida Console'">Lucida Console</option>
-            <option value="courier" style="font-family: 'Courier New'">Courier New</option>
-            <option value="roboto" style="font-family: 'Roboto Mono'">Roboto Mono</option>
-            <option value="comic-mono" style="font-family: 'Comic Mono'">Comic Mono</option>
-            <option value="monaco" style="font-family: 'Monaco'">Monaco</option>
-            <option value="menlo" style="font-family: 'Menlo'">Menlo</option>
-            <option value="ubuntu-mono" style="font-family: 'Ubuntu Mono'">Ubuntu Mono</option>
-            <option value="consolas" style="font-family: 'Consolas'">Consolas</option>
+            <% clientOptionView.outfont.choices.forEach(function(choice) { %>
+            <option value="<%= choice.value %>" style="<%= choice.style %>"<% if (choice.value === "standard") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <% }); %>
           </select>
         </div>
         <div class="option-row" id="outfontsize-option">
@@ -124,29 +118,17 @@
         <div class="option-row" id="editorfont-option">
           <span class="option-label"><%= clientOptionLabels.editorfont %></span>
           <select name="editor-font-choice">
-            <option value="standard" style="font-family: 'Source Code Pro'" selected="selected">Source Code Pro</option>
-            <option value="lucida" style="font-family: 'Lucida Console'">Lucida Console</option>
-            <option value="courier" style="font-family: 'Courier New'">Courier New</option>
-            <option value="roboto" style="font-family: 'Roboto Mono'">Roboto Mono</option>
-            <option value="comic-mono" style="font-family: 'Comic Mono'">Comic Mono</option>
-            <option value="monaco" style="font-family: 'Monaco'">Monaco</option>
-            <option value="menlo" style="font-family: 'Menlo'">Menlo</option>
-            <option value="ubuntu-mono" style="font-family: 'Ubuntu Mono'">Ubuntu Mono</option>
-            <option value="consolas" style="font-family: 'Consolas'">Consolas</option>
+            <% clientOptionView.editorfont.choices.forEach(function(choice) { %>
+            <option value="<%= choice.value %>" style="<%= choice.style %>"<% if (choice.value === "standard") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <% }); %>
           </select>
         </div>
         <div class="option-row" id="inputfont-option">
           <span class="option-label"><%= clientOptionLabels.inputfont %></span>
           <select name="input-font-choice">
-            <option value="standard" style="font-family: 'Source Code Pro'" selected="selected">Source Code Pro</option>
-            <option value="lucida" style="font-family: 'Lucida Console'">Lucida Console</option>
-            <option value="courier" style="font-family: 'Courier New'">Courier New</option>
-            <option value="roboto" style="font-family: 'Roboto Mono'">Roboto Mono</option>
-            <option value="comic-mono" style="font-family: 'Comic Mono'">Comic Mono</option>
-            <option value="monaco" style="font-family: 'Monaco'">Monaco</option>
-            <option value="menlo" style="font-family: 'Menlo'">Menlo</option>
-            <option value="ubuntu-mono" style="font-family: 'Ubuntu Mono'">Ubuntu Mono</option>
-            <option value="consolas" style="font-family: 'Consolas'">Consolas</option>
+            <% clientOptionView.inputfont.choices.forEach(function(choice) { %>
+            <option value="<%= choice.value %>" style="<%= choice.style %>"<% if (choice.value === "standard") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <% }); %>
           </select>
         </div>
         <div class="option-row" id="inputfontsize-option">
@@ -172,12 +154,9 @@
         <div class="option-row" id="colorset-option">
           <span class="option-label"><%= clientOptionLabels.colorset %></span>
           <select name="colorset-choice">
-            <option value="normal" selected="selected">Normal Colors</option>
-            <option value="dim">Not So Bright</option>
-            <option value="slither">Switch Bright White/Green</option>
-            <option value="acid">Dystopia is Pretty</option>
-            <option value="corpie">Privileged Class</option>
-            <option value="snow">Office Documents</option>
+            <% clientOptionView.colorset.choices.forEach(function(choice) { %>
+            <option value="<%= choice.value %>"<% if (choice.value === "normal") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <% }); %>
           </select>
         </div>
       </div>
@@ -185,42 +164,17 @@
         <div class="option-row" id="edittype-option">
           <span class="option-label"><%= clientOptionLabels.edittype %></span>
           <select name="editor-type-choice">
-            <option value="ide" selected="selected">IDE</option>
-            <option value="windows">Individual Windows</option>
+            <% clientOptionView.edittype.choices.forEach(function(choice) { %>
+            <option value="<%= choice.value %>"<% if (choice.value === "ide") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <% }); %>
           </select>
         </div>
         <div class="option-row" id="edittheme-option">
           <span class="option-label"><%= clientOptionLabels.edittheme %></span>
           <select name="editor-theme-choice">
-            <option value="ambience">ambience</option>
-            <option value="chaos">chaos</option>
-            <option value="chrome">chrome</option>
-            <option value="clouds">clouds</option>
-            <option value="clouds_midnight">clouds_midnight</option>
-            <option value="cobalt">cobalt</option>
-            <option value="crimson_editor">crimson_editor</option>
-            <option value="dawn">dawn</option>
-            <option value="dreamweaver">dreamweaver</option>
-            <option value="eclipse">eclipse</option>
-            <option value="github">github</option>
-            <option value="idle_fingers">idle_fingers</option>
-            <option value="kr_theme">kr_theme</option>
-            <option value="merbivore">merbivore</option>
-            <option value="merbivore_soft">merbivore_soft</option>
-            <option value="mono_industrial">mono_industrial</option>
-            <option value="monokai">monokai</option>
-            <option value="pastel_on_dark">pastel_on_dark</option>
-            <option value="solarized_dark">solarized_dark</option>
-            <option value="solarized_light">solarized_light</option>
-            <option value="terminal">terminal</option>
-            <option value="textmate">textmate</option>
-            <option value="tomorrow_night">tomorrow_night</option>
-            <option value="tomorrow_night_blue">tomorrow_night_blue</option>
-            <option value="tomorrow_night_bright">tomorrow_night_bright</option>
-            <option value="tomorrow_night_eighties">tomorrow_night_eighties</option>
-            <option value="twilight" selected="selected">twilight</option>
-            <option value="vibrant_ink">vibrant_ink</option>
-            <option value="xcode">xcode</option>
+            <% clientOptionView.edittheme.choices.forEach(function(choice) { %>
+            <option value="<%= choice.value %>"<% if (choice.value === "twilight") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <% }); %>
           </select>
         </div>
       </div>
