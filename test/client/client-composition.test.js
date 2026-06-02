@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import {
+  createClientFeatureSet,
   createClientSetupHooks,
   initClient
 } from "../../src/client/z-setup.js";
@@ -53,8 +54,6 @@ test("initClient composes setup hooks with explicit client context", () => {
     setupWindowHandlers: () => calls.push("setupWindowHandlers"),
     setupEditorSupport: () => calls.push("setupEditorSupport"),
     setupAutoscroll: () => calls.push("setupAutoscroll"),
-    setupButtons: () => calls.push("setupButtons"),
-    setupChevronToggle: () => calls.push("setupChevronToggle"),
     setupHealthCheck: () => calls.push("setupHealthCheck"),
     setupOutputParser: () => calls.push("setupOutputParser"),
     setupSocket: () => {
@@ -62,12 +61,16 @@ test("initClient composes setup hooks with explicit client context", () => {
       return socket;
     }
   };
+  const features = {
+    setupButtons: () => calls.push("setupButtons"),
+    setupChevronToggle: () => calls.push("setupChevronToggle")
+  };
   window.setTimeout = fn => {
     fn();
     return 1;
   };
 
-  initClient({ client, win: window, doc: window.document, hooks });
+  initClient({ client, win: window, doc: window.document, hooks, features });
 
   assert.deepEqual(calls.slice(0, 8), [
     "setupInputReader",
@@ -107,16 +110,18 @@ test("initClient installs native socket shim when DomeNative is available", () =
     setupWindowHandlers: () => {},
     setupEditorSupport: () => {},
     setupAutoscroll: () => {},
-    setupButtons: () => {},
-    setupChevronToggle: () => {},
     setupHealthCheck: () => {},
     setupOutputParser: () => {},
     setupSocket: () => {
       throw new Error("browser socket should not start");
     }
   };
+  const features = {
+    setupButtons: () => {},
+    setupChevronToggle: () => {}
+  };
 
-  initClient({ client, win: window, doc: window.document, hooks });
+  initClient({ client, win: window, doc: window.document, hooks, features });
   window.DomeBridge.sendInput("look");
   client.socket.emit("input", "say hi");
 
@@ -136,4 +141,11 @@ test("createClientSetupHooks delegates to current client methods", () => {
 
   assert.equal(hooks.setupSocket(), "socket");
   assert.deepEqual(calls, ["input"]);
+});
+
+test("createClientFeatureSet exposes directly imported setup features", () => {
+  const features = createClientFeatureSet();
+
+  assert.equal(typeof features.setupButtons, "function");
+  assert.equal(typeof features.setupChevronToggle, "function");
 });

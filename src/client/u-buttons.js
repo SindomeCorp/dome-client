@@ -11,69 +11,71 @@ import {
 } from "./button-workflows.js";
 import { attachImagePreview, toggleImagePreview } from "./image-preview.js";
 
-dome.setupButtons = function() {
-  dome.reconnectButton = toElement(dome.reconnectButton);
-  bindReconnectButton({ button: dome.reconnectButton, client: dome });
-  bindSaveLogButtons({ buttons: dome.saveButton, client: dome, logger });
+export function setupButtons({ client = dome, doc = globalThis.document } = {}) {
+  client.reconnectButton = toElement(client.reconnectButton);
+  bindReconnectButton({ button: client.reconnectButton, client });
+  bindSaveLogButtons({ buttons: client.saveButton, client, logger });
 
-  dome.clearButton = toElement(dome.clearButton);
-  dome.clearBufferOverlay = toElement(dome.clearBufferOverlay);
-  dome.clearBufferConfirmButton = toElement(dome.clearBufferConfirmButton);
-  dome.clearBufferCancelButton = toElement(dome.clearBufferCancelButton);
+  client.clearButton = toElement(client.clearButton);
+  client.clearBufferOverlay = toElement(client.clearBufferOverlay);
+  client.clearBufferConfirmButton = toElement(client.clearBufferConfirmButton);
+  client.clearBufferCancelButton = toElement(client.clearBufferCancelButton);
   bindClearBufferControls({
-    client: dome,
-    button: dome.clearButton,
-    overlay: dome.clearBufferOverlay,
-    confirmButton: dome.clearBufferConfirmButton,
-    cancelButton: dome.clearBufferCancelButton
+    client,
+    button: client.clearButton,
+    overlay: client.clearBufferOverlay,
+    confirmButton: client.clearBufferConfirmButton,
+    cancelButton: client.clearBufferCancelButton
   });
 
-  dome.scrollButton = toElement(dome.scrollButton);
-  if (dome.scrollButton && dome.onToggleAutoScroll) {
-    dome.scrollButton.addEventListener("click", dome.onToggleAutoScroll);
+  client.scrollButton = toElement(client.scrollButton);
+  if (client.scrollButton && client.onToggleAutoScroll) {
+    client.scrollButton.addEventListener("click", client.onToggleAutoScroll);
   }
 
-  dome.shortcutsButton = toElement(dome.shortcutsButton);
-  dome.shortcutsOverlay = toElement(dome.shortcutsOverlay);
+  client.shortcutsButton = toElement(client.shortcutsButton);
+  client.shortcutsOverlay = toElement(client.shortcutsOverlay);
   bindToggleOverlayButton({
-    button: dome.shortcutsButton,
-    overlay: dome.shortcutsOverlay,
+    button: client.shortcutsButton,
+    overlay: client.shortcutsOverlay,
     closeOnAnyOverlayClick: true
   });
 
-  dome.clientOptionsButton = toElement(dome.clientOptionsButton);
-  dome.clientOptionsOverlay = toElement(dome.clientOptionsOverlay);
+  client.clientOptionsButton = toElement(client.clientOptionsButton);
+  client.clientOptionsOverlay = toElement(client.clientOptionsOverlay);
   bindToggleOverlayButton({
-    button: dome.clientOptionsButton,
-    overlay: dome.clientOptionsOverlay,
+    button: client.clientOptionsButton,
+    overlay: client.clientOptionsOverlay,
     onOpen: refreshClientOptions
   });
 
-  dome.clientOptionsClose = toElement(dome.clientOptionsClose);
-  bindCloseButton({ button: dome.clientOptionsClose, overlay: dome.clientOptionsOverlay });
+  client.clientOptionsClose = toElement(client.clientOptionsClose);
+  bindCloseButton({ button: client.clientOptionsClose, overlay: client.clientOptionsOverlay });
   bindEscapeOverlayClose({
-    documentRef: document,
-    overlays: [dome.clientOptionsOverlay, dome.shortcutsOverlay, dome.clearBufferOverlay]
+    documentRef: doc,
+    overlays: [client.clientOptionsOverlay, client.shortcutsOverlay, client.clearBufferOverlay]
   });
 
-  dome.attachImage = function(elem, imageId, url) {
+  client.attachImage = function(elem, imageId, url) {
     attachImagePreview({
       elem,
       imageId,
       url,
-      parseYouTubeID: dome.parseYouTubeID,
-      buffer: dome.buffer
+      parseYouTubeID: client.parseYouTubeID,
+      buffer: client.buffer
     });
   };
 
-  dome.toggleImage = function(control, imageId, imageURL) {
+  client.toggleImage = function(control, imageId, imageURL) {
     toggleImagePreview({
       control,
-      buffer: dome.buffer,
+      buffer: client.buffer,
       imageId,
       imageURL,
-      attachImage: dome.attachImage,
+      attachImage: client.attachImage,
       logger
     });
   };
-};
+}
+
+dome.setupButtons = () => setupButtons({ client: dome });

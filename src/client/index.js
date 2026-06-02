@@ -9,8 +9,6 @@ import "./g-socket-lifecycle.js";
 import "./s-editor.js";
 import "./ide.js";
 import "./t-autoscroll.js";
-import "./u-buttons.js";
-import "./chevron-toggle.js";
 import "./w-autocomplete.js";
 import "./y-health.js";
 import "./z-setup.js";

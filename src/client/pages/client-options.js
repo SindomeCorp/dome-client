@@ -410,21 +410,23 @@ export {
   refreshClientOptions
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-  if (window.__domeClientOptionsInitialized) return;
-  window.__domeClientOptionsInitialized = true;
-  // allow scrolling without showing a scrollbar
-  document.body.style.overflowY = "auto";
-  document.body.style.msOverflowStyle = "none";
-  document.body.style.scrollbarWidth = "none";
-  const hideScrollbar = document.createElement("style");
-  hideScrollbar.textContent = "body::-webkit-scrollbar { display: none; }";
-  document.head.appendChild(hideScrollbar);
+if (globalThis.document && globalThis.window) {
+  document.addEventListener("DOMContentLoaded", () => {
+    if (window.__domeClientOptionsInitialized) return;
+    window.__domeClientOptionsInitialized = true;
+    // allow scrolling without showing a scrollbar
+    document.body.style.overflowY = "auto";
+    document.body.style.msOverflowStyle = "none";
+    document.body.style.scrollbarWidth = "none";
+    const hideScrollbar = document.createElement("style");
+    hideScrollbar.textContent = "body::-webkit-scrollbar { display: none; }";
+    document.head.appendChild(hideScrollbar);
 
-  refreshClientOptions();
-  setupClientOptionsTabs();
-  bindImportExportControls();
-  bindOptionSelects();
-  bindOptionButtons();
-  bindOptionInputs();
-});
+    refreshClientOptions();
+    setupClientOptionsTabs();
+    bindImportExportControls();
+    bindOptionSelects();
+    bindOptionButtons();
+    bindOptionInputs();
+  });
+}

@@ -1,4 +1,11 @@
 import { dome, SOCKET_STATE_ENUM, setSocket } from "./b-variables.js";
+import { setupChevronToggle } from "./chevron-toggle.js";
+import { setupButtons } from "./u-buttons.js";
+
+export const createClientFeatureSet = () => ({
+  setupButtons,
+  setupChevronToggle
+});
 
 export const createClientSetupHooks = (client = dome) => ({
   setupInputReader: () => client.setupInputReader?.(),
@@ -98,12 +105,18 @@ export const applyInitialClientPreferences = ({ client = dome, doc = globalThis.
   applyTransparentOverlayPreference({ client, doc });
 };
 
-export const setupClientFeatures = ({ hooks = createClientSetupHooks(dome) }) => {
+export const setupClientFeatures = ({
+  client = dome,
+  doc = globalThis.document,
+  win = globalThis.window,
+  hooks = createClientSetupHooks(client),
+  features = createClientFeatureSet()
+} = {}) => {
   hooks.setupWindowHandlers();
   hooks.setupEditorSupport();
   hooks.setupAutoscroll();
-  hooks.setupButtons();
-  hooks.setupChevronToggle();
+  features.setupButtons({ client, doc, win });
+  features.setupChevronToggle({ client, doc, win });
   hooks.setupHealthCheck();
   hooks.setupOutputParser();
 };
@@ -205,13 +218,14 @@ export const initClient = ({
   client = dome,
   win = globalThis.window,
   doc = globalThis.document,
-  hooks = createClientSetupHooks(client)
+  hooks = createClientSetupHooks(client),
+  features = createClientFeatureSet()
 } = {}) => {
   const hasNativeBridge = !!win.DomeNative && typeof win.DomeNative.sendInput === "function";
 
   assignClientDomReferences({ client, doc });
   applyInitialClientPreferences({ client, doc, hooks });
-  setupClientFeatures({ hooks });
+  setupClientFeatures({ client, doc, win, hooks, features });
   installDomeBridge({ client, win, hasNativeBridge });
   notifyNativeBridgeReady({ win });
   startClientSocket({ client, win, hooks, hasNativeBridge });
@@ -223,9 +237,10 @@ export const startClientWhenDomReady = ({
   client = dome,
   win = globalThis.window,
   doc = globalThis.document,
-  hooks = createClientSetupHooks(client)
+  hooks = createClientSetupHooks(client),
+  features = createClientFeatureSet()
 } = {}) => {
-  const start = () => initClient({ client, win, doc, hooks });
+  const start = () => initClient({ client, win, doc, hooks, features });
   if (doc.readyState === "loading") {
     doc.addEventListener("DOMContentLoaded", start);
     return;

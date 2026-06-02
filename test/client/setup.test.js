@@ -64,7 +64,6 @@ test("z-setup assigns DOM references and invokes setup hooks", async t => {
     "setupWindowHandlers",
     "setupEditorSupport",
     "setupAutoscroll",
-    "setupButtons",
     "setupHealthCheck",
     "setupOutputParser",
     "setupSocket"
@@ -105,4 +104,3 @@ test("z-setup assigns DOM references and invokes setup hooks", async t => {
   assert.ok(dome.socket);
 
 });
-

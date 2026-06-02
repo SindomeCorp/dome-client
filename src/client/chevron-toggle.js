@@ -1,19 +1,20 @@
 import { dome } from "./b-variables.js";
 
-dome.setupChevronToggle = function() {
-  if (!dome.buffer) {
+export function setupChevronToggle({ client = dome } = {}) {
+  if (!client.buffer) {
     return;
   }
-  dome.buffer.addEventListener("click", event => {
+  client.buffer.addEventListener("click", event => {
     const control = event.target.closest("i.icon-chevron-up, i.icon-chevron-down");
     if (!control) {
       return;
     }
     const { imageId, imageUrl } = control.dataset;
-    if (!imageId || !imageUrl || typeof dome.toggleImage !== "function") {
+    if (!imageId || !imageUrl || typeof client.toggleImage !== "function") {
       return;
     }
-    dome.toggleImage(control, imageId, imageUrl);
+    client.toggleImage(control, imageId, imageUrl);
   });
-};
+}
 
+dome.setupChevronToggle = () => setupChevronToggle({ client: dome });

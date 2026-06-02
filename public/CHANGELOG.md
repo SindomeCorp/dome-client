@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - Added Knip dead-code analysis commands for finding unused files, exports, and dependencies.
 
 ### Changed
+- Wired button and chevron setup through explicit client composition exports instead of standalone side-effect startup imports.
 - Split button workflows for reconnect, log download, clear-buffer confirmation, overlays, and image preview into focused helpers.
 - Extracted health status classification, connection-error diagnosis, detail rendering, and graph-series shaping from the health UI setup.
 - Extracted connect-page saved-user storage and connection intent helpers so local profile persistence and player-client URL building are tested outside DOM setup.

@@ -122,7 +122,7 @@ Benefits:
 
 ## Phase 5. Normalize Client Composition
 
-Status: Planned after Phases 1-4.
+Status: In progress.
 
 Target files:
 
@@ -136,6 +136,7 @@ Why: The current compatibility layer is useful, but `src/client/index.js` still 
 
 Steps:
 
+- Converted button and chevron setup modules to explicit setup exports and wired them through `z-setup.js`.
 - Convert one setup module at a time to export `setupFeature({ client, document, window })`.
 - Have `z-setup.js` call imported setup functions directly.
 - Keep temporary assignments to `dome.setupX` only where tests or legacy callers still need them.
