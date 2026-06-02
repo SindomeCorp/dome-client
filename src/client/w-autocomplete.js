@@ -2,7 +2,7 @@ import { dome, logger } from "./b-variables.js";
 
 dome.autoCommands = [];
 
-const SUGGESTION_INPUT_GAP_PX = 6;
+const SUGGESTION_INPUT_GAP_PX = 16;
 const SUGGESTION_ROW_HEIGHT_PX = 24;
 
 const getSuggestionListHeight = (list, availableHeight) => {
