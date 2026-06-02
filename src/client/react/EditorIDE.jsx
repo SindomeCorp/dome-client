@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useReducer, useRef } from "react";
 import { parseCommand, getCommandLabel } from "../command-utils.js";
 import { getPreferredFont } from "../ace/fonts.js";
 import {
@@ -15,9 +15,7 @@ import {
 import {
   getOverlayCacheKeys,
   normalizeObjectPropertiesPayload,
-  normalizeObjectVerbsPayload,
-  sortByLabel,
-  sortByPropertyLabel
+  normalizeObjectVerbsPayload
 } from "./editor-ide/payloads.js";
 import {
   buildTitle,
@@ -26,6 +24,10 @@ import {
   OBJECT_BROWSER_TAB,
   PROPERTY_BROWSER_TAB
 } from "./editor-ide/tabs.js";
+import {
+  ideReducer,
+  initialIdeState
+} from "./editor-ide/state.js";
 import { emitInput } from "./editor-ide/socketAdapter.js";
 import { useAceEditors } from "./editor-ide/useAceEditors.js";
 import { useIdeConfig } from "./editor-ide/useIdeConfig.js";
@@ -50,14 +52,7 @@ export default function EditorIDE() {
     localSaveNoteMaxLines
   } = useIdeConfig();
 
-  const [documents, setDocuments] = useState([]);
-  const [panels, setPanels] = useState({ objectBrowser: false, propertyBrowser: false });
-  const [objectGraph, setObjectGraph] = useState({});
-  const [collapsedObjects, setCollapsedObjects] = useState({});
-  const [propertyGraph, setPropertyGraph] = useState({});
-  const [collapsedProperties, setCollapsedProperties] = useState({});
-  const [propertyObjectMeta, setPropertyObjectMeta] = useState({});
-  const [active, setActive] = useState(null);
+  const [ideState, dispatchIde] = useReducer(ideReducer, initialIdeState);
   const [darkMode, setDarkMode] = usePersistentPreference(
     "ide-dark",
     false,
@@ -74,6 +69,16 @@ export default function EditorIDE() {
   const overlayCache = useRef({ verb: new Map(), prop: new Map() });
   const pendingOverlayKey = useRef("");
   const vmsPromptInputRef = useRef(null);
+  const {
+    active,
+    collapsedObjects,
+    collapsedProperties,
+    documents,
+    objectGraph,
+    panels,
+    propertyGraph,
+    propertyObjectMeta
+  } = ideState;
   const tabs = useMemo(() => buildIdeTabs(documents, panels), [documents, panels]);
   const {
     destroyEditor,
@@ -91,11 +96,7 @@ export default function EditorIDE() {
       localSaveNoteMaxLines
     },
     onContentChange: (id, val) => {
-      setDocuments((items) =>
-        items.map((item) =>
-          item.id === id ? { ...item, content: val, dirty: val !== item.savedContent } : item
-        )
-      );
+      dispatchIde({ type: "markDocumentChanged", id, content: val });
     },
     onHoverOverlay: setHoverOverlay,
     onHoverOverlayClear: (id) => {
@@ -124,91 +125,29 @@ export default function EditorIDE() {
   }, [active]);
 
 
-  const upsertObjectVerb = (objectId, verbLabel) => {
-    setObjectGraph((prev) => {
-      const current = prev[objectId] || [];
-      if (current.some((entry) => entry.verbName === verbLabel)) return prev;
-      if (!Object.prototype.hasOwnProperty.call(prev, objectId)) {
-        setCollapsedObjects((state) =>
-          Object.prototype.hasOwnProperty.call(state, objectId)
-            ? state
-            : { ...state, [objectId]: true }
-        );
-      }
-      return {
-        ...prev,
-        [objectId]: sortByLabel([
-          ...current,
-          { verbName: verbLabel, permissions: "", argumentsText: "" }
-        ])
-      };
-    });
-  };
-
-  const replaceObjectVerbs = (objectId, verbRows) => {
-    const dedupedMap = new Map();
-    verbRows.forEach((row) => {
-      if (!row.verbName) return;
-      dedupedMap.set(row.verbName, row);
-    });
-    const deduped = Array.from(dedupedMap.values());
-    setCollapsedObjects((state) =>
-      Object.prototype.hasOwnProperty.call(state, objectId)
-        ? state
-        : { ...state, [objectId]: true }
-    );
-    setObjectGraph((prev) => ({ ...prev, [objectId]: sortByLabel(deduped) }));
-  };
-
-  const upsertObjectProperty = (objectId, propertyLabel) => {
-    setPropertyGraph((prev) => {
-      const current = prev[objectId] || [];
-      if (current.some((entry) => entry.propertyName === propertyLabel)) return prev;
-      if (!Object.prototype.hasOwnProperty.call(prev, objectId)) {
-        setCollapsedProperties((state) =>
-          Object.prototype.hasOwnProperty.call(state, objectId)
-            ? state
-            : { ...state, [objectId]: true }
-        );
-      }
-      return {
-        ...prev,
-        [objectId]: sortByPropertyLabel([
-          ...current,
-          { propertyName: propertyLabel, clear: false }
-        ])
-      };
-    });
-  };
-
-  const replaceObjectProperties = (objectId, propertyRows, objectMeta) => {
-    const dedupedMap = new Map();
-    propertyRows.forEach((row) => {
-      if (!row.propertyName) return;
-      dedupedMap.set(row.propertyName, row);
-    });
-    const deduped = Array.from(dedupedMap.values());
-    setCollapsedProperties((state) =>
-      Object.prototype.hasOwnProperty.call(state, objectId)
-        ? state
-        : { ...state, [objectId]: true }
-    );
-    setPropertyGraph((prev) => ({ ...prev, [objectId]: sortByPropertyLabel(deduped) }));
-    if (objectMeta && typeof objectMeta === "object") {
-      setPropertyObjectMeta((prev) => ({ ...prev, [objectId]: objectMeta }));
-    }
+  const activateTab = (id) => {
+    dispatchIde({ type: "activateTab", id });
   };
 
   const applyObjectVerbsPayload = (payload) => {
     const normalized = normalizeObjectVerbsPayload(payload);
     if (!normalized) return;
-    replaceObjectVerbs(normalized.objectId, normalized.rows);
+    dispatchIde({
+      type: "replaceObjectVerbs",
+      objectId: normalized.objectId,
+      rows: normalized.rows
+    });
   };
 
   const applyObjectPropsPayload = (payload) => {
     const normalized = normalizeObjectPropertiesPayload(payload);
     if (!normalized) return;
-    replaceObjectProperties(normalized.objectId, normalized.rows, normalized.objectMeta);
+    dispatchIde({
+      type: "replaceObjectProperties",
+      objectId: normalized.objectId,
+      objectMeta: normalized.objectMeta,
+      rows: normalized.rows
+    });
   };
 
   const addTab = (editor) => {
@@ -229,36 +168,36 @@ export default function EditorIDE() {
         const objectId = commandTarget.slice(0, splitAt).trim();
         const verbName = commandTarget.slice(splitAt + 1).trim();
         if (objectId && verbName) {
-          upsertObjectVerb(objectId, verbName);
+          dispatchIde({ type: "upsertObjectVerb", objectId, verbLabel: verbName });
         }
       }
     } else if (isPropertyContext) {
       const parsedTarget = parseObjectPropertyTarget(commandTarget);
       if (parsedTarget) {
-        upsertObjectProperty(parsedTarget.objectId, parsedTarget.propertyName);
+        dispatchIde({
+          type: "upsertObjectProperty",
+          objectId: parsedTarget.objectId,
+          propertyLabel: parsedTarget.propertyName
+        });
       }
     }
 
-    setDocuments((prev) => {
-      const existing = prev.find((t) => t.name === name);
-      if (existing) {
-        setActive(existing.id);
-        emitInput(
-          "@@editor-message There was already a tab with that information open so we have switched the view to that. We did not update the contents."
-        );
-        return prev;
-      }
-      const id = Date.now() + Math.random();
-      setActive(id);
-      const nextTab = createEditableTab({ id, editor, title, command, commandTarget, name, isProgramCommand });
-      return [...prev, nextTab];
-    });
-    if (isVerbContext || isPropertyContext) {
-      setPanels((prev) => ({
-        objectBrowser: prev.objectBrowser || isVerbContext,
-        propertyBrowser: prev.propertyBrowser || isPropertyContext
-      }));
+    const existing = documents.find((t) => t.name === name);
+    if (existing) {
+      dispatchIde({ type: "activateTab", id: existing.id });
+      emitInput(
+        "@@editor-message There was already a tab with that information open so we have switched the view to that. We did not update the contents."
+      );
+      return;
     }
+    const id = Date.now() + Math.random();
+    const nextTab = createEditableTab({ id, editor, title, command, commandTarget, name, isProgramCommand });
+    dispatchIde({
+      type: "openEditableTab",
+      objectBrowser: isVerbContext,
+      propertyBrowser: isPropertyContext,
+      tab: nextTab
+    });
   };
 
   const addScratch = () => {
@@ -348,7 +287,7 @@ export default function EditorIDE() {
     if (typeof val !== "string") return false;
     const messages = getSaveMessages(tab, val, vmsNoteLine);
     if (!messages.every((message) => emitInput(message))) return false;
-    setDocuments((items) => items.map((item) => (item.id === tab.id ? { ...item, savedContent: val, dirty: false } : item)));
+    dispatchIde({ type: "markDocumentSaved", id: tab.id, content: val });
     return true;
   };
 
@@ -366,17 +305,17 @@ export default function EditorIDE() {
     const nextNote = vmsPrompt.value || "";
     const didSave = runSave({ ...targetTab, vmsNote: nextNote }, nextNote);
     if (!didSave) return;
-    setDocuments((items) => items.map((item) => (item.id === targetTab.id ? { ...item, vmsNote: nextNote } : item)));
+    dispatchIde({ type: "updateVmsNote", id: targetTab.id, vmsNote: nextNote });
     setVmsPrompt(EMPTY_VMS_PROMPT_STATE);
   };
 
   const onLoadVerbs = (objectId) => {
-    setCollapsedObjects((prev) => ({ ...prev, [objectId]: false }));
+    dispatchIde({ type: "loadObjectVerbs", objectId });
     emitInput(formatVerbListCommand(objectId));
   };
 
   const onLoadProps = (objectId) => {
-    setCollapsedProperties((prev) => ({ ...prev, [objectId]: false }));
+    dispatchIde({ type: "loadObjectProperties", objectId });
     emitInput(formatPropertyListCommand(objectId));
   };
 
@@ -393,11 +332,11 @@ export default function EditorIDE() {
   };
 
   const toggleObjectCollapsed = (objectId) => {
-    setCollapsedObjects((prev) => ({ ...prev, [objectId]: !prev[objectId] }));
+    dispatchIde({ type: "toggleObjectCollapsed", objectId });
   };
 
   const togglePropertyCollapsed = (objectId) => {
-    setCollapsedProperties((prev) => ({ ...prev, [objectId]: !prev[objectId] }));
+    dispatchIde({ type: "togglePropertyCollapsed", objectId });
   };
 
   const closeTab = (id) => {
@@ -405,20 +344,14 @@ export default function EditorIDE() {
     if (!isPanel) {
       destroyEditor(id);
     }
-    if (isPanel) {
-      setPanels((currentPanels) => ({
-        objectBrowser: id === OBJECT_BROWSER_TAB.id ? false : currentPanels.objectBrowser,
-        propertyBrowser: id === PROPERTY_BROWSER_TAB.id ? false : currentPanels.propertyBrowser
-      }));
-    } else {
-      setDocuments((items) => items.filter((item) => item.id !== id));
-    }
     const next = tabs.filter((t) => t.id !== id);
     recentTabIds.current = recentTabIds.current.filter((tabId) => tabId !== id);
+    let nextActiveId = active;
     if (active === id) {
       const fallbackId = [...recentTabIds.current].reverse().find((tabId) => next.some((t) => t.id === tabId));
-      setActive(fallbackId || next[0]?.id || null);
+      nextActiveId = fallbackId || next[0]?.id || null;
     }
+    dispatchIde({ type: "closeTab", id, nextActiveId });
     if (next.length === 0) {
       setTimeout(() => window.close(), 0);
     }
@@ -436,7 +369,7 @@ export default function EditorIDE() {
     if (active == null) return;
     if (tabs.some((tab) => tab.id === active)) return;
     const fallbackId = [...recentTabIds.current].reverse().find((tabId) => tabs.some((tab) => tab.id === tabId));
-    setActive(fallbackId || tabs[0]?.id || null);
+    dispatchIde({ type: "activateTab", id: fallbackId || tabs[0]?.id || null });
   }, [active, tabs]);
 
   useEffect(() => {
@@ -502,14 +435,14 @@ export default function EditorIDE() {
         if (tabs.length) {
           const idx = tabs.findIndex((t) => t.id === active);
           const next = tabs[(idx - 1 + tabs.length) % tabs.length];
-          setActive(next.id);
+          activateTab(next.id);
         }
       } else if (key === "]") {
         e.preventDefault();
         if (tabs.length) {
           const idx = tabs.findIndex((t) => t.id === active);
           const next = tabs[(idx + 1) % tabs.length];
-          setActive(next.id);
+          activateTab(next.id);
         }
       } else if (key === "l" && e.shiftKey) {
         e.preventDefault();
@@ -571,7 +504,7 @@ export default function EditorIDE() {
           <div className={`flex-1 flex min-h-0 ${orientation === "left" ? "" : "flex-col"}`}>
             <TabStrip
               active={active}
-              onActivate={setActive}
+              onActivate={activateTab}
               onClose={onClose}
               orientation={orientation}
               tabs={tabs}
@@ -601,7 +534,7 @@ export default function EditorIDE() {
                   }}
                   ideVmsNoteEnabled={ideVmsNoteEnabled}
                   onUpdateVmsNote={(tabId, vmsNote) => {
-                    setDocuments((items) => items.map((item) => (item.id === tabId ? { ...item, vmsNote } : item)));
+                    dispatchIde({ type: "updateVmsNote", id: tabId, vmsNote });
                   }}
                   setEditorRef={setEditorRef}
                   tab={tab}

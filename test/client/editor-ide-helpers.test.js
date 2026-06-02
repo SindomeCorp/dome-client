@@ -35,6 +35,10 @@ import {
   createPropertyBrowserTab,
   pinBrowserTabs
 } from "../../src/client/react/editor-ide/tabs.js";
+import {
+  ideReducer,
+  initialIdeState
+} from "../../src/client/react/editor-ide/state.js";
 
 test("editor IDE target helpers parse and resolve references", () => {
   assert.deepEqual(parseObjectPropertyTarget("#12.name"), {
@@ -241,4 +245,157 @@ test("editor IDE tab helpers build editable and pinned browser tabs", () => {
   assert.equal(Object.prototype.hasOwnProperty.call(objectBrowser, "savedContent"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(objectBrowser, "dirty"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(objectBrowser, "uploadCommand"), false);
+});
+
+test("editor IDE reducer opens, activates, changes, and saves documents", () => {
+  const tab = createEditableTab({
+    id: 3,
+    editor: {
+      editorName: "Look",
+      uploadCommand: "@program #12:look",
+      buffer: "content"
+    },
+    title: "Look",
+    command: "@program",
+    commandTarget: "#12:look",
+    name: "Look|#12:look",
+    isProgramCommand: true
+  });
+  const opened = ideReducer(initialIdeState, {
+    type: "openEditableTab",
+    objectBrowser: true,
+    propertyBrowser: false,
+    tab
+  });
+
+  assert.equal(opened.active, 3);
+  assert.equal(opened.panels.objectBrowser, true);
+  assert.deepEqual(opened.documents, [tab]);
+
+  const duplicate = ideReducer(opened, {
+    type: "openEditableTab",
+    tab: { ...tab, id: 4, content: "replacement" }
+  });
+  assert.equal(duplicate.active, 3);
+  assert.deepEqual(duplicate.documents, [tab]);
+
+  const changed = ideReducer(opened, { type: "markDocumentChanged", id: 3, content: "new content" });
+  assert.equal(changed.documents[0].dirty, true);
+  assert.equal(changed.documents[0].content, "new content");
+
+  const saved = ideReducer(changed, { type: "markDocumentSaved", id: 3, content: "new content" });
+  assert.equal(saved.documents[0].dirty, false);
+  assert.equal(saved.documents[0].savedContent, "new content");
+});
+
+test("editor IDE reducer closes panels and documents with explicit active fallback", () => {
+  const firstTab = createEditableTab({
+    id: 1,
+    editor: { editorName: "One", uploadCommand: "@program #1:one" },
+    title: "One",
+    command: "@program",
+    commandTarget: "#1:one",
+    name: "One|#1:one",
+    isProgramCommand: true
+  });
+  const secondTab = createEditableTab({
+    id: 2,
+    editor: { editorName: "Two", uploadCommand: "@program #1:two" },
+    title: "Two",
+    command: "@program",
+    commandTarget: "#1:two",
+    name: "Two|#1:two",
+    isProgramCommand: true
+  });
+  const state = {
+    ...initialIdeState,
+    active: "object-browser",
+    documents: [firstTab, secondTab],
+    panels: { objectBrowser: true, propertyBrowser: true }
+  };
+
+  const withoutPanel = ideReducer(state, {
+    type: "closeTab",
+    id: "object-browser",
+    nextActiveId: 2
+  });
+  assert.equal(withoutPanel.panels.objectBrowser, false);
+  assert.equal(withoutPanel.panels.propertyBrowser, true);
+  assert.equal(withoutPanel.active, 2);
+  assert.deepEqual(withoutPanel.documents, [firstTab, secondTab]);
+
+  const withoutDocument = ideReducer({ ...state, active: 2 }, {
+    type: "closeTab",
+    id: 2,
+    nextActiveId: 1
+  });
+  assert.equal(withoutDocument.active, 1);
+  assert.deepEqual(withoutDocument.documents, [firstTab]);
+});
+
+test("editor IDE reducer updates browser graph state", () => {
+  const withVerb = ideReducer(initialIdeState, {
+    type: "upsertObjectVerb",
+    objectId: "#12",
+    verbLabel: "look"
+  });
+  assert.deepEqual(withVerb.objectGraph["#12"], [
+    { verbName: "look", permissions: "", argumentsText: "" }
+  ]);
+  assert.equal(withVerb.collapsedObjects["#12"], true);
+
+  const loadedVerbs = ideReducer(withVerb, {
+    type: "replaceObjectVerbs",
+    objectId: "#12",
+    rows: [
+      { verbName: "zeta" },
+      { verbName: "" },
+      { verbName: "alpha" },
+      { verbName: "zeta", owner: "#2" }
+    ]
+  });
+  assert.deepEqual(loadedVerbs.objectGraph["#12"], [
+    { verbName: "alpha" },
+    { verbName: "zeta", owner: "#2" }
+  ]);
+  assert.equal(ideReducer(loadedVerbs, { type: "loadObjectVerbs", objectId: "#12" }).collapsedObjects["#12"], false);
+  assert.equal(
+    ideReducer(loadedVerbs, { type: "toggleObjectCollapsed", objectId: "#12" }).collapsedObjects["#12"],
+    false
+  );
+
+  const withProperty = ideReducer(initialIdeState, {
+    type: "upsertObjectProperty",
+    objectId: "#12",
+    propertyLabel: "name"
+  });
+  assert.deepEqual(withProperty.propertyGraph["#12"], [
+    { propertyName: "name", clear: false }
+  ]);
+  assert.equal(withProperty.collapsedProperties["#12"], true);
+
+  const loadedProperties = ideReducer(withProperty, {
+    type: "replaceObjectProperties",
+    objectId: "#12",
+    objectMeta: { owner: "#2" },
+    rows: [
+      { propertyName: "zeta" },
+      { propertyName: "" },
+      { propertyName: "alpha" },
+      { propertyName: "zeta", owner: "#2" }
+    ]
+  });
+  assert.deepEqual(loadedProperties.propertyGraph["#12"], [
+    { propertyName: "alpha" },
+    { propertyName: "zeta", owner: "#2" }
+  ]);
+  assert.deepEqual(loadedProperties.propertyObjectMeta["#12"], { owner: "#2" });
+  assert.equal(
+    ideReducer(loadedProperties, { type: "loadObjectProperties", objectId: "#12" }).collapsedProperties["#12"],
+    false
+  );
+  assert.equal(
+    ideReducer(loadedProperties, { type: "togglePropertyCollapsed", objectId: "#12" }).collapsedProperties["#12"],
+    false
+  );
 });
