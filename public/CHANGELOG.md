@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## 2026-06-02
 
 ### Changed
+- Extracted connect-page saved-user storage and connection intent helpers so local profile persistence and player-client URL building are tested outside DOM setup.
+- Removed obsolete connect-page migration for legacy `dc-username` and `dc-password` local profile keys.
 - Replaced the Editor IDE technical debt plan with a roadmap focused on tab planning, save flow, shortcuts, overlays, and orchestration cleanup.
 - Refactored the Editor IDE internals into focused planning, save-flow, shortcut, overlay, browser command, recent-tab, and label helpers while preserving existing behavior.
 - Centralized client option display names in the shared option schema so option UI labels stay aligned with command and preference metadata.

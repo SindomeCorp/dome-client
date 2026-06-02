@@ -1,87 +1,38 @@
 import logger from "./logger.js";
 import { store } from "../store.js";
+import { savedUsersStore } from "../saved-users-store.js";
+import {
+  DEFAULT_MUD_HOST,
+  DEFAULT_MUD_PORT,
+  buildMooConnectCommand,
+  buildPlayerClientUrl,
+  resolvePlayerClientAddress
+} from "../client-connect-intent.js";
 
 function getParameterByName(name) {
   const match = RegExp("[?&]" + name + "=([^&]*)").exec(window.location.search);
   return match && decodeURIComponent(match[1].replace(/\+/g, " "));
 }
 
-const gogo = getParameterByName("auto");
-const DEFAULT_MUD_HOST = "moo.sindome.org";
-const DEFAULT_MUD_PORT = "5555";
-
 const connectFunction = function() {
   const u = document.getElementById("moo-username").value;
   const p = document.getElementById("moo-password").value;
-  let cmd = "";
-  if ( u && p ) {
-    // both username and password
-    cmd = "connect " + u + " " + p;
-  } else if ( u ) {
-    // just username
-    cmd = "connect " + u;
-  }
+  const cmd = buildMooConnectCommand({ username: u, password: p });
   if ( cmd ) {
-    store.addUser({"username" : u, "password" : p });
+    savedUsersStore.addUser({ "username": u, "password": p });
     store.put("last-username", u);
     //store.put('dc-password', p);
     store.put("dc-user-login", cmd);
   }
   const hostField = document.getElementById("moo-hostname");
   const portField = document.getElementById("moo-port");
-  let host = (hostField?.value || "").trim();
-  let port = (portField?.value || "").trim();
-  if (!host) {
-    host = DEFAULT_MUD_HOST;
-  }
-  if (!port) {
-    port = DEFAULT_MUD_PORT;
-  }
+  const { host, port } = resolvePlayerClientAddress({
+    host: hostField?.value,
+    port: portField?.value
+  });
   store.put("game-hostname", host);
   store.put("game-port", port);
-  const params = new URLSearchParams();
-  params.set("gh", host);
-  params.set("gp", port);
-  window.location = `/player-client/?${params.toString()}`;
-};
-
-store.getUsernames = function() {
-  let users = this.get("stored-users");
-  if (!users) {
-    users = [];
-  }
-  return users;
-};
-
-store.getUser = function(username) {
-  const key = username.toLowerCase();
-  const pwd = this.get("user-" + key + "-passwd");
-  if (pwd) {
-    return { "username": key, "password": pwd };
-  }
-  return null;
-};
-
-store.addUser = function(user) {
-  const username = user.username.toLowerCase();
-  const password = user.password;
-
-  const users = this.getUsernames();
-  if (!users.includes(username)) {
-    users.push(username);
-  }
-  this.put("user-" + username + "-passwd", password);
-  this.put("stored-users", users);
-};
-
-store.purge = function() {
-  const usernames = this.getUsernames();
-  for (let i = 0; i < usernames.length; i++) {
-    this.remove("user-" + usernames[i] + "-passwd");
-  }
-  this.remove("stored-users");
-  this.remove("dc-user-login");
-  this.remove("last-username");
+  window.location = buildPlayerClientUrl({ host, port });
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -100,18 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
     window.setTimeout(() => { b.style.backgroundImage = bg; }, 10);
   }
 
-  // old school check
-  const storedUsername = store.get("dc-username"); // old username format
-  const storedPassword = store.get("dc-password"); // old password format
-  if (storedUsername && storedPassword) {
-    // convert old values
-    store.addUser({"username": storedUsername, "password": storedPassword});
-  }
-  // purge unmatched old pairs
-  store.remove("dc-username");
-  store.remove("dc-password");
-
-  const usernames = store.getUsernames();
+  const gogo = getParameterByName("auto");
+  const usernames = savedUsersStore.getUsernames();
   const gameHostname = DEFAULT_MUD_HOST;
   const gamePort = DEFAULT_MUD_PORT;
 
@@ -170,11 +111,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       let bestUser = null;
       if (gogo) {
-        bestUser = store.getUser(gogo);
+        bestUser = savedUsersStore.getUser(gogo);
       }
 
       if (!bestUser) {
-        bestUser = store.getUser(usernames[0]);
+        bestUser = savedUsersStore.getUser(usernames[0]);
       }
 
       if (bestUser) {
@@ -188,7 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (clicked.classList.contains("username") || clicked.classList.contains("character")) {
             // clicked username
             const usernameClicked = clicked.getAttribute("data-username");
-            let user = store.getUser(usernameClicked);
+            let user = savedUsersStore.getUser(usernameClicked);
             if (!user) {
               user = { username: usernameClicked, password: "" };
             }
@@ -198,7 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
             logger.info(`Command selected: ${command}`);
             if (command == "purgeAll") {
               if (window.confirm("You really want to delete all local user profiles?")) {
-                store.purge();
+                savedUsersStore.purge();
                 window.location.reload();
               }
             } else if (command == "newChar") {
@@ -263,7 +204,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (gogo) {
       logger.info(`Auto-connect parameter: ${gogo}`);
-      const user = store.getUser(gogo);
+      const user = savedUsersStore.getUser(gogo);
       if (user) {
         // we can auto launch
         connectFunction();
