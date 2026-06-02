@@ -21,6 +21,7 @@ export function error(err) {
 const SOCKET_PROXIED = config.node?.socketProxied ?? false;
 const SHORTEN_ENABLED = config.shorten?.enabled ?? true;
 const MULTI_MUD_ENABLED = config.node?.multiMud === true;
+const SOCKET_CONNECT_TIMEOUT_MS = 5000;
 
 function parseSocketPort(rawPort) {
   const parsed = Number.parseInt(String(rawPort || ""), 10);
@@ -84,8 +85,18 @@ export async function connection(socket) {
   try {
     moo = await new Promise((resolve, reject) => {
       const conn = net.connect({ port: gameAddress.port, host: gameAddress.host });
-      conn.once("connect", () => resolve(conn));
-      conn.once("error", reject);
+      const timer = setTimeout(() => {
+        reject(new Error("socket connect timeout"));
+      }, SOCKET_CONNECT_TIMEOUT_MS);
+      if (typeof timer?.unref === "function") {
+        timer.unref();
+      }
+      const settle = (fn) => (value) => {
+        clearTimeout(timer);
+        fn(value);
+      };
+      conn.once("connect", settle(() => resolve(conn)));
+      conn.once("error", settle(reject));
     });
   } catch (err) {
     logger.error("error while connecting to moo");

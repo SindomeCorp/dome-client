@@ -1,0 +1,16 @@
+{
+  "path": "/",
+  "title": "Connect - Modern Gaming Client | Integration MUD",
+  "h1": [
+    "Play Integration MUD Now",
+    "Client Options"
+  ],
+  "hasWebsiteLogin": false,
+  "hasConnectToHeading": false,
+  "hasPlayNow": false,
+  "hasLineBuffer": false,
+  "hasGameHealth": false,
+  "hasGameHealthDetail": false,
+  "hasGameOwnerGuideLink": false,
+  "hasGameOwnerGuideHeading": false
+}

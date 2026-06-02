@@ -12,6 +12,10 @@
     "build": "node src/services/build.js",
     "test": "npm run lint:views && NODE_ENV=test node --experimental-test-module-mocks --import=./test/mock-module.js --test",
     "test:integration": "NODE_ENV=test node --experimental-test-module-mocks --import=./test/mock-module.js --test test/integration/*.integration.js",
+    "test:mutation": "npm run test:mutation:full",
+    "test:mutation:warm": "stryker run --mutate \"src/controllers/save.js\"",
+    "test:mutation:hot": "stryker run stryker.hot.conf.json",
+    "test:mutation:full": "stryker run",
     "test:find-slow": "NODE_ENV=test node --experimental-test-module-mocks --import=./test/mock-module.js --test --test-reporter=tap 2>&1 | tee test-output.log | awk -v THRESHOLD=200 -f ./scripts/filter-slow-tap.awk",
     "test:views": "node --test test/views.test.js",
     "coverage": "NODE_ENV=test c8 --check-coverage --lines 80 --functions 80 --statements 80 node --experimental-test-module-mocks --import=./test/mock-module.js --experimental-test-coverage --test",
@@ -44,6 +48,7 @@
     "winston": "^3.14.2"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^9.6.1",
     "@eslint/js": "9.39.4",
     "c8": "^10.1.3",
     "cssnano": "7.1.9",

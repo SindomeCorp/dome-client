@@ -66,6 +66,20 @@ function handleHealthCheckError(err) {
   return status;
 }
 
+function hasRequiredStatusShape(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  if (typeof value.message !== "string") return false;
+  if (!Number.isFinite(value.cpu)) return false;
+  if (!Number.isFinite(value.memory)) return false;
+  if (!Number.isFinite(value.checked)) return false;
+  if (!Number.isFinite(value.users)) return false;
+  if (!Number.isFinite(value.interval)) return false;
+  if (value.state !== undefined && typeof value.state !== "string") return false;
+  return true;
+}
+
 async function healthCheck() {
   if (!STATUS_ENABLED) {
     return lastStatus;
@@ -100,6 +114,14 @@ async function healthCheck() {
         `status service returned invalid JSON: url=${STATUS_URL} status=${res.status} bodyPreview=${JSON.stringify(bodyText.slice(0, 160))}`
       );
       lastStatus = handleHealthCheckError({ code: "EBADJSON" });
+      return lastStatus;
+    }
+
+    if (!hasRequiredStatusShape(status)) {
+      logger.warn(
+        `status service returned unexpected schema: url=${STATUS_URL} bodyPreview=${JSON.stringify(bodyText.slice(0, 160))}`
+      );
+      lastStatus = handleHealthCheckError({ code: "EBADSCHEMA" });
       return lastStatus;
     }
 

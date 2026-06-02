@@ -17,8 +17,8 @@ test("integration: https startup path initializes ssl server and returns binding
   fs.writeFileSync(keyPath, "test-key");
   fs.writeFileSync(certPath, "test-cert");
   t.after(() => {
-    try { fs.unlinkSync(keyPath); } catch {}
-    try { fs.unlinkSync(certPath); } catch {}
+    try { fs.unlinkSync(keyPath); } catch (err) { void err; }
+    try { fs.unlinkSync(certPath); } catch (err) { void err; }
   });
 
   const config = {
@@ -166,8 +166,8 @@ test("integration: https mode serves core routes on app handlers for both http a
   fs.writeFileSync(keyPath, "test-key");
   fs.writeFileSync(certPath, "test-cert");
   t.after(() => {
-    try { fs.unlinkSync(keyPath); } catch {}
-    try { fs.unlinkSync(certPath); } catch {}
+    try { fs.unlinkSync(keyPath); } catch (err) { void err; }
+    try { fs.unlinkSync(certPath); } catch (err) { void err; }
   });
 
   const config = {

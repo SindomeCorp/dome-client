@@ -1,0 +1,15 @@
+{
+  "path": "/game-owner-questions/",
+  "title": "Game Owner Questions - Modern Gaming Client | Integration MUD",
+  "h1": [
+    "Game Owner Questions"
+  ],
+  "hasWebsiteLogin": false,
+  "hasConnectToHeading": false,
+  "hasPlayNow": false,
+  "hasLineBuffer": false,
+  "hasGameHealth": false,
+  "hasGameHealthDetail": false,
+  "hasGameOwnerGuideLink": false,
+  "hasGameOwnerGuideHeading": true
+}

@@ -4,9 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-06-01
 
+### Added
+- Added auth contract tests for malformed upstream payloads to lock expected login failure and user-sanitization behavior.
+- Added status contract tests to verify malformed status-service payload schemas degrade to safe fallback state.
+- Added integration config-matrix coverage for high-risk deployment modes (single vs multi-MUD and auth enabled vs disabled) with isolated per-case test processes to prevent module-cache cross-contamination.
+- Added reusable HTML golden-snapshot integration coverage for key routes (`/`, `/player-client/`, and multi-MUD `/game-owner-questions/`) across high-value mode variants.
+- Added a scoped mutation-testing profile (`npm run test:mutation`) for critical server modules with Stryker configuration and HTML reporting output.
+
 ### Changed
 - Moved user-facing testing guidance out of `README.md` into a dedicated `docs/TESTING.md` guide.
 - Added up-to-date test command coverage and coverage-threshold guidance in the new testing guide.
+- Hardened status-service polling by validating required payload schema fields before accepting upstream status data.
+- Hardened website-auth handling by validating upstream payload shape (`status`, `message`, and required `user` object for `status: "ok"`) before mutating session state.
+- Updated lint configuration to exclude `.stryker-tmp/` mutation sandbox artifacts from repository-wide lint runs.
+- Updated Stryker reporting to emit machine-readable JSON output while preserving live terminal progress.
+- Added dedicated mutation scripts for warm-cache prep and hotspot-only runs to speed up mutation-testing iteration.
+
+### Fixed
+- Added a socket connect-timeout safeguard so stalled TCP connect attempts fail fast instead of hanging indefinitely.
+- Restored the `npm run test:mutation` script and Stryker dev dependency so mutation testing works after clean installs.
+- Fixed `npm run test:mutation:hot` to pass the dedicated Stryker config file using the CLI's positional config argument format.
 
 ## 2026-05-29
 

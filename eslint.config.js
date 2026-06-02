@@ -7,6 +7,7 @@ export default [
       "node_modules/**",
       "dist/**",
       "coverage/**",
+      ".stryker-tmp/**",
       "public/**",
       // Mode file pulled from ace-builds; skip linting
       "src/client/ace/mode-moo.js",
