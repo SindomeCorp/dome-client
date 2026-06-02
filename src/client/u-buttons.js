@@ -1,4 +1,5 @@
 import { dome, logger } from "./b-variables.js";
+import { setupSocket } from "./g-socket-lifecycle.js";
 import { refreshClientOptions } from "./pages/client-options.js";
 import {
   bindClearBufferControls,
@@ -11,9 +12,13 @@ import {
 } from "./button-workflows.js";
 import { attachImagePreview, toggleImagePreview } from "./image-preview.js";
 
-export function setupButtons({ client = dome, doc = globalThis.document } = {}) {
+export function setupButtons({
+  client = dome,
+  doc = globalThis.document,
+  setupSocketFn = setupSocket
+} = {}) {
   client.reconnectButton = toElement(client.reconnectButton);
-  bindReconnectButton({ button: client.reconnectButton, client });
+  bindReconnectButton({ button: client.reconnectButton, client, setupSocket: setupSocketFn });
   bindSaveLogButtons({ buttons: client.saveButton, client, logger });
 
   client.clearButton = toElement(client.clearButton);
@@ -77,5 +82,3 @@ export function setupButtons({ client = dome, doc = globalThis.document } = {}) 
     });
   };
 }
-
-dome.setupButtons = () => setupButtons({ client: dome });

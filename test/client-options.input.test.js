@@ -40,8 +40,7 @@ test("@client-options prints preferences locally", async (t) => {
       insertAdjacentHTML: (pos, text) => output.push(text),
       append: (text) => output.push(text)
     },
-    preferences: { commandSuggestions: true },
-    scrollBuffer: () => { scrolled = true; }
+    preferences: { commandSuggestions: true }
   });
   globalThis.store = { get: () => [], put() {} };
   let emitted = false;
@@ -50,9 +49,10 @@ test("@client-options prints preferences locally", async (t) => {
   t.after(() => setSocket(prevSocket));
 
   await import("../src/client/c-preferences.js");
-  await import("../src/client/d-inputreader.js");
+  const { setupInputReader } = await import("../src/client/d-inputreader.js");
+  dome.scrollBuffer = () => { scrolled = true; };
 
-  dome.setupInputReader();
+  setupInputReader({ client: dome, doc: window.document });
 
   dome.inputReader.value = "@client-options";
   dome.inputReader.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));

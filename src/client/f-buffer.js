@@ -45,5 +45,3 @@ export function setupOutputParser({
     client.scrollBuffer();
   };
 }
-
-dome.setupOutputParser = () => setupOutputParser({ client: dome });

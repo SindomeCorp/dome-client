@@ -1,7 +1,10 @@
+import { setupAutoCompleteFeature } from "./w-autocomplete.js";
+
 export function createSocketOutputEventHandler({
   dome,
   logger,
-  renderer
+  renderer,
+  setupAutoComplete = setupAutoCompleteFeature
 }) {
   const withFadeText = (msg) => {
     if (dome.setFadeText && dome.statusDisplay) dome.setFadeText(dome.statusDisplay, msg);
@@ -87,8 +90,9 @@ export function createSocketOutputEventHandler({
       withFadeText(event.message);
     } else if (event.type === "user-type") {
       dome.userType = event.userType;
-      if (dome.setupAutoComplete && dome.inputReader) {
-        dome.setupAutoComplete(dome.inputReader, dome.userType);
+      if (dome.inputReader) {
+        setupAutoComplete({ client: dome });
+        dome.setupAutoComplete?.(dome.inputReader, dome.userType);
       }
     } else if (event.type === "ping") {
       withFadeText("pinged");

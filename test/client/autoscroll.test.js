@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { dome } from "../../src/client/b-variables.js";
+import { setupAutoscroll } from "../../src/client/t-autoscroll.js";
 
 test.afterEach(() => {
   delete globalThis.window;
@@ -29,8 +30,7 @@ test("none mode toggle updates DOM and state", async () => {
     preferences: { autoScroll: "none" }
   });
 
-  await import("../../src/client/t-autoscroll.js");
-  dome.setupAutoscroll();
+  setupAutoscroll({ client: dome, win: window, doc: document });
 
   dome.buffer.scrollTop = 0;
   Object.defineProperty(dome.buffer, "scrollHeight", { value: 100, configurable: true });
@@ -73,7 +73,6 @@ test("changing autoScroll to none removes dblclick handler", async () => {
     preferences: { autoScroll: "dbl" }
   };
 
-  const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
   setupAutoscroll(domeLocal, window);
 
   domeLocal.buffer.dispatchEvent(new window.Event("dblclick"));

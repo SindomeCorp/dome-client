@@ -38,8 +38,6 @@ export function setupAutoCompleteFeature({
   fetchFn = (...args) => globalThis.fetch(...args),
   log = logger
 } = {}) {
-  client.autoComplete = () => setupAutoCompleteFeature({ client });
-
   const commandArgumentPattern = /<[-A-Z a-z]+>/g;
 
   const prettyCommandArguments = (unformattedString) => {
@@ -185,5 +183,3 @@ export function setupAutoCompleteFeature({
     }
   };
 }
-
-dome.autoComplete = () => setupAutoCompleteFeature({ client: dome });

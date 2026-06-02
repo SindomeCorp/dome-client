@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import {
   createClientFeatureSet,
-  createClientSetupHooks,
   initClient
 } from "../../src/client/z-setup.js";
 
@@ -48,12 +47,10 @@ test("initClient composes setup hooks with explicit client context", () => {
     }),
     parseSocketData: () => {}
   };
-  const hooks = {
-    setupAutoComplete: () => calls.push("setupAutoComplete"),
-    setupHealthCheck: () => calls.push("setupHealthCheck")
-  };
   const features = {
-    setupAutoCompleteFeature: () => calls.push("setupAutoCompleteFeature"),
+    setupAutoCompleteFeature: () => {
+      calls.push("setupAutoCompleteFeature");
+    },
     setupInputReader: () => calls.push("setupInputReader"),
     setupWindowHandlers: () => calls.push("setupWindowHandlers"),
     setupEditorSupport: () => calls.push("setupEditorSupport"),
@@ -72,7 +69,7 @@ test("initClient composes setup hooks with explicit client context", () => {
     return 1;
   };
 
-  initClient({ client, win: window, doc: window.document, hooks, features });
+  initClient({ client, win: window, doc: window.document, features });
 
   assert.deepEqual(calls.slice(0, 9), [
     "setupAutoCompleteFeature",
@@ -107,10 +104,6 @@ test("initClient installs native socket shim when DomeNative is available", () =
     }),
     parseSocketData: () => {}
   };
-  const hooks = {
-    setupAutoComplete: () => {},
-    setupHealthCheck: () => {}
-  };
   const features = {
     setupAutoCompleteFeature: () => {},
     setupInputReader: () => {},
@@ -126,26 +119,12 @@ test("initClient installs native socket shim when DomeNative is available", () =
     }
   };
 
-  initClient({ client, win: window, doc: window.document, hooks, features });
+  initClient({ client, win: window, doc: window.document, features });
   window.DomeBridge.sendInput("look");
   client.socket.emit("input", "say hi");
 
   assert.deepEqual(sent, ["ready", "look", "say hi"]);
   assert.equal(client.socketState, 1);
-});
-
-test("createClientSetupHooks delegates to current client methods", () => {
-  const calls = [];
-  const client = {
-    setupInputReader: () => calls.push("input"),
-    setupSocket: () => "socket"
-  };
-  const hooks = createClientSetupHooks(client);
-
-  hooks.setupInputReader();
-
-  assert.equal(hooks.setupSocket(), "socket");
-  assert.deepEqual(calls, ["input"]);
 });
 
 test("createClientFeatureSet exposes directly imported setup features", () => {

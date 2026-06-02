@@ -51,12 +51,7 @@ test("z-setup assigns DOM references and invokes setup hooks", async t => {
     colorSet: "dim",
     commandSuggestions: false
   });
-  dome.autoComplete = () => { calls.push("autoComplete"); };
-
   dome.parseSocketData = () => {};
-  const hooks = {
-    setupAutoComplete: () => calls.push("setupAutoComplete")
-  };
   const features = {
     setupAutoCompleteFeature: () => calls.push("setupAutoCompleteFeature"),
     setupInputReader: () => calls.push("setupInputReader"),
@@ -73,7 +68,7 @@ test("z-setup assigns DOM references and invokes setup hooks", async t => {
     }
   };
 
-  initClient({ client: dome, win: window, doc: window.document, hooks, features });
+  initClient({ client: dome, win: window, doc: window.document, features });
 
   // verify setup functions called
   [

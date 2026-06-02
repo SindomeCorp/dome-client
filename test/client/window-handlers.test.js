@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { dome, setSocket, SOCKET_STATE_ENUM, defaultHeightOffset } from "../../src/client/b-variables.js";
+import { setupWindowHandlers } from "../../src/client/e-window.js";
 
 test.afterEach(() => {
   delete globalThis.window;
@@ -28,8 +29,7 @@ test("window handlers parse IDs, set titles, and flash alerts", async () => {
     preferences: { playDing: true }
   });
 
-  await import("../../src/client/e-window.js");
-  dome.setupWindowHandlers();
+  setupWindowHandlers({ client: dome, win: window, doc: document });
 
   assert.equal(
     dome.parseYouTubeID("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
@@ -78,8 +78,7 @@ test("onFocusHandler clears alerts and focuses input", async () => {
     preferences: { playDing: true }
   });
 
-  await import("../../src/client/e-window.js?focus");
-  dome.setupWindowHandlers();
+  setupWindowHandlers({ client: dome, win: window, doc: document });
 
   dome.setWindowTitle("Title");
   window.document.title = "!! Title";
@@ -125,8 +124,7 @@ test("onScrollHandler hides offscreen images", async () => {
     preferences: { playDing: true }
   });
 
-  await import("../../src/client/e-window.js?scroll");
-  dome.setupWindowHandlers();
+  setupWindowHandlers({ client: dome, win: window, doc: document });
 
   window.pageXOffset = 0;
   window.pageYOffset = 0;
@@ -171,8 +169,7 @@ test("window handlers respond to focus, blur, resize, and unload", async (t) => 
 
   window.innerHeight = 900;
 
-  await import("../../src/client/e-window.js?events");
-  dome.setupWindowHandlers();
+  setupWindowHandlers({ client: dome, win: window, doc: document });
 
   dome.alert.titleProc = 1;
   dome.titleBarText = "Title";
@@ -233,9 +230,8 @@ test("toggling playDing while unfocused updates alert", async () => {
     preferences: { playDing: false }
   });
 
-  await import("../../src/client/e-window.js?playding");
   await import("../../src/client/c-preferences.js?playding");
-  dome.setupWindowHandlers();
+  setupWindowHandlers({ client: dome, win: window, doc: document });
 
   assert.equal(dome.alert.active, false);
   dome.setClientOption("playDing", true);
@@ -244,4 +240,3 @@ test("toggling playDing while unfocused updates alert", async () => {
   assert.equal(dome.alert.active, false);
 
 });
-

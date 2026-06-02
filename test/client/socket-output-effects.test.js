@@ -52,7 +52,8 @@ test("socket output event handler updates editor and autocomplete side effects",
   const handler = createSocketOutputEventHandler({
     dome,
     logger: createLogger(t),
-    renderer: createRenderer(t)
+    renderer: createRenderer(t),
+    setupAutoComplete: () => {}
   });
 
   handler({

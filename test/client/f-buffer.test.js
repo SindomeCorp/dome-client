@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 /* global document */
 import setupDom from "../../test-support/setup-dom.js";
 import { dome } from "../../src/client/b-variables.js";
+import { setupOutputParser } from "../../src/client/f-buffer.js";
 
 const loadOutputParser = async (t) => {
   setupDom(
@@ -19,8 +20,7 @@ const loadOutputParser = async (t) => {
   dome.updateEditorListView = () => {};
   dome.channel = null;
   dome.alert = { active: false };
-  await import("../../src/client/f-buffer.js");
-  dome.setupOutputParser();
+  setupOutputParser({ client: dome });
 };
 
 test("parseSocketData appends lines and trims buffer", async (t) => {

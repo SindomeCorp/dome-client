@@ -126,5 +126,3 @@ export function setupSocket({
 
   return ioSocket;
 }
-
-dome.setupSocket = () => setupSocket({ client: dome });

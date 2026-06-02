@@ -50,6 +50,7 @@ dome.setWindowTitle = () => {};
 dome.onErrorHandler = () => {};
 let currentEmitter;
 mock.module("socket.io-client", { namedExports: { io: () => currentEmitter } });
+const { setupSocket } = await import("../../src/client/g-socket-lifecycle.js");
 
 dome.alert = {};
 
@@ -73,9 +74,7 @@ test("socket lifecycle updates state and disconnect view", async (t) => {
   currentEmitter = new EventEmitter();
   currentEmitter.disconnect = () => {};
 
-  await import(`../../src/client/g-socket-lifecycle.js?cache=${Math.random()}`);
-
-  const ioSocket = dome.setupSocket();
+  const ioSocket = setupSocket({ client: dome });
 
   ioSocket.emit("connected");
   assert.equal(dome.socketState, SOCKET_STATE_ENUM.CONNECTED);
@@ -101,8 +100,7 @@ const createSocket = async (t) => {
   globalThis.setTimeout = (fn) => { fn(); };
   currentEmitter = new EventEmitter();
   currentEmitter.disconnect = () => {};
-  await import(`../../src/client/g-socket-lifecycle.js?cache=${Math.random()}`);
-  const ioSocket = dome.setupSocket();
+  const ioSocket = setupSocket({ client: dome });
   const origStore = { get: clientStore.get, remove: clientStore.remove, put: clientStore.put };
   t.after(() => {
     globalThis.setTimeout = origTimeout;
@@ -229,8 +227,7 @@ test("setupSocket disconnects existing socket", async (t) => {
   currentEmitter = new EventEmitter();
   currentEmitter.connected = false;
   currentEmitter.disconnect = () => {};
-  await import(`../../src/client/g-socket-lifecycle.js?cache=${Math.random()}`);
-  const newSocket = dome.setupSocket();
+  const newSocket = setupSocket({ client: dome });
   assert.equal(oldEmitter.disconnect.mock.callCount(), 1);
   assert.equal(newSocket.connected, false);
   assert.strictEqual(newSocket, currentEmitter);

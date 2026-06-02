@@ -10,7 +10,7 @@ const toArray = value => {
   return value.length !== undefined ? value : [value];
 };
 
-export function bindReconnectButton({ button, client }) {
+export function bindReconnectButton({ button, client, setupSocket }) {
   if (!button) {
     return;
   }
@@ -20,7 +20,7 @@ export function bindReconnectButton({ button, client }) {
     client.resetSdwcNowrapState?.();
     client.resetAnsiRendererState?.();
     client.socket?.off?.("data", client.parseSocketData);
-    client.socket = client.setupSocket();
+    client.socket = setupSocket({ client });
     client.socket.on("data", client.parseSocketData);
   });
 }

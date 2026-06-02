@@ -149,5 +149,3 @@ export function setupWindowHandlers({
 
   onResizeHandler();
 }
-
-dome.setupWindowHandlers = () => setupWindowHandlers({ client: dome });

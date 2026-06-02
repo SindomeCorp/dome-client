@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 /* global document */
 import { setupDom } from "./index.js";
 import { dome, socket, setSocket, logger } from "../../src/client/b-variables.js";
+import { setupInputReader } from "../../src/client/d-inputreader.js";
 
 const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
   const { window } = setupDom("<!doctype html><html><body><textarea id=\"input\"></textarea><button id=\"button-input-history-up\" type=\"button\"></button><button id=\"button-input-history-down\" type=\"button\"></button><div id=\"history-search-overlay\" class=\"hide\"><div class=\"history-search-content\"><button id=\"button-history-search-close\" type=\"button\">x</button><input id=\"history-search-query\" /><ul id=\"history-search-results\"></ul><div id=\"history-search-empty\" class=\"hide\">No matching commands.</div></div></div></body></html>");
@@ -49,8 +50,7 @@ const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
   dome.onToggleAutoScroll = () => {};
   dome.setFadeText = () => {};
   dome.statusDisplay = {};
-  await import("../../src/client/d-inputreader.js");
-  dome.setupInputReader();
+  setupInputReader({ client: dome, doc: document });
   t.after(() => {
     setSocket(prevSocket);
     Object.assign(dome, origDome);
@@ -82,8 +82,6 @@ test("enter emits command and echoes", async (t) => {
 
 test("enter with command suggestions disabled does not log error", async (t) => {
   const { window } = await loadInputReader(t);
-  const origAuto = dome.autoComplete;
-  dome.autoComplete = () => {};
   dome.preferences.commandSuggestions = false;
   const origError = logger.error;
   let logged = false;
@@ -91,7 +89,6 @@ test("enter with command suggestions disabled does not log error", async (t) => 
     logged = true;
   };
   t.after(() => {
-    dome.autoComplete = origAuto;
     logger.error = origError;
   });
   const input = dome.inputReader;

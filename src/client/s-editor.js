@@ -130,5 +130,3 @@ export function setupEditorSupport({ client = dome, win = globalThis.window } = 
     }
   });
 }
-
-dome.setupEditorSupport = () => setupEditorSupport({ client: dome });

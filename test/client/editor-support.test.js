@@ -14,7 +14,7 @@ setSocket({});
 
 Object.assign(dome, { spawned: {}, preferences: { edittheme: "dark", editorType: "ide" }, editorListView: window.document.querySelector("#editor-list-view"), socket: {} });
 
-await import("../../src/client/s-editor.js");
+const { setupEditorSupport } = await import("../../src/client/s-editor.js");
 
 test.after(() => {
   globalThis.window = orig.window;
@@ -35,7 +35,7 @@ function resetEnvironment() {
 test("makeEditor cancels when existing window is not replaced", () => {
   resetEnvironment();
   dome.preferences.editorType = "windows";
-  dome.setupEditorSupport();
+  setupEditorSupport({ client: dome, win: window });
 
   let openCalled = false;
   window.open = () => {
@@ -59,7 +59,7 @@ test("makeEditor cancels when existing window is not replaced", () => {
 test("makeEditor selects type and updates existing window", () => {
   resetEnvironment();
   dome.preferences.editorType = "windows";
-  dome.setupEditorSupport();
+  setupEditorSupport({ client: dome, win: window });
 
   const opened = [];
   window.open = (url, name) => {
@@ -94,7 +94,7 @@ test("makeEditor routes editors to IDE", () => {
   const opened = [];
   dome.openIDE = (editor) => { opened.push(editor); };
 
-  dome.setupEditorSupport();
+  setupEditorSupport({ client: dome, win: window });
 
   const editor = { editorName: "Editor1", uploadCommand: "@program", buffer: "data" };
   const res = dome.makeEditor(editor);
@@ -114,7 +114,7 @@ test("makeEditor uses individual windows when editorType is windows", () => {
     return { focus() {}, addEventListener() {} };
   };
 
-  dome.setupEditorSupport();
+  setupEditorSupport({ client: dome, win: window });
 
   const editor = { editorName: "Verb", uploadCommand: "@program", buffer: "code" };
   const res = dome.makeEditor(editor);
@@ -126,7 +126,7 @@ test("makeEditor uses individual windows when editorType is windows", () => {
 test("updateEditorListView handles missing view and empty list", () => {
   resetEnvironment();
   dome.preferences.editorType = "windows";
-  dome.setupEditorSupport();
+  setupEditorSupport({ client: dome, win: window });
 
   let warned = false;
   const origWarn = logger.warn;
@@ -147,7 +147,7 @@ test("updateEditorListView handles missing view and empty list", () => {
 test("updateEditorListView renders list and handles clicks", () => {
   resetEnvironment();
   dome.preferences.editorType = "windows";
-  dome.setupEditorSupport();
+  setupEditorSupport({ client: dome, win: window });
 
   const e1 = { focusCalled: false, focus() { this.focusCalled = true; }, close() {} };
   const e2 = { focusCalled: false, closeCalled: false, focus() { this.focusCalled = true; }, close() { this.closeCalled = true; } };
@@ -183,7 +183,7 @@ test("updateEditorListView renders list and handles clicks", () => {
 test("editor window notifies parent via message and unload", () => {
   resetEnvironment();
   dome.preferences.editorType = "windows";
-  dome.setupEditorSupport();
+  setupEditorSupport({ client: dome, win: window });
 
   let openArgs = null;
   const childDom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost" });

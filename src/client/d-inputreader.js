@@ -73,7 +73,6 @@ export function setupInputReader({
     inputReader.addEventListener("keypress", (event) => {
       if ( event.key === "Enter" && !event.shiftKey ) {
         if (
-          client.autoComplete &&
           typeof inputReader.commandSuggestions === "function"
         ) {
           try {
@@ -105,5 +104,3 @@ export function setupInputReader({
     });
   }
 }
-
-dome.setupInputReader = () => setupInputReader({ client: dome });

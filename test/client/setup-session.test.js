@@ -48,10 +48,6 @@ test("z-setup replaces existing socket and binds data handler", async t => {
   dome.readPreferences = () => ({ lineBufferFont: "standard", colorSet: "normal", commandSuggestions: false });
   dome.parseSocketData = () => {};
   const setupOutputParser = t.mock.fn();
-  const hooks = {
-    setupAutoComplete: () => {},
-    setupHealthCheck: () => {}
-  };
   const features = {
     setupAutoCompleteFeature: () => {},
     setupInputReader: () => {},
@@ -65,7 +61,7 @@ test("z-setup replaces existing socket and binds data handler", async t => {
     setupSocket: () => ({ on: (...args) => { onCalls.push(args); } })
   };
 
-  initClient({ client: dome, win: window, doc: window.document, hooks, features });
+  initClient({ client: dome, win: window, doc: window.document, features });
 
   assert.equal(dome.clientOptionsButton, window.document.querySelector("#button-client-options"));
   assert.equal(dome.clientOptionsOverlay, window.document.querySelector("#client-options-overlay"));
@@ -80,10 +76,6 @@ test("z-setup surfaces setupSocket errors", async t => {
   t.mock.method(window, "setTimeout", fn => { fn(); });
 
   dome.readPreferences = () => ({ lineBufferFont: "standard", colorSet: "normal", commandSuggestions: false });
-  const hooks = {
-    setupAutoComplete: () => {},
-    setupHealthCheck: () => {}
-  };
   const features = {
     setupAutoCompleteFeature: () => {},
     setupInputReader: () => {},
@@ -98,6 +90,6 @@ test("z-setup surfaces setupSocket errors", async t => {
   };
 
   assert.throws(() => {
-    initClient({ client: dome, win: window, doc: window.document, hooks, features });
+    initClient({ client: dome, win: window, doc: window.document, features });
   }, /boom/);
 });

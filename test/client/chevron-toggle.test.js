@@ -25,11 +25,11 @@ test("chevron click toggles image", async (t) => {
     globalThis.window = orig.window;
     globalThis.document = orig.document;
   });
-  await import("../../src/client/u-buttons.js");
-  await import("../../src/client/chevron-toggle.js");
+  const { setupButtons } = await import("../../src/client/u-buttons.js");
+  const { setupChevronToggle } = await import("../../src/client/chevron-toggle.js");
 
-  dome.setupButtons();
-  dome.setupChevronToggle();
+  setupButtons({ client: dome, doc: window.document });
+  setupChevronToggle({ client: dome });
 
   buffer.innerHTML = "<span id=\"simg1\"></span><i id=\"bimg1\" class=\"icon-white icon-chevron-up\" data-image-id=\"img1\" data-image-url=\"https://example.com/img.png\"></i>";
   const control = buffer.querySelector("#bimg1");

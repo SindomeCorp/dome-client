@@ -144,8 +144,10 @@ Steps:
 - Converted socket lifecycle setup to an explicit setup export and wired it through `z-setup.js`.
 - Convert one setup module at a time to export `setupFeature({ client, document, window })`.
 - Have `z-setup.js` call imported setup functions directly.
-- Keep temporary assignments to `dome.setupX` only where tests or legacy callers still need them.
+- Removed the temporary `dome.setupX` assignments after tests and runtime callers moved to explicit setup exports.
 - Remove side-effect imports from `src/client/index.js` once the corresponding setup export is wired.
+- Removed the `createClientSetupHooks` compatibility adapter and switched remaining runtime callers to explicit setup exports.
+- Removed the legacy `autoComplete` installer method so autocomplete setup flows through the explicit feature export.
 
 Benefits:
 

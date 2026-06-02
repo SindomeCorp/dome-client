@@ -50,13 +50,18 @@ const setupWindow = async (t) => {
     }
     globalThis.isMultiMud = orig.isMultiMud;
   });
-  await import("../../src/client/u-buttons.js");
-  return { window, dome };
+  const { setupButtons } = await import("../../src/client/u-buttons.js");
+  const setupClientButtons = (options = {}) => setupButtons({
+    client: dome,
+    doc: window.document,
+    ...options
+  });
+  return { window, dome, setupButtons: setupClientButtons };
 };
 
 test("attachImage injects linked image", async (t) => {
-  const { window, dome } = await setupWindow(t);
-  dome.setupButtons();
+  const { window, dome, setupButtons } = await setupWindow(t);
+  setupButtons();
   const span = window.document.createElement("span");
   dome.attachImage(span, "img1", "https://example.com/image.png");
   const html = span.innerHTML;
@@ -70,8 +75,8 @@ test("attachImage injects linked image", async (t) => {
 });
 
 test("toggleImage shows and hides images", async (t) => {
-  const { window, dome } = await setupWindow(t);
-  dome.setupButtons();
+  const { window, dome, setupButtons } = await setupWindow(t);
+  setupButtons();
   const span = window.document.createElement("span");
   span.id = "simg1";
   dome.buffer.append(span);
@@ -89,29 +94,29 @@ test("toggleImage shows and hides images", async (t) => {
 
 
 test("clear button empties buffer", async (t) => {
-  const { window, dome } = await setupWindow(t);
+  const { window, dome, setupButtons } = await setupWindow(t);
   const btn = window.document.createElement("button");
   window.document.body.appendChild(btn);
   dome.clearButton = btn;
   dome.buffer.innerHTML = "abc";
-  dome.setupButtons();
+  setupButtons();
   btn.click();
   assert.equal(dome.buffer.innerHTML, "");
 });
 
 test("scroll button triggers handler", async (t) => {
-  const { window, dome } = await setupWindow(t);
+  const { window, dome, setupButtons } = await setupWindow(t);
   const btn = window.document.createElement("button");
   window.document.body.appendChild(btn);
   dome.scrollButton = btn;
   dome.onToggleAutoScroll = t.mock.fn();
-  dome.setupButtons();
+  setupButtons();
   btn.click();
   assert.equal(dome.onToggleAutoScroll.mock.callCount(), 1);
 });
 
 test("options button toggles overlay", async () => {
-  const { window, dome } = await setupWindow();
+  const { window, dome, setupButtons } = await setupWindow();
   const button = window.document.createElement("button");
   button.id = "button-client-options";
   const overlay = window.document.createElement("div");
@@ -121,7 +126,7 @@ test("options button toggles overlay", async () => {
   dome.clientOptionsButton = button;
   dome.clientOptionsOverlay = overlay;
 
-  dome.setupButtons();
+  setupButtons();
 
   button.click();
   assert.ok(!overlay.classList.contains("hide"));
@@ -131,7 +136,7 @@ test("options button toggles overlay", async () => {
 });
 
 test("options overlay closes on escape key", async () => {
-  const { window, dome } = await setupWindow();
+  const { window, dome, setupButtons } = await setupWindow();
   const button = window.document.createElement("button");
   button.id = "button-client-options";
   const overlay = window.document.createElement("div");
@@ -141,7 +146,7 @@ test("options overlay closes on escape key", async () => {
   dome.clientOptionsButton = button;
   dome.clientOptionsOverlay = overlay;
 
-  dome.setupButtons();
+  setupButtons();
 
   button.click();
   assert.ok(!overlay.classList.contains("hide"));
@@ -151,7 +156,7 @@ test("options overlay closes on escape key", async () => {
 });
 
 test("save button downloads HTML log", async (t) => {
-  const { window, dome } = await setupWindow(t);
+  const { window, dome, setupButtons } = await setupWindow(t);
   globalThis.isMultiMud = false;
   window.__LOG_EXPORT_CSS__ = "body { background: #000; }";
   const btn = window.document.createElement("button");
@@ -181,7 +186,7 @@ test("save button downloads HTML log", async (t) => {
     return originalAppend.call(this, element);
   });
 
-  dome.setupButtons();
+  setupButtons();
   btn.click();
 
   assert.equal(createObjectURL.mock.callCount(), 1);
@@ -203,7 +208,7 @@ test("save button downloads HTML log", async (t) => {
 });
 
 test("save button uses dome-client prefix in multi-mud mode", async (t) => {
-  const { window, dome } = await setupWindow(t);
+  const { window, dome, setupButtons } = await setupWindow(t);
   globalThis.isMultiMud = true;
   const btn = window.document.createElement("button");
   window.document.body.appendChild(btn);
@@ -223,7 +228,7 @@ test("save button uses dome-client prefix in multi-mud mode", async (t) => {
     return originalAppend.call(this, element);
   });
 
-  dome.setupButtons();
+  setupButtons();
   btn.click();
 
   assert.equal(appendedAnchors.length, 1);
@@ -232,7 +237,7 @@ test("save button uses dome-client prefix in multi-mud mode", async (t) => {
 });
 
 test("save button supports legacy linked stylesheet log mode", async (t) => {
-  const { window, dome } = await setupWindow(t);
+  const { window, dome, setupButtons } = await setupWindow(t);
   window.__LOG_EXPORT_CSS__ = "body { background: #000; }";
   const btn = window.document.createElement("button");
   window.document.body.appendChild(btn);
@@ -259,7 +264,7 @@ test("save button supports legacy linked stylesheet log mode", async (t) => {
     return originalAppend.call(this, element);
   });
 
-  dome.setupButtons();
+  setupButtons();
   btn.click();
 
   const blobText = await capturedBlob.text();
@@ -269,7 +274,7 @@ test("save button supports legacy linked stylesheet log mode", async (t) => {
 });
 
 test("shortcuts button toggles fullscreen overlay", async () => {
-  const { window, dome } = await setupWindow();
+  const { window, dome, setupButtons } = await setupWindow();
   const btn = window.document.createElement("button");
   const overlay = window.document.createElement("div");
   overlay.className = "hide";
@@ -277,7 +282,7 @@ test("shortcuts button toggles fullscreen overlay", async () => {
   dome.shortcutsButton = btn;
   dome.shortcutsOverlay = overlay;
 
-  dome.setupButtons();
+  setupButtons();
   btn.click();
   assert.ok(!overlay.classList.contains("hide"));
   overlay.click();
@@ -286,7 +291,7 @@ test("shortcuts button toggles fullscreen overlay", async () => {
 });
 
 test("shortcuts overlay closes on escape key", async () => {
-  const { window, dome } = await setupWindow();
+  const { window, dome, setupButtons } = await setupWindow();
   const btn = window.document.createElement("button");
   const overlay = window.document.createElement("div");
   overlay.className = "hide";
@@ -294,7 +299,7 @@ test("shortcuts overlay closes on escape key", async () => {
   dome.shortcutsButton = btn;
   dome.shortcutsOverlay = overlay;
 
-  dome.setupButtons();
+  setupButtons();
   btn.click();
   assert.ok(!overlay.classList.contains("hide"));
 
@@ -303,7 +308,7 @@ test("shortcuts overlay closes on escape key", async () => {
 });
 
 test("reconnect button reinitializes socket without reloading", async (t) => {
-  const { window, dome } = await setupWindow();
+  const { window, dome, setupButtons } = await setupWindow();
   const btn = window.document.createElement("button");
   let handler;
   btn.addEventListener = (event, fn) => { if (event === "click") handler = fn; };
@@ -311,9 +316,9 @@ test("reconnect button reinitializes socket without reloading", async (t) => {
   dome.parseSocketData = () => {};
   const emitter = new EventEmitter();
   const onMock = t.mock.method(emitter, "on", () => {});
-  dome.setupSocket = t.mock.fn(() => emitter);
+  const setupSocketFn = t.mock.fn(() => emitter);
 
-  dome.setupButtons();
+  setupButtons({ client: dome, doc: window.document, setupSocketFn });
 
   let reloadCalled = 0;
   const stubWindow = { location: { reload: () => { reloadCalled++; } } };
@@ -322,7 +327,7 @@ test("reconnect button reinitializes socket without reloading", async (t) => {
   handler();
   globalThis.window = origWindow;
 
-  assert.equal(dome.setupSocket.mock.callCount(), 1);
+  assert.equal(setupSocketFn.mock.callCount(), 1);
   assert.equal(onMock.mock.calls[0]?.arguments[0], "data");
   assert.equal(onMock.mock.calls[0]?.arguments[1], dome.parseSocketData);
   assert.equal(reloadCalled, 0);
@@ -330,14 +335,14 @@ test("reconnect button reinitializes socket without reloading", async (t) => {
 });
 
 test("reconnect button replaces socket and listener", async (t) => {
-  const { dome } = await setupWindow(t);
+  const { dome, setupButtons } = await setupWindow(t);
   const btn = document.createElement("button");
   let handler;
   btn.addEventListener = (event, fn) => { if (event === "click") handler = fn; };
   dome.reconnectButton = btn;
   dome.parseSocketData = () => {};
   const sockets = [];
-  dome.setupSocket = t.mock.fn(() => {
+  const setupSocketFn = t.mock.fn(() => {
     const emitter = new EventEmitter();
     emitter.disconnect = () => {};
     t.mock.method(emitter, "disconnect");
@@ -345,13 +350,13 @@ test("reconnect button replaces socket and listener", async (t) => {
     return emitter;
   });
 
-  dome.setupButtons();
+  setupButtons({ client: dome, doc: document, setupSocketFn });
 
   handler();
   handler();
   handler();
 
-  assert.equal(dome.setupSocket.mock.callCount(), 3);
+  assert.equal(setupSocketFn.mock.callCount(), 3);
   assert.equal(sockets[0].disconnect.mock.callCount(), 1);
   assert.equal(sockets[0].listenerCount("data"), 0);
   assert.equal(sockets[1].disconnect.mock.callCount(), 1);

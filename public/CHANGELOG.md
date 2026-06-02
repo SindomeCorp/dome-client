@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file.
 - Added Knip dead-code analysis commands for finding unused files, exports, and dependencies.
 
 ### Changed
+- Removed legacy browser-client setup wrapper assignments now that startup and tests use explicit setup exports.
+- Reduced legacy browser-client setup hook usage in reconnect, preferences, and socket-output flows.
 - Split server listen, close, and bound-address helpers out of the server startup path.
 - Split Socket.IO manager binding out of the server startup path.
 - Split HTTP and HTTPS server creation out of the server startup path.

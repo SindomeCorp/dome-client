@@ -374,6 +374,11 @@ test("parseClientOptionCommand reapplies overlay classes after autocomplete rebu
   win.dome.inputReader = {
     commandSuggestions(arg) {
       if (arg === "destroy") destroyed = true;
+      if (typeof arg === "object") {
+        const ac = win.document.createElement("div");
+        ac.className = "ui-autocomplete ui-transparent-overlay";
+        win.document.body.appendChild(ac);
+      }
     }
   };
   win.dome.userType = "p";
@@ -381,16 +386,16 @@ test("parseClientOptionCommand reapplies overlay classes after autocomplete rebu
   win.dome.preferences.transparentOverlay = false;
   win.dome.preferences.commandSuggestions = true;
   win.dome.preferences.broadSearch = true;
-  win.dome.autoComplete = () => {};
-  win.dome.setupAutoComplete = () => Promise.resolve().then(() => {
-    const ac = win.document.createElement("div");
-    ac.className = "ui-autocomplete ui-transparent-overlay";
-    win.document.body.appendChild(ac);
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    json: async () => ["look"]
+  });
+  t.after(() => {
+    globalThis.fetch = origFetch;
   });
 
   win.dome.parseClientOptionCommand("@client-option broadSearch false");
-  await Promise.resolve();
-  await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
 
   const ac = win.document.querySelector(".ui-autocomplete");
   assert.equal(destroyed, true);
@@ -412,14 +417,11 @@ test("@client-option pb accepts numeric values", async (t) => {
 
 test("parseClientOptionCommand refreshes autoscroll when scrollUpToPause changes", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
-  let setupCount = 0;
-  win.dome.buffer = { append() {} };
+  win.dome.buffer = win.document.createElement("div");
+  win.document.body.appendChild(win.dome.buffer);
   win.dome.scrollBuffer = () => {};
-  win.dome.setupAutoscroll = () => {
-    setupCount++;
-  };
   win.dome.preferences = win.dome.readPreferences();
   win.dome.parseClientOptionCommand("@client-option scrollUpToPause true");
   assert.equal(win.dome.preferences.scrollUpToPause, true);
-  assert.equal(setupCount, 1);
+  assert.equal(typeof win.dome.onToggleAutoScroll, "function");
 });

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { dome, logger } from "../../src/client/b-variables.js";
+import { setupAutoCompleteFeature } from "../../src/client/w-autocomplete.js";
 
 const setup = async (commands = []) => {
   const dom = new JSDOM("<!doctype html><html><body><input id=\"input\" /></body></html>", {
@@ -12,12 +13,11 @@ const setup = async (commands = []) => {
   globalThis.window = window;
   globalThis.document = window.document;
   dome.preferences = { broadSearch: false };
-  await import("../../src/client/w-autocomplete.js");
-  dome.autoComplete();
   globalThis.fetch = () =>
     Promise.resolve({
       json: () => Promise.resolve(commands)
     });
+  setupAutoCompleteFeature({ client: dome, doc: window.document, win: window });
   const input = window.document.querySelector("#input");
   await dome.setupAutoComplete(input, "user");
   return { window, input };
@@ -43,8 +43,7 @@ test("setupAutoComplete warns when fetch fails", async () => {
   globalThis.window = window;
   globalThis.document = window.document;
   dome.preferences = { broadSearch: false };
-  await import("../../src/client/w-autocomplete.js");
-  dome.autoComplete();
+  setupAutoCompleteFeature({ client: dome, doc: window.document, win: window });
 
   globalThis.fetch = () => Promise.reject(new Error("boom"));
   let warned = false;
@@ -158,8 +157,6 @@ test("setupAutoComplete respects existing commandSuggestions function", async ()
   globalThis.window = window;
   globalThis.document = window.document;
   dome.preferences = { broadSearch: false };
-  await import("../../src/client/w-autocomplete.js");
-  dome.autoComplete();
   const input = window.document.querySelector("#input");
   let called = false;
   const original = function() {
@@ -168,6 +165,7 @@ test("setupAutoComplete respects existing commandSuggestions function", async ()
   input.commandSuggestions = original;
   globalThis.fetch = () =>
     Promise.resolve({ json: () => Promise.resolve(["say | say something"]) });
+  setupAutoCompleteFeature({ client: dome, doc: window.document, win: window });
   await dome.setupAutoComplete(input, "user");
   assert.equal(called, true);
   assert.equal(input.commandSuggestions, original);

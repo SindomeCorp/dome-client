@@ -46,21 +46,16 @@ test("z-setup applies transparent overlay after async autocomplete setup", async
   dome.readPreferences = () => ({ transparentOverlay: true, commandSuggestions: true });
   dome.parseSocketData = () => {};
 
-  const hooks = {
-    setupAutoComplete: () => new Promise((resolve) => {
-      Promise.resolve().then(() => {
-        const ac = document.createElement("div");
-        ac.className = "ui-autocomplete ui-opaque-overlay";
-        document.body.appendChild(ac);
-        resolve();
-      });
-    }),
-    setupHealthCheck: () => {},
-    setupSocket: () => ({ on: () => {} })
-  };
   const features = {
     setupAutoCompleteFeature: ({ client }) => {
-      client.autoComplete = () => {};
+      client.setupAutoComplete = () => new Promise((resolve) => {
+        Promise.resolve().then(() => {
+          const ac = document.createElement("div");
+          ac.className = "ui-autocomplete ui-opaque-overlay";
+          document.body.appendChild(ac);
+          resolve();
+        });
+      });
     },
     setupInputReader: () => {},
     setupWindowHandlers: () => {},
@@ -73,7 +68,7 @@ test("z-setup applies transparent overlay after async autocomplete setup", async
     setupSocket: () => ({ on: () => {} })
   };
 
-  initClient({ client: dome, win: window, doc: window.document, hooks, features });
+  initClient({ client: dome, win: window, doc: window.document, features });
   await Promise.resolve();
   await Promise.resolve();
   const ac = document.querySelector(".ui-autocomplete");

@@ -249,5 +249,3 @@ export function setupHealthCheck({
   updateMOOStatus();
 
 }
-
-dome.setupHealthCheck = () => setupHealthCheck({ client: dome });

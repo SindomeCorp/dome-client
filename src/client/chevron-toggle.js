@@ -16,5 +16,3 @@ export function setupChevronToggle({ client = dome } = {}) {
     client.toggleImage(control, imageId, imageUrl);
   });
 }
-
-dome.setupChevronToggle = () => setupChevronToggle({ client: dome });

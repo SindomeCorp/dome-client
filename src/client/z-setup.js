@@ -23,19 +23,6 @@ export const createClientFeatureSet = () => ({
   setupWindowHandlers
 });
 
-export const createClientSetupHooks = (client = dome) => ({
-  setupInputReader: () => client.setupInputReader?.(),
-  setupAutoComplete: (inputReader, userType) => client.setupAutoComplete?.(inputReader, userType),
-  setupWindowHandlers: () => client.setupWindowHandlers?.(),
-  setupEditorSupport: () => client.setupEditorSupport?.(),
-  setupAutoscroll: () => client.setupAutoscroll?.(),
-  setupButtons: () => client.setupButtons?.(),
-  setupChevronToggle: () => client.setupChevronToggle?.(),
-  setupHealthCheck: () => client.setupHealthCheck?.(),
-  setupOutputParser: () => client.setupOutputParser?.(),
-  setupSocket: () => client.setupSocket()
-});
-
 export const assignClientDomReferences = ({ client = dome, doc = globalThis.document }) => {
   Object.assign(client, {
     userType        : "p",
@@ -92,7 +79,6 @@ const applyTransparentOverlayPreference = ({ client, doc }) => {
 export const applyInitialClientPreferences = ({
   client = dome,
   doc = globalThis.document,
-  hooks = createClientSetupHooks(client),
   features = createClientFeatureSet()
 }) => {
   const preferences = client.readPreferences();
@@ -112,9 +98,8 @@ export const applyInitialClientPreferences = ({
 
   if (client.inputReader) {
     features.setupInputReader({ client, doc });
-    if (preferences.commandSuggestions && client.autoComplete != null) {
-      client.autoComplete();
-      const acSetup = hooks.setupAutoComplete(client.inputReader, client.userType);
+    if (preferences.commandSuggestions && typeof client.setupAutoComplete === "function") {
+      const acSetup = client.setupAutoComplete?.(client.inputReader, client.userType);
       if (acSetup && typeof acSetup.then === "function") {
         acSetup.then(() => applyTransparentOverlayPreference({ client, doc }));
       } else {
@@ -130,7 +115,6 @@ export const setupClientFeatures = ({
   client = dome,
   doc = globalThis.document,
   win = globalThis.window,
-  hooks = createClientSetupHooks(client),
   features = createClientFeatureSet()
 } = {}) => {
   features.setupWindowHandlers({ client, doc, win });
@@ -240,15 +224,14 @@ export const initClient = ({
   client = dome,
   win = globalThis.window,
   doc = globalThis.document,
-  hooks = createClientSetupHooks(client),
   features = createClientFeatureSet()
 } = {}) => {
   const hasNativeBridge = !!win.DomeNative && typeof win.DomeNative.sendInput === "function";
 
   assignClientDomReferences({ client, doc });
   features.setupAutoCompleteFeature({ client, doc, win });
-  applyInitialClientPreferences({ client, doc, hooks, features });
-  setupClientFeatures({ client, doc, win, hooks, features });
+  applyInitialClientPreferences({ client, doc, features });
+  setupClientFeatures({ client, doc, win, features });
   installDomeBridge({ client, win, hasNativeBridge });
   notifyNativeBridgeReady({ win });
   startClientSocket({ client, doc, win, features, hasNativeBridge });
@@ -260,10 +243,9 @@ export const startClientWhenDomReady = ({
   client = dome,
   win = globalThis.window,
   doc = globalThis.document,
-  hooks = createClientSetupHooks(client),
   features = createClientFeatureSet()
 } = {}) => {
-  const start = () => initClient({ client, win, doc, hooks, features });
+  const start = () => initClient({ client, win, doc, features });
   if (doc.readyState === "loading") {
     doc.addEventListener("DOMContentLoaded", start);
     return;

@@ -1,5 +1,6 @@
 import logger from "./logger.js";
 import { dome } from "../b-variables.js";
+import { setupAutoscroll } from "../t-autoscroll.js";
 import { store } from "../store.js";
 import {
   COLORSET_CHOICES,
@@ -156,7 +157,7 @@ function applyOptionValue(name, value) {
       if (dome.preferences) {
         dome.preferences.autoScroll = value;
       }
-      dome.setupAutoscroll?.();
+      setupAutoscroll({ client: dome });
     } else if (name === "colorset") {
       dome.parseClientOptionCommand?.(`@client-option cl ${value}`);
     }

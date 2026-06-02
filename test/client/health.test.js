@@ -77,8 +77,8 @@ async function setup(t, { perfBuffer = 0 } = {}) {
     t.mock.restoreAll();
   });
 
-  await import(`../../src/client/y-health.js?cachebust=${Date.now()}`);
-  dome.setupHealthCheck();
+  const { setupHealthCheck } = await import(`../../src/client/y-health.js?cachebust=${Date.now()}`);
+  setupHealthCheck({ client: dome, doc: document });
   return {
     window,
     dome,
@@ -455,4 +455,3 @@ test("setGameHealthDisplay handles each MOO status", async (t) => {
     });
   }
 });
-

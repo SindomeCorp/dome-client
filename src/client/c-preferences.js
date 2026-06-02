@@ -16,6 +16,8 @@ import {
   readClientPreferences,
   validateClientOptionValue
 } from "./client-option-parser.js";
+import { setupAutoscroll } from "./t-autoscroll.js";
+import { setupAutoCompleteFeature } from "./w-autocomplete.js";
 
 const shortenFeatureEnabled = typeof window === "undefined" ? true : window.shortenEnabled !== false;
 
@@ -132,9 +134,9 @@ const applyInputReaderColorPreferences = function() {
 dome.applyInputReaderColorPreferences = applyInputReaderColorPreferences;
 
 const setupCommandSuggestions = function() {
-  if (!dome.autoComplete || !dome.inputReader) return;
-  dome.autoComplete();
-  const acSetup = dome.setupAutoComplete(dome.inputReader, dome.userType);
+  if (!dome.inputReader) return;
+  setupAutoCompleteFeature({ client: dome });
+  const acSetup = dome.setupAutoComplete?.(dome.inputReader, dome.userType);
   if (acSetup && typeof acSetup.then === "function") {
     acSetup.then(() => applyTransparentOverlayPreference());
   } else {
@@ -209,7 +211,7 @@ const setClientOption = function(optionName, optionValue) {
       }
     }
     if (optionName === "autoScroll" || optionName === "scrollUpToPause") {
-      dome.setupAutoscroll?.();
+      setupAutoscroll({ client: dome });
     }
     if (optionName === "shortenUrls" && optionValue === true) {
       if (dome.socket) dome.socket.emit("shorten-on", "shorten-on");

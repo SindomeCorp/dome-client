@@ -63,21 +63,25 @@ export function setupAutoscroll(context = dome, winArg = window) {
   const client = context?.buffer ? context : context.client;
   const win = context?.buffer ? winArg : context.win ?? window;
   const doc = context?.buffer ? win.document ?? globalThis.document : context.doc ?? win.document ?? globalThis.document;
+  const preferences = client.preferences ?? {};
+  const canBindBuffer = client.buffer
+    && typeof client.buffer.addEventListener === "function"
+    && typeof client.buffer.removeEventListener === "function";
 
   // remove previous bindings
-  if (client._autoScrollPosition) {
+  if (canBindBuffer && client._autoScrollPosition) {
     client.buffer.removeEventListener("scroll", client._autoScrollPosition);
     client._autoScrollPosition = null;
   }
-  if (client._autoScrollDbl) {
+  if (canBindBuffer && client._autoScrollDbl) {
     client.buffer.removeEventListener("dblclick", client._autoScrollDbl);
     client._autoScrollDbl = null;
   }
-  if (client._autoScrollDown) {
+  if (canBindBuffer && client._autoScrollDown) {
     client.buffer.removeEventListener("mousedown", client._autoScrollDown);
     client._autoScrollDown = null;
   }
-  if (client._autoScrollUp) {
+  if (canBindBuffer && client._autoScrollUp) {
     client.buffer.removeEventListener("mouseup", client._autoScrollUp);
     client._autoScrollUp = null;
   }
@@ -90,6 +94,9 @@ export function setupAutoscroll(context = dome, winArg = window) {
   client.pausedLines = 0;
 
   setScrollBuffer(client);
+  if (!canBindBuffer) {
+    return;
+  }
 
   client._longClickTimeout = null;
   client.onToggleAutoScroll = () => {
@@ -108,7 +115,7 @@ export function setupAutoscroll(context = dome, winArg = window) {
     }
   };
 
-  if (client.preferences.scrollUpToPause !== false) {
+  if (preferences.scrollUpToPause !== false) {
     client._autoScrollPosition = () => {
       if (client._autoScrollProgrammatic) {
         return;
@@ -122,7 +129,7 @@ export function setupAutoscroll(context = dome, winArg = window) {
     client.buffer.addEventListener("scroll", client._autoScrollPosition);
   }
 
-  if (client.preferences.autoScroll === "dbl") {
+  if (preferences.autoScroll === "dbl") {
     client._autoScrollDbl = (e) => {
       // Only suppress browser text-selection behavior for the specific
       // double-click gesture that toggles autoscroll.
@@ -130,7 +137,7 @@ export function setupAutoscroll(context = dome, winArg = window) {
       client.onToggleAutoScroll();
     };
     client.buffer.addEventListener("dblclick", client._autoScrollDbl);
-  } else if (client.preferences.autoScroll === "long") {
+  } else if (preferences.autoScroll === "long") {
     client._autoScrollDown = () => {
       client._longClickTimeout = win.setTimeout(client.onToggleAutoScroll, 2000);
     };
@@ -142,12 +149,9 @@ export function setupAutoscroll(context = dome, winArg = window) {
     };
     client.buffer.addEventListener("mousedown", client._autoScrollDown);
     client.buffer.addEventListener("mouseup", client._autoScrollUp);
-  } else if (client.preferences.autoScroll === "none") {
+  } else if (preferences.autoScroll === "none") {
     // no mouse bindings
   }
 }
 
 setScrollBuffer(dome);
-dome.setupAutoscroll = () => {
-  setupAutoscroll({ client: dome });
-};

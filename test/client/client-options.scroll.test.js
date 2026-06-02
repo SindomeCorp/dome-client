@@ -19,7 +19,6 @@ test("client-options change scrolls buffer", async () => {
   Object.assign(dome, {
     buffer: { append: (text) => output.push(text) },
     preferences: { commandSuggestions: true },
-    scrollBuffer: () => { scrolled = true; },
     setClientOption: (name, val) => {
       dome.buffer.append(`changing @client-option ${name} to ${val}\n`);
       dome.preferences[name] = val;
@@ -27,6 +26,7 @@ test("client-options change scrolls buffer", async () => {
   });
   const options = await import("../../src/client/pages/client-options.js");
   Object.assign(options.store, store);
+  dome.scrollBuffer = () => { scrolled = true; };
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
   const offBtn = window.document.querySelector("#commands-option .disabled-state");
   offBtn.click();
