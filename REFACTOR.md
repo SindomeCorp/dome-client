@@ -95,7 +95,7 @@ Benefits:
 
 ## Phase 4. Extract Button Workflows
 
-Status: Planned.
+Status: Complete.
 
 Target files:
 
