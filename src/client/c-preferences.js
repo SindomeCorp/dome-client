@@ -1,238 +1,42 @@
 import { dome, logger } from "./b-variables.js";
 import {
   store,
-  clientOptions,
-  EDIT_THEMES,
-  FONT_CHOICES,
-  COLORSET_CHOICES
+  clientOptions
 } from "./pages/client-options.js";
+import {
+  CLIENT_OPTION_BY_PARAM,
+  CLIENT_OPTION_BY_PREFERENCE,
+  CLIENT_OPTION_DEFINITIONS,
+  FONT_CHOICES,
+  buildPreferenceDefaults,
+  coerceOptionValue,
+  normalizeHexColor
+} from "./client-option-schema.js";
 
 const shortenFeatureEnabled = typeof window === "undefined" ? true : window.shortenEnabled !== false;
 
 dome.readPreferences = function() {
-  const options = window.location.search || null;
+  const options = window.location.search || "";
 
-  // user preferences
-  const preferences = {
-    commandSuggestions : true,
-    shortenUrls        : true,
-    playDing           : true,
-    localEcho          : false,
-    colorSet           : "normal",
-    autoScroll         : "dbl",
-    edittheme          : "twilight",
-    editorType         : "ide",
-    lineBufferFont     : "standard",
-    lineBufferFontSizePt: 9.75,
-    inputFont          : "standard",
-    inputFontSizePt    : 11,
-    inputFontColor     : "#EEEEEE",
-    inputBackgroundColor: "#333333",
-    editorFont         : "standard",
-    imagePreview       : false,
-    inlineLogCss       : true,
-    sdwcNowrapBlocks   : false,
-    scrollUpToPause    : false,
-    transparentOverlay : true,
-    broadSearch        : true,
-    performanceBuffer  : 0 // set to 0 for unlimited buffer
-  };
+  const preferences = buildPreferenceDefaults();
   // load saved preferences from localStorage
-  for (const shortCode in PREFERENCE_ENUM) {
-    if (shortCode.length !== 2) continue;
-    const pref = PREFERENCE_ENUM[shortCode];
-    const key = clientOptions.prefix + pref.storeKey;
+  CLIENT_OPTION_DEFINITIONS.forEach((pref) => {
+    const key = clientOptions.prefix + pref.key;
     const saved = store.get(key);
     if (saved !== null) {
-      preferences[pref.name] = saved;
+      preferences[pref.preferenceName] = saved;
     }
-  }
+  });
   if (options) {
-    if (options.indexOf("cs=false") != -1) {
-      preferences.commandSuggestions = false;
-    }
-
-    if (options.indexOf("su=false") != -1) {
-      preferences.shortenUrls = false;
-    }
-
-    if (options.indexOf("pd=false") != -1) {
-      preferences.playDing = false;
-    }
-
-    if (options.indexOf("le=true") != -1) {
-      preferences.localEcho = true;
-    }
-
-    if (options.indexOf("iv=true") != -1) {
-      preferences.imagePreview = true;
-    }
-    if (options.indexOf("lc=false") != -1) {
-      preferences.inlineLogCss = false;
-    }
-    if (options.indexOf("nw=true") != -1) {
-      preferences.sdwcNowrapBlocks = true;
-    }
-    if (options.indexOf("up=true") != -1) {
-      preferences.scrollUpToPause = true;
-    }
-
-    if (options.indexOf("as=long") != -1) {
-      preferences.autoScroll = "long";
-    } else if (options.indexOf("as=none") != -1) {
-      preferences.autoScroll = "none";
-    }
-
-    const ofIndex = options.indexOf("of=");
-    if (ofIndex !== -1) {
-      let rest = options.substr(ofIndex);
-      const nIndex = rest.indexOf("&");
-      const of = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
-      if (of.length > 3) {
-        const font = of.substr(3);
-        if (FONT_CHOICES.includes(font)) {
-          preferences.lineBufferFont = font;
-        }
+    const searchParams = new URLSearchParams(options);
+    CLIENT_OPTION_DEFINITIONS.forEach((option) => {
+      if (!searchParams.has(option.param)) return;
+      const rawValue = searchParams.get(option.param);
+      const coerced = coerceOptionValue(option, rawValue);
+      if (coerced.valid && !(option.key === "buffer" && coerced.value <= 0)) {
+        preferences[option.preferenceName] = coerced.value;
       }
-    }
-
-    const efIndex = options.indexOf("ef=");
-    if (efIndex !== -1) {
-      let rest = options.substr(efIndex);
-      const nIndex = rest.indexOf("&");
-      const ef = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
-      if (ef.length > 3) {
-        const font = ef.substr(3);
-        if (FONT_CHOICES.includes(font)) {
-          preferences.editorFont = font;
-        }
-      }
-    }
-
-    const ifIndex = options.indexOf("if=");
-    if (ifIndex !== -1) {
-      let rest = options.substr(ifIndex);
-      const nIndex = rest.indexOf("&");
-      const inputFont = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
-      if (inputFont.length > 3) {
-        const font = inputFont.substr(3);
-        if (FONT_CHOICES.includes(font)) {
-          preferences.inputFont = font;
-        }
-      }
-    }
-
-    const ozIndex = options.indexOf("oz=");
-    if (ozIndex !== -1) {
-      let rest = options.substr(ozIndex);
-      const nIndex = rest.indexOf("&");
-      let outputSize = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
-      if (outputSize.length > 3) {
-        outputSize = Number(outputSize.substr(3));
-        if (!Number.isNaN(outputSize) && outputSize >= 8 && outputSize <= 24) {
-          preferences.lineBufferFontSizePt = outputSize;
-        }
-      }
-    }
-
-    const izIndex = options.indexOf("iz=");
-    if (izIndex !== -1) {
-      let rest = options.substr(izIndex);
-      const nIndex = rest.indexOf("&");
-      let inputSize = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
-      if (inputSize.length > 3) {
-        inputSize = Number(inputSize.substr(3));
-        if (!Number.isNaN(inputSize) && inputSize >= 8 && inputSize <= 24) {
-          preferences.inputFontSizePt = inputSize;
-        }
-      }
-    }
-
-    const icIndex = options.indexOf("ic=");
-    if (icIndex !== -1) {
-      let rest = options.substr(icIndex);
-      const nIndex = rest.indexOf("&");
-      const inputColor = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
-      if (inputColor.length > 3) {
-        const normalized = normalizeHexColor(inputColor.substr(3));
-        if (normalized) {
-          preferences.inputFontColor = normalized;
-        }
-      }
-    }
-
-    const ibIndex = options.indexOf("ib=");
-    if (ibIndex !== -1) {
-      let rest = options.substr(ibIndex);
-      const nIndex = rest.indexOf("&");
-      const inputBg = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
-      if (inputBg.length > 3) {
-        const normalized = normalizeHexColor(inputBg.substr(3));
-        if (normalized) {
-          preferences.inputBackgroundColor = normalized;
-        }
-      }
-    }
-
-    const etIndex = options.indexOf("et=");
-    if (etIndex !== -1) {
-      let rest = options.substr(etIndex);
-      const nIndex = rest.indexOf("&");
-      const et = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
-      if (et.length > 3) {
-        const theme = et.substr(3);
-        if (EDIT_THEMES.includes(theme)) {
-          preferences.edittheme = theme;
-        }
-      }
-    }
-
-    const edIndex = options.indexOf("ed=");
-    if (edIndex !== -1) {
-      let rest = options.substr(edIndex);
-      const nIndex = rest.indexOf("&");
-      const ed = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
-      if (ed.length > 3) {
-        const type = ed.substr(3);
-        if (["ide", "windows"].includes(type)) {
-          preferences.editorType = type;
-        }
-      }
-    }
-
-    const clIndex = options.indexOf("cl=");
-    if (clIndex !== -1) {
-      let rest = options.substr(clIndex);
-      const nIndex = rest.indexOf("&");
-      const cl = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
-      if (cl.length > 3) {
-        const colorset = cl.substr(3);
-        if (COLORSET_CHOICES.includes(colorset)) {
-          preferences.colorSet = colorset;
-        }
-      }
-    }
-
-    const pbIndex = options.indexOf("pb=");
-    if (pbIndex !== -1) {
-      let rest = options.substr(pbIndex);
-      const nIndex = rest.indexOf("&");
-      let pb = nIndex !== -1 ? rest.substr(0, nIndex) : rest;
-      if (pb.length > 3) {
-        pb = parseInt(pb.substr(3), 10);
-        if (pb > 0) {
-          preferences.performanceBuffer = pb;
-        }
-      }
-    }
-
-    if (options.indexOf("to=false") != -1) {
-      preferences.transparentOverlay = false;
-    }
-
-    if (options.indexOf("bs=false") != -1) {
-      preferences.broadSearch = false;
-    }
+    });
   }
   if (store.get(clientOptions.prefix + "editorfont") === null && !(options && options.indexOf("ef=") !== -1)) {
     preferences.editorFont = preferences.lineBufferFont;
@@ -246,30 +50,7 @@ dome.readPreferences = function() {
   return preferences;
 };
 
-const PREFERENCE_ENUM = {
-  "cs" : { name: "commandSuggestions", storeKey: "commands", def: true },
-  "su" : { name: "shortenUrls", storeKey: "shorten", def: true },
-  "pd" : { name: "playDing", storeKey: "playding", def: true },
-  "le" : { name: "localEcho", storeKey: "localecho", def: false },
-  "iv" : { name: "imagePreview", storeKey: "imageview", def: false },
-  "lc" : { name: "inlineLogCss", storeKey: "logcss", def: true },
-  "nw" : { name: "sdwcNowrapBlocks", storeKey: "sdwcnowrap", def: false },
-  "up" : { name: "scrollUpToPause", storeKey: "scrolluppause", def: false },
-  "as" : { name: "autoScroll", storeKey: "scroll", def: "dbl", valid: ["dbl", "long", "none"] },
-  "of" : { name: "lineBufferFont", storeKey: "outfont", def: "standard", valid: FONT_CHOICES },
-  "oz" : { name: "lineBufferFontSizePt", storeKey: "outfontsize", def: 9.75 },
-  "if" : { name: "inputFont", storeKey: "inputfont", def: "standard", valid: FONT_CHOICES },
-  "iz" : { name: "inputFontSizePt", storeKey: "inputfontsize", def: 11 },
-  "ic" : { name: "inputFontColor", storeKey: "inputfontcolor", def: "#EEEEEE" },
-  "ib" : { name: "inputBackgroundColor", storeKey: "inputbgcolor", def: "#333333" },
-  "ef" : { name: "editorFont", storeKey: "editorfont", def: "standard", valid: FONT_CHOICES },
-  "et" : { name: "edittheme", storeKey: "edittheme", def: "twilight", valid: EDIT_THEMES },
-  "ed" : { name: "editorType", storeKey: "edittype", def: "ide", valid: ["ide", "windows"] },
-  "cl" : { name: "colorSet", storeKey: "colorset", def: "normal", valid: COLORSET_CHOICES },
-  "to" : { name: "transparentOverlay", storeKey: "transparent", def: true },
-  "bs" : { name: "broadSearch", storeKey: "broadly", def: true },
-  "pb" : { name: "performanceBuffer", storeKey: "buffer", def: 0 }
-};
+const PREFERENCE_ENUM = { ...CLIENT_OPTION_BY_PARAM, ...CLIENT_OPTION_BY_PREFERENCE };
 
 const helpDocs = [
   "Help on @client-option:\n",
@@ -279,11 +60,9 @@ const helpDocs = [
   "  Options Include:\n"
 ];
 
-for (const shortCode in PREFERENCE_ENUM) {
-  const prefName = PREFERENCE_ENUM[shortCode].name;
-  PREFERENCE_ENUM[prefName] = PREFERENCE_ENUM[shortCode];
-  helpDocs[helpDocs.length] = "   [" + shortCode + "] " + prefName + "\n";
-}
+CLIENT_OPTION_DEFINITIONS.forEach((option) => {
+  helpDocs[helpDocs.length] = "   [" + option.param + "] " + option.preferenceName + "\n";
+});
 
 const CLIENT_OPTION_NAME_ERROR = "Unknown @client-option specified, check @client-options" + "\n";
 const CLIENT_OPTION_VALUE_ERROR = "Invalid @client-option value, must be one of ";
@@ -294,7 +73,7 @@ const showClientOptionHelp = function() {
 };
 const translateClientOptionName = function(optionName) {
   if (PREFERENCE_ENUM[ optionName ] != null) {
-    return PREFERENCE_ENUM[ optionName ].name;
+    return PREFERENCE_ENUM[ optionName ].preferenceName;
   }
   return optionName;
 };
@@ -355,16 +134,6 @@ const INPUT_FONT_FAMILIES = {
   consolas: "\"Consolas\"",
 };
 const INPUT_FONT_CLASSES = FONT_CHOICES.map((font) => `${font}Text`);
-
-const normalizeHexColor = function(value) {
-  if (typeof value !== "string") return null;
-  let hex = value.trim();
-  if (!hex.startsWith("#")) {
-    hex = `#${hex}`;
-  }
-  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return null;
-  return hex.toUpperCase();
-};
 
 const applyInputReaderTextPreferences = function() {
   if (!dome.inputReader) return;
@@ -427,13 +196,9 @@ const setClientOption = function(optionName, optionValue) {
   } else if (optionValue === "false") {
     optionValue = false;
   }
-  const prefDef = PREFERENCE_ENUM[ optionName ].def;
-  if (typeof prefDef === "number" && typeof optionValue === "string") {
-    const num = Number(optionValue);
-    if (!Number.isNaN(num)) {
-      optionValue = num;
-    }
-  }
+  const optionDef = PREFERENCE_ENUM[ optionName ];
+  const coerced = coerceOptionValue(optionDef, optionValue);
+  optionValue = coerced.value;
 
   if (optionName === "lineBufferFontSizePt" || optionName === "inputFontSizePt") {
     if (typeof optionValue !== "number" || Number.isNaN(optionValue)) {
@@ -444,21 +209,18 @@ const setClientOption = function(optionName, optionValue) {
     }
   }
 
-  const validValues = PREFERENCE_ENUM[ optionName ].valid || (typeof prefDef === "boolean" ? [true, false] : null);
-
   if (optionName === "inputFontColor" || optionName === "inputBackgroundColor") {
-    const normalized = normalizeHexColor(optionValue);
-    if (!normalized) {
+    if (!coerced.valid) {
       return dome.buffer?.append("Invalid @client-option value, must be a hex color like #AABBCC\n");
     }
-    optionValue = normalized;
   }
 
-  if (validValues && !validValues.includes(optionValue)) {
+  const validValues = optionDef.ok || (typeof optionDef.def === "boolean" ? [true, false] : null);
+  if (!coerced.valid && validValues) {
     return dome.buffer?.append(CLIENT_OPTION_VALUE_ERROR + validValues.toString() + "\n");
   }
 
-  clientOptions.save( PREFERENCE_ENUM[ optionName ].storeKey, optionValue );
+  clientOptions.save( optionDef.key, optionValue );
 
   if (dome.preferences[ optionName ] != optionValue) {
     dome.buffer?.append("changing @client-option " + optionName + " to " + optionValue + "\n");

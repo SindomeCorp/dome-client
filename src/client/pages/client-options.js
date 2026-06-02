@@ -1,20 +1,14 @@
 import logger from "./logger.js";
 import { dome } from "../b-variables.js";
 import { store } from "../store.js";
-
-const EDIT_THEMES = ["ambience", "chaos", "chrome", "clouds", "clouds_midnight", "cobalt", "crimson_editor", "dawn", "dreamweaver", "eclipse", "github", "idle_fingers", "kr_theme", "merbivore", "merbivore_soft", "mono_industrial", "monokai", "pastel_on_dark", "solarized_dark", "solarized_light", "terminal", "textmate", "tomorrow_night", "tomorrow_night_blue", "tomorrow_night_bright", "tomorrow_night_eighties", "twilight", "vibrant_ink", "xcode"];
-const FONT_CHOICES = [
-  "standard",
-  "lucida",
-  "courier",
-  "roboto",
-  "comic-mono",
-  "monaco",
-  "menlo",
-  "ubuntu-mono",
-  "consolas",
-];
-const COLORSET_CHOICES = ["normal", "dim", "slither", "acid", "corpie", "snow"];
+import {
+  COLORSET_CHOICES,
+  EDIT_THEMES,
+  FONT_CHOICES,
+  PREF_NAME,
+  buildClientOptionState,
+  coerceOptionValue
+} from "../client-option-schema.js";
 
 // Expose color set choices for modules that read from the window object.
 if (typeof window !== "undefined" && !window.COLORSET_CHOICES) {
@@ -22,30 +16,7 @@ if (typeof window !== "undefined" && !window.COLORSET_CHOICES) {
 }
 
 const clientOptions = {
-  options: {
-    commands: { param: "cs", def: true, ok: [true, false] },
-    shorten: { param: "su", def: true, ok: [true, false] },
-    scroll: { param: "as", def: "dbl", ok: ["dbl", "long", "none"] },
-    edittheme: { param: "et", def: "twilight", ok: EDIT_THEMES },
-    edittype: { param: "ed", def: "ide", ok: ["ide", "windows"] },
-    colorset: { param: "cl", def: "normal", ok: COLORSET_CHOICES },
-    outfont: { param: "of", def: "standard", ok: FONT_CHOICES },
-    outfontsize: { param: "oz", def: 9.75 },
-    inputfont: { param: "if", def: "standard", ok: FONT_CHOICES },
-    inputfontsize: { param: "iz", def: 11 },
-    inputfontcolor: { param: "ic", def: "#EEEEEE" },
-    inputbgcolor: { param: "ib", def: "#333333" },
-    editorfont: { param: "ef", def: "standard", ok: FONT_CHOICES },
-    playding: { param: "pd", def: true, ok: [true, false] },
-    localecho: { param: "le", def: false, ok: [true, false] },
-    imageview: { param: "iv", def: false, ok: [true, false] },
-    logcss: { param: "lc", def: true, ok: [true, false] },
-    sdwcnowrap: { param: "nw", def: false, ok: [true, false] },
-    scrolluppause: { param: "up", def: false, ok: [true, false] },
-    transparent: { param: "to", def: true, ok: [true, false] },
-    broadly: { param: "bs", def: true, ok: [true, false] },
-    buffer: { param: "pb", def: 0 }
-  },
+  options: buildClientOptionState(),
   prefix: "dc-toggle-", // namespacing options in localStorage
   get(name) {
     const option = this.options[name];
@@ -86,31 +57,6 @@ const clientOptions = {
     }
     return qs;
   }
-};
-
-const PREF_NAME = {
-  commands: "commandSuggestions",
-  shorten: "shortenUrls",
-  scroll: "autoScroll",
-  edittheme: "edittheme",
-  edittype: "editorType",
-  colorset: "colorSet",
-  outfont: "lineBufferFont",
-  outfontsize: "lineBufferFontSizePt",
-  inputfont: "inputFont",
-  inputfontsize: "inputFontSizePt",
-  inputfontcolor: "inputFontColor",
-  inputbgcolor: "inputBackgroundColor",
-  editorfont: "editorFont",
-  playding: "playDing",
-  localecho: "localEcho",
-  imageview: "imagePreview",
-  logcss: "inlineLogCss",
-  sdwcnowrap: "sdwcNowrapBlocks",
-  scrolluppause: "scrollUpToPause",
-  transparent: "transparentOverlay",
-  broadly: "broadSearch",
-  buffer: "performanceBuffer"
 };
 
 function getOptionNameFromRow(row) {
@@ -326,11 +272,12 @@ async function importClientOptionsJson(file) {
     if (!Object.prototype.hasOwnProperty.call(clientOptions.options, name)) return;
     const normalized = normalizeImportedValue(name, value);
     const optionDef = clientOptions.options[name];
-    if (optionDef.ok && !optionDef.ok.includes(normalized)) {
+    const coerced = coerceOptionValue(optionDef, normalized);
+    if (!coerced.valid) {
       skipped++;
       return;
     }
-    applyOptionValue(name, normalized);
+    applyOptionValue(name, coerced.value);
     applied++;
   });
   refreshClientOptions();
