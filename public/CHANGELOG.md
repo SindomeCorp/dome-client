@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-06-02
 
+### Changed
+- Replaced the Editor IDE technical debt plan with a roadmap focused on tab planning, save flow, shortcuts, overlays, and orchestration cleanup.
+- Refactored the Editor IDE internals into focused planning, save-flow, shortcut, overlay, browser command, recent-tab, and label helpers while preserving existing behavior.
+
 ### Fixed
 - Hardened the IDE editor against malformed window messages and unavailable socket, opener, root, or Ace editor APIs.
 

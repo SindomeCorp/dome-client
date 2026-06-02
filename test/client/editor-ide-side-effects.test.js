@@ -6,6 +6,9 @@ import setupDom from "../../test-support/setup-dom.js";
 import { emitInput } from "../../src/client/react/editor-ide/socketAdapter.js";
 import { useIdeConfig } from "../../src/client/react/editor-ide/useIdeConfig.js";
 import { useIdeMessages } from "../../src/client/react/editor-ide/useIdeMessages.js";
+import { useIdeSaveFlow } from "../../src/client/react/editor-ide/useIdeSaveFlow.js";
+import { useIdeKeyboardShortcuts } from "../../src/client/react/editor-ide/useIdeKeyboardShortcuts.js";
+import { useIdeBrowserCommands } from "../../src/client/react/editor-ide/useIdeBrowserCommands.js";
 import { usePersistentPreference } from "../../src/client/react/editor-ide/usePersistentPreference.js";
 
 test("useIdeConfig reads root data attributes with defaults", () => {
@@ -217,6 +220,263 @@ test("useIdeMessages ignores malformed messages and unavailable opener postMessa
   });
 
   assert.deepEqual(calls, [["font", "standard"]]);
+
+  await act(async () => {
+    root.unmount();
+  });
+});
+
+test("useIdeSaveFlow prompts, submits, cancels, and preserves failed saves", async (t) => {
+  const { window, cleanup } = setupDom();
+  window.HTMLElement.prototype.attachEvent = () => {};
+  window.HTMLElement.prototype.detachEvent = () => {};
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  t.after(() => {
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    cleanup();
+  });
+
+  const dispatches = [];
+  const messages = [];
+  let controls;
+  let emitResult = true;
+  const tabs = [{
+    id: 3,
+    command: "@program",
+    commandTarget: "#12:look",
+    uploadCommand: "@program #12:look",
+    vmsNote: ""
+  }];
+
+  function SaveHarness() {
+    controls = useIdeSaveFlow({
+      active: 3,
+      dispatchIde: (action) => dispatches.push(action),
+      emitInput: (message) => {
+        messages.push(message);
+        return emitResult;
+      },
+      getEditorValue: () => "content",
+      ideVmsNoteEnabled: true,
+      tabs
+    });
+    return React.createElement("input", { ref: controls.vmsPromptInputRef });
+  }
+
+  const container = window.document.createElement("div");
+  window.document.body.append(container);
+  const root = createRoot(container);
+
+  await act(async () => {
+    root.render(React.createElement(SaveHarness));
+  });
+
+  await act(async () => {
+    controls.onSave();
+  });
+  assert.deepEqual(controls.vmsPrompt, { open: true, tabId: 3, value: "" });
+  assert.deepEqual(messages, []);
+
+  await act(async () => {
+    controls.setVmsPromptValue("changed look behavior");
+  });
+  await act(async () => {
+    controls.submitVmsPrompt();
+  });
+  assert.deepEqual(messages, [
+    "@program #12:look",
+    "content\n.",
+    "changed look behavior"
+  ]);
+  assert.deepEqual(dispatches, [
+    { type: "markDocumentSaved", id: 3, content: "content" },
+    { type: "updateVmsNote", id: 3, vmsNote: "changed look behavior" }
+  ]);
+  assert.deepEqual(controls.vmsPrompt, { open: false, tabId: null, value: "" });
+
+  await act(async () => {
+    controls.onSave();
+  });
+  await act(async () => {
+    controls.cancelVmsPrompt();
+  });
+  assert.deepEqual(controls.vmsPrompt, { open: false, tabId: null, value: "" });
+
+  emitResult = false;
+  messages.length = 0;
+  dispatches.length = 0;
+  await act(async () => {
+    controls.onSave();
+  });
+  await act(async () => {
+    controls.setVmsPromptValue("failed note");
+  });
+  await act(async () => {
+    controls.submitVmsPrompt();
+  });
+  assert.deepEqual(messages, ["@program #12:look"]);
+  assert.deepEqual(dispatches, []);
+  assert.deepEqual(controls.vmsPrompt, { open: true, tabId: 3, value: "failed note" });
+
+  await act(async () => {
+    root.unmount();
+  });
+});
+
+test("useIdeKeyboardShortcuts routes keydown commands", async (t) => {
+  const { window, cleanup } = setupDom();
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  t.after(() => {
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    cleanup();
+  });
+
+  const calls = [];
+  let closeCalls = 0;
+  window.close = () => {
+    closeCalls += 1;
+  };
+
+  function ShortcutHarness({ active = 2, showShortcuts = false, vmsPrompt = { open: false } }) {
+    const [vimMode, setVimMode] = useState(false);
+    useIdeKeyboardShortcuts({
+      active,
+      activateTab: (id) => calls.push(["activate", id]),
+      cancelVmsPrompt: () => calls.push(["cancel-vms"]),
+      onClose: (id) => calls.push(["close", id]),
+      onSave: () => calls.push(["save"]),
+      orientation: "top",
+      setOrientationPersist: (orientation) => calls.push(["orientation", orientation]),
+      setShowShortcuts: (value) => calls.push(["shortcuts", typeof value === "function" ? value(false) : value]),
+      setVimMode: (value) => {
+        setVimMode(value);
+        calls.push(["vim", value]);
+      },
+      showShortcuts,
+      submitVmsPrompt: () => calls.push(["submit-vms"]),
+      tabs: [
+        { id: 1, commandTarget: "#1:a" },
+        { id: 2, commandTarget: "#1:b" },
+        { id: 3, commandTarget: "#1:c" }
+      ],
+      toggleWordWrap: () => calls.push(["wrap"]),
+      vmsPrompt
+    });
+    return React.createElement("span", null, vimMode ? "vim" : "normal");
+  }
+
+  const container = window.document.createElement("div");
+  window.document.body.append(container);
+  const root = createRoot(container);
+
+  await act(async () => {
+    root.render(React.createElement(ShortcutHarness));
+  });
+
+  await act(async () => {
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "s", ctrlKey: true }));
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "e", ctrlKey: true }));
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "[", ctrlKey: true }));
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "]", ctrlKey: true }));
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "1", ctrlKey: true }));
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "0", ctrlKey: true }));
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "L", ctrlKey: true, shiftKey: true }));
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "X", ctrlKey: true, shiftKey: true }));
+  });
+  assert.deepEqual(calls, [
+    ["save"],
+    ["close", 2],
+    ["activate", 1],
+    ["activate", 3],
+    ["vim", true],
+    ["vim", false],
+    ["wrap"],
+    ["orientation", "left"]
+  ]);
+
+  calls.length = 0;
+  await act(async () => {
+    root.render(React.createElement(ShortcutHarness, { vmsPrompt: { open: true } }));
+  });
+  await act(async () => {
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape" }));
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter" }));
+  });
+  assert.deepEqual(calls, [["cancel-vms"], ["submit-vms"]]);
+
+  calls.length = 0;
+  await act(async () => {
+    root.render(React.createElement(ShortcutHarness, { showShortcuts: true }));
+  });
+  await act(async () => {
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape" }));
+  });
+  assert.deepEqual(calls, [["shortcuts", false]]);
+
+  calls.length = 0;
+  await act(async () => {
+    root.render(React.createElement(ShortcutHarness, { active: null }));
+  });
+  await act(async () => {
+    window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "e", ctrlKey: true }));
+  });
+  assert.equal(closeCalls, 1);
+  assert.deepEqual(calls, []);
+
+  await act(async () => {
+    root.unmount();
+  });
+});
+
+test("useIdeBrowserCommands dispatches browser state and emits protocol commands", async (t) => {
+  const { window, cleanup } = setupDom();
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  t.after(() => {
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    cleanup();
+  });
+
+  const dispatches = [];
+  const messages = [];
+  let commands;
+
+  function BrowserCommandHarness() {
+    commands = useIdeBrowserCommands({
+      dispatchIde: (action) => dispatches.push(action),
+      emitInput: (message) => messages.push(message)
+    });
+    return React.createElement("span", null, "ready");
+  }
+
+  const container = window.document.createElement("div");
+  window.document.body.append(container);
+  const root = createRoot(container);
+
+  await act(async () => {
+    root.render(React.createElement(BrowserCommandHarness));
+  });
+
+  await act(async () => {
+    commands.onLoadVerbs("#12");
+    commands.onLoadProps("#12");
+    commands.onEditVerb("#12", "look* tell");
+    commands.onEditProperty("#12", "name aliases");
+    commands.toggleObjectCollapsed("#12");
+    commands.togglePropertyCollapsed("#12");
+  });
+
+  assert.deepEqual(dispatches, [
+    { type: "loadObjectVerbs", objectId: "#12" },
+    { type: "loadObjectProperties", objectId: "#12" },
+    { type: "toggleObjectCollapsed", objectId: "#12" },
+    { type: "togglePropertyCollapsed", objectId: "#12" }
+  ]);
+  assert.deepEqual(messages, [
+    "#$# SDWC%%VERBS%%#12",
+    "#$# SDWC%%PROPS%%#12",
+    "@edit #12:look",
+    "@edit #12.name"
+  ]);
 
   await act(async () => {
     root.unmount();

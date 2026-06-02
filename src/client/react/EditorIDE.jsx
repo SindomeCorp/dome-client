@@ -1,30 +1,20 @@
 import React, { useState, useEffect, useMemo, useReducer, useRef } from "react";
-import { parseCommand, getCommandLabel } from "../command-utils.js";
 import { getPreferredFont } from "../ace/fonts.js";
 import {
-  PROPERTY_EDIT_COMMANDS,
-  parseObjectPropertyTarget
-} from "./editor-ide/targets.js";
-import {
-  formatEditPropertyCommand,
-  formatEditVerbCommand,
-  formatPropertyListCommand,
-  formatVerbListCommand,
-  getSaveMessages
-} from "./editor-ide/protocol.js";
-import {
-  getOverlayCacheKeys,
   normalizeObjectPropertiesPayload,
   normalizeObjectVerbsPayload
 } from "./editor-ide/payloads.js";
 import {
-  buildTitle,
   buildIdeTabs,
-  createEditableTab,
   OBJECT_BROWSER_TAB,
-  PROPERTY_BROWSER_TAB,
-  TAB_TYPES
+  PROPERTY_BROWSER_TAB
 } from "./editor-ide/tabs.js";
+import {
+  buildOpenTabPlan
+} from "./editor-ide/openTabPlan.js";
+import {
+  createOverlayPayloadHandler
+} from "./editor-ide/overlays.js";
 import {
   ideReducer,
   initialIdeState
@@ -34,14 +24,20 @@ import { useAceEditors } from "./editor-ide/useAceEditors.js";
 import { useIdeConfig } from "./editor-ide/useIdeConfig.js";
 import { useIdeMessages } from "./editor-ide/useIdeMessages.js";
 import { usePersistentPreference } from "./editor-ide/usePersistentPreference.js";
+import { useIdeSaveFlow } from "./editor-ide/useIdeSaveFlow.js";
+import { useIdeKeyboardShortcuts } from "./editor-ide/useIdeKeyboardShortcuts.js";
+import { useIdeBrowserCommands } from "./editor-ide/useIdeBrowserCommands.js";
+import { useRecentTabs } from "./editor-ide/useRecentTabs.js";
+import {
+  buildEditingLabel,
+  isBrowserActiveTab
+} from "./editor-ide/editorLabels.js";
 import { EditorPane } from "./editor-ide/EditorPane.jsx";
 import { EditorToolbar } from "./editor-ide/EditorToolbar.jsx";
 import { HoverOverlay } from "./editor-ide/HoverOverlay.jsx";
 import { ShortcutDialog } from "./editor-ide/ShortcutDialog.jsx";
 import { TabStrip } from "./editor-ide/TabStrip.jsx";
 import { VmsPromptDialog } from "./editor-ide/VmsPromptDialog.jsx";
-
-const EMPTY_VMS_PROMPT_STATE = { open: false, tabId: null, value: "" };
 
 export default function EditorIDE() {
   const {
@@ -62,14 +58,11 @@ export default function EditorIDE() {
   const [orientation, setOrientation] = usePersistentPreference("ide-orientation", "top");
   const [vimMode, setVimMode] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const [vmsPrompt, setVmsPrompt] = useState(EMPTY_VMS_PROMPT_STATE);
   const [editorFont, setEditorFont] = useState(getPreferredFont());
   const [wordWrap, setWordWrap] = useState(false);
   const [hoverOverlay, setHoverOverlay] = useState(null);
-  const recentTabIds = useRef([]);
   const overlayCache = useRef({ verb: new Map(), prop: new Map() });
   const pendingOverlayKey = useRef("");
-  const vmsPromptInputRef = useRef(null);
   const {
     active,
     collapsedObjects,
@@ -109,6 +102,21 @@ export default function EditorIDE() {
     vimMode,
     wordWrap
   });
+  const {
+    cancelVmsPrompt,
+    onSave,
+    setVmsPromptValue,
+    submitVmsPrompt,
+    vmsPrompt,
+    vmsPromptInputRef
+  } = useIdeSaveFlow({
+    active,
+    dispatchIde,
+    emitInput,
+    getEditorValue,
+    ideVmsNoteEnabled,
+    tabs
+  });
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -119,12 +127,6 @@ export default function EditorIDE() {
     document.body.classList.add("ide-editor");
     return () => document.body.classList.remove("ide-editor");
   }, []);
-
-  useEffect(() => {
-    if (!active) return;
-    recentTabIds.current = [...recentTabIds.current.filter((id) => id !== active), active];
-  }, [active]);
-
 
   const activateTab = (id) => {
     dispatchIde({ type: "activateTab", id });
@@ -154,50 +156,18 @@ export default function EditorIDE() {
   const addTab = (editor) => {
     setHoverOverlay(null);
     pendingOverlayKey.current = "";
-    const title = buildTitle(editor);
-    const { command, commandTarget } = parseCommand(editor.uploadCommand || "");
-    const name = editor.name || `${editor.editorName || ""}|${commandTarget || ""}`;
-    const isProgramCommand = command === "@program";
-    const isEditVerbTarget = command === "@edit" && commandTarget.includes(":");
-    const isEditPropTarget = command === "@edit" && commandTarget.includes(".") && !commandTarget.includes(":");
-    const isVerbContext = isProgramCommand || isEditVerbTarget;
-    const isPropertyContext = PROPERTY_EDIT_COMMANDS.has(command) || isEditPropTarget;
-
-    if (isVerbContext) {
-      const splitAt = commandTarget.indexOf(":");
-      if (splitAt > 0 && splitAt < commandTarget.length - 1) {
-        const objectId = commandTarget.slice(0, splitAt).trim();
-        const verbName = commandTarget.slice(splitAt + 1).trim();
-        if (objectId && verbName) {
-          dispatchIde({ type: "upsertObjectVerb", objectId, verbLabel: verbName });
-        }
-      }
-    } else if (isPropertyContext) {
-      const parsedTarget = parseObjectPropertyTarget(commandTarget);
-      if (parsedTarget) {
-        dispatchIde({
-          type: "upsertObjectProperty",
-          objectId: parsedTarget.objectId,
-          propertyLabel: parsedTarget.propertyName
-        });
-      }
-    }
-
-    const existing = documents.find((t) => t.name === name);
-    if (existing) {
-      dispatchIde({ type: "activateTab", id: existing.id });
-      emitInput(
-        "@@editor-message There was already a tab with that information open so we have switched the view to that. We did not update the contents."
-      );
+    const plan = buildOpenTabPlan(editor, documents);
+    if (plan.type === "activateExisting") {
+      dispatchIde({ type: "activateTab", id: plan.id });
+      emitInput(plan.duplicateMessage);
       return;
     }
-    const id = Date.now() + Math.random();
-    const nextTab = createEditableTab({ id, editor, title, command, commandTarget, name, isProgramCommand });
+    plan.browserEffects.forEach((effect) => dispatchIde(effect));
     dispatchIde({
       type: "openEditableTab",
-      objectBrowser: isVerbContext,
-      propertyBrowser: isPropertyContext,
-      tab: nextTab
+      objectBrowser: plan.objectBrowser,
+      propertyBrowser: plan.propertyBrowser,
+      tab: plan.tab
     });
   };
 
@@ -214,31 +184,26 @@ export default function EditorIDE() {
     emitInput("@edit me.scratch");
   };
 
-  const handleVerbOverlayPayload = (data) => {
-    const objectId = String(data.objectId || "").trim();
-    const itemName = String(data.verbName || "").trim();
-    if (!objectId || !itemName) return;
-    const keys = getOverlayCacheKeys(objectId, itemName, data.payload);
-    keys.forEach((key) => overlayCache.current.verb.set(key, data.payload ?? {}));
-    setHoverOverlay((state) =>
-      state && state.kind === "verb" && state.objectId === objectId && state.itemName === itemName
-        ? { ...state, loading: false, payload: data.payload ?? {} }
-        : state
-    );
-  };
+  const {
+    onEditProperty,
+    onEditVerb,
+    onLoadProps,
+    onLoadVerbs,
+    toggleObjectCollapsed,
+    togglePropertyCollapsed
+  } = useIdeBrowserCommands({ dispatchIde, emitInput });
 
-  const handlePropOverlayPayload = (data) => {
-    const objectId = String(data.objectId || "").trim();
-    const itemName = String(data.propertyName || "").trim();
-    if (!objectId || !itemName) return;
-    const keys = getOverlayCacheKeys(objectId, itemName, data.payload);
-    keys.forEach((key) => overlayCache.current.prop.set(key, data.payload ?? {}));
-    setHoverOverlay((state) =>
-      state && state.kind === "prop" && state.objectId === objectId && state.itemName === itemName
-        ? { ...state, loading: false, payload: data.payload ?? {} }
-        : state
-    );
-  };
+  const handleVerbOverlayPayload = createOverlayPayloadHandler({
+    kind: "verb",
+    overlayCache,
+    setHoverOverlay
+  });
+
+  const handlePropOverlayPayload = createOverlayPayloadHandler({
+    kind: "prop",
+    overlayCache,
+    setHoverOverlay
+  });
 
   useIdeMessages({
     addTab,
@@ -268,92 +233,16 @@ export default function EditorIDE() {
     document.title = `Dome-Client Developer IDE [${tabs.length}]`;
   }, [tabs.length]);
 
-  const onSave = () => {
-    const tab = tabs.find((t) => t.id === active);
-    if (!tab || !tab.commandTarget || tab.commandTarget === "none") return;
-    if (ideVmsNoteEnabled && tab.command === "@program" && String(tab.vmsNote || "").trim() === "") {
-      setVmsPrompt({ open: true, tabId: tab.id, value: tab.vmsNote || "" });
-      return;
-    }
-    const shouldSendVmsLine = ideVmsNoteEnabled && tab.command === "@program";
-    const vmsNote = shouldSendVmsLine ? String(tab.vmsNote || "") : "";
-    const didSave = runSave(tab, shouldSendVmsLine ? vmsNote : null);
-    if (didSave && ideVmsNoteEnabled && vmsPrompt.open) {
-      setVmsPrompt(EMPTY_VMS_PROMPT_STATE);
-    }
-  };
-
-  const runSave = (tab, vmsNoteLine = null) => {
-    const val = getEditorValue(tab.id);
-    if (typeof val !== "string") return false;
-    const messages = getSaveMessages(tab, val, vmsNoteLine);
-    if (!messages.every((message) => emitInput(message))) return false;
-    dispatchIde({ type: "markDocumentSaved", id: tab.id, content: val });
-    return true;
-  };
-
-  const cancelVmsPrompt = () => {
-    setVmsPrompt(EMPTY_VMS_PROMPT_STATE);
-  };
-
-  const submitVmsPrompt = () => {
-    if (!vmsPrompt.open || vmsPrompt.tabId == null) return;
-    const targetTab = tabs.find((t) => t.id === vmsPrompt.tabId);
-    if (!targetTab) {
-      setVmsPrompt(EMPTY_VMS_PROMPT_STATE);
-      return;
-    }
-    const nextNote = vmsPrompt.value || "";
-    const didSave = runSave({ ...targetTab, vmsNote: nextNote }, nextNote);
-    if (!didSave) return;
-    dispatchIde({ type: "updateVmsNote", id: targetTab.id, vmsNote: nextNote });
-    setVmsPrompt(EMPTY_VMS_PROMPT_STATE);
-  };
-
-  const onLoadVerbs = (objectId) => {
-    dispatchIde({ type: "loadObjectVerbs", objectId });
-    emitInput(formatVerbListCommand(objectId));
-  };
-
-  const onLoadProps = (objectId) => {
-    dispatchIde({ type: "loadObjectProperties", objectId });
-    emitInput(formatPropertyListCommand(objectId));
-  };
-
-  const onEditVerb = (objectId, rawVerbName) => {
-    const command = formatEditVerbCommand(objectId, rawVerbName);
-    if (!command) return;
-    emitInput(command);
-  };
-
-  const onEditProperty = (objectId, rawPropertyName) => {
-    const command = formatEditPropertyCommand(objectId, rawPropertyName);
-    if (!command) return;
-    emitInput(command);
-  };
-
-  const toggleObjectCollapsed = (objectId) => {
-    dispatchIde({ type: "toggleObjectCollapsed", objectId });
-  };
-
-  const togglePropertyCollapsed = (objectId) => {
-    dispatchIde({ type: "togglePropertyCollapsed", objectId });
-  };
+  const { getCloseState } = useRecentTabs({ active, dispatchIde, tabs });
 
   const closeTab = (id) => {
     const isPanel = id === OBJECT_BROWSER_TAB.id || id === PROPERTY_BROWSER_TAB.id;
     if (!isPanel) {
       destroyEditor(id);
     }
-    const next = tabs.filter((t) => t.id !== id);
-    recentTabIds.current = recentTabIds.current.filter((tabId) => tabId !== id);
-    let nextActiveId = active;
-    if (active === id) {
-      const fallbackId = [...recentTabIds.current].reverse().find((tabId) => next.some((t) => t.id === tabId));
-      nextActiveId = fallbackId || next[0]?.id || null;
-    }
+    const { nextActiveId, nextTabs } = getCloseState(id);
     dispatchIde({ type: "closeTab", id, nextActiveId });
-    if (next.length === 0) {
+    if (nextTabs.length === 0) {
       setTimeout(() => window.close(), 0);
     }
   };
@@ -366,97 +255,6 @@ export default function EditorIDE() {
     }
   };
 
-  useEffect(() => {
-    if (active == null) return;
-    if (tabs.some((tab) => tab.id === active)) return;
-    const fallbackId = [...recentTabIds.current].reverse().find((tabId) => tabs.some((tab) => tab.id === tabId));
-    dispatchIde({ type: "activateTab", id: fallbackId || tabs[0]?.id || null });
-  }, [active, tabs]);
-
-  useEffect(() => {
-    if (!ideVmsNoteEnabled) return;
-    if (!vmsPrompt.open) return;
-    const id = setTimeout(() => vmsPromptInputRef.current?.focus(), 0);
-    return () => clearTimeout(id);
-  }, [ideVmsNoteEnabled, vmsPrompt.open]);
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (ideVmsNoteEnabled && vmsPrompt.open) {
-        if (e.key === "Escape") {
-          e.preventDefault();
-          cancelVmsPrompt();
-          return;
-        }
-        if (e.key === "Enter") {
-          e.preventDefault();
-          submitVmsPrompt();
-          return;
-        }
-      }
-
-      if (e.key === "Escape" && showShortcuts) {
-        setShowShortcuts(false);
-        return;
-      }
-
-      const key = e.key.toLowerCase();
-      if (key === "/") {
-        const isMac = typeof navigator !== "undefined" && navigator.platform.includes("Mac");
-        if ((isMac && e.metaKey) || (!isMac && e.ctrlKey)) {
-          e.preventDefault();
-          setShowShortcuts((s) => !s);
-        }
-        return;
-      }
-
-      if (!(e.ctrlKey || e.metaKey)) return;
-
-      if (key === "s") {
-        e.preventDefault();
-        const t = tabs.find((tab) => tab.id === active);
-        if (t?.commandTarget && t.commandTarget !== "none") {
-          onSave();
-        }
-      } else if (key === "e" && !e.shiftKey) {
-        e.preventDefault();
-        if (active !== null) {
-          onClose(active);
-        } else {
-          window.close();
-        }
-      } else if (key === "1") {
-        e.preventDefault();
-        setVimMode(true);
-      } else if (key === "0") {
-        e.preventDefault();
-        setVimMode(false);
-      } else if (key === "[") {
-        e.preventDefault();
-        if (tabs.length) {
-          const idx = tabs.findIndex((t) => t.id === active);
-          const next = tabs[(idx - 1 + tabs.length) % tabs.length];
-          activateTab(next.id);
-        }
-      } else if (key === "]") {
-        e.preventDefault();
-        if (tabs.length) {
-          const idx = tabs.findIndex((t) => t.id === active);
-          const next = tabs[(idx + 1) % tabs.length];
-          activateTab(next.id);
-        }
-      } else if (key === "l" && e.shiftKey) {
-        e.preventDefault();
-        toggleWordWrap();
-      } else if (key === "x" && e.shiftKey) {
-        e.preventDefault();
-        setOrientationPersist(orientation === "top" ? "left" : "top");
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [active, onSave, onClose, tabs, showShortcuts, orientation, toggleWordWrap, ideVmsNoteEnabled, vmsPrompt]);
-
   const toggleTheme = () => {
     setDarkMode((currentValue) => !currentValue);
   };
@@ -466,16 +264,26 @@ export default function EditorIDE() {
     resizeActiveEditor();
   };
 
+  useIdeKeyboardShortcuts({
+    active,
+    activateTab,
+    cancelVmsPrompt,
+    onClose,
+    onSave,
+    orientation,
+    setOrientationPersist,
+    setShowShortcuts,
+    setVimMode,
+    showShortcuts,
+    submitVmsPrompt,
+    tabs,
+    toggleWordWrap,
+    vmsPrompt
+  });
+
   const activeTab = tabs.find((t) => t.id === active);
-  const inputLabel = getCommandLabel(activeTab?.uploadCommand, activeTab?.editorName);
-  const browserTabTitleByType = {
-    [TAB_TYPES.objectBrowser]: "Object Browser",
-    [TAB_TYPES.propertyBrowser]: "Property Browser"
-  };
-  const isBrowserActive = Object.prototype.hasOwnProperty.call(browserTabTitleByType, activeTab?.tabType || "");
-  const editingLabel = isBrowserActive
-    ? browserTabTitleByType[activeTab.tabType]
-    : `${vimMode ? "VIM Editing" : "Normal Editing"}${inputLabel ? ` | ${inputLabel}` : ""}`;
+  const isBrowserActive = isBrowserActiveTab(activeTab);
+  const editingLabel = buildEditingLabel({ activeTab, vimMode });
 
   return (
     <div className="h-dvh w-dvw bg-bg-canvas text-ink">
@@ -551,7 +359,7 @@ export default function EditorIDE() {
         enabled={ideVmsNoteEnabled}
         inputRef={vmsPromptInputRef}
         onCancel={cancelVmsPrompt}
-        onChange={(value) => setVmsPrompt((prev) => ({ ...prev, value }))}
+        onChange={setVmsPromptValue}
         onSubmit={submitVmsPrompt}
         prompt={vmsPrompt}
       />
