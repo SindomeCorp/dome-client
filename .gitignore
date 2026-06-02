@@ -23,7 +23,6 @@ nohup.out
 reports/mutation/
 reports/stryker-incremental.json
 REFACTOR.md
-knip.json
 .brooks-lint-history.json
 .br4ooks-lint-history.json
 .agents/
