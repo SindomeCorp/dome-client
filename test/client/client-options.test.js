@@ -43,6 +43,16 @@ test("client-options updates state and persists to store", async (t) => {
     scrolluppause: { param: "up", def: false, ok: [true, false] },
     scroll: { param: "as", def: "dbl", ok: ["dbl", "long", "none"] }
   };
+  options.setClientOptionsActions({
+    setClientOption(name, value) {
+      const keyByPreference = {
+        commandSuggestions: "commands",
+        scrollUpToPause: "scrolluppause",
+        autoScroll: "scroll"
+      };
+      clientOptions.save(keyByPreference[name], value);
+    }
+  });
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
   const offBtn = window.document.querySelector("#commands-option .disabled-state");
   offBtn.click();

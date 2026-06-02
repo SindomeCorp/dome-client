@@ -1,16 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome, logger, setSocket } from "../../src/client/b-variables.js";
+import { logger } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
 
 // global setup for module side effects
 const dom = new JSDOM("<!doctype html><html><body><div id=\"editor-list-view\"></div></body></html>", { pretendToBeVisual: true });
 const { window } = dom;
-const orig = { window: globalThis.window, document: globalThis.document, socket: dome.socket };
+const dome = createClientState();
+const orig = { window: globalThis.window, document: globalThis.document };
 
 globalThis.window = window;
 globalThis.document = window.document;
-setSocket({});
 
 Object.assign(dome, { spawned: {}, preferences: { edittheme: "dark", editorType: "ide" }, editorListView: window.document.querySelector("#editor-list-view"), socket: {} });
 
@@ -19,7 +20,6 @@ const { setupEditorSupport } = await import("../../src/client/s-editor.js");
 test.after(() => {
   globalThis.window = orig.window;
   globalThis.document = orig.document;
-  setSocket(orig.socket);
 });
 
 function resetEnvironment() {

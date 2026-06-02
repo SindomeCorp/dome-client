@@ -1,6 +1,4 @@
-import { dome, logger } from "./b-variables.js";
-
-dome.autoCommands = [];
+import { logger } from "./b-variables.js";
 
 const SUGGESTION_INPUT_GAP_PX = 16;
 const SUGGESTION_ROW_HEIGHT_PX = 24;
@@ -32,7 +30,7 @@ const positionSuggestionList = ({ list, inputBuffer, win = globalThis.window }) 
 };
 
 export function setupAutoCompleteFeature({
-  client = dome,
+  client,
   doc = globalThis.document,
   win = globalThis.window,
   fetchFn = (...args) => globalThis.fetch(...args),

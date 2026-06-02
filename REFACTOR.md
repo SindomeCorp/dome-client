@@ -6,7 +6,7 @@ This plan targets the remaining browser-client debt. The goal is to keep reducin
 
 Remaining debt:
 
-- Client modules still coordinate through the mutable global `dome` object.
+- Browser-client runtime state now uses explicit client composition instead of the mutable global `dome` object.
 - Several leaf pages mix DOM lookup, event binding, persistence, validation, rendering, and navigation.
 - Option metadata is centralized in JavaScript but still partly duplicated in EJS markup.
 - Some feature stores and UI modules mutate shared objects at runtime instead of exposing explicit APIs.
@@ -118,6 +118,38 @@ Benefits:
 
 - Log export, image preview, and overlay changes become independent.
 - `dome.setupButtons` stops being a catch-all for unrelated UI actions.
+
+## Phase 5. Remove Browser Client Singleton
+
+Status: Complete.
+
+Target files:
+
+- `src/client/client-state.js`
+- `src/client/z-setup.js`
+- `src/client/c-preferences.js`
+- `src/client/ide.js`
+- `src/client/pages/client-options.js`
+- `src/client/pages/editor-window.js`
+
+What it accomplishes: Replace the internal `dome` singleton and module-level socket state with explicit client runtime composition.
+
+Why: Startup and feature modules now receive the browser-client runtime object directly, so mutable state is owned by one initialized client instance instead of a shared module export.
+
+Steps:
+
+- Added `createClientState()` for non-DOM runtime defaults.
+- Removed `dome`, `socket`, and `setSocket` exports from `b-variables.js`.
+- Converted preferences and IDE launcher side effects into explicit setup exports.
+- Injected client-option actions into the options page instead of importing runtime state.
+- Switched child editor close notifications to `postMessage`.
+- Added a static regression test blocking `dome` singleton imports and `window.dome` fallbacks in client modules.
+
+Benefits:
+
+- Browser-client setup has an explicit runtime owner.
+- Socket lifecycle and input dispatch share one injected socket source.
+- Feature tests can create isolated client state per test.
 - Mobile confirmation behavior becomes easier to test directly.
 
 ## Phase 5. Normalize Client Composition

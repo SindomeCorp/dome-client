@@ -2,12 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 /* global document */
-import { dome } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
 import { initClient } from "../../src/client/z-setup.js";
 
 // Test that z-setup initializes DOM references and calls setup functions
 
 test("z-setup assigns DOM references and invokes setup hooks", async t => {
+  const dome = createClientState();
   // Create minimal DOM
   const dom = new JSDOM(`<!doctype html><html><body>
     <div id="browser-client"></div>

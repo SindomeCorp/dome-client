@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
 import { initClient } from "../../src/client/z-setup.js";
 
 const setupDom = (t) => {
@@ -39,6 +39,7 @@ const setupDom = (t) => {
 };
 
 test("z-setup replaces existing socket and binds data handler", async t => {
+  const dome = createClientState();
   const window = setupDom(t);
   t.mock.method(window, "setTimeout", fn => { fn(); return 1; });
 
@@ -72,6 +73,7 @@ test("z-setup replaces existing socket and binds data handler", async t => {
 });
 
 test("z-setup surfaces setupSocket errors", async t => {
+  const dome = createClientState();
   const window = setupDom(t);
   t.mock.method(window, "setTimeout", fn => { fn(); });
 

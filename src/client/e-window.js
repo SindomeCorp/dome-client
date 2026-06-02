@@ -1,7 +1,7 @@
-import { dome, socket, SOCKET_STATE_ENUM, defaultHeightOffset } from "./b-variables.js";
+import { SOCKET_STATE_ENUM, defaultHeightOffset } from "./b-variables.js";
 
 export function setupWindowHandlers({
-  client = dome,
+  client,
   win = globalThis.window,
   doc = globalThis.document,
   navigatorRef = globalThis.navigator,
@@ -51,7 +51,7 @@ export function setupWindowHandlers({
   };
 
   const onUnloadHandler = function() {
-    if (client.socketState == SOCKET_STATE_ENUM.CONNECTED) socket.emit("input", "@quit\r\n");
+    if (client.socketState == SOCKET_STATE_ENUM.CONNECTED) client.socket?.emit("input", "@quit\r\n");
   };
 
   const onBeforeUnloadHandler = function(event) {

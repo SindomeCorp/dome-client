@@ -1,8 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome, setSocket, SOCKET_STATE_ENUM, defaultHeightOffset } from "../../src/client/b-variables.js";
+import { SOCKET_STATE_ENUM, defaultHeightOffset } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
+import { setupClientPreferences } from "../../src/client/c-preferences.js";
 import { setupWindowHandlers } from "../../src/client/e-window.js";
+
+const dome = createClientState();
 
 test.afterEach(() => {
   delete globalThis.window;
@@ -197,7 +201,7 @@ test("window handlers respond to focus, blur, resize, and unload", async (t) => 
 
   const mockSocket = { emit() {} };
   const emitMock = t.mock.method(mockSocket, "emit");
-  setSocket(mockSocket);
+  dome.socket = mockSocket;
   dome.socketState = SOCKET_STATE_ENUM.CONNECTED;
 
   window.dispatchEvent(new window.Event("unload"));
@@ -206,7 +210,7 @@ test("window handlers respond to focus, blur, resize, and unload", async (t) => 
   assert.deepEqual(emitMock.mock.calls[0].arguments, ["input", "@quit\r\n"]);
 
   t.mock.restoreAll();
-  setSocket(null);
+  dome.socket = null;
 });
 
 test("toggling playDing while unfocused updates alert", async () => {
@@ -230,7 +234,7 @@ test("toggling playDing while unfocused updates alert", async () => {
     preferences: { playDing: false }
   });
 
-  await import("../../src/client/c-preferences.js?playding");
+  setupClientPreferences({ client: dome, doc: document, win: window });
   setupWindowHandlers({ client: dome, win: window, doc: document });
 
   assert.equal(dome.alert.active, false);

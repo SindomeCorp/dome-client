@@ -1,8 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome, logger } from "../../src/client/b-variables.js";
+import { logger } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
 import { setupAutoCompleteFeature } from "../../src/client/w-autocomplete.js";
+
+const dome = createClientState();
 
 const setup = async (commands = []) => {
   const dom = new JSDOM("<!doctype html><html><body><input id=\"input\" /></body></html>", {

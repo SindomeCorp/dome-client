@@ -1,6 +1,4 @@
 import logger from "./logger.js";
-import { dome } from "../b-variables.js";
-import { setupAutoscroll } from "../t-autoscroll.js";
 import { store } from "../store.js";
 import {
   COLORSET_CHOICES,
@@ -63,6 +61,27 @@ const clientOptions = {
     return qs;
   }
 };
+
+const createDefaultActions = () => ({
+  setClientOption() {},
+  parseClientOptionCommand() {},
+  appendOutput() {},
+  scrollBuffer() {},
+  refreshAutoscroll() {},
+  getPreference() {
+    return undefined;
+  },
+  setPreference() {}
+});
+
+let clientActions = createDefaultActions();
+
+function setClientOptionsActions(actions = {}) {
+  clientActions = {
+    ...createDefaultActions(),
+    ...actions
+  };
+}
 
 function getOptionNameFromRow(row) {
   const id = row?.getAttribute("id") || "";
@@ -149,17 +168,15 @@ function setupClientOptionsTabs() {
 
 function applyOptionValue(name, value) {
   const prefName = PREF_NAME[name];
-  if (prefName && dome.setClientOption) {
-    dome.setClientOption(prefName, value);
+  if (prefName && clientActions.setClientOption) {
+    clientActions.setClientOption(prefName, value);
   } else {
     clientOptions.save(name, value);
     if (name === "scroll") {
-      if (dome.preferences) {
-        dome.preferences.autoScroll = value;
-      }
-      setupAutoscroll({ client: dome });
+      clientActions.setPreference("autoScroll", value);
+      clientActions.refreshAutoscroll();
     } else if (name === "colorset") {
-      dome.parseClientOptionCommand?.(`@client-option cl ${value}`);
+      clientActions.parseClientOptionCommand(`@client-option cl ${value}`);
     }
   }
 }
@@ -207,8 +224,8 @@ function buildExportPayload() {
 
 function downloadClientOptionsJson() {
   if (typeof document === "undefined" || typeof Blob === "undefined") {
-    dome.buffer?.append("Client options export is not supported in this environment.\n");
-    dome.scrollBuffer?.();
+    clientActions.appendOutput("Client options export is not supported in this environment.\n");
+    clientActions.scrollBuffer();
     return;
   }
   const payload = buildExportPayload();
@@ -240,8 +257,8 @@ async function importClientOptionsJson(file) {
     const text = await file.text();
     parsed = JSON.parse(text);
   } catch {
-    dome.buffer?.append("Client options import error: invalid JSON file.\n");
-    dome.scrollBuffer?.();
+    clientActions.appendOutput("Client options import error: invalid JSON file.\n");
+    clientActions.scrollBuffer();
     showImportExportToast("Import failed.", true);
     return;
   }
@@ -251,8 +268,8 @@ async function importClientOptionsJson(file) {
     options: clientOptions.options
   });
   if (!plan.valid) {
-    dome.buffer?.append(`Client options import error: ${plan.error}\n`);
-    dome.scrollBuffer?.();
+    clientActions.appendOutput(`Client options import error: ${plan.error}\n`);
+    clientActions.scrollBuffer();
     showImportExportToast("Import failed.", true);
     return;
   }
@@ -261,12 +278,12 @@ async function importClientOptionsJson(file) {
     applyOptionValue(name, value);
   });
   refreshClientOptions();
-  dome.scrollBuffer?.();
+  clientActions.scrollBuffer();
   const applied = plan.applied.length;
   const skipped = plan.skipped;
-  dome.buffer?.append(`Imported ${applied} client option${applied === 1 ? "" : "s"}.\n`);
+  clientActions.appendOutput(`Imported ${applied} client option${applied === 1 ? "" : "s"}.\n`);
   if (skipped > 0) {
-    dome.buffer?.append(`Skipped ${skipped} invalid imported option value${skipped === 1 ? "" : "s"}.\n`);
+    clientActions.appendOutput(`Skipped ${skipped} invalid imported option value${skipped === 1 ? "" : "s"}.\n`);
   }
   showImportExportToast("Preferences imported.");
 }
@@ -302,8 +319,8 @@ function bindImportExportControls() {
       applyOptionValue(name, optionDef.def);
     });
     refreshClientOptions();
-    dome.buffer?.append("Reset all client options to defaults.\n");
-    dome.scrollBuffer?.();
+    clientActions.appendOutput("Reset all client options to defaults.\n");
+    clientActions.scrollBuffer();
     showImportExportToast("Defaults restored.");
   });
 }
@@ -315,7 +332,7 @@ function bindOptionSelects({ root = document } = {}) {
     self.addEventListener("change", () => {
       const value = self.value;
       applyOptionValue(id, value);
-      dome.scrollBuffer?.();
+      clientActions.scrollBuffer();
     });
   });
 }
@@ -351,7 +368,7 @@ function bindOptionButtons({ root = document } = {}) {
         btn.classList.add("btn-primary");
       }
       applyOptionValue(name, val);
-      dome.scrollBuffer?.();
+      clientActions.scrollBuffer();
     });
   });
 }
@@ -369,7 +386,7 @@ function readOptionInputValue(input) {
 }
 
 function syncColorInputs(row, name) {
-  const updated = dome.preferences?.[PREF_NAME[name]];
+  const updated = clientActions.getPreference(PREF_NAME[name]);
   if (typeof updated === "string") {
     row.querySelectorAll("input").forEach((input) => {
       input.value = updated;
@@ -388,10 +405,10 @@ function bindOptionInputs({ root = document } = {}) {
       const fieldValue = readOptionInputValue(self);
       logger.debug("" + typeof(fieldValue) + ": " + fieldValue);
       applyOptionValue(name, fieldValue);
-      if (PREF_NAME[name] && dome.setClientOption && (self.getAttribute("type") === "color" || self.dataset.colorHex === "true")) {
+      if (PREF_NAME[name] && (self.getAttribute("type") === "color" || self.dataset.colorHex === "true")) {
         syncColorInputs(row, name);
       }
-      dome.scrollBuffer?.();
+      clientActions.scrollBuffer();
     });
   });
 }
@@ -408,7 +425,8 @@ export {
   bindImportExportControls,
   buildExportPayload,
   importClientOptionsJson,
-  refreshClientOptions
+  refreshClientOptions,
+  setClientOptionsActions
 };
 
 if (globalThis.document && globalThis.window) {

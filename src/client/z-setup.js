@@ -1,12 +1,15 @@
-import { dome, SOCKET_STATE_ENUM, setSocket } from "./b-variables.js";
+import { SOCKET_STATE_ENUM } from "./b-variables.js";
+import { createClientState } from "./client-state.js";
 import { setupChevronToggle } from "./chevron-toggle.js";
 import { setupInputReader } from "./d-inputreader.js";
 import { setupWindowHandlers } from "./e-window.js";
 import { setupOutputParser } from "./f-buffer.js";
 import { setupSocket } from "./g-socket-lifecycle.js";
+import { setupClientPreferences } from "./c-preferences.js";
 import { setupEditorSupport } from "./s-editor.js";
 import { setupAutoscroll } from "./t-autoscroll.js";
 import { setupButtons } from "./u-buttons.js";
+import { setupIdeLauncher } from "./ide.js";
 import { setupAutoCompleteFeature } from "./w-autocomplete.js";
 import { setupHealthCheck } from "./y-health.js";
 
@@ -16,6 +19,8 @@ export const createClientFeatureSet = () => ({
   setupButtons,
   setupChevronToggle,
   setupEditorSupport,
+  setupIdeLauncher,
+  setupClientPreferences,
   setupHealthCheck,
   setupInputReader,
   setupOutputParser,
@@ -23,13 +28,10 @@ export const createClientFeatureSet = () => ({
   setupWindowHandlers
 });
 
-export const assignClientDomReferences = ({ client = dome, doc = globalThis.document }) => {
+export const assignClientDomReferences = ({ client, doc = globalThis.document }) => {
   Object.assign(client, {
-    userType        : "p",
-    socket          : null,
-    socketState     : SOCKET_STATE_ENUM.BEFORE_FIRST,
-    titleBarText    : null,
-    gameHealth      : [],
+    ...createClientState(),
+    ...client,
     client          : doc.querySelector("#browser-client"),
     buffer          : doc.querySelector("#lineBuffer"),
     healthDisplay   : doc.querySelector("#gameHealth"),
@@ -53,10 +55,7 @@ export const assignClientDomReferences = ({ client = dome, doc = globalThis.docu
     disconnectView  : {
       overlay     : doc.querySelector("#disconnect-overlay"),
       buttonGroup : doc.querySelector(".disconnect-buttons")
-    },
-    spawned         : {},
-    makeEditor : null,
-    refreshRecent : function(e) {e.preventDefault();}
+    }
   });
 };
 
@@ -77,7 +76,7 @@ const applyTransparentOverlayPreference = ({ client, doc }) => {
 };
 
 export const applyInitialClientPreferences = ({
-  client = dome,
+  client,
   doc = globalThis.document,
   features = createClientFeatureSet()
 }) => {
@@ -112,12 +111,13 @@ export const applyInitialClientPreferences = ({
 };
 
 export const setupClientFeatures = ({
-  client = dome,
+  client,
   doc = globalThis.document,
   win = globalThis.window,
   features = createClientFeatureSet()
 } = {}) => {
   features.setupWindowHandlers({ client, doc, win });
+  features.setupIdeLauncher?.({ client, win, getSocket: () => client.socket });
   features.setupEditorSupport({ client, doc, win });
   features.setupAutoscroll({ client, doc, win });
   features.setupButtons({ client, doc, win });
@@ -126,7 +126,7 @@ export const setupClientFeatures = ({
   features.setupOutputParser({ client, doc, win });
 };
 
-export const installDomeBridge = ({ client = dome, win = globalThis.window, hasNativeBridge = false }) => {
+export const installDomeBridge = ({ client, win = globalThis.window, hasNativeBridge = false }) => {
   win.DomeBridge = {
     onData(payload) {
       if (typeof client.parseSocketData === "function") {
@@ -199,7 +199,7 @@ const notifyNativeBridgeReady = ({ win }) => {
 };
 
 export const startClientSocket = ({
-  client = dome,
+  client,
   doc = globalThis.document,
   win = globalThis.window,
   features = createClientFeatureSet(),
@@ -207,7 +207,6 @@ export const startClientSocket = ({
 }) => {
   if (hasNativeBridge) {
     const nativeSocketShim = createNativeSocketShim({ win });
-    setSocket(nativeSocketShim);
     client.socket = nativeSocketShim;
     client.socketState = SOCKET_STATE_ENUM.CONNECTED;
     return nativeSocketShim;
@@ -221,7 +220,7 @@ export const startClientSocket = ({
 };
 
 export const initClient = ({
-  client = dome,
+  client = createClientState(),
   win = globalThis.window,
   doc = globalThis.document,
   features = createClientFeatureSet()
@@ -229,6 +228,7 @@ export const initClient = ({
   const hasNativeBridge = !!win.DomeNative && typeof win.DomeNative.sendInput === "function";
 
   assignClientDomReferences({ client, doc });
+  features.setupClientPreferences?.({ client, doc, win });
   features.setupAutoCompleteFeature({ client, doc, win });
   applyInitialClientPreferences({ client, doc, features });
   setupClientFeatures({ client, doc, win, features });
@@ -240,7 +240,7 @@ export const initClient = ({
 };
 
 export const startClientWhenDomReady = ({
-  client = dome,
+  client = createClientState(),
   win = globalThis.window,
   doc = globalThis.document,
   features = createClientFeatureSet()

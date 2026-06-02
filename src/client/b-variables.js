@@ -1,8 +1,5 @@
 import logger from "./pages/logger.js";
 
-export const dome = {};
-export let socket = null;
-
 export const defaultHeightOffset = 50;
 
 export const subs = [];
@@ -25,7 +22,3 @@ export const SOCKET_STATE_ENUM = {
   CONNECTED: 1, // we have a connection
   BEFORE_FIRST: 2 // we have yet to try for a connection
 };
-
-export function setSocket(newSocket) {
-  socket = newSocket;
-}

@@ -2,8 +2,12 @@ import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { JSDOM } from "jsdom";
-import { dome, SOCKET_STATE_ENUM, logger } from "../../src/client/b-variables.js";
+import { SOCKET_STATE_ENUM, logger } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
+import { setupClientPreferences } from "../../src/client/c-preferences.js";
 import { store as clientStore } from "../../src/client/store.js";
+
+const dome = createClientState();
 
 const { window } = new JSDOM(`<!doctype html><html><body>
   <div id="disconnect-overlay" class="hide"></div>
@@ -39,9 +43,9 @@ dome.statusDisplay = window.document.querySelector("#statusMsg");
 dome.inputReader = window.document.querySelector("#inputBuffer");
 
 dome.preferences = { shortenUrls: false };
+setupClientPreferences({ client: dome, doc: window.document, win: window });
 
 Object.assign(clientStore, { get: () => null, remove: () => {}, put: () => {} });
-await import("../../src/client/c-preferences.js");
 globalThis.socketUrl = "http://sock";
 globalThis.socketUrlSSL = "https://sock";
 globalThis.gameName = "Game";

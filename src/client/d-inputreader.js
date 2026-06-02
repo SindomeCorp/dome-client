@@ -1,4 +1,4 @@
-import { dome, logger } from "./b-variables.js";
+import { logger } from "./b-variables.js";
 import { wireHistorySearchOverlay } from "./history-search-overlay.js";
 import { createCommandDispatcher } from "./input-command-dispatch.js";
 import { wireInputHistoryControls } from "./input-history-controls.js";
@@ -12,7 +12,7 @@ import { store } from "./store.js";
 
 // Wires input-reader dependencies while feature modules own their behavior.
 export function setupInputReader({
-  client = dome,
+  client,
   doc = globalThis.document,
   storage = store,
   promptFn = (...args) => globalThis.prompt(...args)

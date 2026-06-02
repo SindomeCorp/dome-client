@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome } from "../../src/client/b-variables.js";
-
-const prefUrl = new URL("../../src/client/c-preferences.js", import.meta.url);
+import { createClientState } from "../../src/client/client-state.js";
+import { setupClientPreferences } from "../../src/client/c-preferences.js";
 
 test("setClientOption broadcasts editorFont", async (t) => {
+  const dome = createClientState();
   const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "https://example.com" });
   const { window } = dom;
   window.dome = dome;
@@ -28,7 +28,7 @@ test("setClientOption broadcasts editorFont", async (t) => {
     Object.defineProperty(globalThis, "localStorage", { value: orig.localStorage, configurable: true, writable: true });
     global.dome = orig.dome;
   });
-  await import(prefUrl);
+  setupClientPreferences({ client: dome, doc: window.document, win: window });
   const messages = [];
   dome.spawned = { a: { postMessage: (msg) => messages.push(msg) } };
   dome.ideWindow = { postMessage: (msg) => messages.push(msg) };

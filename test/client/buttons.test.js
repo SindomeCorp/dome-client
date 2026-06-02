@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { JSDOM, VirtualConsole } from "jsdom";
-import { dome as baseDome } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
 import { buildLogHtml } from "../../src/shared/log-template.js";
 
 const setupWindow = async (t) => {
@@ -19,7 +19,7 @@ const setupWindow = async (t) => {
   const buffer = window.document.createElement("div");
   buffer.id = "buffer";
   window.document.body.appendChild(buffer);
-  const dome = Object.assign(baseDome, {
+  const dome = Object.assign(createClientState(), {
     preferences: { imagePreview: true, localEcho: true },
     buffer,
     parseYouTubeID: () => false

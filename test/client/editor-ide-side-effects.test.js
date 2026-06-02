@@ -485,10 +485,8 @@ test("useIdeBrowserCommands dispatches browser state and emits protocol commands
 
 test("emitInput ignores unavailable sockets and malformed socket adapters", () => {
   const previousWindowSocket = globalThis.window.uploadSocket;
-  const previousDomeSocket = globalThis.dome.socket;
   try {
     delete globalThis.window.uploadSocket;
-    delete globalThis.dome.socket;
     assert.equal(emitInput("look"), false);
 
     globalThis.window.uploadSocket = {};
@@ -504,6 +502,5 @@ test("emitInput ignores unavailable sockets and malformed socket adapters", () =
     assert.deepEqual(emitted, [["input", "look"]]);
   } finally {
     globalThis.window.uploadSocket = previousWindowSocket;
-    globalThis.dome.socket = previousDomeSocket;
   }
 });

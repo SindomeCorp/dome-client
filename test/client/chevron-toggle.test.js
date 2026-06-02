@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM, VirtualConsole } from "jsdom";
-import { dome as baseDome } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
 
 test("chevron click toggles image", async (t) => {
   const virtualConsole = new VirtualConsole();
@@ -13,7 +13,7 @@ test("chevron click toggles image", async (t) => {
   const dom = new JSDOM("<!doctype html><html><body><div id='lineBuffer'></div></body></html>", { runScripts: "outside-only", virtualConsole });
   const { window } = dom;
   const buffer = window.document.getElementById("lineBuffer");
-  const dome = Object.assign(baseDome, {
+  const dome = Object.assign(createClientState(), {
     buffer,
     preferences: { imagePreview: false, localEcho: true },
     parseYouTubeID: () => false

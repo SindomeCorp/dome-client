@@ -1,10 +1,10 @@
-import { dome, logger } from "./b-variables.js";
+import { logger } from "./b-variables.js";
 import { createSocketOutputEventHandler } from "./socket-output-effects.js";
 import { createSocketOutputProtocolParser } from "./socket-output-protocol.js";
 import { createSocketOutputRenderer } from "./socket-output-renderer.js";
 
 export function setupOutputParser({
-  client = dome,
+  client,
   logger: log = logger,
   win = globalThis.window
 } = {}) {

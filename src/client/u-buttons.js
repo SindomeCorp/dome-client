@@ -1,4 +1,4 @@
-import { dome, logger } from "./b-variables.js";
+import { logger } from "./b-variables.js";
 import { setupSocket } from "./g-socket-lifecycle.js";
 import { refreshClientOptions } from "./pages/client-options.js";
 import {
@@ -13,7 +13,7 @@ import {
 import { attachImagePreview, toggleImagePreview } from "./image-preview.js";
 
 export function setupButtons({
-  client = dome,
+  client,
   doc = globalThis.document,
   setupSocketFn = setupSocket
 } = {}) {

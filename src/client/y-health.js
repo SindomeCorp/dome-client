@@ -1,5 +1,5 @@
 import BarGraph from "./x-bar-graph.js";
-import { dome, logger, SOCKET_STATE_ENUM } from "./b-variables.js";
+import { logger, SOCKET_STATE_ENUM } from "./b-variables.js";
 import {
   buildHealthDetails,
   classifyHealthStatus,
@@ -9,7 +9,7 @@ import {
 } from "./health-status.js";
 
 export function setupHealthCheck({
-  client = dome,
+  client,
   doc = globalThis.document,
   fetchFn = (...args) => globalThis.fetch(...args),
   log = logger,

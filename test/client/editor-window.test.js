@@ -29,7 +29,7 @@ test("editor window", async (t) => {
     };
     socket = { emit: t.mock.fn() };
     window.uploadSocket = socket;
-    parent = { dome: { editorClosed: t.mock.fn() } };
+    parent = { postMessage: t.mock.fn() };
     window.parentWindow = parent;
     await import("../../src/client/pages/editor-window.js");
   });
@@ -39,7 +39,7 @@ test("editor window", async (t) => {
     window.document.title = "";
     window.editorData = null;
     socket.emit.mock.resetCalls();
-    parent.dome.editorClosed.mock.resetCalls();
+    parent.postMessage.mock.resetCalls();
     delete window.close;
     delete window.confirm;
     for (const handler of beforeUnloadHandlers) {
@@ -68,7 +68,10 @@ test("editor window", async (t) => {
     abortBtn.dispatchEvent(new window.Event("click"));
     assert.equal(confirmCalls, 0);
     assert.ok(closed);
-    assert.equal(parent.dome.editorClosed.mock.calls[0].arguments[0], "Doc");
+    assert.deepEqual(parent.postMessage.mock.calls[0].arguments, [
+      { type: "editorClosed", editorName: "Doc" },
+      "*"
+    ]);
   });
 
   await t.test("beforeunload warns on unsaved changes", async () => {
@@ -81,13 +84,16 @@ test("editor window", async (t) => {
     const cancelled = !window.dispatchEvent(evt);
     assert.ok(cancelled);
     assert.equal(evt.defaultPrevented, true);
-    assert.equal(parent.dome.editorClosed.mock.calls.length, 0);
+    assert.equal(parent.postMessage.mock.calls.length, 0);
     textArea.value = "hi";
     textArea.dispatchEvent(new window.Event("input"));
     const evt2 = new window.Event("beforeunload", { cancelable: true });
     const cancelled2 = !window.dispatchEvent(evt2);
     assert.equal(cancelled2, false);
-    assert.equal(parent.dome.editorClosed.mock.calls[0].arguments[0], "Doc");
+    assert.deepEqual(parent.postMessage.mock.calls[0].arguments, [
+      { type: "editorClosed", editorName: "Doc" },
+      "*"
+    ]);
   });
 
   await t.test("editor utils support setup, upload, and abort", async () => {
@@ -107,4 +113,3 @@ test("editor window", async (t) => {
     assert.ok(closed);
   });
 });
-

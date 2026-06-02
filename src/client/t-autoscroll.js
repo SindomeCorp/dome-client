@@ -1,5 +1,3 @@
-import { dome } from "./b-variables.js";
-
 const BOTTOM_THRESHOLD_PX = 24;
 
 const isAtBottom = (buffer) => {
@@ -59,7 +57,7 @@ const setPaused = (dome, paused, message = null) => {
   setPauseUi(dome, paused);
 };
 
-export function setupAutoscroll(context = dome, winArg = window) {
+export function setupAutoscroll(context, winArg = window) {
   const client = context?.buffer ? context : context.client;
   const win = context?.buffer ? winArg : context.win ?? window;
   const doc = context?.buffer ? win.document ?? globalThis.document : context.doc ?? win.document ?? globalThis.document;
@@ -153,5 +151,3 @@ export function setupAutoscroll(context = dome, winArg = window) {
     // no mouse bindings
   }
 }
-
-setScrollBuffer(dome);

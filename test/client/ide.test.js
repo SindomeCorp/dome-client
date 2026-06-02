@@ -1,19 +1,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome, setSocket, socket as origSocket } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
+import { setupIdeLauncher } from "../../src/client/ide.js";
 
 // ensure clean environment
-const orig = { window: globalThis.window, document: globalThis.document, openIDE: dome.openIDE, socket: origSocket };
+const orig = { window: globalThis.window, document: globalThis.document };
 
 test("openIDE reuses existing window after beforeunload", async (t) => {
+  const dome = createClientState();
   const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost" });
   const { window } = dom;
   globalThis.window = window;
   globalThis.document = window.document;
   dome.preferences = { edittheme: "dark" };
   const fakeSocket = { id: "fake-socket" };
-  setSocket(fakeSocket);
+  dome.socket = fakeSocket;
 
   let openCount = 0;
   const openLog = [];
@@ -98,7 +100,7 @@ test("openIDE reuses existing window after beforeunload", async (t) => {
     return win;
   };
 
-  await import("../../src/client/ide.js");
+  setupIdeLauncher({ client: dome, win: window, getSocket: () => dome.socket });
 
   dome.openIDE({ editorName: "one" });
   assert.deepEqual(openLog.map((entry) => entry.url), ["", "/editor/ide/"]);
@@ -142,8 +144,5 @@ test("openIDE reuses existing window after beforeunload", async (t) => {
   t.after(() => {
     globalThis.window = orig.window;
     globalThis.document = orig.document;
-    dome.openIDE = orig.openIDE;
-    setSocket(orig.socket);
-    delete dome.preferences;
   });
 });

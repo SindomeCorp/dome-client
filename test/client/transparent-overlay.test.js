@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
 import { initClient } from "../../src/client/z-setup.js";
 
 // Ensure transparent overlay class applied after async setupAutoComplete
@@ -31,6 +31,7 @@ const domHtml = `<!doctype html><html><body>
 </body></html>`;
 
 test("z-setup applies transparent overlay after async autocomplete setup", async (t) => {
+  const dome = createClientState();
   const dom = new JSDOM(domHtml, { pretendToBeVisual: true });
   const { window } = dom;
   const orig = { window: globalThis.window, document: globalThis.document, setTimeout: globalThis.setTimeout };

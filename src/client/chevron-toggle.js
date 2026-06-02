@@ -1,6 +1,4 @@
-import { dome } from "./b-variables.js";
-
-export function setupChevronToggle({ client = dome } = {}) {
+export function setupChevronToggle({ client } = {}) {
   if (!client.buffer) {
     return;
   }

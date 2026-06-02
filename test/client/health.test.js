@@ -1,9 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome, MOO_STATUS_ENUM, SOCKET_STATE_ENUM, logger } from "../../src/client/b-variables.js";
+import { MOO_STATUS_ENUM, SOCKET_STATE_ENUM, logger } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
 
 async function setup(t, { perfBuffer = 0 } = {}) {
+  const dome = createClientState();
   const dom = new JSDOM(`<!doctype html><html><body>
     <div id="gameHealth"></div>
     <div id="gameHealthDetail"></div>

@@ -6,8 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Added Knip dead-code analysis commands for finding unused files, exports, and dependencies.
+- Added regression coverage to keep browser-client modules from reintroducing the legacy `dome` singleton.
 
 ### Changed
+- Replaced the internal browser-client `dome` singleton and shared socket state with explicit client runtime composition.
+- Routed editor and IDE window coordination through injected client state and `postMessage` instead of browser-facing `window.dome` access.
 - Removed legacy browser-client setup wrapper assignments now that startup and tests use explicit setup exports.
 - Reduced legacy browser-client setup hook usage in reconnect, preferences, and socket-output flows.
 - Split server listen, close, and bound-address helpers out of the server startup path.

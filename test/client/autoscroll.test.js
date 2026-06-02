@@ -1,8 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
 import { setupAutoscroll } from "../../src/client/t-autoscroll.js";
+
+const dome = createClientState();
 
 test.afterEach(() => {
   delete globalThis.window;

@@ -2,8 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 /* global document */
 import setupDom from "../../test-support/setup-dom.js";
-import { dome } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
 import { setupOutputParser } from "../../src/client/f-buffer.js";
+
+const dome = createClientState();
 
 const loadOutputParser = async (t) => {
   setupDom(

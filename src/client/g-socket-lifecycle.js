@@ -1,5 +1,5 @@
 import { io } from "socket.io-client";
-import { dome, logger, SOCKET_STATE_ENUM, setSocket } from "./b-variables.js";
+import { logger, SOCKET_STATE_ENUM } from "./b-variables.js";
 import { store } from "./store.js";
 
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -14,7 +14,7 @@ const emitAsync = (socket, event, ...args) => new Promise((resolve, reject) => {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function setupSocket({
-  client = dome,
+  client,
   win = globalThis.window,
   doc = globalThis.document,
   storage = store,
@@ -24,7 +24,6 @@ export function setupSocket({
   socketUrlSSLValue = globalThis.socketUrlSSL,
   gameNameValue = globalThis.gameName,
   poweredByValue = globalThis.poweredBy,
-  setSocketFn = setSocket,
   sleepFn = sleep
 } = {}) {
   client.socket?.disconnect?.();
@@ -108,7 +107,6 @@ export function setupSocket({
     "sync disconnect on unload": true, // send 'disconnect' event when the page is left
     query: socketQuery
   });
-  setSocketFn(ioSocket);
   client.socket = ioSocket;
 
   ioSocket.on("connected", () => {

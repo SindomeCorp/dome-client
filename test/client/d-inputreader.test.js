@@ -2,8 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 /* global document */
 import { setupDom } from "./index.js";
-import { dome, socket, setSocket, logger } from "../../src/client/b-variables.js";
+import { logger } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
 import { setupInputReader } from "../../src/client/d-inputreader.js";
+
+const dome = createClientState();
 
 const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
   const { window } = setupDom("<!doctype html><html><body><textarea id=\"input\"></textarea><button id=\"button-input-history-up\" type=\"button\"></button><button id=\"button-input-history-down\" type=\"button\"></button><div id=\"history-search-overlay\" class=\"hide\"><div class=\"history-search-content\"><button id=\"button-history-search-close\" type=\"button\">x</button><input id=\"history-search-query\" /><ul id=\"history-search-results\"></ul><div id=\"history-search-empty\" class=\"hide\">No matching commands.</div></div></div></body></html>");
@@ -18,7 +21,6 @@ const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
       this.history = val;
     }
   });
-  const prevSocket = socket;
   const testSocket = {
     events: [],
     emit(event, cmd, cb) {
@@ -26,7 +28,6 @@ const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
       if (ack && cb) cb({ status: "command sent" });
     }
   };
-  setSocket(testSocket);
   const origDome = {
     buffer: dome.buffer,
     socket: dome.socket,
@@ -52,7 +53,6 @@ const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
   dome.statusDisplay = {};
   setupInputReader({ client: dome, doc: document });
   t.after(() => {
-    setSocket(prevSocket);
     Object.assign(dome, origDome);
     globalThis.window = origGlobals.window;
     globalThis.document = origGlobals.document;
@@ -122,12 +122,10 @@ test("insert prompts and sends command", async (t) => {
 
 test("enter uses socket assigned after input reader setup", async (t) => {
   const { window, testSocket } = await loadInputReader(t);
-  setSocket(null);
   dome.socket = null;
   const input = dome.inputReader;
   input.value = "early setup";
 
-  setSocket(testSocket);
   dome.socket = testSocket;
   input.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
 

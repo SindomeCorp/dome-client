@@ -131,8 +131,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({ type: "editorClosed", editorName: eName }, "*");
     }
-    if (window.parentWindow && window.parentWindow.dome && window.parentWindow.dome) {
-      window.parentWindow.dome.editorClosed(eName);
+    if (window.parentWindow && typeof window.parentWindow.postMessage === "function") {
+      window.parentWindow.postMessage({ type: "editorClosed", editorName: eName }, "*");
     }
   };
 

@@ -3,10 +3,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome, setSocket } from "../src/client/b-variables.js";
+import { createClientState } from "../src/client/client-state.js";
+import { setupClientPreferences } from "../src/client/c-preferences.js";
 
 // Typing @client-options should display preferences without a server response.
 test("@client-options prints preferences locally", async (t) => {
+  const dome = createClientState();
   const dom = new JSDOM("<input id=\"input\" />", { pretendToBeVisual: true, url: "https://example.com/" });
   const { window } = dom;
   const orig = {
@@ -44,11 +46,9 @@ test("@client-options prints preferences locally", async (t) => {
   });
   globalThis.store = { get: () => [], put() {} };
   let emitted = false;
-  const prevSocket = dome.socket;
-  setSocket({ emit: () => { emitted = true; } });
-  t.after(() => setSocket(prevSocket));
+  dome.socket = { emit: () => { emitted = true; } };
 
-  await import("../src/client/c-preferences.js");
+  setupClientPreferences({ client: dome, doc: window.document, win: window });
   const { setupInputReader } = await import("../src/client/d-inputreader.js");
   dome.scrollBuffer = () => { scrolled = true; };
 

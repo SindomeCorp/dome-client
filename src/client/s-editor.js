@@ -1,8 +1,8 @@
-import { dome, socket, logger } from "./b-variables.js";
+import { logger } from "./b-variables.js";
 
-export const getSocket = () => window.uploadSocket || dome.socket;
+export const getSocket = ({ client, win = globalThis.window } = {}) => win.uploadSocket || client?.socket;
 
-export function setupEditorSupport({ client = dome, win = globalThis.window } = {}) {
+export function setupEditorSupport({ client, win = globalThis.window } = {}) {
 
 
   // analyze the editor properties to determine which editor
@@ -51,7 +51,7 @@ export function setupEditorSupport({ client = dome, win = globalThis.window } = 
     }
 
     editWindow.editorData = editor;
-    editWindow.uploadSocket = socket;
+    editWindow.uploadSocket = getSocket({ client, win });
     editWindow.parentWindow = win;
     editWindow.addEventListener("beforeunload", () => {
       client.editorClosed(editor.editorName);

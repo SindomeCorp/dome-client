@@ -1,7 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { setupClientOptionsDom } from "./index.js";
-import { dome } from "../../src/client/b-variables.js";
 
 // Changing a client option via the overlay should scroll the buffer.
 test("client-options change scrolls buffer", async () => {
@@ -16,17 +15,14 @@ test("client-options change scrolls buffer", async () => {
   const { window, store } = setupClientOptionsDom(html);
   const output = [];
   let scrolled = false;
-  Object.assign(dome, {
-    buffer: { append: (text) => output.push(text) },
-    preferences: { commandSuggestions: true },
-    setClientOption: (name, val) => {
-      dome.buffer.append(`changing @client-option ${name} to ${val}\n`);
-      dome.preferences[name] = val;
-    }
-  });
   const options = await import("../../src/client/pages/client-options.js");
   Object.assign(options.store, store);
-  dome.scrollBuffer = () => { scrolled = true; };
+  options.setClientOptionsActions({
+    setClientOption: (name, val) => {
+      output.push(`changing @client-option ${name} to ${val}\n`);
+    },
+    scrollBuffer: () => { scrolled = true; }
+  });
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
   const offBtn = window.document.querySelector("#commands-option .disabled-state");
   offBtn.click();
