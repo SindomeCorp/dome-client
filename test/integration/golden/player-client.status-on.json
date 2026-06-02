@@ -1,0 +1,15 @@
+{
+  "path": "/player-client/",
+  "title": "Integration MUD's Modern Gaming Client | Integration MUD",
+  "h1": [
+    "Client Options"
+  ],
+  "hasWebsiteLogin": false,
+  "hasConnectToHeading": false,
+  "hasPlayNow": false,
+  "hasLineBuffer": true,
+  "hasGameHealth": true,
+  "hasGameHealthDetail": true,
+  "hasGameOwnerGuideLink": false,
+  "hasGameOwnerGuideHeading": false
+}

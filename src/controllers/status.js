@@ -66,6 +66,20 @@ function handleHealthCheckError(err) {
   return status;
 }
 
+function hasRequiredStatusShape(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  if (typeof value.message !== "string") return false;
+  if (!Number.isFinite(value.cpu)) return false;
+  if (!Number.isFinite(value.memory)) return false;
+  if (!Number.isFinite(value.checked)) return false;
+  if (!Number.isFinite(value.users)) return false;
+  if (!Number.isFinite(value.interval)) return false;
+  if (value.state !== undefined && typeof value.state !== "string") return false;
+  return true;
+}
+
 async function healthCheck() {
   if (!STATUS_ENABLED) {
     return lastStatus;
@@ -103,6 +117,14 @@ async function healthCheck() {
       return lastStatus;
     }
 
+    if (!hasRequiredStatusShape(status)) {
+      logger.warn(
+        `status service returned unexpected schema: url=${STATUS_URL} bodyPreview=${JSON.stringify(bodyText.slice(0, 160))}`
+      );
+      lastStatus = handleHealthCheckError({ code: "EBADSCHEMA" });
+      return lastStatus;
+    }
+
     lastStatus = status;
   } catch (err) {
     logger.warn(`failed to get status: url=${STATUS_URL} code=${err?.code || "UNKNOWN"} message=${err?.message || "no message"}`);
@@ -111,9 +133,19 @@ async function healthCheck() {
   return lastStatus;
 }
 
+export async function refreshStatus() {
+  return healthCheck();
+}
+
 if (STATUS_ENABLED) {
-  setInterval(healthCheck, CHECK_INTERVAL);
-  setTimeout(healthCheck, 1000);
+  const intervalHandle = setInterval(healthCheck, CHECK_INTERVAL);
+  const timeoutHandle = setTimeout(healthCheck, 1000);
+  if (typeof intervalHandle?.unref === "function") {
+    intervalHandle.unref();
+  }
+  if (typeof timeoutHandle?.unref === "function") {
+    timeoutHandle.unref();
+  }
 }
 
 export function get(req, res) {

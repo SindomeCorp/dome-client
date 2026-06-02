@@ -137,11 +137,38 @@ function listen(server, ...args) {
   });
 }
 
-export async function start() {
-  try {
-    await build();
-  } catch (err) {
-    logger.error("asset build failed", err);
+function resolveBoundAddress(server) {
+  if (!server || typeof server.address !== "function") {
+    return null;
+  }
+  const address = server.address();
+  if (!address) {
+    return null;
+  }
+  if (typeof address === "string") {
+    return { type: "pipe", path: address };
+  }
+  return {
+    type: "tcp",
+    address: address.address,
+    family: address.family,
+    port: address.port
+  };
+}
+
+export async function start(options = {}) {
+  const {
+    port = config.node.port,
+    ip = config.node.ip,
+    httpsPort = config.ssl?.port,
+    skipBuild = false
+  } = options;
+  if (!skipBuild) {
+    try {
+      await build();
+    } catch (err) {
+      logger.error("asset build failed", err);
+    }
   }
   if (config.autocomplete.enabled !== false) {
     try {
@@ -151,21 +178,26 @@ export async function start() {
     }
   }
   const vDesc = "dome-client.js v" + app.get("version");
-  if (config.node["ip"]) {
-    await listen(server, config.node.port, config.node.ip);
-    logger.info(vDesc + " (node " + process.version + ") listening on ip " + config.node.ip + " and port " + config.node.port);
+  if (ip) {
+    await listen(server, port, ip);
+    logger.info(vDesc + " (node " + process.version + ") listening on ip " + ip + " and port " + port);
     if (config.ssl) {
-      await listen(sslServer, config.ssl.port, config.node.ip);
-      logger.info(vDesc + " (node " + process.version + ") listening on ip " + config.node.ip + " and port " + config.ssl.port);
+      await listen(sslServer, httpsPort, ip);
+      logger.info(vDesc + " (node " + process.version + ") listening on ip " + ip + " and port " + httpsPort);
     }
   } else {
-    await listen(server, config.node.port);
-    logger.info(vDesc + " (node " + process.version + ") listening on port " + config.node.port);
+    await listen(server, port);
+    logger.info(vDesc + " (node " + process.version + ") listening on port " + port);
     if (config.ssl) {
-      await listen(sslServer, config.ssl.port);
-      logger.info(vDesc + " (node " + process.version + ") listening on port " + config.ssl.port);
+      await listen(sslServer, httpsPort);
+      logger.info(vDesc + " (node " + process.version + ") listening on port " + httpsPort);
     }
   }
+  return {
+    http: resolveBoundAddress(server),
+    https: resolveBoundAddress(sslServer),
+    app
+  };
 }
 
 function close(server) {
@@ -183,6 +215,7 @@ export async function stop() {
   await close(server);
   await close(httpsMgr);
   await close(sslServer);
+  process.removeListener("uncaughtException", onUncaughtException);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -200,9 +233,11 @@ if (config.ssl) {
   httpsMgr.on("error", socket.error);
 }
 
-process.on("uncaughtException", function(err) {
+function onUncaughtException(err) {
   logger.error("uncaught exception", err);
-});
+}
+
+process.on("uncaughtException", onUncaughtException);
 
 /** Define the general routes **/
 app.use(router);

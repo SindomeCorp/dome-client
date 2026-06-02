@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-06-01
+
+### Added
+- Added auth contract tests for malformed upstream payloads to lock expected login failure and user-sanitization behavior.
+- Added status contract tests to verify malformed status-service payload schemas degrade to safe fallback state.
+- Added integration config-matrix coverage for high-risk deployment modes (single vs multi-MUD and auth enabled vs disabled) with isolated per-case test processes to prevent module-cache cross-contamination.
+- Added reusable HTML golden-snapshot integration coverage for key routes (`/`, `/player-client/`, and multi-MUD `/game-owner-questions/`) across high-value mode variants.
+- Added a scoped mutation-testing profile (`npm run test:mutation`) for critical server modules with Stryker configuration and HTML reporting output.
+
+### Changed
+- Moved user-facing testing guidance out of `README.md` into a dedicated `docs/TESTING.md` guide.
+- Added up-to-date test command coverage and coverage-threshold guidance in the new testing guide.
+- Hardened status-service polling by validating required payload schema fields before accepting upstream status data.
+- Hardened website-auth handling by validating upstream payload shape (`status`, `message`, and required `user` object for `status: "ok"`) before mutating session state.
+- Updated lint configuration to exclude `.stryker-tmp/` mutation sandbox artifacts from repository-wide lint runs.
+- Updated Stryker reporting to emit machine-readable JSON output while preserving live terminal progress.
+- Added dedicated mutation scripts for warm-cache prep and hotspot-only runs to speed up mutation-testing iteration.
+
+### Fixed
+- Added a socket connect-timeout safeguard so stalled TCP connect attempts fail fast instead of hanging indefinitely.
+- Restored the `npm run test:mutation` script and Stryker dev dependency so mutation testing works after clean installs.
+- Fixed `npm run test:mutation:hot` to pass the dedicated Stryker config file using the CLI's positional config argument format.
+
+## 2026-05-29
+
+### Added
+- Added a dedicated `npm run test:integration` command to run app-level integration tests separately from the default test suite.
+- Added server integration coverage for core HTTP route availability, Socket.IO connection startup, website-login flow, and status-service endpoint behavior with mocked upstream dependencies.
+- Added integration coverage for auth session continuity, auth upstream network failure behavior, static asset serving contracts, security header baseline checks, and global route-error handling.
+- Added integration coverage for log export endpoint behavior (`/save/:filename`) including attachment headers and filename sanitization.
+- Added integration coverage for multi-MUD successful socket connections updating persisted connection metrics on disk and validating reload behavior.
+- Added DOM-driven integration coverage for client options export/import controls, including JSON round-trip and legacy theme normalization on import.
+- Added integration coverage for multi-MUD failed-connect metrics behavior, multi-MUD host/port fallback behavior, and status-service non-JSON/invalid-JSON degradation paths.
+- Added integration coverage for per-agent session isolation, socket input lifecycle status/disconnect flow, shortener-failure passthrough behavior, and HTTPS startup binding metadata.
+- Added integration coverage for website-login redirect variants (`gogogo` auto character redirect, safe `return` override, and unsafe `return` fallback to `/`).
+- Added integration coverage for status-service transition behavior from healthy to degraded and back to healthy.
+- Added integration coverage for connect-page user flow actions (`Connect as Guest`, `Connect Manually`, and `Connect Now`) validating local client state persistence behavior.
+- Added integration coverage for log export edge cases including empty buffers, large buffers, Unicode payloads, and encoded download filenames.
+- Added integration coverage for client options destructive-flow guardrails, including reset cancellation behavior and partial-invalid import reporting.
+
+### Changed
+- Updated server startup internals so `start()` accepts optional runtime overrides (for example ephemeral test ports) and returns bound runtime address metadata for integration harnesses.
+- Improved status polling testability and test-runner shutdown behavior by adding an explicit status refresh hook and unref'ing background status timers.
+- Updated server shutdown to remove its `uncaughtException` listener, preventing listener accumulation across repeated integration server boots.
+- Added a test-only multi-MUD metrics reset hook to isolate integration runs from module-level in-memory state.
+
 ## 2026-05-28
 
 ### Added

@@ -81,6 +81,52 @@ test("handles net.connect failure", async () => {
   logger.child = original.child;
 });
 
+test("connection emits error when connect handshake times out", async (t) => {
+  const original = {
+    connect: net.connect,
+    reverse: dns.promises.reverse,
+  };
+  const timerUnref = t.mock.fn();
+  const connectTimeoutMock = t.mock.method(global, "setTimeout", (fn) => {
+    fn();
+    return { unref: timerUnref };
+  });
+  net.connect = () => new EventEmitter();
+  dns.promises.reverse = async () => [];
+  const route = await loadRoute();
+  const { socket, events } = createSocket();
+  await route.connection(socket);
+  assert.ok(events.some(e => e[0] === "error" && String(e[1]).includes("socket connect timeout")));
+  assert.equal(timerUnref.mock.callCount(), 1);
+  connectTimeoutMock.mock.restore();
+  net.connect = original.connect;
+  dns.promises.reverse = original.reverse;
+});
+
+test("connection connect handler clears socket timeout timer", async (t) => {
+  const moo = new EventEmitter();
+  moo.write = () => {};
+  moo.end = () => {};
+  const original = {
+    connect: net.connect,
+    reverse: dns.promises.reverse,
+  };
+  const connectTimeoutMock = t.mock.method(global, "setTimeout", () => ({ unref() {} }));
+  const clearTimeoutMock = t.mock.method(global, "clearTimeout", t.mock.fn());
+  net.connect = () => moo;
+  dns.promises.reverse = async () => [];
+  const route = await loadRoute();
+  const { socket } = createSocket();
+  const p = route.connection(socket);
+  moo.emit("connect");
+  await p;
+  assert.equal(clearTimeoutMock.mock.callCount(), 1);
+  connectTimeoutMock.mock.restore();
+  clearTimeoutMock.mock.restore();
+  net.connect = original.connect;
+  dns.promises.reverse = original.reverse;
+});
+
 test("userIp handles object and proxied addresses", async () => {
   const moo = new EventEmitter();
   moo.write = () => {};
@@ -106,9 +152,13 @@ test("userIp handles object and proxied addresses", async () => {
   proxiedSocket.handshake.address = "9.9.9.9";
   proxiedSocket.handshake.headers["x-forwarded-for"] = "5.6.7.8";
   assert.equal(proxiedRoute.userIp(proxiedSocket), "5.6.7.8");
+
+  const { socket: shapedSocket } = createSocket();
+  shapedSocket.handshake.address = { nope: "::ffff:8.8.8.8" };
+  assert.throws(() => route.userIp(shapedSocket), /replace is not a function/);
 });
 
-test("connection uses query host/port only when multi-mud is enabled", async (t) => {
+test("connection uses query host/port only when multi-mud is enabled", async () => {
   const moo = new EventEmitter();
   moo.write = () => {};
   moo.end = () => {};
@@ -148,6 +198,35 @@ test("connection uses query host/port only when multi-mud is enabled", async (t)
   await fs.rm(metricsPath, { force: true });
 });
 
+test("connection falls back to configured host/port for invalid query port", async () => {
+  const moo = new EventEmitter();
+  moo.write = () => {};
+  moo.end = () => {};
+  const connectCalls = [];
+  const original = {
+    connect: net.connect,
+    reverse: dns.promises.reverse,
+  };
+  net.connect = (opts) => {
+    connectCalls.push(opts);
+    return moo;
+  };
+  dns.promises.reverse = async () => [];
+
+  const route = await loadRoute({ multiMud: true });
+  const { socket } = createSocket();
+  socket.handshake.query = { host: "example.org", port: "22" };
+  const p = route.connection(socket);
+  moo.emit("connect");
+  await p;
+
+  assert.equal(connectCalls[0]?.host, config.moo.host);
+  assert.equal(connectCalls[0]?.port, config.moo.port);
+
+  net.connect = original.connect;
+  dns.promises.reverse = original.reverse;
+});
+
 test("logUser formats info messages", async (t) => {
   const entries = [];
   const childMock = t.mock.method(logger, "child", () => ({
@@ -160,6 +239,13 @@ test("logUser formats info messages", async (t) => {
   route.logUser(socket, "HI", ["there"]);
   assert.deepEqual(entries, ["HI 127.0.0.1 there"]);
   childMock.mock.restore();
+});
+
+test("userIp strips ipv6-mapped prefix", async () => {
+  const route = await loadRoute();
+  const { socket } = createSocket();
+  socket.handshake.address = "::ffff:10.2.3.4";
+  assert.equal(route.userIp(socket), "10.2.3.4");
 });
 
 test("logError logs error details", async (t) => {
@@ -176,6 +262,7 @@ test("logError logs error details", async (t) => {
   assert.equal(entries.length, 1);
   const [msg, obj] = entries[0];
   assert.ok(msg.startsWith("ERR 127.0.0.1"));
+  assert.match(msg, /fail/);
   assert.equal(obj, err);
   childMock.mock.restore();
 });
@@ -195,6 +282,23 @@ test("logUser handles error objects", async (t) => {
   const [msg, obj] = entries[0];
   assert.ok(msg.startsWith("ERR 127.0.0.1"));
   assert.equal(obj, err);
+  childMock.mock.restore();
+});
+
+test("logUser treats plain objects without message/code as info labels", async (t) => {
+  const infoEntries = [];
+  const errorEntries = [];
+  const childMock = t.mock.method(logger, "child", () => ({
+    info: msg => infoEntries.push(msg),
+    error: (msg, obj) => errorEntries.push([msg, obj]),
+    debug: () => {},
+  }));
+  const route = await loadRoute();
+  const { socket } = createSocket();
+  route.logUser(socket, {});
+  assert.equal(infoEntries.length, 1);
+  assert.ok(infoEntries[0].startsWith("[object Object] 127.0.0.1"));
+  assert.equal(errorEntries.length, 0);
   childMock.mock.restore();
 });
 
@@ -488,6 +592,28 @@ test("moo and socket events", async (t) => {
     net.connect = original.connect;
     dns.promises.reverse = original.reverse;
   });
+
+  await t.test("shorten-on is ignored when shortener is disabled", async () => {
+    const original = {
+      connect: net.connect,
+      reverse: dns.promises.reverse,
+      shortenEnabled: config.shorten.enabled,
+    };
+    config.shorten.enabled = false;
+    const moo = new EventEmitter();
+    moo.write = () => {};
+    moo.end = () => {};
+    net.connect = () => { process.nextTick(() => moo.emit("connect")); return moo; };
+    dns.promises.reverse = async () => ["host"];
+    const route = await loadRoute();
+    const { socket } = createSocket();
+    await route.connection(socket);
+    socket.emit("shorten-on");
+    assert.equal(socket.shortenUrls, undefined);
+    config.shorten.enabled = original.shortenEnabled;
+    net.connect = original.connect;
+    dns.promises.reverse = original.reverse;
+  });
 });
 
 test("socket route connection lifecycle", async (t) => {
@@ -533,6 +659,40 @@ test("socket route connection lifecycle", async (t) => {
     net.connect = original.connect;
     dns.promises.reverse = original.reverse;
     nock.cleanAll();
+  });
+
+  await t.test("marker response falls back to userIp when hostname is not present", async () => {
+    const moo = new EventEmitter();
+    const writes = [];
+    moo.write = (data, _enc, cb) => {
+      writes.push(data);
+      if (typeof cb === "function") {
+        cb();
+      }
+    };
+    moo.end = () => {};
+
+    const original = {
+      connect: net.connect,
+      reverse: dns.promises.reverse,
+    };
+    net.connect = () => moo;
+    dns.promises.reverse = async () => [];
+
+    const route = await loadRoute();
+    const { socket } = createSocket();
+    socket.handshake.address = "127.0.0.9";
+    const p = route.connection(socket);
+    moo.emit("connect");
+    await p;
+
+    delete socket.hostname;
+    moo.emit("data", Buffer.from("hi #$# dome-client-user there"));
+    await new Promise(r => setImmediate(r));
+    assert.ok(writes.some(line => line.includes("@dome-client-user 127.0.0.9\r\n")));
+
+    net.connect = original.connect;
+    dns.promises.reverse = original.reverse;
   });
 
   await t.test("handles moo.write throwing based on activity", async () => {
@@ -581,6 +741,29 @@ test("socket route connection lifecycle", async (t) => {
     logger.child = original.child;
   });
 
+  await t.test("connect timeout path emits exactly one terminal error and no connected", async (t) => {
+    const original = {
+      connect: net.connect,
+      reverse: dns.promises.reverse,
+    };
+    const connectTimeoutMock = t.mock.method(global, "setTimeout", (fn) => {
+      process.nextTick(fn);
+      return { unref() {} };
+    });
+    net.connect = () => new EventEmitter();
+    dns.promises.reverse = async () => [];
+    const route = await loadRoute();
+    const { socket, events } = createSocket();
+    await route.connection(socket);
+    const errorEvents = events.filter(e => e[0] === "error" && String(e[1]).includes("socket connect timeout"));
+    const connectedEvents = events.filter(e => e[0] === "connected");
+    assert.equal(errorEvents.length, 1);
+    assert.equal(connectedEvents.length, 0);
+    connectTimeoutMock.mock.restore();
+    net.connect = original.connect;
+    dns.promises.reverse = original.reverse;
+  });
+
   await t.test("handles @quit and disconnect", async () => {
     const moo = new EventEmitter();
     const writes = [];
@@ -612,6 +795,35 @@ test("socket route connection lifecycle", async (t) => {
     assert.equal(socket.isActive, false);
     assert.equal(moo.socketQuit, true);
 
+    const disconnectCount = events.filter(e => e[0] === "disconnected").length;
+    socket.emit("disconnect", "after-quit");
+    assert.equal(events.filter(e => e[0] === "disconnected").length, disconnectCount);
+
+    net.connect = original.connect;
+    dns.promises.reverse = original.reverse;
+  });
+
+  await t.test("handles @quit with CRLF form", async () => {
+    const moo = new EventEmitter();
+    const writes = [];
+    moo.write = (data, enc, cb) => { writes.push(data); if (cb) cb(); };
+    moo.end = () => { moo.emit("end"); };
+    const original = {
+      connect: net.connect,
+      reverse: dns.promises.reverse,
+    };
+    net.connect = () => moo;
+    dns.promises.reverse = async () => ["host"];
+    const route = await loadRoute();
+    const { socket, events } = createSocket();
+    const p = route.connection(socket);
+    moo.emit("connect");
+    await p;
+    socket.emit("input", "@quit\r\n");
+    await new Promise(r => setImmediate(r));
+    assert.ok(writes.includes("@quit\r\n\r\n"));
+    assert.ok(events.some(e => e[0] === "disconnected"));
+    assert.equal(socket.isActive, false);
     net.connect = original.connect;
     dns.promises.reverse = original.reverse;
   });
@@ -654,9 +866,72 @@ test("socket route connection lifecycle", async (t) => {
     dns.promises.reverse = original.reverse;
   });
 
+  await t.test("status and connection metadata emits after successful input", async () => {
+    const moo = new EventEmitter();
+    const writes = [];
+    moo.write = (data, enc, cb) => {
+      writes.push(data);
+      if (cb) {
+        cb();
+      }
+    };
+    moo.end = () => {};
+    const original = {
+      connect: net.connect,
+      reverse: dns.promises.reverse,
+    };
+    net.connect = () => moo;
+    dns.promises.reverse = async () => ["host"];
+    const route = await loadRoute();
+    const { socket, events } = createSocket();
+    const p = route.connection(socket);
+    moo.emit("connect");
+    await p;
+    assert.equal(socket.isActive, true);
+    socket.emit("input", "look");
+    await new Promise(r => setImmediate(r));
+    assert.ok(writes.includes("look\r\n"));
+    assert.ok(events.some(e => e[0] === "status" && String(e[1]).includes("command sent from")));
+    net.connect = original.connect;
+    dns.promises.reverse = original.reverse;
+  });
+
+  await t.test("does not emit data when socket is inactive", async () => {
+    const moo = new EventEmitter();
+    moo.write = (_data, _enc, cb) => { if (cb) cb(); };
+    moo.end = () => {};
+    const original = {
+      connect: net.connect,
+      reverse: dns.promises.reverse,
+    };
+    net.connect = () => moo;
+    dns.promises.reverse = async () => ["host"];
+    const route = await loadRoute();
+    const { socket, events } = createSocket();
+    const p = route.connection(socket);
+    moo.emit("connect");
+    await p;
+
+    socket.isActive = false;
+    moo.emit("data", Buffer.from("hidden"));
+    assert.ok(!events.some(e => e[0] === "data" && e[1] === "hidden"));
+    socket.emit("shorten-on");
+    moo.emit("data", Buffer.from("http://example.com/" + "a".repeat(70)));
+    assert.ok(!events.some(e => e[0] === "data"));
+
+    net.connect = original.connect;
+    dns.promises.reverse = original.reverse;
+  });
+
   await t.test("input rejects null command", async () => {
     const moo = new EventEmitter();
+    const writes = [];
     moo.write = (data, enc, cb) => { if (cb) cb(); };
+    const originalWrite = moo.write;
+    moo.write = (data, enc, cb) => {
+      writes.push(data);
+      originalWrite(data, enc, cb);
+    };
     moo.end = () => {};
     const original = {
       connect: net.connect,
@@ -672,6 +947,40 @@ test("socket route connection lifecycle", async (t) => {
     socket.emit("input", null);
     const cbErr = events.find(e => e[0] === "error")[1];
     assert.equal(cbErr.message, "no input");
+    assert.equal(writes.length, 0);
+    socket.emit("input", "look");
+    await new Promise(r => setImmediate(r));
+    assert.ok(writes.includes("look\r\n"));
+    socket.emit("input", undefined);
+    await new Promise(r => setImmediate(r));
+    const noInputErrors = events.filter(e => e[0] === "error" && e[1]?.message === "no input");
+    assert.ok(noInputErrors.length >= 2);
+    net.connect = original.connect;
+    dns.promises.reverse = original.reverse;
+  });
+
+  await t.test("does not treat commands containing @quit as a quit command", async () => {
+    const moo = new EventEmitter();
+    const writes = [];
+    moo.write = (data, enc, cb) => { writes.push(data); if (cb) cb(); };
+    moo.end = () => { moo.emit("end"); };
+    const original = {
+      connect: net.connect,
+      reverse: dns.promises.reverse,
+    };
+    net.connect = () => moo;
+    dns.promises.reverse = async () => ["host"];
+    const route = await loadRoute();
+    const { socket, events } = createSocket();
+    const p = route.connection(socket);
+    moo.emit("connect");
+    await p;
+    socket.emit("input", "say @quit");
+    await new Promise(r => setImmediate(r));
+    assert.ok(writes.includes("say @quit\r\n"));
+    assert.equal(moo.socketQuit, undefined);
+    assert.equal(socket.isActive, true);
+    assert.ok(!events.some(e => e[0] === "disconnected"));
     net.connect = original.connect;
     dns.promises.reverse = original.reverse;
   });
@@ -700,6 +1009,19 @@ test("socket route connection lifecycle", async (t) => {
     await p;
     socket.emit("input", "connect Alice pass");
     assert.ok(infoLogs.some(m => m.includes("USR 127.0.0.1 Alice")));
+
+    socket.emit("input", "co Bob pass");
+    assert.ok(infoLogs.some(m => m.includes("USR 127.0.0.1 Bob")));
+
+    const before = infoLogs.filter(m => m.includes("USR 127.0.0.1")).length;
+    socket.emit("input", "connect onlyname");
+    const after = infoLogs.filter(m => m.includes("USR 127.0.0.1")).length;
+    assert.equal(after, before);
+    socket.emit("input", "co");
+    socket.emit("input", "connect");
+    const afterInvalid = infoLogs.filter(m => m.includes("USR 127.0.0.1")).length;
+    assert.equal(afterInvalid, before);
+
     net.connect = original.connect;
     dns.promises.reverse = original.reverse;
     logger.child = original.child;
@@ -784,9 +1106,35 @@ test("socket route connection lifecycle", async (t) => {
     assert.ok(writes.includes("@quit\r\n"));
     assert.equal(socket.isActive, false);
 
+    socket.emit("disconnect");
+    assert.equal(writes.filter(w => w === "@quit\r\n").length, 1);
+
     net.connect = original.connect;
     dns.promises.reverse = original.reverse;
     logger.child = original.child;
+  });
+
+  await t.test("disconnect does not write quit when moo already marked socketQuit", async () => {
+    const moo = new EventEmitter();
+    const writes = [];
+    moo.write = (data, enc, cb) => { writes.push(data); if (cb) cb(); };
+    moo.end = () => {};
+    const original = {
+      connect: net.connect,
+      reverse: dns.promises.reverse,
+    };
+    net.connect = () => moo;
+    dns.promises.reverse = async () => ["host"];
+    const route = await loadRoute();
+    const { socket } = createSocket();
+    const p = route.connection(socket);
+    moo.emit("connect");
+    await p;
+    moo.socketQuit = true;
+    socket.emit("disconnect", "already-quit");
+    assert.equal(writes.filter(w => w === "@quit\r\n").length, 0);
+    net.connect = original.connect;
+    dns.promises.reverse = original.reverse;
   });
 
   await t.test("handles dome-client-user marker and data errors", async () => {
@@ -902,6 +1250,57 @@ test("socket route connection lifecycle", async (t) => {
 
     moo.emit("data", Buffer.from("#$# dome-client-user"));
     assert.ok(writes.includes("@dome-client-user resolved.host\r\n"));
+
+    net.connect = original.connect;
+    dns.promises.reverse = original.reverse;
+    logger.child = original.child;
+    if (hadProxied) {
+      config.node.socketProxied = original.socketProxied;
+    } else {
+      delete config.node.socketProxied;
+    }
+  });
+
+  await t.test("omits device field when UA device is Other 0.0.0", async () => {
+    const moo = new EventEmitter();
+    moo.write = (_data, _enc, cb) => { if (cb) cb(); };
+    moo.end = () => {};
+    const hadProxied = Object.prototype.hasOwnProperty.call(config.node, "socketProxied");
+    const original = {
+      connect: net.connect,
+      reverse: dns.promises.reverse,
+      child: logger.child,
+      socketProxied: config.node.socketProxied,
+    };
+    const infoLogs = [];
+    logger.child = () => ({
+      info: msg => infoLogs.push(msg),
+      error: () => {},
+      debug: () => {},
+    });
+    net.connect = () => moo;
+    dns.promises.reverse = async () => [];
+    config.node.socketProxied = true;
+
+    const route = await loadRoute({ proxied: true });
+    const socket = new EventEmitter();
+    socket.handshake = {
+      address: { address: "1.2.3.4" },
+      query: {},
+      headers: {
+        "x-forwarded-for": "5.6.7.8",
+        "user-agent": "UA",
+        referer: ""
+      }
+    };
+    socket.on("error", () => {});
+    const p = route.connection(socket);
+    moo.emit("connect");
+    await p;
+    const hiLog = infoLogs.find(m => m.startsWith("HI "));
+    assert.ok(hiLog);
+    const occurrences = (hiLog.match(/Other 0\.0\.0/g) || []).length;
+    assert.equal(occurrences, 1);
 
     net.connect = original.connect;
     dns.promises.reverse = original.reverse;

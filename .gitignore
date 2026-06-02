@@ -17,7 +17,13 @@ tmp/
 test-output.log
 webclient.log
 npm-debug.log
+stryker.log
 nohup.out
+.stryker-tmp/
+reports/mutation/
+reports/stryker-incremental.json
+.agents/
+.codex/
 play.sindome.org.pem
 play.sindome.org.crt
 data/multi-mud-metrics.json

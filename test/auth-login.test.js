@@ -96,6 +96,48 @@ test("return parameter overrides destination", async t => {
   assert.strictEqual(redirect.url, "/next");
 });
 
+test("return parameter is ignored when it is not an absolute path", async t => {
+  const { login, setupAuth } = await load(t);
+  const { req, res, scope, redirect, done } = setupAuth({
+    status: 200,
+    response: {
+      status: "ok",
+      user: { perms: [1], chars: [{ name: "hero" }] }
+    },
+    body: { email: "a", pass: "b", gogogo: true, return: "https://evil.example/next" }
+  });
+  login(req, res);
+  await done;
+  scope.done();
+  assert.strictEqual(redirect.url, "/?auto=hero");
+});
+
+test("ok status with null user payload is rejected", async t => {
+  const { login, setupAuth } = await load(t);
+  const { req, res, scope, redirect, done } = setupAuth({
+    status: 200,
+    response: { status: "ok", user: null }
+  });
+  login(req, res);
+  await done;
+  scope.done();
+  assert.strictEqual(req.session.error, "Unexpected error occurred while authenticating user against website.");
+  assert.strictEqual(redirect.url, "/");
+});
+
+test("non-ok status without message uses fallback error", async t => {
+  const { login, setupAuth } = await load(t);
+  const { req, res, scope, redirect, done } = setupAuth({
+    status: 200,
+    response: { status: "error" }
+  });
+  login(req, res);
+  await done;
+  scope.done();
+  assert.strictEqual(req.session.error, "Unexpected error occurred while authenticating user against website.");
+  assert.strictEqual(redirect.url, "/");
+});
+
 test("builds request options when host includes port", async t => {
   const remoteAuth = { enabled: true, host: "http://localhost:8080", path: "/session/authenticate/", remoteSecret: "sekret" };
   const { login, setupAuth } = await load(t, remoteAuth);
@@ -179,5 +221,128 @@ test("rejects login when website auth is disabled", async t => {
   const { req, res, redirect } = setupAuth();
   await login(req, res);
   assert.strictEqual(req.session.error, "Website authentication is disabled.");
+  assert.strictEqual(redirect.url, "/");
+});
+
+test("handles non-object auth payload as authentication failure", async t => {
+  const { login, setupAuth } = await load(t);
+  const { req, res, scope, redirect, done } = setupAuth({
+    status: 200,
+    response: 7
+  });
+  login(req, res);
+  await done;
+  scope.done();
+  assert.strictEqual(req.session.error, "Unexpected error occurred while authenticating user against website.");
+  assert.strictEqual(redirect.url, "/");
+});
+
+test("rejects ok status with malformed user payload", async t => {
+  const { login, setupAuth } = await load(t);
+  const { req, res, scope, redirect, done } = setupAuth({
+    status: 200,
+    response: { status: "ok", user: "unexpected" }
+  });
+  login(req, res);
+  await done;
+  scope.done();
+  assert.strictEqual(req.session.error, "Unexpected error occurred while authenticating user against website.");
+  assert.strictEqual(redirect.url, "/");
+});
+
+test("rejects payload with ok status but missing user object", async t => {
+  const { login, setupAuth } = await load(t);
+  const { req, res, scope, redirect, done } = setupAuth({
+    status: 200,
+    response: { status: "ok" }
+  });
+  login(req, res);
+  await done;
+  scope.done();
+  assert.strictEqual(req.session.error, "Unexpected error occurred while authenticating user against website.");
+  assert.strictEqual(redirect.url, "/");
+});
+
+test("rejects payload with non-string status", async t => {
+  const { login, setupAuth } = await load(t);
+  const { req, res, scope, redirect, done } = setupAuth({
+    status: 200,
+    response: { status: 123, user: { perms: [1] } }
+  });
+  login(req, res);
+  await done;
+  scope.done();
+  assert.strictEqual(req.session.error, "Unexpected error occurred while authenticating user against website.");
+  assert.strictEqual(redirect.url, "/");
+});
+
+test("rejects payload with non-string message on non-ok status", async t => {
+  const { login, setupAuth } = await load(t);
+  const { req, res, scope, redirect, done } = setupAuth({
+    status: 200,
+    response: { status: "error", message: 500 }
+  });
+  login(req, res);
+  await done;
+  scope.done();
+  assert.strictEqual(req.session.error, "Unexpected error occurred while authenticating user against website.");
+  assert.strictEqual(redirect.url, "/");
+});
+
+for (const [name, response] of [
+  ["rejects array payload", []],
+  ["rejects null payload", null],
+  ["rejects payload with array user on ok status", { status: "ok", user: [] }],
+  ["rejects payload with numeric user on ok status", { status: "ok", user: 9 }],
+  ["rejects payload with null message on non-ok status", { status: "error", message: null }],
+  ["rejects payload with object message on non-ok status", { status: "error", message: { text: "bad" } }]
+]) {
+  test(name, async t => {
+    const { login, setupAuth } = await load(t);
+    const { req, res, scope, redirect, done } = setupAuth({
+      status: 200,
+      response
+    });
+    login(req, res);
+    await done;
+    scope.done();
+    assert.strictEqual(req.session.error, "Unexpected error occurred while authenticating user against website.");
+    assert.strictEqual(redirect.url, "/");
+  });
+}
+
+test("gogogo does not auto-redirect when first char has empty name", async t => {
+  const { login, setupAuth } = await load(t);
+  const { req, res, scope, redirect, done } = setupAuth({
+    status: 200,
+    response: {
+      status: "ok",
+      user: { perms: [1], chars: [{ name: "" }, { name: "hero" }] }
+    },
+    body: { email: "a", pass: "b", gogogo: true }
+  });
+  login(req, res);
+  await done;
+  scope.done();
+  assert.strictEqual(redirect.url, "/?auto=hero");
+});
+
+test("handles missing request body fields safely", async t => {
+  const remoteAuth = { enabled: true, host: "http://localhost:8081", path: "/session/authenticate/", remoteSecret: "sekret" };
+  const { login, setupAuth } = await load(t, remoteAuth);
+  const expectedBody = qs.stringify({
+    email: undefined,
+    pass: undefined,
+    signature: md5("sekret")
+  });
+  const scope = nock("http://localhost:8081")
+    .matchHeader("Content-Type", "application/x-www-form-urlencoded")
+    .post("/session/authenticate/", expectedBody)
+    .reply(200, { status: "ok", user: { perms: [] } });
+  const { req, res, redirect, done } = setupAuth({ body: {} });
+  login(req, res);
+  await done;
+  scope.done();
+  assert.deepEqual(req.session.user, { perms: [], chars: [] });
   assert.strictEqual(redirect.url, "/");
 });

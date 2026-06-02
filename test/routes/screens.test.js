@@ -7,11 +7,11 @@ import * as screens from "../../src/controllers/screens.js";
 
 const expectedEditor = (readonly) => ({
   readonly,
-  localSaveNodeMaxLines: 200,
-  localSaveNodeAdminMaxLines: 800,
-  localSaveNoteMaxLines: 20,
-  ideEditOpenParent: false,
-  ideVmsNoteEnabled: false,
+  localSaveNodeMaxLines: config.editor.localSaveNodeMaxLines,
+  localSaveNodeAdminMaxLines: config.editor.localSaveNodeAdminMaxLines,
+  localSaveNoteMaxLines: config.editor.localSaveNoteMaxLines,
+  ideEditOpenParent: config.editor.ideEditOpenParent,
+  ideVmsNoteEnabled: config.editor.ideVmsNoteEnabled,
 });
 
 export function createRes() {

@@ -9,6 +9,22 @@ import { sessionError } from "./session-error.js";
 const __filename = fileURLToPath(import.meta.url);
 const logger = named("controllers/" + path.basename(__filename, ".js"));
 
+function hasValidAuthShape(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  if (typeof value.status !== "string") {
+    return false;
+  }
+  if (value.status === "ok" && (value.user === undefined || typeof value.user !== "object" || Array.isArray(value.user) || value.user === null)) {
+    return false;
+  }
+  if (value.message !== undefined && typeof value.message !== "string") {
+    return false;
+  }
+  return true;
+}
+
 /**
  * Authenticate a user against the remote website and set session data.
  * On success, user information is stored and the destination is chosen
@@ -39,6 +55,10 @@ export async function login(req, res) {
     });
 
     const authJSON = await remoteRes.json();
+    if (!hasValidAuthShape(authJSON)) {
+      sessionError(req, "Unexpected error occurred while authenticating user against website.");
+      return res.redirect("/");
+    }
     let dest = "/";
     if (authJSON.status == "ok") {
       const remoteUser = authJSON.user && typeof authJSON.user === "object" ? authJSON.user : {};
