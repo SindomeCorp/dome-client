@@ -12,8 +12,8 @@ export function setupOutputParser({
     (win.performance && win.performance.now) ? win.performance.now() : Date.now();
 
   const protocolParser = createSocketOutputProtocolParser();
-  const renderer = createSocketOutputRenderer({ dome: client, logger: log, nowMs });
-  const handleProtocolEvent = createSocketOutputEventHandler({ dome: client, logger: log, renderer });
+  const renderer = createSocketOutputRenderer({ client, logger: log, nowMs });
+  const handleProtocolEvent = createSocketOutputEventHandler({ client, logger: log, renderer });
   client.activeEditor = protocolParser.editorState;
   client.resetSdwcNowrapState = renderer.resetSdwcNowrapState;
   client.resetAnsiRendererState = renderer.resetAnsiRendererState;

@@ -4,18 +4,18 @@ const isAtBottom = (buffer) => {
   return buffer.scrollHeight - buffer.scrollTop - buffer.clientHeight <= BOTTOM_THRESHOLD_PX;
 };
 
-const setScrollBuffer = dome => {
-  dome.scrollBuffer = () => {
-    if (dome.pauseBuffer) {
-      dome.pausedLines++;
-      if (dome.setFadeText && dome.statusDisplay) {
-        dome.setFadeText(dome.statusDisplay, `${dome.pausedLines} UNREAD LINES`);
+const setScrollBuffer = client => {
+  client.scrollBuffer = () => {
+    if (client.pauseBuffer) {
+      client.pausedLines++;
+      if (client.setFadeText && client.statusDisplay) {
+        client.setFadeText(client.statusDisplay, `${client.pausedLines} UNREAD LINES`);
       }
     } else {
-      dome._autoScrollProgrammatic = true;
-      dome.buffer.scrollTop = dome.buffer.scrollHeight;
+      client._autoScrollProgrammatic = true;
+      client.buffer.scrollTop = client.buffer.scrollHeight;
       Promise.resolve().then(() => {
-        dome._autoScrollProgrammatic = false;
+        client._autoScrollProgrammatic = false;
       });
     }
   };
@@ -24,17 +24,17 @@ const setScrollBuffer = dome => {
 const pauseIconMarkup = "<span class=\"mini-glyph\" aria-hidden=\"true\"><svg class=\"mini-glyph-svg\" viewBox=\"0 0 14 14\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"2\" y=\"2\" width=\"3.5\" height=\"10\" rx=\"0.9\"></rect><rect x=\"8.5\" y=\"2\" width=\"3.5\" height=\"10\" rx=\"0.9\"></rect></svg></span>";
 const playIconMarkup = "<span class=\"mini-glyph\" aria-hidden=\"true\"><svg class=\"mini-glyph-svg\" viewBox=\"0 0 14 14\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M3 2.2L11.5 7L3 11.8Z\"></path></svg></span>";
 
-const setPauseUi = (dome, paused) => {
-  const button = dome.scrollButton;
+const setPauseUi = (client, paused) => {
+  const button = client.scrollButton;
   if (paused) {
-    dome.buffer.classList.add("scroll-disabled");
+    client.buffer.classList.add("scroll-disabled");
     if (button) {
       button.innerHTML = `${playIconMarkup}<span class="hidden-xs">RESUME SCROLL</span>`;
       button.classList.add("btn-danger");
       button.classList.remove("btn-primary");
     }
   } else {
-    dome.buffer.classList.remove("scroll-disabled");
+    client.buffer.classList.remove("scroll-disabled");
     if (button) {
       button.innerHTML = `${pauseIconMarkup}<span class="hidden-xs">PAUSE SCROLL</span>`;
       button.classList.add("btn-primary");
@@ -43,18 +43,18 @@ const setPauseUi = (dome, paused) => {
   }
 };
 
-const setPaused = (dome, paused, message = null) => {
-  if (dome.pauseBuffer === paused) {
+const setPaused = (client, paused, message = null) => {
+  if (client.pauseBuffer === paused) {
     return;
   }
-  dome.pauseBuffer = paused;
+  client.pauseBuffer = paused;
   if (!paused) {
-    dome.pausedLines = 0;
+    client.pausedLines = 0;
   }
-  if (message && dome.setFadeText) {
-    dome.setFadeText(dome.statusDisplay, message);
+  if (message && client.setFadeText) {
+    client.setFadeText(client.statusDisplay, message);
   }
-  setPauseUi(dome, paused);
+  setPauseUi(client, paused);
 };
 
 export function setupAutoscroll(context, winArg = window) {

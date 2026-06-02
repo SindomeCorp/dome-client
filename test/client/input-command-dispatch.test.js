@@ -4,7 +4,7 @@ import { createCommandDispatcher } from "../../src/client/input-command-dispatch
 
 const createHarness = ({ localEcho = true, ackStatus = "command sent" } = {}) => {
   const fadeCalls = [];
-  const dome = {
+  const client = {
     buffer: {
       appended: [],
       insertAdjacentHTML(pos, value) {
@@ -26,57 +26,57 @@ const createHarness = ({ localEcho = true, ackStatus = "command sent" } = {}) =>
   };
 
   return {
-    dome,
+    client,
     fadeCalls,
     socket,
-    dispatcher: createCommandDispatcher({ dome, socket })
+    dispatcher: createCommandDispatcher({ client, socket })
   };
 };
 
 test("normal commands echo and emit socket input", () => {
-  const { dispatcher, dome, socket } = createHarness();
+  const { dispatcher, client, socket } = createHarness();
 
   dispatcher.sendCommand("say hi");
 
   assert.deepEqual(socket.events, [{ event: "input", command: "say hi" }]);
-  assert.deepEqual(dome.buffer.appended, [{
+  assert.deepEqual(client.buffer.appended, [{
     pos: "beforeend",
     value: "<span class=\"input-echo\">&gt;say hi</span>\n"
   }]);
 });
 
 test("command sent ack updates status display to SENT", () => {
-  const { dispatcher, dome, fadeCalls } = createHarness({ ackStatus: "command sent ok" });
+  const { dispatcher, client, fadeCalls } = createHarness({ ackStatus: "command sent ok" });
 
   dispatcher.sendCommand("look");
 
-  assert.deepEqual(fadeCalls, [[dome.statusDisplay, "SENT", false]]);
+  assert.deepEqual(fadeCalls, [[client.statusDisplay, "SENT", false]]);
 });
 
 test("non-command-sent ack status is passed through", () => {
-  const { dispatcher, dome, fadeCalls } = createHarness({ ackStatus: "queued" });
+  const { dispatcher, client, fadeCalls } = createHarness({ ackStatus: "queued" });
 
   dispatcher.sendCommand("look");
 
-  assert.deepEqual(fadeCalls, [[dome.statusDisplay, "queued", false]]);
+  assert.deepEqual(fadeCalls, [[client.statusDisplay, "queued", false]]);
 });
 
 test("client option commands echo and parse without socket emit", () => {
-  const { dispatcher, dome, socket } = createHarness();
+  const { dispatcher, client, socket } = createHarness();
   const parsed = [];
-  dome.parseClientOptionCommand = (command) => parsed.push(command);
+  client.parseClientOptionCommand = (command) => parsed.push(command);
 
   dispatcher.sendCommand("@client-option inputFontSize 14");
 
   assert.deepEqual(parsed, ["@client-option inputFontSize 14"]);
   assert.deepEqual(socket.events, []);
-  assert.equal(dome.buffer.appended[0].value, "<span class=\"input-echo\">&gt;@client-option inputFontSize 14</span>\n");
+  assert.equal(client.buffer.appended[0].value, "<span class=\"input-echo\">&gt;@client-option inputFontSize 14</span>\n");
 });
 
 test("test command echoes and opens the IDE without socket emit", () => {
-  const { dispatcher, dome, socket } = createHarness();
+  const { dispatcher, client, socket } = createHarness();
   const opened = [];
-  dome.openIDE = (options) => opened.push(options);
+  client.openIDE = (options) => opened.push(options);
 
   dispatcher.sendCommand("@test");
 
@@ -86,33 +86,33 @@ test("test command echoes and opens the IDE without socket emit", () => {
     buffer: "This is some test data"
   }]);
   assert.deepEqual(socket.events, []);
-  assert.equal(dome.buffer.appended[0].value, "<span class=\"input-echo\">&gt;@test</span>\n");
+  assert.equal(client.buffer.appended[0].value, "<span class=\"input-echo\">&gt;@test</span>\n");
 });
 
 test("local echo can be disabled", () => {
-  const { dispatcher, dome, socket } = createHarness({ localEcho: false });
+  const { dispatcher, client, socket } = createHarness({ localEcho: false });
 
   dispatcher.sendCommand("say hi");
 
   assert.deepEqual(socket.events, [{ event: "input", command: "say hi" }]);
-  assert.deepEqual(dome.buffer.appended, []);
+  assert.deepEqual(client.buffer.appended, []);
 });
 
 test("dispatcher resolves socket at send time", () => {
-  const { dome, socket } = createHarness();
-  dome.socket = null;
-  const dispatcher = createCommandDispatcher({ dome, socket: null });
+  const { client, socket } = createHarness();
+  client.socket = null;
+  const dispatcher = createCommandDispatcher({ client, socket: null });
 
-  dome.socket = socket;
+  client.socket = socket;
   dispatcher.sendCommand("say hi");
 
   assert.deepEqual(socket.events, [{ event: "input", command: "say hi" }]);
 });
 
 test("missing socket reports status instead of throwing", () => {
-  const { dome, fadeCalls } = createHarness();
-  const dispatcher = createCommandDispatcher({ dome, socket: null });
+  const { client, fadeCalls } = createHarness();
+  const dispatcher = createCommandDispatcher({ client, socket: null });
 
   assert.doesNotThrow(() => dispatcher.sendCommand("say hi"));
-  assert.deepEqual(fadeCalls, [[dome.statusDisplay, "ERROR: socket is not connected", true]]);
+  assert.deepEqual(fadeCalls, [[client.statusDisplay, "ERROR: socket is not connected", true]]);
 });

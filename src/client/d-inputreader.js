@@ -17,7 +17,7 @@ export function setupInputReader({
   storage = store,
   promptFn = (...args) => globalThis.prompt(...args)
 } = {}) {
-  const { sendCommand } = createCommandDispatcher({ dome: client, getSocket: () => client.socket });
+  const { sendCommand } = createCommandDispatcher({ client, getSocket: () => client.socket });
 
   // prevent the backspace key from navigating away from the page
   doc.addEventListener("keydown", (e) => {

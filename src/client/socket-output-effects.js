@@ -1,37 +1,37 @@
 import { setupAutoCompleteFeature } from "./w-autocomplete.js";
 
 export function createSocketOutputEventHandler({
-  dome,
+  client,
   logger,
   renderer,
   setupAutoComplete = setupAutoCompleteFeature
 }) {
   const withFadeText = (msg) => {
-    if (dome.setFadeText && dome.statusDisplay) dome.setFadeText(dome.statusDisplay, msg);
+    if (client.setFadeText && client.statusDisplay) client.setFadeText(client.statusDisplay, msg);
   };
 
   const handleEditorContent = (event) => {
     const editor = event.editor;
-    const spawned = dome.makeEditor(editor);
+    const spawned = client.makeEditor(editor);
     if (event.updateEditorList) {
-      dome.spawned[editor.editorName] = spawned;
-      dome.updateEditorListView();
+      client.spawned[editor.editorName] = spawned;
+      client.updateEditorListView();
     } else if (spawned) {
-      dome.spawned[editor.editorName] = spawned;
-      dome.updateEditorListView();
+      client.spawned[editor.editorName] = spawned;
+      client.updateEditorListView();
     }
   };
 
   const postIdeMessage = (message) => {
-    if (dome.ideWindow && !dome.ideWindow.closed) {
-      dome.ideWindow.postMessage(message, "*");
+    if (client.ideWindow && !client.ideWindow.closed) {
+      client.ideWindow.postMessage(message, "*");
       return true;
     }
     return false;
   };
 
   const handleSdwcVerbOverlay = (event) => {
-    const hasIdeWindow = Boolean(dome.ideWindow && !dome.ideWindow.closed);
+    const hasIdeWindow = Boolean(client.ideWindow && !client.ideWindow.closed);
     if (event.objectId && event.verbName && hasIdeWindow) {
       logger.debug("[SDWC overlay parsed][verb]", {
         objectId: event.objectId,
@@ -56,7 +56,7 @@ export function createSocketOutputEventHandler({
   };
 
   const handleSdwcPropOverlay = (event) => {
-    const hasIdeWindow = Boolean(dome.ideWindow && !dome.ideWindow.closed);
+    const hasIdeWindow = Boolean(client.ideWindow && !client.ideWindow.closed);
     if (event.objectId && event.propertyName && hasIdeWindow) {
       logger.debug("[SDWC overlay parsed][prop]", {
         objectId: event.objectId,
@@ -89,10 +89,10 @@ export function createSocketOutputEventHandler({
     } else if (event.type === "fade") {
       withFadeText(event.message);
     } else if (event.type === "user-type") {
-      dome.userType = event.userType;
-      if (dome.inputReader) {
-        setupAutoComplete({ client: dome });
-        dome.setupAutoComplete?.(dome.inputReader, dome.userType);
+      client.userType = event.userType;
+      if (client.inputReader) {
+        setupAutoComplete({ client });
+        client.setupAutoComplete?.(client.inputReader, client.userType);
       }
     } else if (event.type === "ping") {
       withFadeText("pinged");
@@ -112,6 +112,6 @@ export function createSocketOutputEventHandler({
       logger.warn(`Failed to parse ${event.command.replace("sdwc-", "SDWC ").toUpperCase()} payload`, event.error);
     }
 
-    return dome.buffer.childNodes.length;
+    return client.buffer.childNodes.length;
   };
 }

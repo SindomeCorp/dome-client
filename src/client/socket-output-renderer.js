@@ -23,7 +23,7 @@ export function wrapLinesToDivs(text) {
 }
 
 export function createSocketOutputRenderer({
-  dome,
+  client,
   logger,
   ansiRenderer = createAnsiRenderer(),
   nowMs = defaultNowMs
@@ -37,23 +37,23 @@ export function createSocketOutputRenderer({
       if (url.indexOf("http") !== 0) url = "http://" + url;
 
       const lower = url.toLowerCase();
-      const isImage = lower.match(dome.urlPatterns.images);
-      const isVideo = lower.match(dome.urlPatterns.videos);
-      const ytId = dome.parseYouTubeID(url);
+      const isImage = lower.match(client.urlPatterns.images);
+      const isVideo = lower.match(client.urlPatterns.videos);
+      const ytId = client.parseYouTubeID(url);
 
       let out = `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
 
       if (isImage || isVideo || ytId) {
         const id = createUniqueId(nowMs);
-        const chevron = dome.preferences.imagePreview ? "down" : "up";
+        const chevron = client.preferences.imagePreview ? "down" : "up";
         out += `<i id="b${id}" class="icon-white icon-chevron-${chevron}" aria-hidden="true" style="cursor:pointer" data-image-id="${id}" data-image-url="${url}"></i>`;
         out += `<span id="s${id}">`;
-        if (dome.preferences.imagePreview) {
+        if (client.preferences.imagePreview) {
           out += `<br><a href="${url}" target="_blank" rel="noopener noreferrer">`;
           if (isVideo) {
             out += `<video class="shown-image" loop muted autoplay id="${id}" style="max-width:75%"><source type="video/mp4" src="${url.replace(/gifv$/, "mp4")}"></video>`;
           } else if (ytId) {
-            const width = Math.min(dome.buffer.clientWidth - 20, 560);
+            const width = Math.min(client.buffer.clientWidth - 20, 560);
             const height = Math.floor(width * 0.5652);
             out += `<iframe id="${id}" class="shown-image" width="${width}" height="${height}" src="https://www.youtube.com/embed/${ytId}" frameborder="0" allowfullscreen></iframe>`;
           } else {
@@ -94,9 +94,9 @@ export function createSocketOutputRenderer({
   };
 
   const triggerAlertIfMatched = (outputSegment) => {
-    if (!dome.alert || !dome.alert.active || dome.alert.pattern == null) return;
+    if (!client.alert || !client.alert.active || client.alert.pattern == null) return;
 
-    const pattern = dome.alert.pattern;
+    const pattern = client.alert.pattern;
     let matched = false;
     if (pattern instanceof RegExp) {
       const flags = pattern.flags.includes("i") ? pattern.flags : pattern.flags + "i";
@@ -105,18 +105,18 @@ export function createSocketOutputRenderer({
       matched = outputSegment.toLowerCase().includes(String(pattern).toLowerCase());
     }
     if (matched) {
-      dome.alert.tone.play();
-      dome.windowAlert();
+      client.alert.tone.play();
+      client.windowAlert();
     }
   };
 
   const createSdwcNowrapBlock = () => {
-    if (!dome.buffer || typeof document === "undefined") {
+    if (!client.buffer || typeof document === "undefined") {
       return null;
     }
     const block = document.createElement("div");
     block.className = "sdwc-nowrap-block";
-    dome.buffer.append(block);
+    client.buffer.append(block);
     return block;
   };
 
@@ -126,7 +126,7 @@ export function createSocketOutputRenderer({
   };
 
   const startSdwcNowrapBlock = () => {
-    const nowrapEnabled = dome.preferences?.sdwcNowrapBlocks === true;
+    const nowrapEnabled = client.preferences?.sdwcNowrapBlocks === true;
     logger.info(nowrapEnabled
       ? "Received SDWC-START-NOWRAP"
       : "Received SDWC-START-NOWRAP (ignored: sdwcNowrapBlocks disabled)");
@@ -141,7 +141,7 @@ export function createSocketOutputRenderer({
   };
 
   const endSdwcNowrapBlock = () => {
-    const nowrapEnabled = dome.preferences?.sdwcNowrapBlocks === true;
+    const nowrapEnabled = client.preferences?.sdwcNowrapBlocks === true;
     logger.info(nowrapEnabled
       ? "Received SDWC-END-NOWRAP"
       : "Received SDWC-END-NOWRAP (ignored: sdwcNowrapBlocks disabled)");
@@ -155,33 +155,33 @@ export function createSocketOutputRenderer({
   };
 
   const getOutputTarget = () => {
-    if (sdwcNowrapActive && activeSdwcNowrapBlock && !dome.buffer.contains(activeSdwcNowrapBlock)) {
+    if (sdwcNowrapActive && activeSdwcNowrapBlock && !client.buffer.contains(activeSdwcNowrapBlock)) {
       resetSdwcNowrapState();
     }
 
     return sdwcNowrapActive && activeSdwcNowrapBlock
       ? activeSdwcNowrapBlock
-      : dome.buffer;
+      : client.buffer;
   };
 
   const appendOutputSegment = (rawSegment) => {
-    if (!rawSegment) return dome.buffer.childNodes.length;
+    if (!rawSegment) return client.buffer.childNodes.length;
 
     const outputSegment = renderOutputSegment(rawSegment);
     triggerAlertIfMatched(outputSegment);
     getOutputTarget().insertAdjacentHTML("beforeend", wrapLinesToDivs(outputSegment));
 
-    return dome.buffer.childNodes.length;
+    return client.buffer.childNodes.length;
   };
 
   const pruneBuffer = () => {
-    let kidCount = dome.buffer.childNodes.length;
-    if (dome.preferences.performanceBuffer > 0) {
-      while (kidCount > dome.preferences.performanceBuffer) {
-        const firstChild = dome.buffer.firstChild;
+    let kidCount = client.buffer.childNodes.length;
+    if (client.preferences.performanceBuffer > 0) {
+      while (kidCount > client.preferences.performanceBuffer) {
+        const firstChild = client.buffer.firstChild;
         if (!firstChild) break;
         firstChild.remove();
-        kidCount = dome.buffer.childNodes.length;
+        kidCount = client.buffer.childNodes.length;
       }
     }
     return kidCount;
