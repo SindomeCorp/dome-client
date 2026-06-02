@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Refactored the Editor IDE internals into focused planning, save-flow, shortcut, overlay, browser command, recent-tab, and label helpers while preserving existing behavior.
 - Split socket output rendering from protocol side effects so buffer rendering, SDWC nowrap handling, IDE messages, alerts, and scrollback pruning are easier to maintain.
 - Introduced an explicit client composition initializer so browser setup can be wired with injectable setup hooks while preserving existing startup behavior.
+- Decomposed server socket handling into focused address resolution, MUD connection, data flow, and session event helpers while preserving connection behavior.
 
 ### Fixed
 - Kept fallback autocomplete suggestions above the input buffer with a readable gap instead of overlapping typed commands.

@@ -7,6 +7,10 @@ import { named, inspect } from "../logger.js";
 import { urls as shortenUrls } from "../services/shorten.js";
 import { dnsErrorHandler } from "../services/socket-utils.js";
 import { recordConnection } from "../services/multi-mud-metrics.js";
+import { connectToMud, DEFAULT_SOCKET_CONNECT_TIMEOUT_MS } from "../services/mud-connection.js";
+import { resolveGameAddress } from "../services/socket-address.js";
+import { forwardMudData } from "../services/socket-data-flow.js";
+import { bindSocketSession } from "../services/socket-session.js";
 import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,30 +25,6 @@ export function error(err) {
 const SOCKET_PROXIED = config.node?.socketProxied ?? false;
 const SHORTEN_ENABLED = config.shorten?.enabled ?? true;
 const MULTI_MUD_ENABLED = config.node?.multiMud === true;
-const SOCKET_CONNECT_TIMEOUT_MS = 5000;
-
-function parseSocketPort(rawPort) {
-  const parsed = Number.parseInt(String(rawPort || ""), 10);
-  if (!Number.isFinite(parsed) || parsed < 23 || parsed > 65535) {
-    return null;
-  }
-  return parsed;
-}
-
-function resolveGameAddress(socket) {
-  const fallbackHost = config.moo.host;
-  const fallbackPort = config.moo.port;
-  if (!MULTI_MUD_ENABLED) {
-    return { host: fallbackHost, port: fallbackPort };
-  }
-  const query = socket.handshake?.query || {};
-  const host = String(query.host || "").trim();
-  const port = parseSocketPort(query.port);
-  if (!host || port == null) {
-    return { host: fallbackHost, port: fallbackPort };
-  }
-  return { host, port };
-}
 
 export function userIp(socket) {
   let handshakeAddress = socket.handshake.address;
@@ -79,24 +59,19 @@ export async function connection(socket) {
   socket.logger = logger;
   socket.logUser = logUser;
   socket.logError = logError;
-  const gameAddress = resolveGameAddress(socket);
+  const gameAddress = resolveGameAddress(socket, {
+    fallbackHost: config.moo.host,
+    fallbackPort: config.moo.port,
+    multiMudEnabled: MULTI_MUD_ENABLED
+  });
   socket.gameAddress = gameAddress;
   let moo;
   try {
-    moo = await new Promise((resolve, reject) => {
-      const conn = net.connect({ port: gameAddress.port, host: gameAddress.host });
-      const timer = setTimeout(() => {
-        reject(new Error("socket connect timeout"));
-      }, SOCKET_CONNECT_TIMEOUT_MS);
-      if (typeof timer?.unref === "function") {
-        timer.unref();
-      }
-      const settle = (fn) => (value) => {
-        clearTimeout(timer);
-        fn(value);
-      };
-      conn.once("connect", settle(() => resolve(conn)));
-      conn.once("error", settle(reject));
+    moo = await connectToMud({
+      host: gameAddress.host,
+      port: gameAddress.port,
+      timeoutMs: DEFAULT_SOCKET_CONNECT_TIMEOUT_MS,
+      netConnect: net.connect
     });
   } catch (err) {
     logger.error("error while connecting to moo");
@@ -133,104 +108,25 @@ export async function connection(socket) {
   };
   await onConnect();
 
-  const writeAsync = data => new Promise(r => moo.write(data, "utf8", r));
-
   moo.on("data", async function(data) {
-    try {
-      data = data.toString();
-      const marker = data.indexOf("#$# dome-client-user");
-      if (marker != -1) {
-        moo.write("@dome-client-user " + (Object.prototype.hasOwnProperty.call(socket, "hostname") ? socket.hostname : userIp(socket)) + "\r\n", "utf8");
-      } else {
-        if (!SHORTEN_ENABLED || !socket.shortenUrls) {
-          if (socket.isActive) {
-            socket.emit("data", data);
-          }
-        } else {
-          let output = data;
-          try {
-            output = await shortenUrls(data);
-          } catch (err) {
-            logger.warn("url shortening failed", err);
-          }
-          if (socket.isActive) {
-            socket.emit("data", output);
-          }
-        }
-      }
-    } catch (e) {
-      logger.error("exception caught when receiving data from the moo", e);
-    }
+    await forwardMudData({
+      data,
+      moo,
+      socket,
+      logger,
+      shortenEnabled: SHORTEN_ENABLED,
+      shortenUrls,
+      getUserIdentity: userIp
+    });
   });
 
-  moo.on("end", function() {
-    logger.debug("moo connection sent end");
-    if (socket.isActive) {
-      logger.debug("socket is active, sending disconnect and marking inactive");
-      socket.isActive = false;
-      socket.emit("disconnected");
-    } else {
-      logger.debug("socket is no longer active");
-    }
-  });
-
-  moo.on("error", function(e) {
-    logger.error("moo error event occurred");
-    logError(socket, e);
-    if (socket.isActive) {
-      socket.emit("error", e);
-    }
-  });
-
-  socket.on("error", function(e) {
-    logger.error("socket error event occurred");
-    logError(socket, e);
-  });
-
-  socket.on("shorten-on", function() {
-    if (!SHORTEN_ENABLED) return;
-    socket.shortenUrls = true;
-  });
-
-  socket.on("disconnect", function(data) {
-    logUser(socket, "BYE");
-    if (!socket.isActive) return;
-    socket.isActive = false;
-    if (data) {
-      logger.debug("disconnected from client: " + data);
-    }
-    if (!moo.socketQuit) moo.write("@quit" + "\r\n", "utf8", function() {});
-  });
-
-  socket.on("input", async function(command) {
-    if (command == null) {
-      socket.emit("error", new Error("no input"));
-      return;
-    }
-    if (command.indexOf("connect ") != -1 || command.indexOf("co ") != -1) {
-      const charmatch = command.match(/(connect|co) (\w+) \w/);
-      if (charmatch) {
-        const charname = charmatch[charmatch.length - 1];
-        logUser(socket, "USR", [charname]);
-      }
-    }
-    try {
-      await writeAsync(command + "\r\n");
-      if (command.match(/^@quit(\r\n)?$/)) {
-        moo.socketQuit = true;
-        socket.isActive = false;
-        moo.end();
-        socket.emit("disconnected");
-      } else {
-        socket.emit("status", "sent " + command.length + " characters");
-      }
-      socket.emit("status", "command sent from " + config.node.poweredBy + " to moo at " + new Date().toString());
-    } catch (exception) {
-      logger.error("exception while writing to moo");
-      logger.error(exception.stack);
-      if (socket.isActive) {
-        socket.emit("error", exception);
-      }
-    }
+  bindSocketSession({
+    socket,
+    moo,
+    logger,
+    poweredBy: config.node.poweredBy,
+    shortenEnabled: SHORTEN_ENABLED,
+    logUser,
+    logError
   });
 }
