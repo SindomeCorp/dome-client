@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Introduced an explicit client composition initializer so browser setup can be wired with injectable setup hooks while preserving existing startup behavior.
 
 ### Fixed
+- Kept fallback autocomplete suggestions above the input buffer with a readable gap instead of overlapping typed commands.
 - Fixed Enter-key command submission when the input buffer is initialized before the socket connection is assigned.
 - Hardened the IDE editor against malformed window messages and unavailable socket, opener, root, or Ace editor APIs.
 

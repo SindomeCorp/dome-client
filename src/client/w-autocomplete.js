@@ -2,6 +2,35 @@ import { dome, logger } from "./b-variables.js";
 
 dome.autoCommands = [];
 
+const SUGGESTION_INPUT_GAP_PX = 6;
+const SUGGESTION_ROW_HEIGHT_PX = 24;
+
+const getSuggestionListHeight = (list, availableHeight) => {
+  const measuredHeight = list.getBoundingClientRect().height
+    || list.offsetHeight
+    || list.scrollHeight
+    || (list.children.length * SUGGESTION_ROW_HEIGHT_PX);
+
+  return Math.min(measuredHeight, availableHeight);
+};
+
+const positionSuggestionList = ({ list, inputBuffer }) => {
+  const rect = inputBuffer.getBoundingClientRect();
+  const availableAbove = Math.max(0, rect.top - SUGGESTION_INPUT_GAP_PX);
+  const listHeight = getSuggestionListHeight(list, availableAbove);
+  const top = Math.max(
+    window.scrollY,
+    rect.top + window.scrollY - listHeight - SUGGESTION_INPUT_GAP_PX
+  );
+
+  list.style.position = "absolute";
+  list.style.left = `${rect.left + window.scrollX}px`;
+  list.style.width = `${rect.width}px`;
+  list.style.maxHeight = `${availableAbove}px`;
+  list.style.overflowY = "auto";
+  list.style.top = `${top}px`;
+};
+
 dome.autoComplete = () => {
   const commandArgumentPattern = /<[-A-Z a-z]+>/g;
 
@@ -115,15 +144,7 @@ dome.autoComplete = () => {
             list.appendChild(li);
           });
           list.style.display = "block";
-          const rect = inputBuffer.getBoundingClientRect();
-          const top = Math.max(
-            0,
-            rect.top + window.scrollY - list.offsetHeight
-          );
-          list.style.position = "absolute";
-          list.style.left = `${rect.left + window.scrollX}px`;
-          list.style.width = `${rect.width}px`;
-          list.style.top = `${top}px`;
+          positionSuggestionList({ list, inputBuffer });
         };
 
         const onInput = () => {

@@ -110,7 +110,9 @@ test("typing displays matching suggestions", async () => {
   assert.ok(list.innerHTML.includes("say"));
   assert.equal(list.style.display, "block");
   assert.equal(list.style.zIndex, "1000");
-  assert.equal(list.style.top, "100px");
+  assert.equal(list.style.top, "70px");
+  assert.equal(list.style.maxHeight, "94px");
+  assert.equal(list.style.overflowY, "auto");
 });
 
 test("keyboard navigation and selection of suggestions", async () => {
