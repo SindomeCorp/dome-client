@@ -63,8 +63,9 @@ test("z-setup replaces existing socket and binds data handler", async t => {
 });
 
 test("z-setup surfaces setupSocket errors", async t => {
-  setupDom(t);
+  const window = setupDom(t);
   const origTimeout = globalThis.setTimeout;
+  t.mock.method(window, "setTimeout", fn => { fn(); });
   globalThis.setTimeout = fn => { fn(); };
   t.after(() => { globalThis.setTimeout = origTimeout; });
 
