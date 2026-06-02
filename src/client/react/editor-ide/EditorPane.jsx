@@ -1,3 +1,4 @@
+import React from "react";
 import { ObjectBrowser } from "./ObjectBrowser.jsx";
 import { PropertyBrowser } from "./PropertyBrowser.jsx";
 

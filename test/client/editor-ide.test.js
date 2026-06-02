@@ -117,7 +117,6 @@ async function buildEditorIdeBundle(t) {
     bundle: true,
     format: "esm",
     platform: "browser",
-    jsx: "automatic",
     external: ["react"],
     plugins: [
       {
@@ -380,6 +379,15 @@ test("EditorIDE keyboard shortcuts preserve current editor behavior", async (t) 
     ["input", "@program #12:look"],
     ["input", "initial\n."]
   ]);
+});
+
+test("EditorIDE renders shortcut overlay when bundled with the production JSX runtime", async (t) => {
+  const { window } = await renderEditorIde(t);
+
+  await keydown(window, "/", { ctrlKey: true });
+
+  assert.match(window.document.body.textContent, /Editor Shortcuts/);
+  assert.match(window.document.body.textContent, /Save tab/);
 });
 
 test("EditorIDE hover overlays request and reuse cached SDWC payloads", async (t) => {

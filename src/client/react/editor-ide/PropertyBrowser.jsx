@@ -1,3 +1,4 @@
+import React from "react";
 import { formatObjectPermissions } from "./payloads.js";
 
 export function PropertyBrowser({
