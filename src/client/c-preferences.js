@@ -8,6 +8,7 @@ import {
   FONT_CHOICES,
   normalizeHexColor
 } from "./client-option-schema.js";
+import { createClientOptionEffects } from "./client-option-effects.js";
 import {
   CLIENT_OPTION_NAME_ERROR,
   CLIENT_OPTION_VALUE_ERROR,
@@ -34,6 +35,22 @@ const INPUT_FONT_FAMILIES = {
   consolas: "\"Consolas\"",
 };
 const INPUT_FONT_CLASSES = FONT_CHOICES.map((font) => `${font}Text`);
+
+export function createClientOptionsActions({ client, doc, win, setupAutoscrollFn = setupAutoscroll }) {
+  return {
+    setClientOption: (name, value) => client.setClientOption?.(name, value),
+    parseClientOptionCommand: (command) => client.parseClientOptionCommand?.(command),
+    appendOutput: (text) => client.buffer?.append(text),
+    scrollBuffer: () => client.scrollBuffer?.(),
+    refreshAutoscroll: () => setupAutoscrollFn({ client, doc, win }),
+    getPreference: (name) => client.preferences?.[name],
+    setPreference: (name, value) => {
+      if (client.preferences) {
+        client.preferences[name] = value;
+      }
+    }
+  };
+}
 
 export function setupClientPreferences({
   client,
@@ -143,16 +160,17 @@ export function setupClientPreferences({
 
   client.applyInputReaderColorPreferences = applyInputReaderColorPreferences;
 
-  const setupCommandSuggestions = function() {
-    if (!client.inputReader) return;
-    setupAutoCompleteFeatureFn({ client, doc, win });
-    const acSetup = client.setupAutoComplete?.(client.inputReader, client.userType);
-    if (acSetup && typeof acSetup.then === "function") {
-      acSetup.then(() => applyTransparentOverlayPreference());
-    } else {
-      applyTransparentOverlayPreference();
-    }
-  };
+  const optionEffects = createClientOptionEffects({
+    client,
+    doc,
+    win,
+    setupAutoscroll: setupAutoscrollFn,
+    setupAutoCompleteFeature: setupAutoCompleteFeatureFn,
+    applyOutputBufferTextPreferences,
+    applyInputReaderTextPreferences,
+    applyInputReaderColorPreferences,
+    applyTransparentOverlayPreference
+  });
 
   const setClientOption = function(optionName, optionValue) {
     if (optionName === "shortenUrls" && !shortenFeatureEnabled) {
@@ -174,58 +192,10 @@ export function setupClientPreferences({
     options.save( optionDef.key, optionValue );
 
     if (client.preferences[ optionName ] != optionValue) {
+      const previousValue = client.preferences[optionName];
       client.buffer?.append("changing @client-option " + optionName + " to " + optionValue + "\n");
-      if (optionName === "colorSet") {
-        client.buffer?.classList.remove("colorset-" + client.preferences.colorSet);
-        client.inputReader?.classList.remove("colorset-" + client.preferences.colorSet);
-      }
-      if (optionName === "lineBufferFont") client.buffer?.classList.remove(client.preferences.lineBufferFont + "Text");
       client.preferences[optionName] = optionValue;
-      if (optionName === "playDing") {
-        client.alert.active = optionValue && !doc.hasFocus();
-      }
-      if (optionName === "lineBufferFont") {
-        client.buffer?.classList.add(client.preferences.lineBufferFont + "Text");
-      }
-      if (optionName === "lineBufferFontSizePt") {
-        applyOutputBufferTextPreferences();
-      }
-      if (optionName === "inputFont" || optionName === "inputFontSizePt") {
-        applyInputReaderTextPreferences();
-      }
-      if (optionName === "inputFontColor" || optionName === "inputBackgroundColor") {
-        applyInputReaderColorPreferences();
-      }
-      if (optionName === "editorFont") {
-        Object.values(client.spawned || {}).forEach((w) => {
-          w.postMessage({ type: "set-editor-font", font: optionValue }, "*");
-        });
-        client.ideWindow?.postMessage({ type: "ide-set-font", font: optionValue }, "*");
-      }
-      if (optionName === "colorSet" && client.preferences.colorSet != "normal") {
-        client.buffer?.classList.add("colorset-" + client.preferences.colorSet);
-        client.inputReader?.classList.add("colorset-" + client.preferences.colorSet);
-      }
-      if (optionName === "transparentOverlay") {
-        applyTransparentOverlayPreference(optionValue);
-      }
-      if ( optionName === "broadSearch" && client.preferences.commandSuggestions) {
-        if (client.inputReader) client.inputReader.commandSuggestions( "destroy" );
-        setupCommandSuggestions();
-      }
-      if ( optionName === "commandSuggestions") {
-        if (client.preferences.commandSuggestions) {
-          setupCommandSuggestions();
-        } else {
-          if (client.inputReader) client.inputReader.commandSuggestions( "destroy" );
-        }
-      }
-      if (optionName === "autoScroll" || optionName === "scrollUpToPause") {
-        setupAutoscrollFn({ client, doc, win });
-      }
-      if (optionName === "shortenUrls" && optionValue === true) {
-        if (client.socket) client.socket.emit("shorten-on", "shorten-on");
-      }
+      optionEffects.apply(optionName, optionValue, previousValue);
     }
   };
 
@@ -248,17 +218,5 @@ export function setupClientPreferences({
     if (client.scrollBuffer) client.scrollBuffer();
   };
 
-  setClientOptionsActions({
-    setClientOption: (name, value) => client.setClientOption?.(name, value),
-    parseClientOptionCommand: (command) => client.parseClientOptionCommand?.(command),
-    appendOutput: (text) => client.buffer?.append(text),
-    scrollBuffer: () => client.scrollBuffer?.(),
-    refreshAutoscroll: () => setupAutoscrollFn({ client, doc, win }),
-    getPreference: (name) => client.preferences?.[name],
-    setPreference: (name, value) => {
-      if (client.preferences) {
-        client.preferences[name] = value;
-      }
-    }
-  });
+  setClientOptionsActions(createClientOptionsActions({ client, doc, win, setupAutoscrollFn }));
 }

@@ -12,15 +12,16 @@ import {
 } from "./button-workflows.js";
 import { attachImagePreview, toggleImagePreview } from "./image-preview.js";
 
-export function setupButtons({
-  client,
-  doc = globalThis.document,
-  setupSocketFn = setupSocket
-} = {}) {
+export function setupConnectionButtons({ client, setupSocketFn = setupSocket } = {}) {
   client.reconnectButton = toElement(client.reconnectButton);
   bindReconnectButton({ button: client.reconnectButton, client, setupSocket: setupSocketFn });
-  bindSaveLogButtons({ buttons: client.saveButton, client, logger });
+}
 
+export function setupLogButtons({ client } = {}) {
+  bindSaveLogButtons({ buttons: client.saveButton, client, logger });
+}
+
+export function setupOverlayButtons({ client, doc = globalThis.document } = {}) {
   client.clearButton = toElement(client.clearButton);
   client.clearBufferOverlay = toElement(client.clearBufferOverlay);
   client.clearBufferConfirmButton = toElement(client.clearBufferConfirmButton);
@@ -60,7 +61,9 @@ export function setupButtons({
     documentRef: doc,
     overlays: [client.clientOptionsOverlay, client.shortcutsOverlay, client.clearBufferOverlay]
   });
+}
 
+export function setupImageButtons({ client } = {}) {
   client.attachImage = function(elem, imageId, url) {
     attachImagePreview({
       elem,
@@ -81,4 +84,15 @@ export function setupButtons({
       logger
     });
   };
+}
+
+export function setupButtons({
+  client,
+  doc = globalThis.document,
+  setupSocketFn = setupSocket
+} = {}) {
+  setupConnectionButtons({ client, setupSocketFn });
+  setupLogButtons({ client });
+  setupOverlayButtons({ client, doc });
+  setupImageButtons({ client });
 }
