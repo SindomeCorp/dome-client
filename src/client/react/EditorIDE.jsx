@@ -13,10 +13,7 @@ import {
   getSaveMessages
 } from "./editor-ide/protocol.js";
 import {
-  formatObjectPermissions,
-  formatOverlayValue,
   getOverlayCacheKeys,
-  getOverlayDisplayObjectId,
   normalizeObjectPropertiesPayload,
   normalizeObjectVerbsPayload,
   sortByLabel,
@@ -34,6 +31,12 @@ import { useAceEditors } from "./editor-ide/useAceEditors.js";
 import { useIdeConfig } from "./editor-ide/useIdeConfig.js";
 import { useIdeMessages } from "./editor-ide/useIdeMessages.js";
 import { usePersistentPreference } from "./editor-ide/usePersistentPreference.js";
+import { EditorPane } from "./editor-ide/EditorPane.jsx";
+import { EditorToolbar } from "./editor-ide/EditorToolbar.jsx";
+import { HoverOverlay } from "./editor-ide/HoverOverlay.jsx";
+import { ShortcutDialog } from "./editor-ide/ShortcutDialog.jsx";
+import { TabStrip } from "./editor-ide/TabStrip.jsx";
+import { VmsPromptDialog } from "./editor-ide/VmsPromptDialog.jsx";
 
 const EMPTY_VMS_PROMPT_STATE = { open: false, tabId: null, value: "" };
 
@@ -531,629 +534,82 @@ export default function EditorIDE() {
 
   return (
     <div className="h-dvh w-dvw bg-bg-canvas text-ink">
-      {showShortcuts && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50"
-          onClick={() => setShowShortcuts(false)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="bg-bg-surface text-ink rounded-lg shadow-card p-3 sm:p-6 w-[min(96vw,56rem)] max-h-[88vh] overflow-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-lg sm:text-2xl font-semibold mb-3 sm:mb-4">Editor Shortcuts</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[34rem] text-left border-collapse table-auto whitespace-nowrap">
-                <thead>
-                  <tr className="text-sm sm:text-base text-ink-muted">
-                    <th className="px-2 sm:px-4 pb-2">Action</th>
-                    <th className="px-2 sm:px-4 pb-2">macOS</th>
-                    <th className="px-2 sm:px-4 pb-2">Windows/Linux</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm sm:text-base">
-                <tr>
-                  <td className="py-1 px-2 sm:px-4">Save tab</td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ S</kbd></td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl S</kbd></td>
-                </tr>
-                <tr>
-                  <td className="py-1 px-2 sm:px-4">Close tab</td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ E</kbd></td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl E</kbd></td>
-                </tr>
-                <tr>
-                  <td className="py-1 px-2 sm:px-4">Enable VIM mode</td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ 1</kbd></td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl 1</kbd></td>
-                </tr>
-                <tr>
-                  <td className="py-1 px-2 sm:px-4">Disable VIM mode</td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ 0</kbd></td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl 0</kbd></td>
-                </tr>
-                <tr>
-                  <td className="py-1 px-2 sm:px-4">Previous tab</td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ [</kbd></td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl [</kbd></td>
-                </tr>
-                <tr>
-                  <td className="py-1 px-2 sm:px-4">Next tab</td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ ]</kbd></td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl ]</kbd></td>
-                </tr>
-                <tr>
-                  <td className="py-1 px-2 sm:px-4">Toggle word wrap</td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl Shift L</kbd></td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl Shift L</kbd></td>
-                </tr>
-                <tr>
-                  <td className="py-1 px-2 sm:px-4">Toggle tab alignment</td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ ⇧ X</kbd></td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl Shift X</kbd></td>
-                </tr>
-                <tr>
-                  <td className="py-1 px-2 sm:px-4">Toggle shortcuts overlay</td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ /</kbd></td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl /</kbd></td>
-                </tr>
-                <tr>
-                  <td className="py-1 px-2 sm:px-4">Edit Verb / Prop</td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ Click ref</kbd></td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl Click ref</kbd></td>
-                </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+      {showShortcuts && <ShortcutDialog onClose={() => setShowShortcuts(false)} />}
       <div className="h-full w-full p-1">
         <div className="h-full w-full mx-auto rounded-xl bg-bg-surface shadow-card border border-line-subtle overflow-hidden flex flex-col">
 
-          {/* Status/controls row — ORDER: Orientation | Theme | (center) Editing Mode | Status | Save */}
-          <div className="px-2 py-2 md:px-4 md:py-3 border-b border-line-subtle bg-bg-surface">
-            <div className="flex flex-wrap md:flex-nowrap items-center gap-1 md:gap-2">
-              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                {/* LEFT: Orientation control */}
-                <div
-                  className="inline-flex shrink-0 rounded-md overflow-hidden border border-line-subtle bg-bg-sunken"
-                  role="group"
-                  aria-label="Tab orientation"
-                >
-                  <button
-                    onClick={() => setOrientationPersist("top")}
-                    aria-pressed={orientation === "top"}
-                    aria-label="Horizontal tabs (top)"
-                    title="Horizontal tabs (top)"
-                    className={`px-1 py-0.5 text-[11px] md:px-3 md:py-2 md:text-base ${
-                      orientation === "top"
-                        ? "bg-bg-surface text-ink"
-                        : "text-ink-muted hover:text-ink hover:bg-bg-surface"
-                    }`}
-                  >
-                    ☰
-                  </button>
-                  <button
-                    onClick={() => setOrientationPersist("left")}
-                    aria-pressed={orientation === "left"}
-                    aria-label="Vertical tabs (left)"
-                    title="Vertical tabs (left)"
-                    className={`px-1 py-0.5 text-[11px] md:px-3 md:py-2 md:text-base ${
-                      orientation === "left"
-                        ? "bg-bg-surface text-ink"
-                        : "text-ink-muted hover:text-ink hover:bg-bg-surface"
-                    }`}
-                  >
-                    ⋮
-                  </button>
-                </div>
-
-                {/* NEXT: Theme toggle */}
-                <button
-                  onClick={toggleTheme}
-                  className="px-1 py-0.5 text-[11px] md:px-3 md:py-2 md:text-base rounded-md border border-line-subtle bg-bg-sunken hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-                  aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-                  title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-                >
-                  {darkMode ? "☀" : "🌙"}
-                </button>
-
-                {/* Word wrap toggle */}
-                <button
-                  onClick={toggleWordWrap}
-                  className={`px-1 py-0.5 text-[11px] md:px-3 md:py-2 md:text-base rounded-md border bg-bg-sunken hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ${
-                    wordWrap ? "border-brand-500 ring-1 ring-brand-500/40" : "border-line-subtle"
-                  }`}
-                  aria-label={wordWrap ? "Disable word wrap" : "Enable word wrap"}
-                  title={`${wordWrap ? "Disable" : "Enable"} word wrap for all tabs (Ctrl Shift L)`}
-                >
-                  {wordWrap ? "↩" : "→"}
-                </button>
-
-                {/* Shortcuts overlay toggle */}
-                <button
-                  onClick={() => setShowShortcuts(true)}
-                  className="px-1 py-0.5 text-[11px] md:px-3 md:py-2 md:text-base rounded-md border border-line-subtle bg-bg-sunken hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-                  aria-label="Show editor shortcuts"
-                  title="Show editor shortcuts (⌘/Ctrl+/)"
-                >
-                  ⌨
-                </button>
-
-                {/* Add Scratch tab */}
-                <button
-                  onClick={addScratch}
-                  className="px-1 py-0.5 text-[11px] md:px-4 md:py-2 md:text-base rounded-md border border-line-subtle bg-bg-sunken hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-                  title="Add temporary scratch pad"
-                >
-                  Add Scratch
-                </button>
-
-                {/* View Scratch */}
-                <button
-                  onClick={viewSavedScratch}
-                  className="px-1 py-0.5 text-[11px] md:px-4 md:py-2 md:text-base rounded-md border border-line-subtle bg-bg-sunken hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-                  title="View saved scratch pad"
-                >
-                  View Scratch
-                </button>
-              </div>
-
-              {/* CENTER: Editing mode (large screens) */}
-              <div className="hidden md:block flex-1 min-w-0 text-center text-lg text-ink-muted truncate">
-                {editingLabel}
-              </div>
-
-              {/* RIGHT: Status then Save */}
-              <div className="ml-auto flex items-center gap-1 md:gap-3">
-                {!isBrowserActive && (
-                  <div className="flex items-center gap-1 md:gap-2 text-[11px] md:text-lg">
-                    <span
-                      className={`inline-flex items-center gap-1 font-medium ${
-                        activeTab?.dirty ? "text-warn-500" : "text-ok-500"
-                      }`}
-                    >
-                      <span
-                        className={`w-2.5 h-2.5 rounded-full ${
-                          activeTab?.dirty ? "bg-warn-500" : "bg-ok-500"
-                        }`}
-                      />
-                      {activeTab?.dirty ? "Unsaved" : "Saved"}
-                    </span>
-                  </div>
-                )}
-
-              {activeTab?.commandTarget &&
-                activeTab.commandTarget !== "none" && (
-                <button
-                  onClick={onSave}
-                  className="inline-flex items-center gap-1 md:gap-2 px-1 py-0.5 text-[11px] md:px-4 md:py-2 md:text-base rounded-md bg-brand-600 text-ink-invert hover:bg-brand-500 active:translate-y-[0.5px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
-                  title="Save active tab (⌘/Ctrl+S)"
-                >
-                  <svg className="w-3.5 h-3.5 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path
-                      d="M5 21h14V7l-4-4H5v18Zm3-3h8M9 3v4h6"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  Save
-                </button>
-              )}
-
-                <button
-                  onClick={() => (active !== null ? onClose(active) : window.close())}
-                  className="inline-flex items-center gap-1 md:gap-2 px-1 py-0.5 text-[11px] md:px-4 md:py-2 md:text-base rounded-md bg-red-600 text-ink-invert hover:bg-red-500 active:translate-y-[0.5px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
-                  title="Close active tab (⌘/Ctrl+E)"
-                >
-                  <svg className="w-3.5 h-3.5 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path
-                      d="M6 6l12 12M6 18L18 6"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  Close
-                </button>
-              </div>
-            </div>
-
-            {/* CENTER: Editing mode (small screens) */}
-            <div className="mt-1 text-center text-xs text-ink-muted truncate md:hidden">
-              {editingLabel}
-            </div>
-          </div>
+          <EditorToolbar
+            active={active}
+            activeTab={activeTab}
+            darkMode={darkMode}
+            editingLabel={editingLabel}
+            isBrowserActive={isBrowserActive}
+            onAddScratch={addScratch}
+            onClose={onClose}
+            onSave={onSave}
+            onShowShortcuts={() => setShowShortcuts(true)}
+            onToggleTheme={toggleTheme}
+            onToggleWordWrap={toggleWordWrap}
+            onViewSavedScratch={viewSavedScratch}
+            orientation={orientation}
+            setOrientation={setOrientationPersist}
+            wordWrap={wordWrap}
+          />
 
           {/* Tabs & editors */}
           <div className={`flex-1 flex min-h-0 ${orientation === "left" ? "" : "flex-col"}`}>
-            <div
-              className={`${
-                orientation === "left"
-                  // ✨ Responsive left dock: grows with viewport, but bounded
-                  ? "w-[clamp(14rem,24vw,28rem)] flex-none h-full overflow-y-auto border-r border-line-subtle bg-bg-sunken"
-                  : "flex-none whitespace-nowrap overflow-x-auto border-b border-line-subtle bg-bg-sunken -mb-px"
-              }`}
-              role="tablist"
-              aria-orientation={orientation === "left" ? "vertical" : "horizontal"}
-            >
-              <div className={`flex ${orientation === "left" ? "flex-col" : "items-end gap-2 px-3 py-2"}`}>
-                {tabs.map((t) => {
-                  const dirty = t.dirty;
-                  const isActive = active === t.id;
-                  const isProgramTab = t.command === "@program";
-
-                  const baseTab =
-                    "relative pr-9 group flex items-center gap-2 px-3 py-2 text-sm sm:text-base rounded-md border transition";
-                  const activeStyles = "bg-bg-surface shadow-sm border-line-strong";
-                  const inactiveStyles = "border-line-subtle hover:bg-bg-sunken";
-                  const programOutline = isProgramTab ? "border-b-2 border-b-yellow-300" : "";
-
-                  return orientation === "left" ? (
-                    <div
-                      key={t.id}
-                      role="tab"
-                      aria-selected={isActive}
-                      tabIndex={isActive ? 0 : -1}
-                      className={`${baseTab} ${isActive ? activeStyles : inactiveStyles} ${programOutline}`}
-                      onClick={() => setActive(t.id)}
-                      title={t.title}
-                    >
-                      {/* Tooltip (shows on hover anywhere over the tab) */}
-                      <div className="absolute left-0 bottom-full mb-1 z-30 hidden group-hover:block pointer-events-none">
-                        <div className="px-2 py-1 rounded bg-ink text-ink-invert text-sm shadow-card whitespace-nowrap">
-                          {t.title}
-                        </div>
-                      </div>
-
-                      <svg className="w-5 h-5 text-ink-muted group-hover:text-ink" />
-                      <span className="truncate">{t.title}{dirty ? " *" : ""}</span>
-
-                      {/* scalable dirty/saved dot */}
-                      {t.tabType !== "object-browser" && t.tabType !== "property-browser" && (
-                        <span
-                          className={`ml-auto mr-8 inline-block rounded-full w-[0.9em] h-[0.9em] ${
-                            dirty ? "bg-warn-500" : "bg-ok-500"
-                          }`}
-                          aria-hidden="true"
-                        />
-                      )}
-
-                      {/* Larger close button */}
-                      <button
-                        className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded hover:bg-bg-sunken text-xl leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onClose(t.id);
-                        }}
-                        title="Close tab (⌘/Ctrl+E)"
-                        aria-label={`Close ${t.title}`}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      key={t.id}
-                      role="tab"
-                      aria-selected={isActive}
-                      tabIndex={isActive ? 0 : -1}
-                      className={`${baseTab} rounded-t-md ${isActive ? activeStyles : inactiveStyles} ${programOutline}`}
-                      onClick={() => setActive(t.id)}
-                      title={t.title}
-                    >
-                      {/* Tooltip for top tabs */}
-                      <div className="absolute left-0 bottom-full mb-1 z-30 hidden group-hover:block pointer-events-none">
-                        <div className="px-2 py-1 rounded bg-ink text-ink-invert text-sm shadow-card whitespace-nowrap">
-                          {t.title}
-                        </div>
-                      </div>
-
-                      <svg className="w-5 h-5 text-ink-muted group-hover:text-ink" />
-                      <span className="truncate max-w-[16rem]">{t.title}{dirty ? " *" : ""}</span>
-
-                      {t.tabType !== "object-browser" && t.tabType !== "property-browser" && (
-                        <span
-                          className={`ml-auto mr-8 inline-block rounded-full w-[0.9em] h-[0.9em] ${
-                            dirty ? "bg-warn-500" : "bg-ok-500"
-                          }`}
-                          aria-hidden="true"
-                        />
-                      )}
-
-                      <button
-                        className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded hover:bg-bg-sunken text-xl leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onClose(t.id);
-                        }}
-                        title="Close tab (⌘/Ctrl+E)"
-                        aria-label={`Close ${t.title}`}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <TabStrip
+              active={active}
+              onActivate={setActive}
+              onClose={onClose}
+              orientation={orientation}
+              tabs={tabs}
+            />
 
             <div className="flex-1 relative bg-bg-surface">
-              {tabs.map((t) => (
-                <div key={t.id} className={active === t.id ? "absolute inset-0" : "hidden"}>
-                  {t.tabType === "object-browser" ? (
-                    <div className="object-browser-pane w-full h-full bg-bg-sunken text-ink p-4 overflow-auto">
-                      <div className="max-w-7xl">
-                        <div className="mb-4">
-                          <h2 className="text-xl font-semibold">Object Browser</h2>
-                          <p className="text-base text-ink-muted">Loaded objects and verbs for quick navigation.</p>
-                        </div>
-                      </div>
-                      <div className="max-w-7xl">
-                        {Object.keys(objectGraph).length === 0 ? (
-                          <div className="rounded-md border border-line-subtle bg-bg-surface p-4 text-ink-muted">No objects yet.</div>
-                        ) : (
-                          Object.entries(objectGraph)
-                            .sort((a, b) => a[0].localeCompare(b[0], undefined, { sensitivity: "base" }))
-                            .map(([objectId, verbs]) => (
-                              <section key={objectId} className="mb-4 rounded-md border border-line-subtle bg-bg-surface p-3">
-                                {(() => {
-                                  const isCollapsed = collapsedObjects[objectId] ?? true;
-                                  return (
-                                    <>
-                                <div className="flex items-center gap-3 mb-1">
-                                  <button
-                                    type="button"
-                                    className="text-ink-muted hover:text-ink font-semibold"
-                                    onClick={() => toggleObjectCollapsed(objectId)}
-                                    aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${objectId}`}
-                                  >
-                                    {isCollapsed ? "[+]" : "[-]"} {objectId}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="text-sm text-brand-600 hover:text-brand-500 hover:underline"
-                                    onClick={() => onLoadVerbs(objectId)}
-                                  >
-                                    Load Verbs
-                                  </button>
-                                </div>
-                                {!isCollapsed && (
-                                  <div className="mt-2 space-y-1 text-lg">
-                                    <div className="rounded-sm bg-bg-canvas/40 px-2 py-1 text-sm text-ink-muted">
-                                      <div className="grid grid-cols-[minmax(12rem,2fr)_minmax(10rem,2fr)_minmax(8rem,1fr)_minmax(7rem,1fr)_minmax(18rem,3fr)] gap-3 items-start font-semibold">
-                                        <span>Verb</span>
-                                        <span>Args</span>
-                                        <span>Owner</span>
-                                        <span>Perms</span>
-                                        <span>Last Updated</span>
-                                      </div>
-                                    </div>
-                                    {verbs.map((verb, idx) => {
-                                      const aliases = String(verb.verbName || "").trim().split(/\s+/).filter(Boolean);
-                                      const primaryAlias = aliases[0] || "";
-                                      const extraAliases = aliases.slice(1);
-                                      const rowBgClass = idx % 2 === 0
-                                        ? "bg-bg-canvas/85"
-                                        : "bg-bg-sunken/85 border border-line-subtle/60";
-                                      return (
-                                        <div key={`${objectId}:${verb.verbName}`} className={`rounded-sm ${rowBgClass} px-2 py-1`}>
-                                          <div className="grid grid-cols-[minmax(12rem,2fr)_minmax(10rem,2fr)_minmax(8rem,1fr)_minmax(7rem,1fr)_minmax(18rem,3fr)] gap-3 items-start">
-                                            <button
-                                              type="button"
-                                              className="text-left text-lg text-yellow-300 hover:text-yellow-200 no-underline hover:underline"
-                                              onClick={() => onEditVerb(objectId, primaryAlias)}
-                                            >
-                                              {primaryAlias}
-                                            </button>
-                                            <span className="text-ink-muted">{verb.argumentsText || "none"}</span>
-                                            <span className="text-ink-muted">{verb.owner || "none"}</span>
-                                            <span className="text-ink-muted">{verb.permissions || "none"}</span>
-                                            <span className="text-ink-muted">{verb.lastUpdated || "none"}</span>
-                                          </div>
-                                          {extraAliases.map((alias) => (
-                                            <div
-                                              key={`${objectId}:${verb.verbName}:${alias}`}
-                                              className="mt-1 pl-3 text-lg text-yellow-100"
-                                            >
-                                              ^ {alias}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                                    </>
-                                  );
-                                })()}
-                              </section>
-                            ))
-                        )}
-                      </div>
-                    </div>
-                  ) : t.tabType === "property-browser" ? (
-                    <div className="property-browser-pane w-full h-full bg-bg-sunken text-ink p-4 overflow-auto">
-                      <div className="max-w-7xl">
-                        <div className="mb-4">
-                          <h2 className="text-xl font-semibold">Property Browser</h2>
-                          <p className="text-base text-ink-muted">Loaded objects and properties for quick navigation.</p>
-                        </div>
-                      </div>
-                      <div className="max-w-7xl">
-                        {Object.keys(propertyGraph).length === 0 ? (
-                          <div className="rounded-md border border-line-subtle bg-bg-surface p-4 text-ink-muted">No objects yet.</div>
-                        ) : (
-                          Object.entries(propertyGraph)
-                            .sort((a, b) => a[0].localeCompare(b[0], undefined, { sensitivity: "base" }))
-                            .map(([objectId, properties]) => (
-                              <section key={objectId} className="mb-4 rounded-md border border-line-subtle bg-bg-surface p-3">
-                                {(() => {
-                                  const isCollapsed = collapsedProperties[objectId] ?? true;
-                                  const meta = propertyObjectMeta[objectId] || {};
-                                  const permissionsText = formatObjectPermissions(meta.flags) || "none";
-                                  const objectLabel = meta.name ? `${meta.name} (${objectId})` : objectId;
-                                  const summary = `${objectLabel} | Owner: ${meta.owner || "none"} | Parent: ${meta.parent || "none"} | Permissions: ${permissionsText}`;
-                                  return (
-                                    <>
-                                      <div className="flex items-center gap-3 mb-1">
-                                        <button
-                                          type="button"
-                                          className="text-ink-muted hover:text-ink font-semibold"
-                                          onClick={() => togglePropertyCollapsed(objectId)}
-                                          aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${objectId}`}
-                                        >
-                                          {isCollapsed ? "[+]" : "[-]"} {summary}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="text-sm text-brand-600 hover:text-brand-500 hover:underline"
-                                          onClick={() => onLoadProps(objectId)}
-                                        >
-                                          load props
-                                        </button>
-                                      </div>
-                                      {!isCollapsed && (
-                                        <div className="mt-2 space-y-1 text-lg">
-                                          <div className="rounded-sm bg-bg-canvas/40 px-2 py-1 text-sm text-ink-muted">
-                                            <div className="grid grid-cols-[minmax(12rem,2fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_minmax(8rem,1fr)] gap-3 items-start font-semibold">
-                                              <span>Prop name</span>
-                                              <span>Is Clear</span>
-                                              <span>Owner</span>
-                                              <span>Perms</span>
-                                            </div>
-                                          </div>
-                                          {properties.map((property, idx) => {
-                                            const rowBgClass = idx % 2 === 0
-                                              ? "bg-bg-canvas/85"
-                                              : "bg-bg-sunken/85 border border-line-subtle/60";
-                                            return (
-                                              <div key={`${objectId}.${property.propertyName}`} className={`rounded-sm ${rowBgClass} px-2 py-1`}>
-                                                <div className="grid grid-cols-[minmax(12rem,2fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_minmax(8rem,1fr)] gap-3 items-start">
-                                                  <button
-                                                    type="button"
-                                                    className="text-left text-lg text-yellow-300 hover:text-yellow-200 no-underline hover:underline"
-                                                    onClick={() => onEditProperty(objectId, property.propertyName)}
-                                                  >
-                                                    {property.propertyName}
-                                                  </button>
-                                                  <span className="text-ink-muted">{property.clear ? "clear" : ""}</span>
-                                                  <span className="text-ink-muted">{property.owner || ""}</span>
-                                                  <span className="text-ink-muted">{property.permissions || ""}</span>
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      )}
-                                    </>
-                                  );
-                                })()}
-                              </section>
-                            ))
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="w-full h-full flex flex-col">
-                      {ideVmsNoteEnabled && t.command === "@program" && String(t.vmsNote || "").trim() !== "" && (
-                        <div className="px-4 pt-4 pb-2 border-b border-line-subtle bg-bg-surface">
-                          <label className="block text-sm font-medium text-ink-muted mb-1" htmlFor={`vms-note-${t.id}`}>
-                            VMS Note
-                          </label>
-                          <input
-                            id={`vms-note-${t.id}`}
-                            type="text"
-                            value={t.vmsNote || ""}
-                            onChange={(e) => {
-                              const next = e.target.value;
-                              setTabs((ts) => ts.map((tab) => (tab.id === t.id ? { ...tab, vmsNote: next } : tab)));
-                            }}
-                            className="w-full px-3 py-2 rounded-md border border-line-subtle bg-bg-sunken text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-                            placeholder="Enter VMS note"
-                            aria-label="VMS note"
-                          />
-                        </div>
-                      )}
-                      <div
-                        ref={(node) => setEditorRef(t.id, node, t.content, t.command, t.commandTarget)}
-                        className="w-full flex-1"
-                      />
-                    </div>
-                  )}
-                </div>
+              {tabs.map((tab) => (
+                <EditorPane
+                  key={tab.id}
+                  active={active}
+                  browserProps={{
+                    objectBrowser: {
+                      collapsedObjects,
+                      objectGraph,
+                      onEditVerb,
+                      onLoadVerbs,
+                      onToggleCollapsed: toggleObjectCollapsed
+                    },
+                    propertyBrowser: {
+                      collapsedProperties,
+                      onEditProperty,
+                      onLoadProps,
+                      onToggleCollapsed: togglePropertyCollapsed,
+                      propertyGraph,
+                      propertyObjectMeta
+                    }
+                  }}
+                  ideVmsNoteEnabled={ideVmsNoteEnabled}
+                  onUpdateVmsNote={(tabId, vmsNote) => {
+                    setTabs((ts) => ts.map((item) => (item.id === tabId ? { ...item, vmsNote } : item)));
+                  }}
+                  setEditorRef={setEditorRef}
+                  tab={tab}
+                />
               ))}
             </div>
           </div>
 
         </div>
       </div>
-      {hoverOverlay && (
-        <div
-          className="sdwc-hover-overlay fixed z-50 min-w-[90ch] max-w-[110ch] rounded-md border border-line-subtle bg-bg-surface/95 shadow-card p-4 text-lg"
-          style={{ left: hoverOverlay.x, top: hoverOverlay.y }}
-        >
-          <div className="font-semibold text-ink mb-2">
-            {hoverOverlay.kind === "verb"
-              ? `${getOverlayDisplayObjectId(hoverOverlay)}:${hoverOverlay.itemName}`
-              : `${getOverlayDisplayObjectId(hoverOverlay)}.${hoverOverlay.itemName}`}
-          </div>
-          {hoverOverlay.loading ? (
-            <div className="text-ink-muted">Loading...</div>
-          ) : (
-            <pre className="text-base text-ink-muted whitespace-pre-wrap break-words max-h-56 overflow-auto m-0">
-              {formatOverlayValue(hoverOverlay.payload)}
-            </pre>
-          )}
-        </div>
-      )}
-      {ideVmsNoteEnabled && vmsPrompt.open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50"
-          onClick={cancelVmsPrompt}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="VMS save note prompt"
-            className="bg-bg-surface text-ink rounded-lg border border-line-subtle shadow-card p-6 w-full max-w-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-3xl font-semibold mb-2">VMS Save Note</h2>
-            <p className="text-lg text-ink-muted mb-4">Add a note for this verb save. Press Enter to submit or Esc to cancel.</p>
-            <input
-              ref={vmsPromptInputRef}
-              type="text"
-              value={vmsPrompt.value}
-              onChange={(e) => setVmsPrompt((prev) => ({ ...prev, value: e.target.value }))}
-              className="w-full px-3 py-2 rounded-md border border-line-subtle bg-bg-sunken text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-              placeholder="Optional VMS note"
-              aria-label="VMS note prompt input"
-            />
-            <div className="mt-4 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={cancelVmsPrompt}
-                className="px-4 py-2 text-base rounded-md border border-line-subtle bg-bg-sunken hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={submitVmsPrompt}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-600 text-ink-invert hover:bg-brand-500 active:translate-y-[0.5px] transition text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
-              >
-                Submit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <HoverOverlay overlay={hoverOverlay} />
+      <VmsPromptDialog
+        enabled={ideVmsNoteEnabled}
+        inputRef={vmsPromptInputRef}
+        onCancel={cancelVmsPrompt}
+        onChange={(value) => setVmsPrompt((prev) => ({ ...prev, value }))}
+        onSubmit={submitVmsPrompt}
+        prompt={vmsPrompt}
+      />
     </div>
   );
 }
