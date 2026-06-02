@@ -49,21 +49,23 @@ test("initClient composes setup hooks with explicit client context", () => {
     parseSocketData: () => {}
   };
   const hooks = {
-    setupInputReader: () => calls.push("setupInputReader"),
     setupAutoComplete: () => calls.push("setupAutoComplete"),
+    setupHealthCheck: () => calls.push("setupHealthCheck")
+  };
+  const features = {
+    setupAutoCompleteFeature: () => calls.push("setupAutoCompleteFeature"),
+    setupInputReader: () => calls.push("setupInputReader"),
     setupWindowHandlers: () => calls.push("setupWindowHandlers"),
     setupEditorSupport: () => calls.push("setupEditorSupport"),
     setupAutoscroll: () => calls.push("setupAutoscroll"),
+    setupButtons: () => calls.push("setupButtons"),
+    setupChevronToggle: () => calls.push("setupChevronToggle"),
     setupHealthCheck: () => calls.push("setupHealthCheck"),
     setupOutputParser: () => calls.push("setupOutputParser"),
     setupSocket: () => {
       calls.push("setupSocket");
       return socket;
     }
-  };
-  const features = {
-    setupButtons: () => calls.push("setupButtons"),
-    setupChevronToggle: () => calls.push("setupChevronToggle")
   };
   window.setTimeout = fn => {
     fn();
@@ -72,7 +74,8 @@ test("initClient composes setup hooks with explicit client context", () => {
 
   initClient({ client, win: window, doc: window.document, hooks, features });
 
-  assert.deepEqual(calls.slice(0, 8), [
+  assert.deepEqual(calls.slice(0, 9), [
+    "setupAutoCompleteFeature",
     "setupInputReader",
     "setupWindowHandlers",
     "setupEditorSupport",
@@ -82,8 +85,8 @@ test("initClient composes setup hooks with explicit client context", () => {
     "setupHealthCheck",
     "setupOutputParser"
   ]);
-  assert.equal(calls[8], "setupSocket");
-  assert.deepEqual(calls[9], ["socket.on", "data", client.parseSocketData]);
+  assert.equal(calls[9], "setupSocket");
+  assert.deepEqual(calls[10], ["socket.on", "data", client.parseSocketData]);
   assert.equal(client.client, window.document.querySelector("#browser-client"));
   assert.equal(client.inputReader, window.document.querySelector("#inputBuffer"));
   assert.equal(typeof window.DomeBridge.sendInput, "function");
@@ -105,20 +108,22 @@ test("initClient installs native socket shim when DomeNative is available", () =
     parseSocketData: () => {}
   };
   const hooks = {
-    setupInputReader: () => {},
     setupAutoComplete: () => {},
+    setupHealthCheck: () => {}
+  };
+  const features = {
+    setupAutoCompleteFeature: () => {},
+    setupInputReader: () => {},
     setupWindowHandlers: () => {},
     setupEditorSupport: () => {},
     setupAutoscroll: () => {},
+    setupButtons: () => {},
+    setupChevronToggle: () => {},
     setupHealthCheck: () => {},
     setupOutputParser: () => {},
     setupSocket: () => {
       throw new Error("browser socket should not start");
     }
-  };
-  const features = {
-    setupButtons: () => {},
-    setupChevronToggle: () => {}
   };
 
   initClient({ client, win: window, doc: window.document, hooks, features });
@@ -148,4 +153,12 @@ test("createClientFeatureSet exposes directly imported setup features", () => {
 
   assert.equal(typeof features.setupButtons, "function");
   assert.equal(typeof features.setupChevronToggle, "function");
+  assert.equal(typeof features.setupEditorSupport, "function");
+  assert.equal(typeof features.setupWindowHandlers, "function");
+  assert.equal(typeof features.setupAutoscroll, "function");
+  assert.equal(typeof features.setupOutputParser, "function");
+  assert.equal(typeof features.setupAutoCompleteFeature, "function");
+  assert.equal(typeof features.setupInputReader, "function");
+  assert.equal(typeof features.setupHealthCheck, "function");
+  assert.equal(typeof features.setupSocket, "function");
 });

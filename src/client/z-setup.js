@@ -1,10 +1,26 @@
 import { dome, SOCKET_STATE_ENUM, setSocket } from "./b-variables.js";
 import { setupChevronToggle } from "./chevron-toggle.js";
+import { setupInputReader } from "./d-inputreader.js";
+import { setupWindowHandlers } from "./e-window.js";
+import { setupOutputParser } from "./f-buffer.js";
+import { setupSocket } from "./g-socket-lifecycle.js";
+import { setupEditorSupport } from "./s-editor.js";
+import { setupAutoscroll } from "./t-autoscroll.js";
 import { setupButtons } from "./u-buttons.js";
+import { setupAutoCompleteFeature } from "./w-autocomplete.js";
+import { setupHealthCheck } from "./y-health.js";
 
 export const createClientFeatureSet = () => ({
+  setupAutoCompleteFeature,
+  setupAutoscroll,
   setupButtons,
-  setupChevronToggle
+  setupChevronToggle,
+  setupEditorSupport,
+  setupHealthCheck,
+  setupInputReader,
+  setupOutputParser,
+  setupSocket,
+  setupWindowHandlers
 });
 
 export const createClientSetupHooks = (client = dome) => ({
@@ -73,7 +89,12 @@ const applyTransparentOverlayPreference = ({ client, doc }) => {
   });
 };
 
-export const applyInitialClientPreferences = ({ client = dome, doc = globalThis.document, hooks = createClientSetupHooks(client) }) => {
+export const applyInitialClientPreferences = ({
+  client = dome,
+  doc = globalThis.document,
+  hooks = createClientSetupHooks(client),
+  features = createClientFeatureSet()
+}) => {
   const preferences = client.readPreferences();
   client.preferences = preferences;
 
@@ -90,7 +111,7 @@ export const applyInitialClientPreferences = ({ client = dome, doc = globalThis.
   client.applyInputReaderColorPreferences?.();
 
   if (client.inputReader) {
-    hooks.setupInputReader();
+    features.setupInputReader({ client, doc });
     if (preferences.commandSuggestions && client.autoComplete != null) {
       client.autoComplete();
       const acSetup = hooks.setupAutoComplete(client.inputReader, client.userType);
@@ -112,13 +133,13 @@ export const setupClientFeatures = ({
   hooks = createClientSetupHooks(client),
   features = createClientFeatureSet()
 } = {}) => {
-  hooks.setupWindowHandlers();
-  hooks.setupEditorSupport();
-  hooks.setupAutoscroll();
+  features.setupWindowHandlers({ client, doc, win });
+  features.setupEditorSupport({ client, doc, win });
+  features.setupAutoscroll({ client, doc, win });
   features.setupButtons({ client, doc, win });
   features.setupChevronToggle({ client, doc, win });
-  hooks.setupHealthCheck();
-  hooks.setupOutputParser();
+  features.setupHealthCheck({ client, doc, win });
+  features.setupOutputParser({ client, doc, win });
 };
 
 export const installDomeBridge = ({ client = dome, win = globalThis.window, hasNativeBridge = false }) => {
@@ -195,8 +216,9 @@ const notifyNativeBridgeReady = ({ win }) => {
 
 export const startClientSocket = ({
   client = dome,
+  doc = globalThis.document,
   win = globalThis.window,
-  hooks = createClientSetupHooks(client),
+  features = createClientFeatureSet(),
   hasNativeBridge = false
 }) => {
   if (hasNativeBridge) {
@@ -208,7 +230,7 @@ export const startClientSocket = ({
   }
 
   win.setTimeout(function() {
-    client.socket = hooks.setupSocket();
+    client.socket = features.setupSocket({ client, doc, win });
     client.socket.on("data", client.parseSocketData);
   }, 500);
   return null;
@@ -224,11 +246,12 @@ export const initClient = ({
   const hasNativeBridge = !!win.DomeNative && typeof win.DomeNative.sendInput === "function";
 
   assignClientDomReferences({ client, doc });
-  applyInitialClientPreferences({ client, doc, hooks });
+  features.setupAutoCompleteFeature({ client, doc, win });
+  applyInitialClientPreferences({ client, doc, hooks, features });
   setupClientFeatures({ client, doc, win, hooks, features });
   installDomeBridge({ client, win, hasNativeBridge });
   notifyNativeBridgeReady({ win });
-  startClientSocket({ client, win, hooks, hasNativeBridge });
+  startClientSocket({ client, doc, win, features, hasNativeBridge });
 
   return client;
 };

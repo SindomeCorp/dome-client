@@ -8,18 +8,26 @@ import {
   shapeHealthGraphSeries
 } from "./health-status.js";
 
-dome.setupHealthCheck = function() {
-  if (!dome.healthDisplay || !dome.healthDetail) {
+export function setupHealthCheck({
+  client = dome,
+  doc = globalThis.document,
+  fetchFn = (...args) => globalThis.fetch(...args),
+  log = logger,
+  setIntervalFn = (...args) => globalThis.setInterval(...args),
+  setTimeoutFn = (...args) => globalThis.setTimeout(...args),
+  clearTimeoutFn = (...args) => globalThis.clearTimeout(...args)
+} = {}) {
+  if (!client.healthDisplay || !client.healthDetail) {
     return;
   }
 
   const showConnectionHelp = function(helpType) {
     // @TODO: make help to show ...
-    logger.info("showing help for: " + helpType);
+    log.info("showing help for: " + helpType);
   };
 
   const troubleshootConnection = function(e) {
-    const diagnosis = diagnoseConnectionError(e, dome.gameHealth);
+    const diagnosis = diagnoseConnectionError(e, client.gameHealth);
     if (diagnosis.helpType) {
       showConnectionHelp(diagnosis.helpType);
     }
@@ -27,7 +35,7 @@ dome.setupHealthCheck = function() {
     return diagnosis.message;
   };
 
-  dome.onErrorHandler = function(e) {
+  client.onErrorHandler = function(e) {
     let msg = "";
     if (e) {
       if (e["msg"]) {
@@ -36,16 +44,16 @@ dome.setupHealthCheck = function() {
         msg = e.code;
       }
 
-      if (dome.socketState != SOCKET_STATE_ENUM.CONNECTED) {
+      if (client.socketState != SOCKET_STATE_ENUM.CONNECTED) {
         msg = troubleshootConnection(e);
       }
     }
 
-    if (e) { logger.error(e); }
-    if (msg && dome.statusDisplay) { dome.setFadeText(dome.statusDisplay, "ERROR: " + msg, true); }
+    if (e) { log.error(e); }
+    if (msg && client.statusDisplay) { client.setFadeText(client.statusDisplay, "ERROR: " + msg, true); }
   };
 
-  dome.setFadeText = function(elem, msg, persist) {
+  client.setFadeText = function(elem, msg, persist) {
     msg = msg.toUpperCase();
     elem.innerHTML = msg;
     if (elem.fadeAnimation) {
@@ -75,20 +83,20 @@ dome.setupHealthCheck = function() {
   let overHealthArea = false;
 
   const isInHealthArea = target =>
-    target && (dome.healthDetail.contains(target) || dome.healthDisplay.contains(target));
+    target && (client.healthDetail.contains(target) || client.healthDisplay.contains(target));
 
   const cancelHide = () => {
     if (hideTimeout) {
-      clearTimeout(hideTimeout);
+      clearTimeoutFn(hideTimeout);
       hideTimeout = null;
     }
   };
 
   const scheduleHide = () => {
     cancelHide();
-    hideTimeout = setTimeout(() => {
+    hideTimeout = setTimeoutFn(() => {
       if (!overHealthArea) {
-        dome.hideGameHealth();
+        client.hideGameHealth();
       }
       hideTimeout = null;
     }, 500);
@@ -97,7 +105,7 @@ dome.setupHealthCheck = function() {
   const handleHealthMouseOver = () => {
     overHealthArea = true;
     cancelHide();
-    dome.showGameHealth();
+    client.showGameHealth();
   };
 
   const handleHealthMouseLeave = e => {
@@ -107,54 +115,54 @@ dome.setupHealthCheck = function() {
     }
   };
 
-  dome.showGameHealth = function() {
+  client.showGameHealth = function() {
     cancelHide();
     if (showingGameHealth) return;
     showingGameHealth = true;
-    setTimeout(() => {
+    setTimeoutFn(() => {
       if (!showingGameHealth) return;
       if (detailAnimation) {
         detailAnimation.cancel();
       }
-      detailAnimation = dome.healthDetail.animate([
+      detailAnimation = client.healthDetail.animate([
         { left: "-152px" },
         { left: "0px" }
       ], { duration: 250, fill: "forwards" });
     }, 25);
   };
 
-  dome.hideGameHealth = function() {
+  client.hideGameHealth = function() {
     if (clickedOpen) return;
     if (!showingGameHealth) return;
     cancelHide();
     showingGameHealth = false;
-    setTimeout(() => {
+    setTimeoutFn(() => {
       if (showingGameHealth) return;
       if (detailAnimation) {
         detailAnimation.cancel();
       }
-      detailAnimation = dome.healthDetail.animate([
+      detailAnimation = client.healthDetail.animate([
         { left: "0px" },
         { left: "-152px" }
       ], { duration: 250, fill: "forwards" });
     }, 25);
   };
 
-  dome.toggleGameHealth = function () {
+  client.toggleGameHealth = function () {
     if ( showingGameHealth && clickedOpen ) {
       // close
       clickedOpen = false;
-      dome.hideGameHealth();
+      client.hideGameHealth();
     } else {
       clickedOpen = true;
-      dome.showGameHealth();
+      client.showGameHealth();
     }
   };
 
   const createChartCanvas = function ( id ) {
-    const canvas = document.createElement( "canvas" );
+    const canvas = doc.createElement( "canvas" );
     canvas.setAttribute( "id", id );
-    dome.healthDetail.append( canvas );
+    client.healthDetail.append( canvas );
     return canvas.getContext( "2d" );
   };
 
@@ -182,62 +190,64 @@ dome.setupHealthCheck = function() {
   userGraph.width = 150;
   userGraph.height = 50;
 
-  const detailedMOOStatus = document.createElement( "div" );
+  const detailedMOOStatus = doc.createElement( "div" );
   detailedMOOStatus.setAttribute( "class", "last-details" );
-  dome.healthDetail.append( detailedMOOStatus );
+  client.healthDetail.append( detailedMOOStatus );
 
   const setGameHealthDisplay = function ( health ) {
-    dome.gameHealth.push( health );
-    if ( dome.gameHealth.length > 100 ) {
-      dome.gameHealth.shift();
+    client.gameHealth.push( health );
+    if ( client.gameHealth.length > 100 ) {
+      client.gameHealth.shift();
     }
 
     const globeClass = classifyHealthStatus(health);
     const details = buildHealthDetails(health);
 
-    dome.healthDisplay.innerHTML = `<i class="globe globe-${globeClass}"></i>`;
+    client.healthDisplay.innerHTML = `<i class="globe globe-${globeClass}"></i>`;
     detailedMOOStatus.innerHTML = details;
-    if ( globeClass == "fatal" || globeClass != lastGlobeClass && (dome.setFadeText && dome.statusDisplay) ) {
-      dome.setFadeText( dome.statusDisplay, health.message, globeClass != "ok" ? true : false );
+    if ( globeClass == "fatal" || globeClass != lastGlobeClass && (client.setFadeText && client.statusDisplay) ) {
+      client.setFadeText( client.statusDisplay, health.message, globeClass != "ok" ? true : false );
     }
-    if ( dome.gameHealth ) {
-      const { cpuValues, memValues, userValues } = shapeHealthGraphSeries(dome.gameHealth);
+    if ( client.gameHealth ) {
+      const { cpuValues, memValues, userValues } = shapeHealthGraphSeries(client.gameHealth);
       cpuGraph.update( cpuValues );
       memGraph.update( memValues );
       userGraph.update( userValues );
     }
     lastGlobeClass = globeClass;
   };
-  dome.healthDisplay.addEventListener("mouseover", handleHealthMouseOver);
-  dome.healthDisplay.addEventListener("mouseleave", handleHealthMouseLeave);
-  dome.healthDetail.addEventListener("mouseover", handleHealthMouseOver);
-  dome.healthDetail.addEventListener("mouseleave", handleHealthMouseLeave);
-  dome.healthDetail.addEventListener("click", dome.toggleGameHealth);
+  client.healthDisplay.addEventListener("mouseover", handleHealthMouseOver);
+  client.healthDisplay.addEventListener("mouseleave", handleHealthMouseLeave);
+  client.healthDetail.addEventListener("mouseover", handleHealthMouseOver);
+  client.healthDetail.addEventListener("mouseleave", handleHealthMouseLeave);
+  client.healthDetail.addEventListener("click", client.toggleGameHealth);
 
 
   const updateMOOStatus = function () {
 
-    if (dome.preferences.performanceBuffer != 0) {
-      dome.perfBufferFlag.setAttribute(
+    if (client.preferences.performanceBuffer != 0) {
+      client.perfBufferFlag.setAttribute(
         "title",
-        "Scrollback limited to " + dome.preferences.performanceBuffer + " lines"
+        "Scrollback limited to " + client.preferences.performanceBuffer + " lines"
       );
-      dome.perfBufferFlag.classList.remove("hide");
+      client.perfBufferFlag.classList.remove("hide");
     }
 
     
-    fetch("/moo/status/")
+    fetchFn("/moo/status/")
       .then((res) => res.json())
       .then((health) => {
         setGameHealthDisplay(health);
       })
       .catch((err) => {
         const health = createPollingErrorHealth(err);
-        logger.error(err);
+        log.error(err);
         setGameHealthDisplay(health);
       });
   };
-  setInterval( updateMOOStatus, 30000 );
+  setIntervalFn( updateMOOStatus, 30000 );
   updateMOOStatus();
 
-};
+}
+
+dome.setupHealthCheck = () => setupHealthCheck({ client: dome });

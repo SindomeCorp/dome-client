@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { dome } from "../../src/client/b-variables.js";
+import { initClient } from "../../src/client/z-setup.js";
 
 // Ensure transparent overlay class applied after async setupAutoComplete
 
@@ -43,28 +44,37 @@ test("z-setup applies transparent overlay after async autocomplete setup", async
   });
 
   dome.readPreferences = () => ({ transparentOverlay: true, commandSuggestions: true });
-  dome.autoComplete = () => {};
-  dome.setupInputReader = () => {};
-  dome.setupWindowHandlers = () => {};
-  dome.setupEditorSupport = () => {};
-  dome.setupAutoscroll = () => {};
-  dome.setupButtons = () => {};
-  dome.setupChevronToggle = () => {};
-  dome.setupHealthCheck = () => {};
-  dome.setupOutputParser = () => {};
-  dome.setupSocket = () => ({ on: () => {} });
   dome.parseSocketData = () => {};
 
-  dome.setupAutoComplete = () => new Promise((resolve) => {
-    Promise.resolve().then(() => {
-      const ac = document.createElement("div");
-      ac.className = "ui-autocomplete ui-opaque-overlay";
-      document.body.appendChild(ac);
-      resolve();
-    });
-  });
+  const hooks = {
+    setupAutoComplete: () => new Promise((resolve) => {
+      Promise.resolve().then(() => {
+        const ac = document.createElement("div");
+        ac.className = "ui-autocomplete ui-opaque-overlay";
+        document.body.appendChild(ac);
+        resolve();
+      });
+    }),
+    setupHealthCheck: () => {},
+    setupSocket: () => ({ on: () => {} })
+  };
+  const features = {
+    setupAutoCompleteFeature: ({ client }) => {
+      client.autoComplete = () => {};
+    },
+    setupInputReader: () => {},
+    setupWindowHandlers: () => {},
+    setupEditorSupport: () => {},
+    setupAutoscroll: () => {},
+    setupButtons: () => {},
+    setupChevronToggle: () => {},
+    setupHealthCheck: () => {},
+    setupOutputParser: () => {},
+    setupSocket: () => ({ on: () => {} })
+  };
 
-  await import("../../src/client/z-setup.js");
+  initClient({ client: dome, win: window, doc: window.document, hooks, features });
+  await Promise.resolve();
   await Promise.resolve();
   const ac = document.querySelector(".ui-autocomplete");
   assert.ok(ac.classList.contains("ui-transparent-overlay"));

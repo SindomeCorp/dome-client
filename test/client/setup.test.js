@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 /* global document */
 import { dome } from "../../src/client/b-variables.js";
+import { initClient } from "../../src/client/z-setup.js";
 
 // Test that z-setup initializes DOM references and calls setup functions
 
@@ -48,33 +49,45 @@ test("z-setup assigns DOM references and invokes setup hooks", async t => {
   dome.readPreferences = () => ({
     lineBufferFont: "lucida",
     colorSet: "dim",
-    commandSuggestions: true
+    commandSuggestions: false
   });
   dome.autoComplete = () => { calls.push("autoComplete"); };
 
-  const stub = name => {
-    dome[name] = () => {
-      calls.push(name);
-      if (name === "setupSocket") return { on: () => {} };
-    };
+  dome.parseSocketData = () => {};
+  const hooks = {
+    setupAutoComplete: () => calls.push("setupAutoComplete")
   };
-  const setups = [
+  const features = {
+    setupAutoCompleteFeature: () => calls.push("setupAutoCompleteFeature"),
+    setupInputReader: () => calls.push("setupInputReader"),
+    setupWindowHandlers: () => calls.push("setupWindowHandlers"),
+    setupEditorSupport: () => calls.push("setupEditorSupport"),
+    setupAutoscroll: () => calls.push("setupAutoscroll"),
+    setupButtons: () => calls.push("setupButtons"),
+    setupChevronToggle: () => calls.push("setupChevronToggle"),
+    setupHealthCheck: () => calls.push("setupHealthCheck"),
+    setupOutputParser: () => calls.push("setupOutputParser"),
+    setupSocket: () => {
+      calls.push("setupSocket");
+      return { on: () => {} };
+    }
+  };
+
+  initClient({ client: dome, win: window, doc: window.document, hooks, features });
+
+  // verify setup functions called
+  [
+    "setupAutoCompleteFeature",
     "setupInputReader",
-    "setupAutoComplete",
     "setupWindowHandlers",
     "setupEditorSupport",
     "setupAutoscroll",
+    "setupButtons",
+    "setupChevronToggle",
     "setupHealthCheck",
     "setupOutputParser",
     "setupSocket"
-  ];
-  setups.forEach(stub);
-  dome.parseSocketData = () => {};
-
-  await import("../../src/client/z-setup.js");
-
-  // verify setup functions called
-  setups.forEach(name => assert.ok(calls.includes(name), `${name} was called`));
+  ].forEach(name => assert.ok(calls.includes(name), `${name} was called`));
 
   // verify DOM references assigned
   assert.equal(dome.client, document.querySelector("#browser-client"));

@@ -59,92 +59,95 @@ const setPaused = (dome, paused, message = null) => {
   setPauseUi(dome, paused);
 };
 
-export function setupAutoscroll(dome, win = window) {
+export function setupAutoscroll(context = dome, winArg = window) {
+  const client = context?.buffer ? context : context.client;
+  const win = context?.buffer ? winArg : context.win ?? window;
+  const doc = context?.buffer ? win.document ?? globalThis.document : context.doc ?? win.document ?? globalThis.document;
 
   // remove previous bindings
-  if (dome._autoScrollPosition) {
-    dome.buffer.removeEventListener("scroll", dome._autoScrollPosition);
-    dome._autoScrollPosition = null;
+  if (client._autoScrollPosition) {
+    client.buffer.removeEventListener("scroll", client._autoScrollPosition);
+    client._autoScrollPosition = null;
   }
-  if (dome._autoScrollDbl) {
-    dome.buffer.removeEventListener("dblclick", dome._autoScrollDbl);
-    dome._autoScrollDbl = null;
+  if (client._autoScrollDbl) {
+    client.buffer.removeEventListener("dblclick", client._autoScrollDbl);
+    client._autoScrollDbl = null;
   }
-  if (dome._autoScrollDown) {
-    dome.buffer.removeEventListener("mousedown", dome._autoScrollDown);
-    dome._autoScrollDown = null;
+  if (client._autoScrollDown) {
+    client.buffer.removeEventListener("mousedown", client._autoScrollDown);
+    client._autoScrollDown = null;
   }
-  if (dome._autoScrollUp) {
-    dome.buffer.removeEventListener("mouseup", dome._autoScrollUp);
-    dome._autoScrollUp = null;
+  if (client._autoScrollUp) {
+    client.buffer.removeEventListener("mouseup", client._autoScrollUp);
+    client._autoScrollUp = null;
   }
-  if (dome._longClickTimeout != null) {
-    win.clearTimeout(dome._longClickTimeout);
-    dome._longClickTimeout = null;
+  if (client._longClickTimeout != null) {
+    win.clearTimeout(client._longClickTimeout);
+    client._longClickTimeout = null;
   }
 
-  dome.pauseBuffer = false;
-  dome.pausedLines = 0;
+  client.pauseBuffer = false;
+  client.pausedLines = 0;
 
-  setScrollBuffer(dome);
+  setScrollBuffer(client);
 
-  dome._longClickTimeout = null;
-  dome.onToggleAutoScroll = () => {
-    dome._longClickTimeout = null;
-    if (dome.pauseBuffer) {
-      setPaused(dome, false, "SCROLLING RESUMED");
-      dome._autoScrollProgrammatic = true;
-      dome.buffer.scrollTop = dome.buffer.scrollHeight;
+  client._longClickTimeout = null;
+  client.onToggleAutoScroll = () => {
+    client._longClickTimeout = null;
+    if (client.pauseBuffer) {
+      setPaused(client, false, "SCROLLING RESUMED");
+      client._autoScrollProgrammatic = true;
+      client.buffer.scrollTop = client.buffer.scrollHeight;
       Promise.resolve().then(() => {
-        dome._autoScrollProgrammatic = false;
+        client._autoScrollProgrammatic = false;
       });
-      document.querySelector("#inputBuffer").focus();
+      doc.querySelector("#inputBuffer").focus();
     } else {
-      setPaused(dome, true, "SCROLLING PAUSED");
-      document.querySelector("#lineBuffer").focus();
+      setPaused(client, true, "SCROLLING PAUSED");
+      doc.querySelector("#lineBuffer").focus();
     }
   };
 
-  if (dome.preferences.scrollUpToPause !== false) {
-    dome._autoScrollPosition = () => {
-      if (dome._autoScrollProgrammatic) {
+  if (client.preferences.scrollUpToPause !== false) {
+    client._autoScrollPosition = () => {
+      if (client._autoScrollProgrammatic) {
         return;
       }
-      if (isAtBottom(dome.buffer)) {
-        setPaused(dome, false, "SCROLLING RESUMED");
+      if (isAtBottom(client.buffer)) {
+        setPaused(client, false, "SCROLLING RESUMED");
         return;
       }
-      setPaused(dome, true, "SCROLLING PAUSED");
+      setPaused(client, true, "SCROLLING PAUSED");
     };
-    dome.buffer.addEventListener("scroll", dome._autoScrollPosition);
+    client.buffer.addEventListener("scroll", client._autoScrollPosition);
   }
 
-  if (dome.preferences.autoScroll === "dbl") {
-    dome._autoScrollDbl = (e) => {
+  if (client.preferences.autoScroll === "dbl") {
+    client._autoScrollDbl = (e) => {
       // Only suppress browser text-selection behavior for the specific
       // double-click gesture that toggles autoscroll.
       e?.preventDefault?.();
-      dome.onToggleAutoScroll();
+      client.onToggleAutoScroll();
     };
-    dome.buffer.addEventListener("dblclick", dome._autoScrollDbl);
-  } else if (dome.preferences.autoScroll === "long") {
-    dome._autoScrollDown = () => {
-      dome._longClickTimeout = win.setTimeout(dome.onToggleAutoScroll, 2000);
+    client.buffer.addEventListener("dblclick", client._autoScrollDbl);
+  } else if (client.preferences.autoScroll === "long") {
+    client._autoScrollDown = () => {
+      client._longClickTimeout = win.setTimeout(client.onToggleAutoScroll, 2000);
     };
-    dome._autoScrollUp = () => {
-      if (dome._longClickTimeout != null) {
-        win.clearTimeout(dome._longClickTimeout);
+    client._autoScrollUp = () => {
+      if (client._longClickTimeout != null) {
+        win.clearTimeout(client._longClickTimeout);
       }
-      dome._longClickTimeout = null;
+      client._longClickTimeout = null;
     };
-    dome.buffer.addEventListener("mousedown", dome._autoScrollDown);
-    dome.buffer.addEventListener("mouseup", dome._autoScrollUp);
-  } else if (dome.preferences.autoScroll === "none") {
+    client.buffer.addEventListener("mousedown", client._autoScrollDown);
+    client.buffer.addEventListener("mouseup", client._autoScrollUp);
+  } else if (client.preferences.autoScroll === "none") {
     // no mouse bindings
   }
 }
 
 setScrollBuffer(dome);
 dome.setupAutoscroll = () => {
-  setupAutoscroll(dome, window);
+  setupAutoscroll({ client: dome });
 };

@@ -2,16 +2,16 @@ import { dome, socket, logger } from "./b-variables.js";
 
 export const getSocket = () => window.uploadSocket || dome.socket;
 
-dome.setupEditorSupport = function() {
+export function setupEditorSupport({ client = dome, win = globalThis.window } = {}) {
 
 
   // analyze the editor properties to determine which editor
-  dome.makeEditor = function ( editor ) {
+  client.makeEditor = function ( editor ) {
 
     let editWindow = null;
 
-    if ( Object.prototype.hasOwnProperty.call( dome.spawned, editor.editorName ) && dome.spawned[ editor.editorName ] != null ) {
-      editWindow = dome.spawned[ editor.editorName ];
+    if ( Object.prototype.hasOwnProperty.call( client.spawned, editor.editorName ) && client.spawned[ editor.editorName ] != null ) {
+      editWindow = client.spawned[ editor.editorName ];
       editWindow.focus();
       if ( !editWindow.confirm( "Replace existing editor of the same name? You may have active edits." ) ) {
         return null;
@@ -37,47 +37,47 @@ dome.setupEditorSupport = function() {
     // strip leading linebreaks
     editor.buffer = editor.buffer.replace(/^\n/, "").replace(/[\r\n]+$/, "");
 
-    if (dome.preferences.editorType === "ide") {
-      dome.openIDE?.(editor);
+    if (client.preferences.editorType === "ide") {
+      client.openIDE?.(editor);
       return null;
     }
 
-    const editorURL = "/editor/" + type + "/?et=" + dome.preferences.edittheme + "&ts=" + (new Date()).getTime();
+    const editorURL = "/editor/" + type + "/?et=" + client.preferences.edittheme + "&ts=" + (new Date()).getTime();
     if ( editWindow != null && Object.prototype.hasOwnProperty.call( editWindow, "updateEditor" ) ) {
       editWindow.updateEditor( editor.buffer );
     } else {
       const windowConfig = "width=640,height=480,resizeable,scrollbars";
-      editWindow = window.open( editorURL, "" + editor.editorName, windowConfig );
+      editWindow = win.open( editorURL, "" + editor.editorName, windowConfig );
     }
 
     editWindow.editorData = editor;
     editWindow.uploadSocket = socket;
-    editWindow.parentWindow = window;
+    editWindow.parentWindow = win;
     editWindow.addEventListener("beforeunload", () => {
-      dome.editorClosed(editor.editorName);
+      client.editorClosed(editor.editorName);
     });
     editWindow.focus();
 
     return editWindow;
   };
 
-  dome.updateEditorListView = function () {
-    const v = dome.editorListView;
+  client.updateEditorListView = function () {
+    const v = client.editorListView;
     if ( v == null ) {
       logger.warn("no editor list view");
       return;
     }
     v.style.display = "none";
     v.innerHTML = "";
-    if ( Object.keys( dome.spawned ).length === 0 ) {
+    if ( Object.keys( client.spawned ).length === 0 ) {
       return;
     }
     let listHTML = "<ul>";
-    for ( const title in dome.spawned ) {
-      if ( !dome.spawned.hasOwnProperty( title ) ) {
+    for ( const title in client.spawned ) {
+      if ( !client.spawned.hasOwnProperty( title ) ) {
         continue;
       }
-      const editWin = dome.spawned[ title ];
+      const editWin = client.spawned[ title ];
       if ( editWin != null ) {
         listHTML += "<li data-editor=\"" + title + "\">";
         listHTML += "<span data-editor=\"" + title + "\" class=\"truncate\" title=\"" + title + "\">" + title + "</span>";
@@ -90,24 +90,24 @@ dome.setupEditorSupport = function() {
     v.style.display = "";
   };
 
-  
+
 
   const editorListClicked = function(editorName, action) {
-    logger.debug(editorName, action, dome.spawned[editorName]);
-    if (dome.spawned[editorName] != null) {
-      dome.spawned[editorName].focus();
+    logger.debug(editorName, action, client.spawned[editorName]);
+    if (client.spawned[editorName] != null) {
+      client.spawned[editorName].focus();
       if (action == "close") {
-        dome.spawned[editorName].close();
-        delete dome.spawned[editorName];
+        client.spawned[editorName].close();
+        delete client.spawned[editorName];
       }
     }
-    dome.updateEditorListView();
+    client.updateEditorListView();
 
   };
 
 
-  if (dome.editorListView != null) {
-    dome.editorListView.addEventListener("click", (e) => {
+  if (client.editorListView != null) {
+    client.editorListView.addEventListener("click", (e) => {
       if (!e.target) {
         return;
       }
@@ -116,17 +116,19 @@ dome.setupEditorSupport = function() {
     });
   }
 
-  dome.editorClosed = function(editorName) {
-    if ( Object.prototype.hasOwnProperty.call(dome.spawned, editorName)) {
-      delete dome.spawned[editorName];
-      dome.updateEditorListView();
+  client.editorClosed = function(editorName) {
+    if ( Object.prototype.hasOwnProperty.call(client.spawned, editorName)) {
+      delete client.spawned[editorName];
+      client.updateEditorListView();
     }
   };
 
-  window.addEventListener("message", (event) => {
+  win.addEventListener("message", (event) => {
     const data = event.data;
     if (data && data.type === "editorClosed" && data.editorName) {
-      dome.editorClosed(data.editorName);
+      client.editorClosed(data.editorName);
     }
   });
-};
+}
+
+dome.setupEditorSupport = () => setupEditorSupport({ client: dome });

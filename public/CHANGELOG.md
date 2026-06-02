@@ -8,6 +8,15 @@ All notable changes to this project will be documented in this file.
 - Added Knip dead-code analysis commands for finding unused files, exports, and dependencies.
 
 ### Changed
+- Split server listen, close, and bound-address helpers out of the server startup path.
+- Split Socket.IO manager binding out of the server startup path.
+- Split HTTP and HTTPS server creation out of the server startup path.
+- Split Express app creation out of the server startup path while preserving route and middleware behavior.
+- Wired socket lifecycle setup through explicit client composition exports.
+- Wired health-check setup through explicit client composition exports.
+- Wired input-reader and autocomplete setup through explicit client composition exports.
+- Wired autoscroll and output parser setup through explicit client composition exports.
+- Wired window-handler and editor-support setup through explicit client composition exports.
 - Wired button and chevron setup through explicit client composition exports instead of standalone side-effect startup imports.
 - Split button workflows for reconnect, log download, clear-buffer confirmation, overlays, and image preview into focused helpers.
 - Extracted health status classification, connection-error diagnosis, detail rendering, and graph-series shaping from the health UI setup.

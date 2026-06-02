@@ -11,44 +11,49 @@ import {
 import { store } from "./store.js";
 
 // Wires input-reader dependencies while feature modules own their behavior.
-dome.setupInputReader = () => {
-  const { sendCommand } = createCommandDispatcher({ dome, getSocket: () => dome.socket });
+export function setupInputReader({
+  client = dome,
+  doc = globalThis.document,
+  storage = store,
+  promptFn = (...args) => globalThis.prompt(...args)
+} = {}) {
+  const { sendCommand } = createCommandDispatcher({ dome: client, getSocket: () => client.socket });
 
   // prevent the backspace key from navigating away from the page
-  document.addEventListener("keydown", (e) => {
+  doc.addEventListener("keydown", (e) => {
     if (e.key === "Pause" && !e.shiftKey && !e.altKey && !e.ctrlKey) {
       // 'pause/break' key
       // enable / disable scroll
-      dome.onToggleAutoScroll();
+      client.onToggleAutoScroll();
       return;
     } else if (e.key === "Home" && !e.shiftKey && !e.altKey && !e.ctrlKey) {
       // home
       // return the focus to the input reader
-      dome.inputReader.focus();
+      client.inputReader.focus();
       return;
     } else if (e.key === "Insert" && !e.shiftKey && !e.altKey && !e.ctrlKey) {
       // insert key
       // this code allows you to pop open a window to send a command to the MOO
       // it's useful when you have a bunch of stuff typed out in your normal text input
-      const fastCommand = prompt("Please enter command to send:", "");
+      const fastCommand = promptFn("Please enter command to send:", "");
       if (fastCommand !== null && fastCommand !== "") {
         sendCommand(fastCommand);
       }
     }
-    const isInputFocused = document.activeElement.matches("input:focus, textarea:focus");
+    const isInputFocused = doc.activeElement.matches("input:focus, textarea:focus");
     if (e.key === "Backspace" && !isInputFocused) {
       e.preventDefault();
     }
   });
 
-  const historyState = createHistoryState(store.get("my-input-buffer") || []);
+  const historyState = createHistoryState(storage.get("my-input-buffer") || []);
   const commandBuffer = historyState.entries;
 
-  if ( dome.inputReader ) {
-    const inputReader = dome.inputReader;
+  if ( client.inputReader ) {
+    const inputReader = client.inputReader;
 
     wireHistorySearchOverlay({
-      document,
+      document: doc,
       inputReader,
       historySource: () => commandBuffer.slice().reverse(),
       onSelect(selected) {
@@ -59,16 +64,16 @@ dome.setupInputReader = () => {
     });
 
     wireInputHistoryControls({
-      document,
+      document: doc,
       inputReader,
       historyState,
-      store
+      store: storage
     });
 
     inputReader.addEventListener("keypress", (event) => {
       if ( event.key === "Enter" && !event.shiftKey ) {
         if (
-          dome.autoComplete &&
+          client.autoComplete &&
           typeof inputReader.commandSuggestions === "function"
         ) {
           try {
@@ -88,7 +93,7 @@ dome.setupInputReader = () => {
         sendCommand(command);
 
         if (recordSubmittedCommand(historyState, command)) {
-          store.put("my-input-buffer", commandBuffer); // localStore deals in strings, this won't work as an array Chad. - Future Chad
+          storage.put("my-input-buffer", commandBuffer); // localStore deals in strings, this won't work as an array Chad. - Future Chad
         }
         inputReader.value = "";
         return false;
@@ -99,4 +104,6 @@ dome.setupInputReader = () => {
       }
     });
   }
-};
+}
+
+dome.setupInputReader = () => setupInputReader({ client: dome });

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { dome } from "../../src/client/b-variables.js";
+import { initClient } from "../../src/client/z-setup.js";
 
 const setupDom = (t) => {
   const dom = new JSDOM(`<!doctype html><html><body>
@@ -39,41 +40,64 @@ const setupDom = (t) => {
 
 test("z-setup replaces existing socket and binds data handler", async t => {
   const window = setupDom(t);
-  const origTimeout = globalThis.setTimeout;
   t.mock.method(window, "setTimeout", fn => { fn(); return 1; });
-  globalThis.setTimeout = window.setTimeout;
-  t.after(() => { globalThis.setTimeout = origTimeout; });
 
   const oldSocket = { old: true };
   dome.socket = oldSocket;
   const onCalls = [];
   dome.readPreferences = () => ({ lineBufferFont: "standard", colorSet: "normal", commandSuggestions: false });
-  dome.setupOutputParser = t.mock.fn();
   dome.parseSocketData = () => {};
-  dome.setupSocket = () => ({ on: (...args) => { onCalls.push(args); } });
+  const setupOutputParser = t.mock.fn();
+  const hooks = {
+    setupAutoComplete: () => {},
+    setupHealthCheck: () => {}
+  };
+  const features = {
+    setupAutoCompleteFeature: () => {},
+    setupInputReader: () => {},
+    setupWindowHandlers: () => {},
+    setupEditorSupport: () => {},
+    setupAutoscroll: () => {},
+    setupButtons: () => {},
+    setupChevronToggle: () => {},
+    setupHealthCheck: () => {},
+    setupOutputParser,
+    setupSocket: () => ({ on: (...args) => { onCalls.push(args); } })
+  };
 
-  await import(`../../src/client/z-setup.js?cache=${Date.now()}`);
+  initClient({ client: dome, win: window, doc: window.document, hooks, features });
 
   assert.equal(dome.clientOptionsButton, window.document.querySelector("#button-client-options"));
   assert.equal(dome.clientOptionsOverlay, window.document.querySelector("#client-options-overlay"));
   assert.notEqual(dome.socket, oldSocket);
   assert.equal(onCalls[0][0], "data");
   assert.equal(onCalls[0][1], dome.parseSocketData);
-  assert.equal(dome.setupOutputParser.mock.calls.length, 1);
+  assert.equal(setupOutputParser.mock.calls.length, 1);
 });
 
 test("z-setup surfaces setupSocket errors", async t => {
   const window = setupDom(t);
-  const origTimeout = globalThis.setTimeout;
   t.mock.method(window, "setTimeout", fn => { fn(); });
-  globalThis.setTimeout = fn => { fn(); };
-  t.after(() => { globalThis.setTimeout = origTimeout; });
 
   dome.readPreferences = () => ({ lineBufferFont: "standard", colorSet: "normal", commandSuggestions: false });
-  dome.setupOutputParser = () => {};
-  dome.setupSocket = () => { throw new Error("boom"); };
+  const hooks = {
+    setupAutoComplete: () => {},
+    setupHealthCheck: () => {}
+  };
+  const features = {
+    setupAutoCompleteFeature: () => {},
+    setupInputReader: () => {},
+    setupWindowHandlers: () => {},
+    setupEditorSupport: () => {},
+    setupAutoscroll: () => {},
+    setupButtons: () => {},
+    setupChevronToggle: () => {},
+    setupHealthCheck: () => {},
+    setupOutputParser: () => {},
+    setupSocket: () => { throw new Error("boom"); }
+  };
 
-  await assert.rejects(async () => {
-    await import(`../../src/client/z-setup.js?cache=${Date.now()}`);
+  assert.throws(() => {
+    initClient({ client: dome, win: window, doc: window.document, hooks, features });
   }, /boom/);
 });

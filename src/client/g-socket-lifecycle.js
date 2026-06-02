@@ -13,74 +13,87 @@ const emitAsync = (socket, event, ...args) => new Promise((resolve, reject) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-dome.setupSocket = function() {
-  dome.socket?.disconnect?.();
+export function setupSocket({
+  client = dome,
+  win = globalThis.window,
+  doc = globalThis.document,
+  storage = store,
+  ioClient = io,
+  log = logger,
+  socketUrlValue = globalThis.socketUrl,
+  socketUrlSSLValue = globalThis.socketUrlSSL,
+  gameNameValue = globalThis.gameName,
+  poweredByValue = globalThis.poweredBy,
+  setSocketFn = setSocket,
+  sleepFn = sleep
+} = {}) {
+  client.socket?.disconnect?.();
   const onDisconnectedHandler = function() {
-    logger.info("disconnected");
+    log.info("disconnected");
     ioSocket.disconnect();
-    if (dome.socketState != SOCKET_STATE_ENUM.CONNECTED) {
-      logger.warn("disconnected before we connected!");
+    if (client.socketState != SOCKET_STATE_ENUM.CONNECTED) {
+      log.warn("disconnected before we connected!");
     }
-    dome.socketState = SOCKET_STATE_ENUM.DISCONNECTED;
-    if (dome.activeEditor) {
-      dome.activeEditor.readingContent = false;
+    client.socketState = SOCKET_STATE_ENUM.DISCONNECTED;
+    if (client.activeEditor) {
+      client.activeEditor.readingContent = false;
     }
-    dome.resetSdwcNowrapState?.();
-    if (dome.setFadeText && dome.statusDisplay) dome.setFadeText(dome.statusDisplay, "DISCONNECTED", true);
-    dome.disconnectView.overlay.classList.remove("hide");
-    dome.disconnectView.buttonGroup.classList.remove("hide");
+    client.resetSdwcNowrapState?.();
+    if (client.setFadeText && client.statusDisplay) client.setFadeText(client.statusDisplay, "DISCONNECTED", true);
+    client.disconnectView.overlay.classList.remove("hide");
+    client.disconnectView.buttonGroup.classList.remove("hide");
   };
   const onReconnectHandler = function() {
-    dome.disconnectView.overlay.classList.add("hide");
-    dome.disconnectView.buttonGroup.classList.add("hide");
+    client.disconnectView.overlay.classList.add("hide");
+    client.disconnectView.buttonGroup.classList.add("hide");
   };
   const onReconnectFailedHandler = function() {
-    dome.socketState = SOCKET_STATE_ENUM.RECONNECT_FAILED;
+    client.socketState = SOCKET_STATE_ENUM.RECONNECT_FAILED;
     ioSocket.disconnect();
-    dome.disconnectView.overlay.classList.remove("hide");
-    dome.disconnectView.buttonGroup.classList.remove("hide");
+    client.disconnectView.overlay.classList.remove("hide");
+    client.disconnectView.buttonGroup.classList.remove("hide");
   };
 
   let initialCommand = false;
   const onConnectedHandler = async function() {
-    if (dome.socketState == SOCKET_STATE_ENUM.DISCONNECTED) {
+    if (client.socketState == SOCKET_STATE_ENUM.DISCONNECTED) {
       onReconnectHandler();
     }
-    dome.socketState = SOCKET_STATE_ENUM.CONNECTED;
-    dome.resetSdwcNowrapState?.();
-    if (dome.inputReader) dome.inputReader.focus(); // focus the cursor in the input field
-    if (dome.setFadeText && dome.statusDisplay) dome.setFadeText(dome.statusDisplay, "CONNECTED");
+    client.socketState = SOCKET_STATE_ENUM.CONNECTED;
+    client.resetSdwcNowrapState?.();
+    if (client.inputReader) client.inputReader.focus(); // focus the cursor in the input field
+    if (client.setFadeText && client.statusDisplay) client.setFadeText(client.statusDisplay, "CONNECTED");
 
     if (!initialCommand) {
-      await sleep(2000); // delayed input to account for latency
+      await sleepFn(2000); // delayed input to account for latency
       let cmd;
-      const guestCmd = store.get("dc-initial-command");
+      const guestCmd = storage.get("dc-initial-command");
       if (guestCmd) {
         // remove guest auto-connect before emit so reconnect errors do not repeat forced guest login
-        store.remove("dc-initial-command");
-        if (dome.setWindowTitle) dome.setWindowTitle("Guest | " + gameName + " | " + poweredBy);
+        storage.remove("dc-initial-command");
+        if (client.setWindowTitle) client.setWindowTitle("Guest | " + gameNameValue + " | " + poweredByValue);
         try {
           await emitAsync(ioSocket, "input", guestCmd);
         } catch (err) {
-          logger.error("failed to emit guest initial command", err);
+          log.error("failed to emit guest initial command", err);
         }
-      } else if ((cmd = store.get("dc-user-login"))) {
+      } else if ((cmd = storage.get("dc-user-login"))) {
         // user login
-        const who = store.get("last-username");
-        if (who) dome.alert.pattern = new RegExp(escapeRegex(who), "i");
-        if (dome.setWindowTitle) dome.setWindowTitle(who + " | " + gameName + " | " + poweredBy);
+        const who = storage.get("last-username");
+        if (who) client.alert.pattern = new RegExp(escapeRegex(who), "i");
+        if (client.setWindowTitle) client.setWindowTitle(who + " | " + gameNameValue + " | " + poweredByValue);
         await emitAsync(ioSocket, "input", cmd);
-        store.remove("dc-user-login");
+        storage.remove("dc-user-login");
       }
-      if (window.shortenEnabled !== false && dome.preferences.shortenUrls) {
+      if (win.shortenEnabled !== false && client.preferences.shortenUrls) {
         await emitAsync(ioSocket, "shorten-on", "shorten-on");
-        logger.info("enabling short urls");
+        log.info("enabling short urls");
       }
     }
     initialCommand = true;
   };
 
-  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search || "") : new URLSearchParams();
+  const searchParams = win ? new URLSearchParams(win.location.search || "") : new URLSearchParams();
   const queryHost = (searchParams.get("gh") || "").trim();
   const queryPort = (searchParams.get("gp") || "").trim();
   const socketQuery = {};
@@ -91,12 +104,12 @@ dome.setupSocket = function() {
     socketQuery.port = queryPort;
   }
 
-  const ioSocket = io("https:" == document.location.protocol ? socketUrlSSL : socketUrl, {
+  const ioSocket = ioClient("https:" == doc.location.protocol ? socketUrlSSLValue : socketUrlValue, {
     "sync disconnect on unload": true, // send 'disconnect' event when the page is left
     query: socketQuery
   });
-  setSocket(ioSocket);
-  dome.socket = ioSocket;
+  setSocketFn(ioSocket);
+  client.socket = ioSocket;
 
   ioSocket.on("connected", () => {
     onConnectedHandler();
@@ -108,8 +121,10 @@ dome.setupSocket = function() {
     onReconnectFailedHandler();
   });
   ioSocket.on("error", (e) => {
-    if (dome.onErrorHandler) dome.onErrorHandler(e);
+    if (client.onErrorHandler) client.onErrorHandler(e);
   });
 
   return ioSocket;
-};
+}
+
+dome.setupSocket = () => setupSocket({ client: dome });

@@ -122,7 +122,7 @@ Benefits:
 
 ## Phase 5. Normalize Client Composition
 
-Status: In progress.
+Status: Complete.
 
 Target files:
 
@@ -137,6 +137,11 @@ Why: The current compatibility layer is useful, but `src/client/index.js` still 
 Steps:
 
 - Converted button and chevron setup modules to explicit setup exports and wired them through `z-setup.js`.
+- Converted window-handler and editor-support setup modules to explicit setup exports and wired them through `z-setup.js`.
+- Converted autoscroll and output parser setup modules to explicit setup exports and wired them through `z-setup.js`.
+- Converted input-reader and autocomplete setup modules to explicit setup exports and wired them through `z-setup.js`.
+- Converted health-check setup to an explicit setup export and wired it through `z-setup.js`.
+- Converted socket lifecycle setup to an explicit setup export and wired it through `z-setup.js`.
 - Convert one setup module at a time to export `setupFeature({ client, document, window })`.
 - Have `z-setup.js` call imported setup functions directly.
 - Keep temporary assignments to `dome.setupX` only where tests or legacy callers still need them.
@@ -150,7 +155,7 @@ Benefits:
 
 ## Phase 6. Thin the Server Composition Root
 
-Status: Planned after browser-client phases, unless server work becomes urgent.
+Status: Complete.
 
 Target files:
 
@@ -163,9 +168,10 @@ Why: `src/server.js` is a legitimate composition root, but it currently owns eno
 
 Steps:
 
-- Extract `createApp({ config, logger })`.
-- Extract `createHttpServers({ app, config })`.
-- Extract socket manager binding.
+- Extracted Express app creation into `createApp({ config, logger })`.
+- Extracted HTTP/HTTPS server creation into `createHttpServers({ app, config })`.
+- Extracted socket manager binding.
+- Extracted listen, close, and bound-address lifecycle helpers.
 - Keep the executable entry point thin.
 
 Benefits:

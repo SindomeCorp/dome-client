@@ -3,32 +3,36 @@ import { createSocketOutputEventHandler } from "./socket-output-effects.js";
 import { createSocketOutputProtocolParser } from "./socket-output-protocol.js";
 import { createSocketOutputRenderer } from "./socket-output-renderer.js";
 
-dome.setupOutputParser = function () {
+export function setupOutputParser({
+  client = dome,
+  logger: log = logger,
+  win = globalThis.window
+} = {}) {
   const nowMs = () =>
-    (window.performance && window.performance.now) ? window.performance.now() : Date.now();
+    (win.performance && win.performance.now) ? win.performance.now() : Date.now();
 
   const protocolParser = createSocketOutputProtocolParser();
-  const renderer = createSocketOutputRenderer({ dome, logger, nowMs });
-  const handleProtocolEvent = createSocketOutputEventHandler({ dome, logger, renderer });
-  dome.activeEditor = protocolParser.editorState;
-  dome.resetSdwcNowrapState = renderer.resetSdwcNowrapState;
-  dome.resetAnsiRendererState = renderer.resetAnsiRendererState;
+  const renderer = createSocketOutputRenderer({ dome: client, logger: log, nowMs });
+  const handleProtocolEvent = createSocketOutputEventHandler({ dome: client, logger: log, renderer });
+  client.activeEditor = protocolParser.editorState;
+  client.resetSdwcNowrapState = renderer.resetSdwcNowrapState;
+  client.resetAnsiRendererState = renderer.resetAnsiRendererState;
 
-  dome.parseSocketData = function (incomingSegmentRaw) {
+  client.parseSocketData = function (incomingSegmentRaw) {
     const startTime = nowMs();
-    let kidCount = dome.buffer.childNodes.length;
+    let kidCount = client.buffer.childNodes.length;
 
     const events = protocolParser.parse(incomingSegmentRaw);
     for (const event of events) {
       kidCount = handleProtocolEvent(event);
     }
-    dome.activeEditor = protocolParser.editorState;
+    client.activeEditor = protocolParser.editorState;
 
     const WARN_THRESHOLD = 10; // ms
     const execDuration = nowMs() - startTime;
 
     if (execDuration > WARN_THRESHOLD) {
-      logger.warn(
+      log.warn(
         "slow buffer append: " +
           "nodes=" + kidCount +
           ", segmentLength=" + String(incomingSegmentRaw ?? "").length +
@@ -38,6 +42,8 @@ dome.setupOutputParser = function () {
     }
 
     renderer.pruneBuffer();
-    dome.scrollBuffer();
+    client.scrollBuffer();
   };
-};
+}
+
+dome.setupOutputParser = () => setupOutputParser({ client: dome });
