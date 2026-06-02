@@ -224,6 +224,17 @@ sudo setcap 'cap_net_bind_service=+ep' $(which node)
 npm run lint
 ```
 
+## Static Analysis
+
+```bash
+npm run deadcode
+npm run deadcode:deps
+npm run deadcode:exports
+npm run deadcode:files
+```
+
+Dead-code analysis uses Knip and is configured to scan source, tests, templates, and tooling while ignoring generated assets under `public/`.
+
 ## Testing
 
 See the dedicated testing guide: [docs/TESTING.md](docs/TESTING.md).
