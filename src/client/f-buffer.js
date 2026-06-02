@@ -1,6 +1,7 @@
 import { dome, logger } from "./b-variables.js";
 import * as replacements from "./e-replacements.js";
 import { createAnsiRenderer } from "./ansi-renderer.js";
+import { createSocketOutputProtocolParser } from "./socket-output-protocol.js";
 
 dome.setupOutputParser = function () {
   // ------------------------------
@@ -8,8 +9,6 @@ dome.setupOutputParser = function () {
   // ------------------------------
   const nowMs = () =>
     (window.performance && window.performance.now) ? window.performance.now() : Date.now();
-
-  const normalizeNewlines = (s) => (s ?? "").replace(/\r\n?/g, "\n");
 
   const withFadeText = (msg) => {
     if (dome.setFadeText && dome.statusDisplay) dome.setFadeText(dome.statusDisplay, msg);
@@ -69,20 +68,6 @@ dome.setupOutputParser = function () {
     });
   };
 
-  const findDotTerminator = (text, fromIndex = 0) => {
-    if (!text) return null;
-    const start = Math.max(0, fromIndex);
-    const leadingIdx = text.indexOf(".\n", start);
-    if (leadingIdx === start) {
-      return { index: leadingIdx, length: 2, hasLeadingNewline: false };
-    }
-    const middleIdx = text.indexOf("\n.\n", start);
-    if (middleIdx > -1) {
-      return { index: middleIdx + 1, length: 2, hasLeadingNewline: true };
-    }
-    return null;
-  };
-
   const wrapLinesToDivs = (text) => {
     // text ends with '\n' by construction (see carry guard)
     const parts = text.split("\n");
@@ -96,24 +81,9 @@ dome.setupOutputParser = function () {
     return html;
   };
 
-  // ------------------------------
-  // Editor state (multi-event buffering)
-  // ------------------------------
-  let editor;
-  const editorInit = () => {
-    dome.activeEditor = editor = {
-      readingContent: false,
-      buffer: "",
-      editorName: "",
-      uploadCommand: ""
-    };
-  };
-  editorInit();
+  const protocolParser = createSocketOutputProtocolParser();
+  dome.activeEditor = protocolParser.editorState;
 
-  // ------------------------------
-  // Carry buffer for trailing partial line
-  // ------------------------------
-  let _carry = "";
   let sdwcNowrapActive = false;
   let activeSdwcNowrapBlock = null;
   const ansiRenderer = createAnsiRenderer();
@@ -136,6 +106,116 @@ dome.setupOutputParser = function () {
   dome.resetSdwcNowrapState = resetSdwcNowrapState;
   dome.resetAnsiRendererState = function() {
     ansiRenderer.resetState();
+  };
+
+  const handleEditorContent = (event) => {
+    const editor = event.editor;
+    const spawned = dome.makeEditor(editor);
+    if (event.updateEditorList) {
+      dome.spawned[editor.editorName] = spawned;
+      dome.updateEditorListView();
+    } else if (spawned) {
+      dome.spawned[editor.editorName] = spawned;
+      dome.updateEditorListView();
+    }
+  };
+
+  const postIdeMessage = (message) => {
+    if (dome.ideWindow && !dome.ideWindow.closed) {
+      dome.ideWindow.postMessage(message, "*");
+      return true;
+    }
+    return false;
+  };
+
+  const handleProtocolEvent = (event, appendOutputSegment) => {
+    if (event.type === "text") {
+      appendOutputSegment(event.text);
+    } else if (event.type === "editor-content") {
+      handleEditorContent(event);
+    } else if (event.type === "fade") {
+      withFadeText(event.message);
+    } else if (event.type === "user-type") {
+      dome.userType = event.userType;
+      if (dome.setupAutoComplete && dome.inputReader) {
+        dome.setupAutoComplete(dome.inputReader, dome.userType);
+      }
+    } else if (event.type === "ping") {
+      withFadeText("pinged");
+    } else if (event.type === "sdwc-nowrap-start") {
+      const nowrapEnabled = dome.preferences?.sdwcNowrapBlocks === true;
+      logger.info(nowrapEnabled
+        ? "Received SDWC-START-NOWRAP"
+        : "Received SDWC-START-NOWRAP (ignored: sdwcNowrapBlocks disabled)");
+      if (!nowrapEnabled) return;
+      if (sdwcNowrapActive) {
+        logger.warn("Received duplicate SDWC-START-NOWRAP while nowrap mode is active");
+      } else {
+        activeSdwcNowrapBlock = createSdwcNowrapBlock();
+        sdwcNowrapActive = Boolean(activeSdwcNowrapBlock);
+      }
+    } else if (event.type === "sdwc-nowrap-end") {
+      const nowrapEnabled = dome.preferences?.sdwcNowrapBlocks === true;
+      logger.info(nowrapEnabled
+        ? "Received SDWC-END-NOWRAP"
+        : "Received SDWC-END-NOWRAP (ignored: sdwcNowrapBlocks disabled)");
+      if (!nowrapEnabled) return;
+      if (sdwcNowrapActive) {
+        resetSdwcNowrapState();
+      } else {
+        logger.warn("Received SDWC-END-NOWRAP without an active nowrap block");
+      }
+    } else if (event.type === "sdwc-verbs") {
+      postIdeMessage({ type: "ide-object-verbs", payload: event.payload });
+    } else if (event.type === "sdwc-props") {
+      postIdeMessage({ type: "ide-object-props", payload: event.payload });
+    } else if (event.type === "sdwc-verb-overlay") {
+      const hasIdeWindow = Boolean(dome.ideWindow && !dome.ideWindow.closed);
+      if (event.objectId && event.verbName && hasIdeWindow) {
+        logger.debug("[SDWC overlay parsed][verb]", {
+          objectId: event.objectId,
+          verbName: event.verbName,
+          payload: event.payload
+        });
+        postIdeMessage({
+          type: "ide-verb-overlay",
+          objectId: event.objectId,
+          verbName: event.verbName,
+          payload: event.payload
+        });
+      } else {
+        logger.debug("[SDWC overlay parsed ignored][verb]", {
+          hasObject: Boolean(event.objectId),
+          hasVerb: Boolean(event.verbName),
+          hasIdeWindow,
+          payload: event.payload
+        });
+      }
+    } else if (event.type === "sdwc-prop-overlay") {
+      const hasIdeWindow = Boolean(dome.ideWindow && !dome.ideWindow.closed);
+      if (event.objectId && event.propertyName && hasIdeWindow) {
+        logger.debug("[SDWC overlay parsed][prop]", {
+          objectId: event.objectId,
+          propertyName: event.propertyName,
+          payload: event.payload
+        });
+        postIdeMessage({
+          type: "ide-prop-overlay",
+          objectId: event.objectId,
+          propertyName: event.propertyName,
+          payload: event.payload
+        });
+      } else {
+        logger.debug("[SDWC overlay parsed ignored][prop]", {
+          hasObject: Boolean(event.objectId),
+          hasProperty: Boolean(event.propertyName),
+          hasIdeWindow,
+          payload: event.payload
+        });
+      }
+    } else if (event.type === "sdwc-parse-error") {
+      logger.warn(`Failed to parse ${event.command.replace("sdwc-", "SDWC ").toUpperCase()} payload`, event.error);
+    }
   };
 
   // ------------------------------
@@ -189,249 +269,11 @@ dome.setupOutputParser = function () {
       kidCount = dome.buffer.childNodes.length;
     };
 
-    // 1) Normalize newlines immediately
-    let segment = normalizeNewlines(incomingSegmentRaw);
-
-    // 2) EARLY carry guard — ensure we only process complete lines now
-    if (_carry) {
-      segment = _carry + segment;
-      _carry = "";
+    const events = protocolParser.parse(incomingSegmentRaw);
+    for (const event of events) {
+      handleProtocolEvent(event, appendOutputSegment);
     }
-    const lastNL = segment.lastIndexOf("\n");
-    if (lastNL === -1) {
-      _carry = segment; // nothing complete yet
-      return;
-    }
-    // Process only up to the last newline; keep the tail for next event
-    const complete = segment.slice(0, lastNL + 1); // includes '\n'
-    _carry = segment.slice(lastNL + 1);            // tail without '\n'
-    segment = complete;
-
-    // ------------------ Editor mode handling ------------------
-    if (editor.readingContent) {
-      // Look for terminator: line with a single dot
-      const terminator = findDotTerminator(segment);
-      if (terminator) {
-        if (terminator.hasLeadingNewline) {
-          editor.buffer += segment.slice(0, terminator.index - 1);
-        } else {
-          editor.buffer += segment.slice(0, terminator.index);
-        }
-        const spawned = dome.makeEditor(editor);
-        if (spawned) {
-          dome.spawned[editor.editorName] = spawned;
-          dome.updateEditorListView();
-        }
-        editorInit();
-        segment = segment.slice(terminator.index + terminator.length);
-      } else {
-        // keep buffering all complete lines; wait for terminator in a later event
-        editor.buffer += segment;
-        withFadeText("<span class=\"warn\">BUFFERING POPUP ...</span>");
-        return;
-      }
-      withFadeText("BUFFERING POPUP ...");
-    }
-
-    // ------------------ Meta command handling (#$# ...) ------------------
-    let metaIdx;
-    while ((metaIdx = (segment.indexOf("#$#") === 0 ? 0 : segment.indexOf("\n#$#"))) > -1) {
-      const start = metaIdx === 0 ? 0 : metaIdx + 1; // skip leading \n if present
-      const end = segment.indexOf("\n", start);
-      const lineEnd = end === -1 ? segment.length : end;
-      let metaLine = segment.slice(start, lineEnd); // '#$# ...'
-
-      // parse fields
-      let a = metaLine.split(" upload: ");
-      const uploadCommand = a[a.length - 1];
-      a = a[0].split(" name: ");
-      const editorName = a[a.length - 1];
-
-      // remove '#$# ' prefix (always 4 chars)
-      const metaCommand = a[0].slice(4);
-      if (!/^\s*SDWC\b/i.test(metaCommand)) {
-        logger.debug(editorName);
-      }
-
-      if (metaCommand === "edit") {
-        editorInit();
-        // find editor terminator in the current segment
-        const termPos = findDotTerminator(segment, lineEnd + 1);
-        if (termPos) {
-          const bufferEnd = termPos.hasLeadingNewline ? termPos.index - 1 : termPos.index;
-          dome.spawned[editorName] = dome.makeEditor({
-            editorName,
-            uploadCommand,
-            buffer: segment.slice(lineEnd + 1, bufferEnd)
-          });
-          dome.updateEditorListView();
-          // remove the whole edit block including terminator
-          segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(termPos.index + termPos.length);
-        } else {
-          // begin buffering across events
-          editor.readingContent = true;
-          editor.buffer += segment.slice(lineEnd + 1);
-          editor.editorName = editorName;
-          editor.uploadCommand = uploadCommand;
-          // remove everything from the meta line forward
-          segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx);
-        }
-      } else if (metaCommand && metaCommand.indexOf("user") === 0) {
-        // Extract user type (e.g., "staff", "player")
-        const typeStart = metaLine.indexOf("user-type");
-        if (typeStart > -1) {
-          dome.userType = metaLine.slice(typeStart, typeStart + 12).split(" ")[1];
-        }
-        // Remove meta line from the segment
-        segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
-
-        // Reinit autocomplete with user-type aware list
-        if (dome.setupAutoComplete && dome.inputReader) {
-          dome.setupAutoComplete(dome.inputReader, dome.userType);
-        }
-      } else if (metaCommand === "- PING!") {
-        // Strip out ping line
-        segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
-        withFadeText("pinged");
-      } else if (/^\s*SDWC\b/i.test(metaCommand)) {
-        const metaCommandNormalized = metaCommand.trim().toUpperCase();
-        if (metaCommandNormalized === "SDWC-START-NOWRAP") {
-          const nowrapEnabled = dome.preferences?.sdwcNowrapBlocks === true;
-          logger.info(nowrapEnabled
-            ? "Received SDWC-START-NOWRAP"
-            : "Received SDWC-START-NOWRAP (ignored: sdwcNowrapBlocks disabled)");
-          appendOutputSegment(segment.slice(0, metaIdx === 0 ? 0 : metaIdx + 1));
-          if (!nowrapEnabled) {
-            segment = segment.slice(lineEnd + 1);
-            continue;
-          }
-          if (sdwcNowrapActive) {
-            logger.warn("Received duplicate SDWC-START-NOWRAP while nowrap mode is active");
-          } else {
-            activeSdwcNowrapBlock = createSdwcNowrapBlock();
-            sdwcNowrapActive = Boolean(activeSdwcNowrapBlock);
-          }
-          segment = segment.slice(lineEnd + 1);
-          continue;
-        } else if (metaCommandNormalized === "SDWC-END-NOWRAP") {
-          const nowrapEnabled = dome.preferences?.sdwcNowrapBlocks === true;
-          logger.info(nowrapEnabled
-            ? "Received SDWC-END-NOWRAP"
-            : "Received SDWC-END-NOWRAP (ignored: sdwcNowrapBlocks disabled)");
-          appendOutputSegment(segment.slice(0, metaIdx === 0 ? 0 : metaIdx + 1));
-          if (!nowrapEnabled) {
-            segment = segment.slice(lineEnd + 1);
-            continue;
-          }
-          if (sdwcNowrapActive) {
-            resetSdwcNowrapState();
-          } else {
-            logger.warn("Received SDWC-END-NOWRAP without an active nowrap block");
-          }
-          segment = segment.slice(lineEnd + 1);
-          continue;
-        }
-        const sdwcParts = metaCommand.trim().split("%%");
-        if ((sdwcParts[0] || "").toUpperCase() === "SDWC") {
-          const sdwcCommand = (sdwcParts[1] || "").trim().toLowerCase();
-          const sdwcPayload = sdwcParts.slice(2).join("%%").trim();
-          if (sdwcCommand === "verbs" && sdwcPayload) {
-            try {
-              const parsed = JSON.parse(sdwcPayload);
-              if (dome.ideWindow && !dome.ideWindow.closed) {
-                dome.ideWindow.postMessage({ type: "ide-object-verbs", payload: parsed }, "*");
-              }
-            } catch (err) {
-              logger.warn("Failed to parse SDWC VERBS payload", err);
-            }
-          } else if (sdwcCommand === "verb-overlay") {
-            const overlayPayloadRaw = sdwcParts.slice(2).join("%%").trim();
-            let overlayPayload = null;
-            if (overlayPayloadRaw) {
-              try {
-                overlayPayload = JSON.parse(overlayPayloadRaw);
-              } catch (err) {
-                logger.warn("Failed to parse SDWC VERB-OVERLAY payload", err);
-              }
-            }
-            const overlayObject = String(overlayPayload?.object || "").trim();
-            const overlayVerb = String(overlayPayload?.verb || "").trim();
-            if (overlayObject && overlayVerb && dome.ideWindow && !dome.ideWindow.closed) {
-              logger.debug("[SDWC overlay parsed][verb]", {
-                objectId: overlayObject,
-                verbName: overlayVerb,
-                payload: overlayPayload
-              });
-              dome.ideWindow.postMessage({
-                type: "ide-verb-overlay",
-                objectId: overlayObject,
-                verbName: overlayVerb,
-                payload: overlayPayload
-              }, "*");
-            } else {
-              logger.debug("[SDWC overlay parsed ignored][verb]", {
-                hasObject: Boolean(overlayObject),
-                hasVerb: Boolean(overlayVerb),
-                hasIdeWindow: Boolean(dome.ideWindow && !dome.ideWindow.closed),
-                payload: overlayPayload
-              });
-            }
-          } else if (sdwcCommand === "props" && sdwcPayload) {
-            try {
-              const parsed = JSON.parse(sdwcPayload);
-              if (dome.ideWindow && !dome.ideWindow.closed) {
-                dome.ideWindow.postMessage({ type: "ide-object-props", payload: parsed }, "*");
-              }
-            } catch (err) {
-              logger.warn("Failed to parse SDWC PROPS payload", err);
-            }
-          } else if (sdwcCommand === "prop-overlay") {
-            const overlayPayloadRaw = sdwcParts.slice(2).join("%%").trim();
-            let overlayPayload = null;
-            if (overlayPayloadRaw) {
-              try {
-                overlayPayload = JSON.parse(overlayPayloadRaw);
-              } catch (err) {
-                logger.warn("Failed to parse SDWC PROP-OVERLAY payload", err);
-              }
-            }
-            const overlayObject = String(overlayPayload?.object || "").trim();
-            const overlayProp = String(overlayPayload?.property || "").trim();
-            if (overlayObject && overlayProp && dome.ideWindow && !dome.ideWindow.closed) {
-              logger.debug("[SDWC overlay parsed][prop]", {
-                objectId: overlayObject,
-                propertyName: overlayProp,
-                payload: overlayPayload
-              });
-              dome.ideWindow.postMessage({
-                type: "ide-prop-overlay",
-                objectId: overlayObject,
-                propertyName: overlayProp,
-                payload: overlayPayload
-              }, "*");
-            } else {
-              logger.debug("[SDWC overlay parsed ignored][prop]", {
-                hasObject: Boolean(overlayObject),
-                hasProperty: Boolean(overlayProp),
-                hasIdeWindow: Boolean(dome.ideWindow && !dome.ideWindow.closed),
-                payload: overlayPayload
-              });
-            }
-          }
-        }
-        // Remove SDWC meta line from the segment
-        segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
-      } else {
-        // Show other meta to the user
-        withFadeText(metaCommand);
-        // Remove the meta line and keep processing remainder
-        segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
-      }
-    }
-
-    if (segment) {
-      appendOutputSegment(segment);
-    }
+    dome.activeEditor = protocolParser.editorState;
 
     // ------------------ Perf logging and pruning ------------------
     const WARN_THRESHOLD = 10; // ms
@@ -441,7 +283,7 @@ dome.setupOutputParser = function () {
       logger.warn(
         "slow buffer append: " +
           "nodes=" + kidCount +
-          ", segmentLength=" + segment.length +
+          ", segmentLength=" + String(incomingSegmentRaw ?? "").length +
           ", durationMs=" + execDuration.toFixed(2) +
           ", thresholdMs=" + WARN_THRESHOLD
       );
