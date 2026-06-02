@@ -1,8 +1,18 @@
 /* eslint indent: ["error", 2], quotes: ["error", "double"], semi: ["error", "always"] */
-import { JSDOM } from "jsdom";
+import { JSDOM, VirtualConsole } from "jsdom";
 
-export default function setupDom(t, html = "<!doctype html><html><body></body></html>") {
-  const dom = new JSDOM(html, { url: "http://example.com" });
+export default function setupDom(t, html = "<!doctype html><html><body></body></html>", options = {}) {
+  const domOptions = { url: "http://example.com" };
+  if (options.suppressNavigationErrors) {
+    const virtualConsole = new VirtualConsole();
+    virtualConsole.on("jsdomError", (err) => {
+      if (!String(err?.message || "").includes("Not implemented: navigation")) {
+        throw err;
+      }
+    });
+    domOptions.virtualConsole = virtualConsole;
+  }
+  const dom = new JSDOM(html, domOptions);
   const { window } = dom;
   window.LOG_ENDPOINT = null;
   Object.defineProperty(window.navigator, "sendBeacon", { value: () => {}, configurable: true });

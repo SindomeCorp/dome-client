@@ -1,10 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { JSDOM } from "jsdom";
+import { JSDOM, VirtualConsole } from "jsdom";
 import { dome as baseDome } from "../../src/client/b-variables.js";
 
 test("chevron click toggles image", async (t) => {
-  const dom = new JSDOM("<!doctype html><html><body><div id='lineBuffer'></div></body></html>", { runScripts: "outside-only" });
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on("jsdomError", (err) => {
+    if (!String(err?.message || "").includes("Not implemented: navigation")) {
+      throw err;
+    }
+  });
+  const dom = new JSDOM("<!doctype html><html><body><div id='lineBuffer'></div></body></html>", { runScripts: "outside-only", virtualConsole });
   const { window } = dom;
   const buffer = window.document.getElementById("lineBuffer");
   const dome = Object.assign(baseDome, {

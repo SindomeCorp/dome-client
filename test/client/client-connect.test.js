@@ -4,7 +4,7 @@ import setupDom from "../../test-support/setup-dom.js";
 
 test("guest connect stores initial command", async (t) => {
   t.mock.timers.enable();
-  const { window } = setupDom(t, "<!doctype html><html><body><a class=\"btn-connect-guest\" href=\"/player-client/\"></a></body></html>");
+  const { window } = setupDom(t, "<!doctype html><html><body><a class=\"btn-connect-guest\" href=\"/player-client/\"></a></body></html>", { suppressNavigationErrors: true });
   const { store } = await import("../../src/client/store.js");
   Object.assign(store, {
     get: () => null,
@@ -52,7 +52,7 @@ test("stored usernames without fields is handled", async (t) => {
 
 test("manual connect clears guest command", async (t) => {
   t.mock.timers.enable();
-  const { window } = setupDom(t, "<!doctype html><html><body><a class=\"btn-connect-other\" href=\"/player-client/\"></a></body></html>");
+  const { window } = setupDom(t, "<!doctype html><html><body><a class=\"btn-connect-other\" href=\"/player-client/\"></a></body></html>", { suppressNavigationErrors: true });
   const { store } = await import("../../src/client/store.js");
   const origFns = {
     get: store.get,
@@ -99,7 +99,7 @@ test("connect_now stores selected host and port before navigation", async (t) =>
     + "<input id=\"moo-port\" value=\"7777\" />"
     + "<button id=\"connect_now\"></button>"
     + "</body></html>";
-  const { window } = setupDom(t, html);
+  const { window } = setupDom(t, html, { suppressNavigationErrors: true });
   const { store } = await import("../../src/client/store.js");
   const putMock = t.mock.fn();
   Object.assign(store, {

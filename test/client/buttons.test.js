@@ -3,12 +3,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { JSDOM } from "jsdom";
+import { JSDOM, VirtualConsole } from "jsdom";
 import { dome as baseDome } from "../../src/client/b-variables.js";
 import { buildLogHtml } from "../../src/shared/log-template.js";
 
 const setupWindow = async (t) => {
-  const dom = new JSDOM("<!doctype html><html><body></body></html>", { runScripts: "outside-only" });
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on("jsdomError", (err) => {
+    if (!String(err?.message || "").includes("Not implemented: navigation")) {
+      throw err;
+    }
+  });
+  const dom = new JSDOM("<!doctype html><html><body></body></html>", { runScripts: "outside-only", virtualConsole });
   const { window } = dom;
   const buffer = window.document.createElement("div");
   buffer.id = "buffer";
