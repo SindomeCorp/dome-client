@@ -1,6 +1,7 @@
 import React from "react";
 import { ObjectBrowser } from "./ObjectBrowser.jsx";
 import { PropertyBrowser } from "./PropertyBrowser.jsx";
+import { TAB_TYPES } from "./tabs.js";
 
 export function EditorPane({
   active,
@@ -12,9 +13,9 @@ export function EditorPane({
 }) {
   return (
     <div className={active === tab.id ? "absolute inset-0" : "hidden"}>
-      {tab.tabType === "object-browser" ? (
+      {tab.tabType === TAB_TYPES.objectBrowser ? (
         <ObjectBrowser {...browserProps.objectBrowser} />
-      ) : tab.tabType === "property-browser" ? (
+      ) : tab.tabType === TAB_TYPES.propertyBrowser ? (
         <PropertyBrowser {...browserProps.propertyBrowser} />
       ) : (
         <EditableDocument

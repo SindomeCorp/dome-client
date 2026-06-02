@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import React, { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import setupDom from "../../test-support/setup-dom.js";
+import { emitInput } from "../../src/client/react/editor-ide/socketAdapter.js";
 import { useIdeConfig } from "../../src/client/react/editor-ide/useIdeConfig.js";
 import { useIdeMessages } from "../../src/client/react/editor-ide/useIdeMessages.js";
 import { usePersistentPreference } from "../../src/client/react/editor-ide/usePersistentPreference.js";
@@ -28,6 +29,23 @@ test("useIdeConfig reads root data attributes with defaults", () => {
     });
   } finally {
     cleanup();
+  }
+});
+
+test("useIdeConfig falls back to defaults when document is unavailable", () => {
+  const previousDocument = globalThis.document;
+  try {
+    delete globalThis.document;
+    assert.deepEqual(useIdeConfig(), {
+      editorTheme: "twilight",
+      localSaveNodeMaxLines: 200,
+      localSaveNodeAdminMaxLines: 800,
+      localSaveNoteMaxLines: 20,
+      ideEditOpenParent: false,
+      ideVmsNoteEnabled: false
+    });
+  } finally {
+    globalThis.document = previousDocument;
   }
 });
 
@@ -150,4 +168,82 @@ test("useIdeMessages routes IDE postMessage events and announces readiness", asy
   await act(async () => {
     root.unmount();
   });
+});
+
+test("useIdeMessages ignores malformed messages and unavailable opener postMessage", async (t) => {
+  const { window, cleanup } = setupDom();
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  t.after(() => {
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    cleanup();
+  });
+
+  const calls = [];
+  window.opener = { postMessage: "unavailable" };
+
+  function MessageHarness() {
+    useIdeMessages({
+      addTab: (editor) => calls.push(["tab", editor]),
+      applyObjectPropsPayload: (payload) => calls.push(["props", payload]),
+      applyObjectVerbsPayload: (payload) => calls.push(["verbs", payload]),
+      handlePropOverlayPayload: (payload) => calls.push(["prop-overlay", payload]),
+      handleVerbOverlayPayload: (payload) => calls.push(["verb-overlay", payload]),
+      setEditorFont: (font) => calls.push(["font", font])
+    });
+    return React.createElement("span", null, "ready");
+  }
+
+  const container = window.document.createElement("div");
+  window.document.body.append(container);
+  const root = createRoot(container);
+
+  await act(async () => {
+    root.render(React.createElement(MessageHarness));
+  });
+
+  await act(async () => {
+    window.dispatchEvent(new window.MessageEvent("message", { data: null }));
+    window.dispatchEvent(new window.MessageEvent("message", { data: [] }));
+    window.dispatchEvent(new window.MessageEvent("message", { data: { type: 7 } }));
+    window.dispatchEvent(new window.MessageEvent("message", {
+      data: { type: "ide-open-tab", editor: null }
+    }));
+    window.dispatchEvent(new window.MessageEvent("message", {
+      data: { type: "ide-set-font", font: 12 }
+    }));
+    window.dispatchEvent(new window.MessageEvent("message", {
+      data: { type: "ide-set-font", font: "standard" }
+    }));
+  });
+
+  assert.deepEqual(calls, [["font", "standard"]]);
+
+  await act(async () => {
+    root.unmount();
+  });
+});
+
+test("emitInput ignores unavailable sockets and malformed socket adapters", () => {
+  const previousWindowSocket = globalThis.window.uploadSocket;
+  const previousDomeSocket = globalThis.dome.socket;
+  try {
+    delete globalThis.window.uploadSocket;
+    delete globalThis.dome.socket;
+    assert.equal(emitInput("look"), false);
+
+    globalThis.window.uploadSocket = {};
+    assert.equal(emitInput("look"), false);
+
+    const emitted = [];
+    globalThis.window.uploadSocket = {
+      emit(eventName, message) {
+        emitted.push([eventName, message]);
+      }
+    };
+    assert.equal(emitInput("look"), true);
+    assert.deepEqual(emitted, [["input", "look"]]);
+  } finally {
+    globalThis.window.uploadSocket = previousWindowSocket;
+    globalThis.dome.socket = previousDomeSocket;
+  }
 });

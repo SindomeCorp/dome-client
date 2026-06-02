@@ -22,7 +22,8 @@ import {
   buildIdeTabs,
   createEditableTab,
   OBJECT_BROWSER_TAB,
-  PROPERTY_BROWSER_TAB
+  PROPERTY_BROWSER_TAB,
+  TAB_TYPES
 } from "./editor-ide/tabs.js";
 import {
   ideReducer,
@@ -468,8 +469,8 @@ export default function EditorIDE() {
   const activeTab = tabs.find((t) => t.id === active);
   const inputLabel = getCommandLabel(activeTab?.uploadCommand, activeTab?.editorName);
   const browserTabTitleByType = {
-    "object-browser": "Object Browser",
-    "property-browser": "Property Browser"
+    [TAB_TYPES.objectBrowser]: "Object Browser",
+    [TAB_TYPES.propertyBrowser]: "Property Browser"
   };
   const isBrowserActive = Object.prototype.hasOwnProperty.call(browserTabTitleByType, activeTab?.tabType || "");
   const editingLabel = isBrowserActive

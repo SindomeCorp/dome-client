@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-06-02
+
+### Fixed
+- Hardened the IDE editor against malformed window messages and unavailable socket, opener, root, or Ace editor APIs.
+
 ## 2026-06-01
 
 ### Added

@@ -1,4 +1,5 @@
 import React from "react";
+import { isBrowserTab } from "./tabs.js";
 
 export function TabStrip({
   active,
@@ -69,7 +70,7 @@ function TabButton({
       <svg className="w-5 h-5 text-ink-muted group-hover:text-ink" />
       <span className={labelClass}>{tab.title}{dirty ? " *" : ""}</span>
 
-      {tab.tabType !== "object-browser" && tab.tabType !== "property-browser" && (
+      {!isBrowserTab(tab) && (
         <span
           className={`ml-auto mr-8 inline-block rounded-full w-[0.9em] h-[0.9em] ${
             dirty ? "bg-warn-500" : "bg-ok-500"

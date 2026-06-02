@@ -1,18 +1,27 @@
+export const TAB_TYPES = {
+  objectBrowser: "object-browser",
+  propertyBrowser: "property-browser"
+};
+
 export const OBJECT_BROWSER_TAB = {
-  id: "object-browser",
-  name: "object-browser",
+  id: TAB_TYPES.objectBrowser,
+  name: TAB_TYPES.objectBrowser,
   title: "Object Browser",
   editorName: "Object Browser",
-  tabType: "object-browser"
+  tabType: TAB_TYPES.objectBrowser
 };
 
 export const PROPERTY_BROWSER_TAB = {
-  id: "property-browser",
-  name: "property-browser",
+  id: TAB_TYPES.propertyBrowser,
+  name: TAB_TYPES.propertyBrowser,
   title: "Property Browser",
   editorName: "Property Browser",
-  tabType: "property-browser"
+  tabType: TAB_TYPES.propertyBrowser
 };
+
+export function isBrowserTab(tab) {
+  return tab?.tabType === TAB_TYPES.objectBrowser || tab?.tabType === TAB_TYPES.propertyBrowser;
+}
 
 export function buildTitle(editor) {
   if (editor.editorName) return editor.editorName;
@@ -23,9 +32,9 @@ export function buildTitle(editor) {
 }
 
 export function pinBrowserTabs(list) {
-  const objectBrowser = list.find((tab) => tab.tabType === "object-browser");
-  const propertyBrowser = list.find((tab) => tab.tabType === "property-browser");
-  const otherTabs = list.filter((tab) => tab.tabType !== "object-browser" && tab.tabType !== "property-browser");
+  const objectBrowser = list.find((tab) => tab.tabType === TAB_TYPES.objectBrowser);
+  const propertyBrowser = list.find((tab) => tab.tabType === TAB_TYPES.propertyBrowser);
+  const otherTabs = list.filter((tab) => !isBrowserTab(tab));
   const pinned = [];
   if (objectBrowser) pinned.push(objectBrowser);
   if (propertyBrowser) pinned.push(propertyBrowser);

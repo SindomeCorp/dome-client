@@ -33,7 +33,8 @@ import {
   createEditableTab,
   createObjectBrowserTab,
   createPropertyBrowserTab,
-  pinBrowserTabs
+  pinBrowserTabs,
+  TAB_TYPES
 } from "../../src/client/react/editor-ide/tabs.js";
 import {
   ideReducer,
@@ -228,18 +229,18 @@ test("editor IDE tab helpers build editable and pinned browser tabs", () => {
     vmsNote: ""
   });
   assert.deepEqual(objectBrowser, {
-    id: "object-browser",
-    name: "object-browser",
+    id: TAB_TYPES.objectBrowser,
+    name: TAB_TYPES.objectBrowser,
     title: "Object Browser",
     editorName: "Object Browser",
-    tabType: "object-browser"
+    tabType: TAB_TYPES.objectBrowser
   });
   assert.deepEqual(propertyBrowser, {
-    id: "property-browser",
-    name: "property-browser",
+    id: TAB_TYPES.propertyBrowser,
+    name: TAB_TYPES.propertyBrowser,
     title: "Property Browser",
     editorName: "Property Browser",
-    tabType: "property-browser"
+    tabType: TAB_TYPES.propertyBrowser
   });
   assert.equal(Object.prototype.hasOwnProperty.call(objectBrowser, "content"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(objectBrowser, "savedContent"), false);
@@ -309,14 +310,14 @@ test("editor IDE reducer closes panels and documents with explicit active fallba
   });
   const state = {
     ...initialIdeState,
-    active: "object-browser",
+    active: TAB_TYPES.objectBrowser,
     documents: [firstTab, secondTab],
     panels: { objectBrowser: true, propertyBrowser: true }
   };
 
   const withoutPanel = ideReducer(state, {
     type: "closeTab",
-    id: "object-browser",
+    id: TAB_TYPES.objectBrowser,
     nextActiveId: 2
   });
   assert.equal(withoutPanel.panels.objectBrowser, false);

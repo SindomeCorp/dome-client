@@ -18,7 +18,7 @@ import {
 } from "./protocol.js";
 import { emitInput } from "./socketAdapter.js";
 
-ace.config.set("basePath", "/js/ace");
+ace?.config?.set?.("basePath", "/js/ace");
 
 export function useAceEditors({
   active,
@@ -74,8 +74,10 @@ export function useAceEditors({
 
   const setEditorRef = (id, node, content, command, commandTarget = "") => {
     if (!node || editors.current[id]) return;
+    if (typeof ace?.edit !== "function") return;
 
     const ed = ace.edit(node);
+    if (!ed || typeof ed.getSession !== "function") return;
     const isProgram = command === "@program";
     const editingObjectId = getEditingObjectId(command, commandTarget);
     const lineLimit = getLineLimit(command, lineLimits);
