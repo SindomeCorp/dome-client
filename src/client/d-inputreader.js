@@ -1,4 +1,11 @@
 import { dome, socket, logger } from "./b-variables.js";
+import {
+  createHistoryState,
+  navigateHistory,
+  recordSubmittedCommand,
+  rememberDraftInput,
+  resetHistoryNavigation
+} from "./input-history.js";
 import { store } from "./store.js";
 
 /**
@@ -40,29 +47,28 @@ dome.setupInputReader = () => {
     }
   });
 
-  let lastInput = "";
-  const commandBuffer = store.get("my-input-buffer") || [];
-  let commandPointer = commandBuffer.length || -1;
+  const historyState = createHistoryState(store.get("my-input-buffer") || []);
+  const commandBuffer = historyState.entries;
+
+  const echoCommand = (command) => {
+    if (dome.preferences.localEcho) {
+      dome.buffer.insertAdjacentHTML("beforeend", "<span class=\"input-echo\">&gt;" + command + "</span>\n");
+    }
+  };
 
   const sendCommand = (command) => {
     if (command.startsWith("@client-option")) {
-      if (dome.preferences.localEcho) {
-        dome.buffer.insertAdjacentHTML("beforeend", "<span class=\"input-echo\">&gt;" + command + "</span>\n");
-      }
+      echoCommand(command);
       if (dome.parseClientOptionCommand) dome.parseClientOptionCommand(command);
     } else if (command === "@test") {
-      if (dome.preferences.localEcho) {
-        dome.buffer.insertAdjacentHTML("beforeend", "<span class=\"input-echo\">&gt;" + command + "</span>\n");
-      }
+      echoCommand(command);
       dome.openIDE?.({
         editorName: "Test Tab",
         uploadCommand: "@save-test",
         buffer: "This is some test data"
       });
     } else {
-      if (dome.preferences.localEcho) {
-        dome.buffer.insertAdjacentHTML("beforeend", "<span class=\"input-echo\">&gt;" + command + "</span>\n");
-      }
+      echoCommand(command);
       socket.emit("input", command, (state) => {
         if (dome.setFadeText && dome.statusDisplay) {
           dome.setFadeText(
@@ -120,8 +126,8 @@ dome.setupInputReader = () => {
         return false;
       }
       inputReader.value = selected;
-      lastInput = selected;
-      commandPointer = commandBuffer.length;
+      rememberDraftInput(historyState, selected);
+      resetHistoryNavigation(historyState);
       closeHistorySearch({ focusInput: true });
       const end = inputReader.value.length;
       if ("selectionStart" in inputReader) {
@@ -263,77 +269,34 @@ dome.setupInputReader = () => {
     });
 
     const applyHistoryNavigation = (key) => {
-      const lineLength = inputReader.value.length;
-      if ( key === "ArrowUp" ) {
-        // Up arrow: recall previous command when at line start or line is short
-        const cursor = getCursorPosition( inputReader );
-        if ( commandPointer >= 0 && cursor.start == cursor.end && ( lineLength < 150 || cursor.start === 0 ) ) {
-          commandPointer = ( commandPointer <= -1 ? commandBuffer.length : commandPointer ) - 1;
-          inputReader.value = commandBuffer[ commandPointer ];
-          return true;
-        }
-      } else if ( key === "ArrowDown" ) {
-        // Down arrow: show next command when at line end or line is short
-        const cursor = getCursorPosition( inputReader );
-        if ( cursor.start == cursor.end && ( lineLength < 150 || cursor.start === lineLength ) ) {
-          if ( commandPointer < commandBuffer.length - 1 ) {
-            // down (show next newest)
-            commandPointer = ( commandPointer + 1 > commandBuffer.length ? 0 : commandPointer ) + 1;
-            inputReader.value = commandBuffer[ commandPointer ];
-            return true;
-          } else if ( commandPointer >= commandBuffer.length - 1 ) {
-            // down (at last, don't show me anything)
-            commandPointer = commandBuffer.length;
-            if ( inputReader.value == lastInput && inputReader.value != "" ) {
-              // clear the buffer but don't forget what was in it
-              // but dont add blank lines for each down when there is nothing there
-              commandBuffer[ commandBuffer.length ] = inputReader.value;
-              if ( commandBuffer.length > 2e3 ) {
-                commandBuffer.shift();
-              }
-              commandPointer = commandBuffer.length;
-              store.put( "my-input-buffer", commandBuffer );
-              inputReader.value = "";
-              lastInput = "";
-            } else {
-              inputReader.value = lastInput;
-            }
-            return true;
-          }
-        }
+      const result = navigateHistory(historyState, {
+        key,
+        currentInput: inputReader.value,
+        cursor: getCursorPosition(inputReader)
+      });
+      if (!result.navigated) {
+        return false;
       }
-      return false;
+      inputReader.value = result.value;
+      if (result.storedDraft) {
+        store.put("my-input-buffer", commandBuffer);
+      }
+      return true;
     };
     const applyHistoryNavigationFromButtons = (key) => {
-      if ( key === "ArrowUp" ) {
-        if ( commandPointer >= 0 ) {
-          commandPointer = ( commandPointer <= -1 ? commandBuffer.length : commandPointer ) - 1;
-          inputReader.value = commandBuffer[ commandPointer ];
-          return true;
-        }
-      } else if ( key === "ArrowDown" ) {
-        if ( commandPointer < commandBuffer.length - 1 ) {
-          commandPointer = ( commandPointer + 1 > commandBuffer.length ? 0 : commandPointer ) + 1;
-          inputReader.value = commandBuffer[ commandPointer ];
-          return true;
-        } else if ( commandPointer >= commandBuffer.length - 1 ) {
-          commandPointer = commandBuffer.length;
-          if ( inputReader.value == lastInput && inputReader.value != "" ) {
-            commandBuffer[ commandBuffer.length ] = inputReader.value;
-            if ( commandBuffer.length > 2e3 ) {
-              commandBuffer.shift();
-            }
-            commandPointer = commandBuffer.length;
-            store.put( "my-input-buffer", commandBuffer );
-            inputReader.value = "";
-            lastInput = "";
-          } else {
-            inputReader.value = lastInput;
-          }
-          return true;
-        }
+      const result = navigateHistory(historyState, {
+        key,
+        currentInput: inputReader.value,
+        force: true
+      });
+      if (!result.navigated) {
+        return false;
       }
-      return false;
+      inputReader.value = result.value;
+      if (result.storedDraft) {
+        store.put("my-input-buffer", commandBuffer);
+      }
+      return true;
     };
 
     inputReader.addEventListener("keydown", (event) => {
@@ -343,9 +306,6 @@ dome.setupInputReader = () => {
       }
     });
     inputReader.addEventListener("keypress", (event) => {
-      if ( event.key === "Backspace" ) {
-
-      }
       if ( event.key === "Enter" && !event.shiftKey ) {
         if (
           dome.autoComplete &&
@@ -367,21 +327,16 @@ dome.setupInputReader = () => {
         }
         sendCommand(command);
 
-        commandBuffer[ commandBuffer.length ] = command;
-        if ( commandBuffer.length > 2000 ) {
-          commandBuffer.shift();
+        if (recordSubmittedCommand(historyState, command)) {
+          store.put("my-input-buffer", commandBuffer); // localStore deals in strings, this won't work as an array Chad. - Future Chad
         }
-        commandPointer = commandBuffer.length;
-        store.put( "my-input-buffer", commandBuffer ); // localStore deals in strings, this won't work as an array Chad. - Future Chad
         inputReader.value = "";
         return false;
       } else {
         setTimeout( () => {
-          lastInput = inputReader.value;
+          rememberDraftInput(historyState, inputReader.value);
         }, 5 );
       }
-    });
-    inputReader.addEventListener("focus", () => {
     });
 
     const wireHistoryButton = (selector, key) => {
