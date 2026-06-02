@@ -7,13 +7,47 @@ import "ace-builds/src-noconflict/mode-text.js";
 import { getSocket } from "../s-editor.js";
 import { parseCommand, getCommandLabel } from "../command-utils.js";
 import { getPreferredFont, getFontFamily } from "../ace/fonts.js";
+import {
+  PROPERTY_EDIT_COMMANDS,
+  getDefinitionTargetAtPosition,
+  getEditingObjectId,
+  parseObjectPropertyTarget,
+  resolveThisReference,
+  splitReferenceTarget
+} from "./editor-ide/targets.js";
+import {
+  formatEditPropertyCommand,
+  formatEditVerbCommand,
+  formatOpenReferenceCommand,
+  formatPropertyListCommand,
+  formatPropertyOverlayCommand,
+  formatVerbListCommand,
+  formatVerbOverlayCommand,
+  getSaveMessages
+} from "./editor-ide/protocol.js";
+import {
+  formatObjectPermissions,
+  formatOverlayValue,
+  getOverlayCacheKeys,
+  getOverlayDisplayObjectId,
+  normalizeObjectPropertiesPayload,
+  normalizeObjectVerbsPayload,
+  sortByLabel,
+  sortByPropertyLabel
+} from "./editor-ide/payloads.js";
+import {
+  buildTitle,
+  createEditableTab,
+  createObjectBrowserTab,
+  createPropertyBrowserTab,
+  pinBrowserTabs
+} from "./editor-ide/tabs.js";
 
 ace.config.set("basePath", "/js/ace");
 
 const DEFAULT_LOCAL_SAVE_NODE_MAX_LINES = 200;
 const DEFAULT_LOCAL_SAVE_NODE_ADMIN_MAX_LINES = 800;
 const DEFAULT_LOCAL_SAVE_NOTE_MAX_LINES = 20;
-const PROPERTY_EDIT_COMMANDS = new Set(["@set-note-string", "@set-note-text"]);
 const EMPTY_VMS_PROMPT_STATE = { open: false, tabId: null, value: "" };
 
 export default function EditorIDE() {
@@ -67,146 +101,6 @@ export default function EditorIDE() {
     recentTabIds.current = [...recentTabIds.current.filter((id) => id !== active), active];
   }, [active]);
 
-
-  const buildTitle = (editor) => {
-    if (editor.editorName) return editor.editorName;
-    if (editor.obj && (editor.verb || editor.prop || editor.property)) {
-      return `${editor.obj}:${editor.verb || editor.prop || editor.property}`;
-    }
-    return editor.uploadCommand || "Untitled";
-  };
-
-  const getPrimaryAlias = (verbName) => String(verbName || "").trim().split(/\s+/)[0] || "";
-  const getPrimaryProperty = (propertyName) => String(propertyName || "").trim().split(/\s+/)[0] || "";
-
-  const sortByLabel = (items) =>
-    [...items].sort((a, b) =>
-      getPrimaryAlias(a.verbName).localeCompare(
-        getPrimaryAlias(b.verbName),
-        undefined,
-        { sensitivity: "base" }
-      )
-    );
-
-  const sortByPropertyLabel = (items) =>
-    [...items].sort((a, b) =>
-      getPrimaryProperty(a.propertyName).localeCompare(
-        getPrimaryProperty(b.propertyName),
-        undefined,
-        { sensitivity: "base" }
-      )
-    );
-
-  const parseObjectPropertyTarget = (target) => {
-    const value = String(target || "").trim();
-    const dotAt = value.indexOf(".");
-    if (dotAt <= 0 || dotAt >= value.length - 1) return null;
-    const objectId = value.slice(0, dotAt).trim();
-    const propertyName = value.slice(dotAt + 1).trim();
-    if (!objectId || !propertyName) return null;
-    return { objectId, propertyName };
-  };
-
-  const getDefinitionTargetAtPosition = (line, column) => {
-    if (typeof line !== "string") return "";
-    const pattern = /(#\d+(?::[A-Za-z0-9_@*.-]+|\.[A-Za-z0-9_]+)|\$[A-Za-z0-9_]+(?::[A-Za-z0-9_@*.-]+|\.[A-Za-z0-9_]+)|this(?::[A-Za-z0-9_@*.-]+|\.[A-Za-z0-9_]+))(?:\(\))?/g;
-    let match;
-    while ((match = pattern.exec(line)) !== null) {
-      const full = match[0];
-      const target = match[1];
-      const start = match.index;
-      const end = start + full.length;
-      if (column >= start && column <= end) {
-        return target;
-      }
-    }
-    return "";
-  };
-
-  const splitReferenceTarget = (target) => {
-    const raw = String(target || "").trim();
-    if (!raw) return null;
-    const separator = raw.includes(":") ? ":" : raw.includes(".") ? "." : "";
-    if (!separator) return null;
-    const idx = raw.indexOf(separator);
-    if (idx <= 0 || idx >= raw.length - 1) return null;
-    return {
-      kind: separator === ":" ? "verb" : "prop",
-      objectId: raw.slice(0, idx),
-      itemName: raw.slice(idx + 1),
-    };
-  };
-
-  const getEditingObjectId = (command, commandTarget) => {
-    const target = String(commandTarget || "").trim();
-    if (!target) return "";
-    if (command === "@program") {
-      const idx = target.indexOf(":");
-      if (idx > 0) return target.slice(0, idx).trim();
-    }
-    if (PROPERTY_EDIT_COMMANDS.has(command)) {
-      const idx = target.indexOf(".");
-      if (idx > 0) return target.slice(0, idx).trim();
-    }
-    const match = target.match(/^(#\d+)/);
-    return match ? match[1] : "";
-  };
-
-  const resolveThisReference = (target, editingObjectId) => {
-    const raw = String(target || "").trim();
-    if (!raw) return "";
-    if (!raw.startsWith("this:") && !raw.startsWith("this.")) return raw;
-    if (!editingObjectId) return "";
-    return `${editingObjectId}${raw.slice(4)}`;
-  };
-
-  const getOverlayResolvedObjectId = (requestObjectId, payload) => {
-    const resolvedObjectId = String(payload?.resolved_object || payload?.resolvedObject || "").trim();
-    return resolvedObjectId || String(requestObjectId || "").trim();
-  };
-
-  const getOverlayCacheKeys = (requestObjectId, itemName, payload) => {
-    const requestObject = String(requestObjectId || "").trim();
-    const item = String(itemName || "").trim();
-    if (!requestObject || !item) return [];
-    const resolvedObject = getOverlayResolvedObjectId(requestObject, payload);
-    const keys = [`${requestObject}::${item}`];
-    if (resolvedObject && resolvedObject !== requestObject) {
-      keys.push(`${resolvedObject}::${item}`);
-    }
-    return keys;
-  };
-
-  const getOverlayDisplayObjectId = (overlay) => {
-    if (!overlay) return "";
-    return getOverlayResolvedObjectId(overlay.objectId, overlay.payload);
-  };
-  const formatOverlayValue = (payload) => {
-    const value = payload?.value;
-    if (Array.isArray(value)) {
-      return value.map((line) => String(line ?? "")).join("\n");
-    }
-    if (typeof value === "string") return value;
-    if (value == null) return "";
-    return String(value);
-  };
-
-  const isEnabledFlag = (value) =>
-    value === 1 || value === true || String(value).trim() === "1" || String(value).toLowerCase() === "true";
-
-  const formatObjectPermissions = (flags) => {
-    if (!flags || typeof flags !== "object") return "";
-    let base = "";
-    if (isEnabledFlag(flags.r)) base += "r";
-    if (isEnabledFlag(flags.w)) base += "w";
-    if (isEnabledFlag(flags.f)) base += "f";
-    const parts = [];
-    if (base) parts.push(`+${base}`);
-    if (isEnabledFlag(flags.wiz) || isEnabledFlag(flags.wizard)) parts.push("+wiz");
-    if (isEnabledFlag(flags.prog) || isEnabledFlag(flags.programmer)) parts.push("+prog");
-    if (isEnabledFlag(flags.player)) parts.push("+player");
-    return parts.join("");
-  };
 
   const upsertObjectVerb = (objectId, verbLabel) => {
     setObjectGraph((prev) => {
@@ -284,98 +178,15 @@ export default function EditorIDE() {
   };
 
   const applyObjectVerbsPayload = (payload) => {
-    if (!payload) return;
-
-    if (Array.isArray(payload) && payload.length >= 2) {
-      const objectId = String(payload[0] || "").trim();
-      const rows = Array.isArray(payload[1]) ? payload[1] : [];
-      if (!objectId) return;
-      const formatted = rows
-        .map((row) => {
-          if (!Array.isArray(row)) return "";
-          const permissions = String(row[1] || "").trim();
-          const verbName = String(row[2] || "").trim();
-          const argGroups = Array.isArray(row[3]) ? row[3] : [];
-          const argumentsText = argGroups
-            .map((group) => (Array.isArray(group) ? group.map((x) => String(x)).join(" ") : String(group)))
-            .join(" | ")
-            .trim();
-          if (!verbName) return "";
-          return { verbName, permissions, argumentsText, owner: "", lastUpdated: "" };
-        })
-        .filter(Boolean);
-      replaceObjectVerbs(objectId, formatted);
-      return;
-    }
-
-    if (typeof payload !== "object") return;
-    const objectId = String(payload.object || payload.id || "").trim();
-    if (!objectId) return;
-    const verbsObj = payload.verbs && typeof payload.verbs === "object" ? payload.verbs : {};
-    const formatted = Object.values(verbsObj)
-      .map((verb) => {
-        if (!verb || typeof verb !== "object") return "";
-        const verbName = String(verb.name || "").trim();
-        if (!verbName) return "";
-        const args = Array.isArray(verb.args) ? verb.args.map((x) => String(x)).join(" ") : String(verb.args || "").trim();
-        return {
-          verbName,
-          argumentsText: args,
-          owner: String(verb.owner || "").trim(),
-          permissions: String(verb.permissions || "").trim(),
-          lastUpdated: String(verb["last updated"] || verb.lastUpdated || "").trim()
-        };
-      })
-      .filter(Boolean);
-    replaceObjectVerbs(objectId, formatted);
+    const normalized = normalizeObjectVerbsPayload(payload);
+    if (!normalized) return;
+    replaceObjectVerbs(normalized.objectId, normalized.rows);
   };
 
   const applyObjectPropsPayload = (payload) => {
-    if (!payload) return;
-
-    if (Array.isArray(payload) && payload.length >= 2) {
-      const objectId = String(payload[0] || "").trim();
-      const rows = Array.isArray(payload[1]) ? payload[1] : [];
-      if (!objectId) return;
-      const formatted = rows
-        .map((row) => {
-          if (Array.isArray(row)) {
-            const rawName = [row[1], row[2], row[0]].find((part) => String(part || "").trim()) || "";
-            const propertyName = String(rawName || "").trim();
-            if (!propertyName || propertyName === objectId) return "";
-            return { propertyName, clear: false, owner: "", permissions: "" };
-          }
-          const propertyName = String(row || "").trim();
-          if (!propertyName) return "";
-          return { propertyName, clear: false, owner: "", permissions: "" };
-        })
-        .filter(Boolean);
-      replaceObjectProperties(objectId, formatted);
-      return;
-    }
-
-    if (typeof payload !== "object") return;
-    const objectId = String(payload.object || payload.id || "").trim();
-    if (!objectId) return;
-    const props = payload.props && typeof payload.props === "object" ? payload.props : {};
-    const formatted = Object.entries(props)
-      .map(([propertyName, propData]) => {
-        const name = String(propertyName || "").trim();
-        if (!name) return "";
-        return {
-          propertyName: name,
-          clear: Number(propData?.clear) === 1,
-          owner: String(propData?.owner || "").trim(),
-          permissions: String(propData?.permissions || "").trim()
-        };
-      })
-      .filter(Boolean);
-    replaceObjectProperties(objectId, formatted, {
-      name: String(payload.name || "").trim(),
-      owner: String(payload.owner || "").trim(),
-      parent: String(payload.parent || "").trim(),
-      flags: payload.flags && typeof payload.flags === "object" ? payload.flags : {}
-    });
+    const normalized = normalizeObjectPropertiesPayload(payload);
+    if (!normalized) return;
+    replaceObjectProperties(normalized.objectId, normalized.rows, normalized.objectMeta);
   };
 
   const addTab = (editor) => {
@@ -406,16 +217,6 @@ export default function EditorIDE() {
       }
     }
 
-    const pinBrowserTabs = (list) => {
-      const objectBrowser = list.find((tab) => tab.tabType === "object-browser");
-      const propertyBrowser = list.find((tab) => tab.tabType === "property-browser");
-      const otherTabs = list.filter((tab) => tab.tabType !== "object-browser" && tab.tabType !== "property-browser");
-      const pinned = [];
-      if (objectBrowser) pinned.push(objectBrowser);
-      if (propertyBrowser) pinned.push(propertyBrowser);
-      return [...pinned, ...otherTabs];
-    };
-
     setTabs((prev) => {
       const existing = prev.find((t) => t.name === name);
       if (existing) {
@@ -429,53 +230,17 @@ export default function EditorIDE() {
       }
       const id = Date.now() + Math.random();
       setActive(id);
-      const nextTab = {
-        id,
-        name,
-        title,
-        uploadCommand: editor.uploadCommand || "none",
-        editorName: editor.editorName || "",
-        command,
-        commandTarget,
-        content: editor.buffer || "",
-        savedContent: editor.buffer || "",
-        dirty: false,
-        vmsNote: isProgramCommand ? "" : null,
-      };
+      const nextTab = createEditableTab({ id, editor, title, command, commandTarget, name, isProgramCommand });
       const tabsToAdd = [];
       const hasObjectBrowser = prev.some((t) => t.name === "object-browser");
       const hasPropertyBrowser = prev.some((t) => t.name === "property-browser");
 
       if (isVerbContext && !hasObjectBrowser) {
-        tabsToAdd.push({
-          id: Date.now() + Math.random(),
-          name: "object-browser",
-          title: "Object Browser",
-          uploadCommand: "none",
-          editorName: "Object Browser",
-          command: "",
-          commandTarget: "none",
-          content: "",
-          savedContent: "",
-          dirty: false,
-          tabType: "object-browser",
-        });
+        tabsToAdd.push(createObjectBrowserTab(Date.now() + Math.random()));
       }
 
       if (isPropertyContext && !hasPropertyBrowser) {
-        tabsToAdd.push({
-          id: Date.now() + Math.random(),
-          name: "property-browser",
-          title: "Property Browser",
-          uploadCommand: "none",
-          editorName: "Property Browser",
-          command: "",
-          commandTarget: "none",
-          content: "",
-          savedContent: "",
-          dirty: false,
-          tabType: "property-browser",
-        });
+        tabsToAdd.push(createPropertyBrowserTab(Date.now() + Math.random()));
       }
 
       return pinBrowserTabs([...prev, ...tabsToAdd, nextTab]);
@@ -662,8 +427,8 @@ export default function EditorIDE() {
         domEvent.preventDefault?.();
         domEvent.stopPropagation?.();
         const socket = getSocket();
-        const openParentSuffix = ideEditOpenParent && target.includes(":") ? " --open-parent" : "";
-        socket?.emit("input", `@edit ${target}${openParentSuffix}`);
+        const command = formatOpenReferenceCommand(target, { openParent: ideEditOpenParent });
+        if (command) socket?.emit("input", command);
       });
       ed.on("mousemove", (event) => {
         const pos = event?.getDocumentPosition?.();
@@ -698,8 +463,8 @@ export default function EditorIDE() {
         const socket = getSocket();
         if (!socket) return;
         const cmd = parsed.kind === "verb"
-          ? `#$# SDWC%%VERB-OVERLAY%%${parsed.objectId}%%${parsed.itemName}`
-          : `#$# SDWC%%PROP-OVERLAY%%${parsed.objectId}%%${parsed.itemName}`;
+          ? formatVerbOverlayCommand(parsed.objectId, parsed.itemName)
+          : formatPropertyOverlayCommand(parsed.objectId, parsed.itemName);
         console.log("[SDWC overlay request][ide-editor]", { cmd });
         socket.emit("input", cmd);
       });
@@ -731,11 +496,7 @@ export default function EditorIDE() {
     const ed = editors.current[tab.id];
     if (!socket || !ed) return false;
     const val = ed.getValue();
-    socket.emit("input", tab.uploadCommand);
-    socket.emit("input", val + "\n.");
-    if (typeof vmsNoteLine === "string" && vmsNoteLine.trim() !== "") {
-      socket.emit("input", vmsNoteLine);
-    }
+    getSaveMessages(tab, val, vmsNoteLine).forEach((message) => socket.emit("input", message));
     setTabs((ts) => ts.map((t) => (t.id === tab.id ? { ...t, savedContent: val, dirty: false } : t)));
     return true;
   };
@@ -762,33 +523,30 @@ export default function EditorIDE() {
     setCollapsedObjects((prev) => ({ ...prev, [objectId]: false }));
     const socket = getSocket();
     if (!socket) return;
-    socket.emit("input", `#$# SDWC%%VERBS%%${objectId}`);
+    socket.emit("input", formatVerbListCommand(objectId));
   };
 
   const onLoadProps = (objectId) => {
     setCollapsedProperties((prev) => ({ ...prev, [objectId]: false }));
     const socket = getSocket();
     if (!socket) return;
-    socket.emit("input", `#$# SDWC%%PROPS%%${objectId}`);
+    socket.emit("input", formatPropertyListCommand(objectId));
   };
 
   const onEditVerb = (objectId, rawVerbName) => {
-    const firstAlias = String(rawVerbName || "").trim().split(/\s+/)[0] || "";
-    const verbName = firstAlias.includes("*")
-      ? firstAlias.slice(0, firstAlias.indexOf("*")).trim()
-      : firstAlias;
-    if (!verbName) return;
+    const command = formatEditVerbCommand(objectId, rawVerbName);
+    if (!command) return;
     const socket = getSocket();
     if (!socket) return;
-    socket.emit("input", `@edit ${objectId}:${verbName}`);
+    socket.emit("input", command);
   };
 
   const onEditProperty = (objectId, rawPropertyName) => {
-    const propertyName = String(rawPropertyName || "").trim().split(/\s+/)[0] || "";
-    if (!propertyName) return;
+    const command = formatEditPropertyCommand(objectId, rawPropertyName);
+    if (!command) return;
     const socket = getSocket();
     if (!socket) return;
-    socket.emit("input", `@edit ${objectId}.${propertyName}`);
+    socket.emit("input", command);
   };
 
   const toggleObjectCollapsed = (objectId) => {
