@@ -185,6 +185,7 @@ test("integration: multi-mud successful connects update metrics in memory and on
   assert.ok((firstRead.games["example.org:7777"] || 0) >= 2);
 
   const freshService = await import(`../../src/services/multi-mud-metrics.js?verify=${Date.now()}`);
+  freshService.setMetricsPathForTests(metricsPath);
   const stats = freshService.connectedStats();
   assert.ok(stats.count >= 2);
   const target = stats.games.find((entry) => entry.address === "example.org:7777");
