@@ -1,0 +1,104 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { createSocketOutputEventHandler } from "../../src/client/socket-output-effects.js";
+
+function createDome(t) {
+  return {
+    buffer: { childNodes: [] },
+    ideWindow: { closed: false, postMessage: t.mock.fn() },
+    inputReader: {},
+    makeEditor: t.mock.fn(() => ({ id: "editor" })),
+    setFadeText: t.mock.fn(),
+    setupAutoComplete: t.mock.fn(),
+    spawned: {},
+    statusDisplay: {},
+    updateEditorListView: t.mock.fn()
+  };
+}
+
+function createLogger(t) {
+  return {
+    debug: t.mock.fn(),
+    warn: t.mock.fn()
+  };
+}
+
+function createRenderer(t) {
+  return {
+    appendOutputSegment: t.mock.fn(() => 1),
+    endSdwcNowrapBlock: t.mock.fn(),
+    startSdwcNowrapBlock: t.mock.fn()
+  };
+}
+
+test("socket output event handler delegates text and fade events", (t) => {
+  const dome = createDome(t);
+  const renderer = createRenderer(t);
+  const handler = createSocketOutputEventHandler({
+    dome,
+    logger: createLogger(t),
+    renderer
+  });
+
+  assert.equal(handler({ type: "text", text: "line\n" }), 1);
+  handler({ type: "fade", message: "status" });
+
+  assert.deepEqual(renderer.appendOutputSegment.mock.calls[0].arguments, ["line\n"]);
+  assert.deepEqual(dome.setFadeText.mock.calls[0].arguments, [dome.statusDisplay, "status"]);
+});
+
+test("socket output event handler updates editor and autocomplete side effects", (t) => {
+  const dome = createDome(t);
+  const handler = createSocketOutputEventHandler({
+    dome,
+    logger: createLogger(t),
+    renderer: createRenderer(t)
+  });
+
+  handler({
+    type: "editor-content",
+    updateEditorList: true,
+    editor: {
+      buffer: "content",
+      editorName: "verb",
+      uploadCommand: "@program #1:verb"
+    }
+  });
+  handler({ type: "user-type", userType: "staff" });
+
+  assert.equal(dome.spawned.verb.id, "editor");
+  assert.equal(dome.updateEditorListView.mock.callCount(), 1);
+  assert.equal(dome.userType, "staff");
+  assert.deepEqual(dome.setupAutoComplete.mock.calls[0].arguments, [dome.inputReader, "staff"]);
+});
+
+test("socket output event handler forwards SDWC IDE messages", (t) => {
+  const dome = createDome(t);
+  const handler = createSocketOutputEventHandler({
+    dome,
+    logger: createLogger(t),
+    renderer: createRenderer(t)
+  });
+
+  handler({ type: "sdwc-verbs", payload: ["#1", []] });
+  handler({
+    type: "sdwc-prop-overlay",
+    objectId: "#1",
+    propertyName: "name",
+    payload: { object: "#1", property: "name" }
+  });
+
+  assert.deepEqual(dome.ideWindow.postMessage.mock.calls[0].arguments, [
+    { type: "ide-object-verbs", payload: ["#1", []] },
+    "*"
+  ]);
+  assert.deepEqual(dome.ideWindow.postMessage.mock.calls[1].arguments, [
+    {
+      type: "ide-prop-overlay",
+      objectId: "#1",
+      propertyName: "name",
+      payload: { object: "#1", property: "name" }
+    },
+    "*"
+  ]);
+});

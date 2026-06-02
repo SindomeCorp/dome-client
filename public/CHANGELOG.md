@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Replaced the Editor IDE technical debt plan with a roadmap focused on tab planning, save flow, shortcuts, overlays, and orchestration cleanup.
 - Refactored the Editor IDE internals into focused planning, save-flow, shortcut, overlay, browser command, recent-tab, and label helpers while preserving existing behavior.
+- Split socket output rendering from protocol side effects so buffer rendering, SDWC nowrap handling, IDE messages, alerts, and scrollback pruning are easier to maintain.
 
 ### Fixed
 - Fixed Enter-key command submission when the input buffer is initialized before the socket connection is assigned.
