@@ -1,6 +1,12 @@
 import BarGraph from "./x-bar-graph.js";
-import { formatDate } from "./a-date-format-date.js";
-import { dome, logger, MOO_STATUS_ENUM, SOCKET_STATE_ENUM } from "./b-variables.js";
+import { dome, logger, SOCKET_STATE_ENUM } from "./b-variables.js";
+import {
+  buildHealthDetails,
+  classifyHealthStatus,
+  createPollingErrorHealth,
+  diagnoseConnectionError,
+  shapeHealthGraphSeries
+} from "./health-status.js";
 
 dome.setupHealthCheck = function() {
   if (!dome.healthDisplay || !dome.healthDetail) {
@@ -13,29 +19,12 @@ dome.setupHealthCheck = function() {
   };
 
   const troubleshootConnection = function(e) {
-    const lastState = dome.gameHealth.state;
-    if (lastState == MOO_STATUS_ENUM.UNCHECKED) {
-      return "";
-    } else if (lastState == MOO_STATUS_ENUM.OK || lastState == MOO_STATUS_ENUM.UNKNOWN) {
-      if (e.code == "ETIMEOUT" && dome.gameHealth.cpu > 98) {
-        showConnectionHelp(MOO_STATUS_ENUM.SEVERE_LAG);
-        return "the moo is under heavy load and might not be able to respond in a timely manner";
-      } else if (e.code == "ENOTFOUND" || e.code == "ETIMEOUT") {
-        showConnectionHelp(MOO_STATUS_ENUM.NETWORK_ISSUE);
-        return "unable to reach webclient server via socket, check your Internet connection";
-      } else if (e.code == "ECONNREFUSED") {
-        showConnectionHelp("CHECK_FIREWALL");
-        return "socket connection refused, behind a strict company or school firewall?";
-      } else {
-        showConnectionHelp(MOO_STATUS_ENUM.NETWORK_ISSUE);
-        return "unexpected error while opening socket to webclient server: " + e.code;
-      }
-    } else {
-      // whatever other state is already in play
-      showConnectionHelp(lastState);
+    const diagnosis = diagnoseConnectionError(e, dome.gameHealth);
+    if (diagnosis.helpType) {
+      showConnectionHelp(diagnosis.helpType);
     }
 
-    return dome.gameHealth.message;
+    return diagnosis.message;
   };
 
   dome.onErrorHandler = function(e) {
@@ -203,27 +192,8 @@ dome.setupHealthCheck = function() {
       dome.gameHealth.shift();
     }
 
-    let globeClass = "ok";
-    if ( health.state != MOO_STATUS_ENUM.OK && health.state != MOO_STATUS_ENUM.UNCHECKED ) {
-      globeClass = "fatal";
-    } else if ( health.cpu > 98 ) {
-      globeClass = "warn";
-    }
-
-    const mem = (health.memory / 1024 / 1024).toFixed( 2 );
-
-    let details = health.message + "<br>";
-
-    if ( health.cpu > 0 ) {
-      details += health.cpu + "% CPU consumption<br>";
-    }
-    if ( health.memory > 0 ) {
-      details += mem + "MB RAM occupied<br>";
-    }
-    details += health.users + " users connected<br>";
-    if ( health.checked ) {
-      details += "Checked at " + formatDate(new Date(health.checked), "hh:mm:ss t");
-    }
+    const globeClass = classifyHealthStatus(health);
+    const details = buildHealthDetails(health);
 
     dome.healthDisplay.innerHTML = `<i class="globe globe-${globeClass}"></i>`;
     detailedMOOStatus.innerHTML = details;
@@ -231,19 +201,7 @@ dome.setupHealthCheck = function() {
       dome.setFadeText( dome.statusDisplay, health.message, globeClass != "ok" ? true : false );
     }
     if ( dome.gameHealth ) {
-      const cpuValues = dome.gameHealth.map(h => h.cpu);
-      const memValues = dome.gameHealth.map(h => h.memory);
-      const userValues = dome.gameHealth.map(h => h.users);
-
-      while ( cpuValues.length < 100 ) {
-        cpuValues.push( 0 );
-      }
-      while ( memValues.length < 100 ) {
-        memValues.push( 0 );
-      }
-      while ( userValues.length < 100 ) {
-        userValues.push( 0 );
-      }
+      const { cpuValues, memValues, userValues } = shapeHealthGraphSeries(dome.gameHealth);
       cpuGraph.update( cpuValues );
       memGraph.update( memValues );
       userGraph.update( userValues );
@@ -274,27 +232,7 @@ dome.setupHealthCheck = function() {
         setGameHealthDisplay(health);
       })
       .catch((err) => {
-        const health = {
-          cpu: 0,
-          memory: 0,
-          checked: new Date().getTime(),
-          state: MOO_STATUS_ENUM.WEBCLIENT_DOWN,
-          message: "",
-        };
-        if (err && err.code) {
-          if (err.code == "ENOTFOUND") {
-            health.state = MOO_STATUS_ENUM.NETWORK_ISSUE;
-            health.message = "unable to reach webclient server, check your Internet connection";
-          } else if (err.code == "ETIMEDOUT") {
-            // local network problem or server offline
-            health.message = "unable to reach webclient server after a reasonable time, server may be offline";
-          } else if (err.code == "ECONNREFUSED") {
-            health.state = MOO_STATUS_ENUM.NETWORK_ISSUE;
-            health.message = "server connection refused, behind a strict company or school firewall?";
-          } else {
-            health.message = "error while connecting to webclient server: " + err.code;
-          }
-        }
+        const health = createPollingErrorHealth(err);
         logger.error(err);
         setGameHealthDisplay(health);
       });

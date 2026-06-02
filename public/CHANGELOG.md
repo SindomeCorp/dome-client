@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - Added Knip dead-code analysis commands for finding unused files, exports, and dependencies.
 
 ### Changed
+- Extracted health status classification, connection-error diagnosis, detail rendering, and graph-series shaping from the health UI setup.
 - Extracted connect-page saved-user storage and connection intent helpers so local profile persistence and player-client URL building are tested outside DOM setup.
 - Removed obsolete connect-page migration for legacy `dc-username` and `dc-password` local profile keys.
 - Split client options import/export helpers and schema-driven dropdown metadata out of the options DOM setup.
