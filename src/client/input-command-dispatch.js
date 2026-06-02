@@ -4,7 +4,7 @@ const echoCommand = (dome, command) => {
   }
 };
 
-export const createCommandDispatcher = ({ dome, socket }) => ({
+export const createCommandDispatcher = ({ dome, socket, getSocket = () => socket ?? dome.socket }) => ({
   sendCommand(command) {
     if (command.startsWith("@client-option")) {
       echoCommand(dome, command);
@@ -18,7 +18,14 @@ export const createCommandDispatcher = ({ dome, socket }) => ({
       });
     } else {
       echoCommand(dome, command);
-      socket.emit("input", command, (state) => {
+      const activeSocket = getSocket();
+      if (!activeSocket || typeof activeSocket.emit !== "function") {
+        if (dome.setFadeText && dome.statusDisplay) {
+          dome.setFadeText(dome.statusDisplay, "ERROR: socket is not connected", true);
+        }
+        return;
+      }
+      activeSocket.emit("input", command, (state) => {
         if (dome.setFadeText && dome.statusDisplay) {
           dome.setFadeText(
             dome.statusDisplay,

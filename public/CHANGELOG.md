@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Refactored the Editor IDE internals into focused planning, save-flow, shortcut, overlay, browser command, recent-tab, and label helpers while preserving existing behavior.
 
 ### Fixed
+- Fixed Enter-key command submission when the input buffer is initialized before the socket connection is assigned.
 - Hardened the IDE editor against malformed window messages and unavailable socket, opener, root, or Ace editor APIs.
 
 ## 2026-06-01

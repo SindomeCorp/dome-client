@@ -97,3 +97,22 @@ test("local echo can be disabled", () => {
   assert.deepEqual(socket.events, [{ event: "input", command: "say hi" }]);
   assert.deepEqual(dome.buffer.appended, []);
 });
+
+test("dispatcher resolves socket at send time", () => {
+  const { dome, socket } = createHarness();
+  dome.socket = null;
+  const dispatcher = createCommandDispatcher({ dome, socket: null });
+
+  dome.socket = socket;
+  dispatcher.sendCommand("say hi");
+
+  assert.deepEqual(socket.events, [{ event: "input", command: "say hi" }]);
+});
+
+test("missing socket reports status instead of throwing", () => {
+  const { dome, fadeCalls } = createHarness();
+  const dispatcher = createCommandDispatcher({ dome, socket: null });
+
+  assert.doesNotThrow(() => dispatcher.sendCommand("say hi"));
+  assert.deepEqual(fadeCalls, [[dome.statusDisplay, "ERROR: socket is not connected", true]]);
+});

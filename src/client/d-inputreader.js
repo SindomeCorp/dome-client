@@ -1,4 +1,4 @@
-import { dome, socket, logger } from "./b-variables.js";
+import { dome, logger } from "./b-variables.js";
 import { wireHistorySearchOverlay } from "./history-search-overlay.js";
 import { createCommandDispatcher } from "./input-command-dispatch.js";
 import { wireInputHistoryControls } from "./input-history-controls.js";
@@ -12,7 +12,7 @@ import { store } from "./store.js";
 
 // Wires input-reader dependencies while feature modules own their behavior.
 dome.setupInputReader = () => {
-  const { sendCommand } = createCommandDispatcher({ dome, socket });
+  const { sendCommand } = createCommandDispatcher({ dome, getSocket: () => dome.socket });
 
   // prevent the backspace key from navigating away from the page
   document.addEventListener("keydown", (e) => {

@@ -18,21 +18,24 @@ const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
     }
   });
   const prevSocket = socket;
-  setSocket({
+  const testSocket = {
     events: [],
     emit(event, cmd, cb) {
       this.events.push({ event, cmd });
       if (ack && cb) cb({ status: "command sent" });
     }
-  });
+  };
+  setSocket(testSocket);
   const origDome = {
     buffer: dome.buffer,
+    socket: dome.socket,
     preferences: dome.preferences,
     inputReader: dome.inputReader,
     onToggleAutoScroll: dome.onToggleAutoScroll,
     setFadeText: dome.setFadeText,
     statusDisplay: dome.statusDisplay
   };
+  dome.socket = testSocket;
   const output = [];
   dome.buffer = {
     appended: [],
@@ -54,7 +57,7 @@ const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
     globalThis.window = origGlobals.window;
     globalThis.document = origGlobals.document;
   });
-  return { window, store };
+  return { window, store, testSocket };
 };
 
 test("up arrow recalls previous command", async (t) => {
@@ -66,12 +69,12 @@ test("up arrow recalls previous command", async (t) => {
 });
 
 test("enter emits command and echoes", async (t) => {
-  const { window, store } = await loadInputReader(t);
+  const { window, store, testSocket } = await loadInputReader(t);
   const input = dome.inputReader;
   input.value = "say hi";
   input.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
-  assert.equal(socket.events.length, 1);
-  assert.deepEqual(socket.events[0], { event: "input", cmd: "say hi" });
+  assert.equal(testSocket.events.length, 1);
+  assert.deepEqual(testSocket.events[0], { event: "input", cmd: "say hi" });
   assert.equal(dome.buffer.appended[0], "<span class=\"input-echo\">&gt;say hi</span>\n");
   assert.equal(store.history.at(-1), "say hi");
   assert.equal(input.value, "");
@@ -110,14 +113,28 @@ test("enter echoes even without server ack", async (t) => {
 });
 
 test("insert prompts and sends command", async (t) => {
-  const { window } = await loadInputReader(t);
+  const { window, testSocket } = await loadInputReader(t);
   const origPrompt = globalThis.prompt;
   window.prompt = globalThis.prompt = () => "look";
   document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Insert" }));
   window.prompt = globalThis.prompt = origPrompt;
-  assert.equal(socket.events.length, 1);
-  assert.deepEqual(socket.events[0], { event: "input", cmd: "look" });
+  assert.equal(testSocket.events.length, 1);
+  assert.deepEqual(testSocket.events[0], { event: "input", cmd: "look" });
   assert.equal(dome.buffer.appended[0], "<span class=\"input-echo\">&gt;look</span>\n");
+});
+
+test("enter uses socket assigned after input reader setup", async (t) => {
+  const { window, testSocket } = await loadInputReader(t);
+  setSocket(null);
+  dome.socket = null;
+  const input = dome.inputReader;
+  input.value = "early setup";
+
+  setSocket(testSocket);
+  dome.socket = testSocket;
+  input.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
+
+  assert.deepEqual(testSocket.events.at(-1), { event: "input", cmd: "early setup" });
 });
 
 
@@ -180,12 +197,12 @@ test("long line arrow navigation respects cursor position", async (t) => {
 });
 
 test("enter on empty input sends empty command", async (t) => {
-  const { window, store } = await loadInputReader(t);
+  const { window, store, testSocket } = await loadInputReader(t);
   const input = dome.inputReader;
   input.value = "";
   input.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
-  assert.equal(socket.events.length, 1);
-  assert.deepEqual(socket.events[0], { event: "input", cmd: "" });
+  assert.equal(testSocket.events.length, 1);
+  assert.deepEqual(testSocket.events[0], { event: "input", cmd: "" });
   assert.equal(dome.buffer.appended[0], "<span class=\"input-echo\">&gt;</span>\n");
   assert.deepEqual(store.history, ["look"]);
 });
