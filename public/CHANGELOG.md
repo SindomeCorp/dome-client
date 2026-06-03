@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-06-03
 
 ### Changed
+- Closed the IDE window automatically when closing the last editable tab leaves only Object Browser or Property Browser tabs behind.
 - Highlighted user-defined MOO access receivers with the object-receiver color while keeping built-in variables such as `this` and `player` visually consistent.
 - Added distinct MOO verb editor highlighting for access receivers, cored/direct object receivers, and property names.
 - Distinguished builtin functions from in-MOO verb calls and corified object references in the MOO verb editor highlighting, including separate call-name coloring for MOO verb invocations.

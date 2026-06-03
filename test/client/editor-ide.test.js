@@ -349,6 +349,48 @@ test("EditorIDE closes browser panels without destroying editable documents", as
   ]);
 });
 
+test("EditorIDE closes the window when only browser panels remain", async (t) => {
+  const { window } = await renderEditorIde(t);
+  let closeCalls = 0;
+  window.close = () => {
+    closeCalls += 1;
+  };
+
+  await openTab(window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "initial"
+  });
+  await click(window, getButtonByText(window, "Close"));
+
+  await waitFor(() => {
+    assert.equal(closeCalls, 1);
+  });
+});
+
+test("EditorIDE does not close the window while editable tabs remain", async (t) => {
+  const { window } = await renderEditorIde(t);
+  let closeCalls = 0;
+  window.close = () => {
+    closeCalls += 1;
+  };
+
+  await openTab(window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "initial"
+  });
+  await openTab(window, {
+    editorName: "Tell",
+    uploadCommand: "@program #12:tell",
+    buffer: "second"
+  });
+  await click(window, getButtonByText(window, "Close"));
+
+  assert.equal(closeCalls, 0);
+  assert.deepEqual(getTabs(window), ["Object Browser", "Look"]);
+});
+
 test("EditorIDE prompts for VMS notes before saving program tabs when enabled", async (t) => {
   const { window, emit } = await renderEditorIde(t, { "data-ide-vms-note-enabled": "true" });
 

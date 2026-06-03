@@ -6,6 +6,7 @@ import {
 } from "./editor-ide/payloads.js";
 import {
   buildIdeTabs,
+  isBrowserTab,
   OBJECT_BROWSER_TAB,
   PROPERTY_BROWSER_TAB
 } from "./editor-ide/tabs.js";
@@ -242,7 +243,7 @@ export default function EditorIDE() {
     }
     const { nextActiveId, nextTabs } = getCloseState(id);
     dispatchIde({ type: "closeTab", id, nextActiveId });
-    if (nextTabs.length === 0) {
+    if (nextTabs.every(isBrowserTab)) {
       setTimeout(() => window.close(), 0);
     }
   };
