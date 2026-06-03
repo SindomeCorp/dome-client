@@ -182,14 +182,14 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "$player:tell(#-1, $nothing.name);"),
     [
-      "variable.other.object.receiver.moo",
+      "entity.other.object.receiver.moo",
       "punctuation.operator",
       "entity.name.function.moo",
       "paren.lparen",
       "constant.language.object",
       "punctuation.operator",
       "text",
-      "variable.other.object.receiver.moo",
+      "entity.other.object.receiver.moo",
       "punctuation.operator",
       "variable.other.property.moo",
       "paren.rparen",
@@ -212,7 +212,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "$code_utils:critical(\"some content\")"),
     [
-      "variable.other.object.receiver.moo",
+      "entity.other.object.receiver.moo",
       "punctuation.operator",
       "entity.name.function.moo",
       "paren.lparen",
@@ -223,7 +223,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "#0:critical()"),
     [
-      "variable.other.object.receiver.moo",
+      "entity.other.object.receiver.moo",
       "punctuation.operator",
       "entity.name.function.moo",
       "paren.lparen",
@@ -233,7 +233,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "#15840:verbname()"),
     [
-      "variable.other.object.receiver.moo",
+      "entity.other.object.receiver.moo",
       "punctuation.operator",
       "entity.name.function.moo",
       "paren.lparen",
@@ -243,7 +243,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "$code_utils.name"),
     [
-      "variable.other.object.receiver.moo",
+      "entity.other.object.receiver.moo",
       "punctuation.operator",
       "variable.other.property.moo"
     ]
@@ -251,13 +251,21 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "#15840.some_prop"),
     [
-      "variable.other.object.receiver.moo",
+      "entity.other.object.receiver.moo",
       "punctuation.operator",
       "variable.other.property.moo"
     ]
   );
   assert.deepEqual(
     tokenTypesFor(mode, "player.name"),
+    [
+      "variable.other.object.receiver.moo",
+      "punctuation.operator",
+      "variable.other.property.moo"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "this.production_check"),
     [
       "variable.other.object.receiver.moo",
       "punctuation.operator",

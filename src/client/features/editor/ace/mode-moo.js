@@ -270,10 +270,10 @@ var MOOHighlightRules = function() {
                 regex : '"(?=.)',
                 next  : "qqstring"
             }, {
-                token : "variable.other.object.receiver.moo",
+                token : "entity.other.object.receiver.moo",
                 regex : "\\$" + identifierRe + "(?=(?:" + propertyAccessRe + "|" + verbCallAccessRe + "))"
             }, {
-                token : "variable.other.object.receiver.moo",
+                token : "entity.other.object.receiver.moo",
                 regex : "#-?\\d+\\b(?=(?:" + propertyAccessRe + "|" + verbCallAccessRe + "))"
             }, {
                 token : "variable.other.object.receiver.moo",
