@@ -13,6 +13,9 @@ All notable changes to this project will be documented in this file.
 - Refactored the browser-client health UI into a focused controller for status messages, socket errors, panel controls, graph updates, and polling.
 - Clarified MUD/MOO terminology in the README while preserving legacy route, config, and documentation names.
 
+### Fixed
+- Fixed MOO verb editor outdent detection for typed closing block keywords such as `endfor`.
+
 ## 2026-06-02
 
 ### Added

@@ -343,6 +343,7 @@ test("MOO mode indents and outdents keyword-terminated blocks", () => {
   assert.equal(mode.getNextLineIndent("doc-start", " * details", "  "), " * ");
   assert.equal(mode.getNextLineIndent("doc-start", " */", "  "), "");
   assert.equal(mode.checkOutdent("start", "  ", "endif"), true);
+  assert.equal(mode.checkOutdent("start", "  endfo", "r"), true);
   assert.equal(mode.checkOutdent("start", "  ", "}"), false);
 
   mode.autoOutdent("start", endifDoc, 1);

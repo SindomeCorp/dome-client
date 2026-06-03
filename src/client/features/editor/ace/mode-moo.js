@@ -111,7 +111,7 @@ oop.inherits(Mode, TextMode);
     };
 
     this.checkOutdent = function(state, line, input) {
-        return /^\s+$/.test(line) && /^\s*(?:endif|endfor|endwhile|endtry|endfork|elseif|else|except|finally)\b/.test(input);
+        return /^\s*(?:endif|endfor|endwhile|endtry|endfork|elseif|else|except|finally)\b/.test(line + input);
     };
 
     this.autoOutdent = function(state, doc, row) {
