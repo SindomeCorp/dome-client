@@ -4,7 +4,7 @@ import {
   COLORSET_CHOICES,
   EDIT_THEMES,
   FONT_CHOICES,
-  PREF_NAME
+  getPreferenceNameForOptionKey
 } from "../client-option-schema.js";
 import { createClientOptionsStore } from "../client-options-store.js";
 import { showClientOptionsSaved, showImportExportToast } from "../client-options-toast.js";
@@ -129,7 +129,7 @@ function setupClientOptionsTabs() {
 }
 
 function applyOptionValue(name, value) {
-  const prefName = PREF_NAME[name];
+  const prefName = getPreferenceNameForOptionKey(name);
   if (prefName && clientActions.setClientOption) {
     clientActions.setClientOption(prefName, value);
   } else {
@@ -229,7 +229,7 @@ function readOptionInputValue(input) {
 }
 
 function syncColorInputs(row, name) {
-  const updated = clientActions.getPreference(PREF_NAME[name]);
+  const updated = clientActions.getPreference(getPreferenceNameForOptionKey(name));
   if (typeof updated === "string") {
     row.querySelectorAll("input").forEach((input) => {
       input.value = updated;
@@ -248,7 +248,7 @@ function bindOptionInputs({ root = document } = {}) {
       const fieldValue = readOptionInputValue(self);
       logger.debug("" + typeof(fieldValue) + ": " + fieldValue);
       applyOptionValue(name, fieldValue);
-      if (PREF_NAME[name] && (self.getAttribute("type") === "color" || self.dataset.colorHex === "true")) {
+      if (getPreferenceNameForOptionKey(name) && (self.getAttribute("type") === "color" || self.dataset.colorHex === "true")) {
         syncColorInputs(row, name);
       }
       clientActions.scrollBuffer();

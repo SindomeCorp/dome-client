@@ -6,7 +6,8 @@ import {
   CLIENT_OPTION_VIEW,
   buildClientOptionState,
   buildPreferenceDefaults,
-  getClientOptionStorageKey
+  getClientOptionStorageKey,
+  getPreferenceNameForOptionKey
 } from "../../src/client/client-option-schema.js";
 import {
   parseClientOptionCommandIntent,
@@ -101,6 +102,14 @@ test("client option schema includes labels for every option surface", () => {
 test("client option schema owns localStorage keys", () => {
   assert.equal(getClientOptionStorageKey("colorset"), "dc-toggle-colorset");
   assert.equal(getClientOptionStorageKey("colorset", "custom-"), "custom-colorset");
+});
+
+test("client option schema maps rendered option keys to preference names", () => {
+  const optionState = buildClientOptionState();
+
+  assert.equal(getPreferenceNameForOptionKey("colorset"), "colorSet");
+  assert.equal(optionState.colorset.preferenceName, "colorSet");
+  assert.equal(getPreferenceNameForOptionKey("unknown"), null);
 });
 
 test("client option schema exposes view choices for rendered select controls", () => {

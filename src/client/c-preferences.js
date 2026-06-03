@@ -4,11 +4,8 @@ import {
   clientOptions,
   setClientOptionsActions
 } from "./pages/client-options.js";
-import {
-  FONT_CHOICES,
-  normalizeHexColor
-} from "./client-option-schema.js";
 import { createClientOptionEffects } from "./client-option-effects.js";
+import { createClientPreferenceDomAppliers } from "./client-preference-dom.js";
 import {
   CLIENT_OPTION_NAME_ERROR,
   CLIENT_OPTION_VALUE_ERROR,
@@ -22,19 +19,6 @@ import { setupAutoscroll } from "./t-autoscroll.js";
 import { setupAutoCompleteFeature } from "./w-autocomplete.js";
 
 const CLIENT_OPTIONS_HELP = buildClientOptionsHelp();
-
-const INPUT_FONT_FAMILIES = {
-  standard: "\"Source Code Pro\"",
-  lucida: "\"Lucida Console\"",
-  courier: "\"Courier New\"",
-  roboto: "\"Roboto Mono\"",
-  "comic-mono": "\"Comic Mono\"",
-  monaco: "\"Monaco\"",
-  menlo: "\"Menlo\"",
-  "ubuntu-mono": "\"Ubuntu Mono\"",
-  consolas: "\"Consolas\"",
-};
-const INPUT_FONT_CLASSES = FONT_CHOICES.map((font) => `${font}Text`);
 
 export function createClientOptionsActions({ client, doc, win, setupAutoscrollFn = setupAutoscroll }) {
   return {
@@ -94,71 +78,19 @@ export function setupClientPreferences({
     });
   };
 
-  const applyTransparentOverlayPreference = function(transparentOverlay = client.preferences?.transparentOverlay) {
-    doc.querySelectorAll(".ui-autocomplete").forEach((ac) => {
-      if (transparentOverlay) {
-        ac.classList.add("ui-transparent-overlay");
-        ac.classList.remove("ui-opaque-overlay");
-      } else {
-        ac.classList.remove("ui-transparent-overlay");
-        ac.classList.add("ui-opaque-overlay");
-      }
-    });
+  const {
+    applyInputReaderColorPreferences,
+    applyInputReaderTextPreferences,
+    applyOutputBufferTextPreferences,
+    applyTransparentOverlayPreference
+  } = createClientPreferenceDomAppliers({ client, doc });
 
-    [
-      "#shortcuts-overlay",
-      "#history-search-overlay",
-      "#client-options-overlay",
-      "#gameHealthDetail",
-    ].forEach((selector) => {
-      const overlay = doc.querySelector(selector);
-      if (!overlay) return;
-      if (transparentOverlay) {
-        overlay.classList.add("ui-transparent-overlay");
-        overlay.classList.remove("ui-opaque-overlay");
-      } else {
-        overlay.classList.remove("ui-transparent-overlay");
-        overlay.classList.add("ui-opaque-overlay");
-      }
-    });
-  };
-
-  client.applyTransparentOverlayPreference = applyTransparentOverlayPreference;
-
-  const applyInputReaderTextPreferences = function() {
-    if (!client.inputReader) return;
-    const prefFont = client.preferences?.inputFont;
-    const fontName = FONT_CHOICES.includes(prefFont) ? prefFont : "standard";
-    const prefSize = Number(client.preferences?.inputFontSizePt);
-    const fontSizePt = !Number.isNaN(prefSize) && prefSize >= 8 && prefSize <= 24 ? prefSize : 11;
-    client.inputReader.classList.remove(...INPUT_FONT_CLASSES);
-    client.inputReader.classList.add(`${fontName}Text`);
-    client.inputReader.style.fontFamily = INPUT_FONT_FAMILIES[fontName] || INPUT_FONT_FAMILIES.standard;
-    client.inputReader.style.fontSize = `${fontSizePt}pt`;
-  };
-
-  client.applyInputReaderTextPreferences = applyInputReaderTextPreferences;
-
-  const applyOutputBufferTextPreferences = function() {
-    if (!client.buffer) return;
-    const prefSize = Number(client.preferences?.lineBufferFontSizePt);
-    const fontSizePt = !Number.isNaN(prefSize) && prefSize >= 8 && prefSize <= 24 ? prefSize : 9.75;
-    client.buffer.style.fontSize = `${fontSizePt}pt`;
-  };
-
-  client.applyOutputBufferTextPreferences = applyOutputBufferTextPreferences;
-
-  const applyInputReaderColorPreferences = function() {
-    if (!client.inputReader) return;
-    const fg = normalizeHexColor(client.preferences?.inputFontColor) || "#EEEEEE";
-    const bg = normalizeHexColor(client.preferences?.inputBackgroundColor) || "#333333";
-    client.inputReader.style.setProperty("--inputCustomFG", fg);
-    client.inputReader.style.setProperty("--inputCustomBG", bg);
-    client.inputReader.style.color = fg;
-    client.inputReader.style.backgroundColor = bg;
-  };
-
-  client.applyInputReaderColorPreferences = applyInputReaderColorPreferences;
+  Object.assign(client, {
+    applyInputReaderColorPreferences,
+    applyInputReaderTextPreferences,
+    applyOutputBufferTextPreferences,
+    applyTransparentOverlayPreference
+  });
 
   const optionEffects = createClientOptionEffects({
     client,

@@ -92,10 +92,6 @@ export const CLIENT_OPTION_BY_PREFERENCE = Object.fromEntries(
   CLIENT_OPTION_DEFINITIONS.map((option) => [option.preferenceName, option])
 );
 
-export const PREF_NAME = Object.fromEntries(
-  CLIENT_OPTION_DEFINITIONS.map((option) => [option.key, option.preferenceName])
-);
-
 export const CLIENT_OPTION_LABELS = Object.fromEntries(
   CLIENT_OPTION_DEFINITIONS.map((option) => [option.key, option.label])
 );
@@ -134,6 +130,7 @@ export function buildClientOptionState() {
     {
       param: option.param,
       label: option.label,
+      preferenceName: option.preferenceName,
       def: option.def,
       ...(option.ok ? { ok: option.ok } : {}),
       ...(option.min != null ? { min: option.min } : {}),
@@ -142,6 +139,14 @@ export function buildClientOptionState() {
       ...(option.choices ? { choices: option.choices } : {})
     }
   ]));
+}
+
+export function getClientOptionDefinitionByKey(optionKey) {
+  return CLIENT_OPTION_BY_KEY[optionKey] ?? null;
+}
+
+export function getPreferenceNameForOptionKey(optionKey) {
+  return getClientOptionDefinitionByKey(optionKey)?.preferenceName ?? null;
 }
 
 export function buildPreferenceDefaults() {
