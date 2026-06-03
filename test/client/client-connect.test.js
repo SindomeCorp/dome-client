@@ -5,7 +5,7 @@ import setupDom from "../../test-support/setup-dom.js";
 test("guest connect stores initial command", async (t) => {
   t.mock.timers.enable();
   const { window } = setupDom(t, "<!doctype html><html><body><a class=\"btn-connect-guest\" href=\"/player-client/\"></a></body></html>", { suppressNavigationErrors: true });
-  const { store } = await import("../../src/client/store.js");
+  const { store } = await import("../../src/client/core/store.js");
   Object.assign(store, {
     get: () => null,
     put: t.mock.fn(),
@@ -16,7 +16,7 @@ test("guest connect stores initial command", async (t) => {
     purge: () => {}
   });
 
-  await import("../../src/client/pages/client-connect.js?guest");
+  await import("../../src/client/entrypoints/client-connect.js?guest");
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
   t.mock.timers.tick(10);
   const button = window.document.querySelector(".btn-connect-guest");
@@ -34,7 +34,7 @@ test("guest connect stores initial command", async (t) => {
 test("stored usernames without fields is handled", async (t) => {
   t.mock.timers.enable();
   const { window } = setupDom(t);
-  const { store } = await import("../../src/client/store.js");
+  const { store } = await import("../../src/client/core/store.js");
   Object.assign(store, {
     get: () => null,
     put: () => {},
@@ -45,7 +45,7 @@ test("stored usernames without fields is handled", async (t) => {
     purge: () => {}
   });
 
-  await import("../../src/client/pages/client-connect.js?guest");
+  await import("../../src/client/entrypoints/client-connect.js?guest");
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
   t.mock.timers.tick(10);
 });
@@ -53,7 +53,7 @@ test("stored usernames without fields is handled", async (t) => {
 test("manual connect clears guest command", async (t) => {
   t.mock.timers.enable();
   const { window } = setupDom(t, "<!doctype html><html><body><a class=\"btn-connect-other\" href=\"/player-client/\"></a></body></html>", { suppressNavigationErrors: true });
-  const { store } = await import("../../src/client/store.js");
+  const { store } = await import("../../src/client/core/store.js");
   const origFns = {
     get: store.get,
     put: store.put,
@@ -74,7 +74,7 @@ test("manual connect clears guest command", async (t) => {
     Object.assign(store, origFns);
   });
 
-  await import("../../src/client/pages/client-connect.js?manual");
+  await import("../../src/client/entrypoints/client-connect.js?manual");
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
   t.mock.timers.tick(10);
   const button = window.document.querySelector(".btn-connect-other");
@@ -100,7 +100,7 @@ test("connect_now stores selected host and port before navigation", async (t) =>
     + "<button id=\"connect_now\"></button>"
     + "</body></html>";
   const { window } = setupDom(t, html, { suppressNavigationErrors: true });
-  const { store } = await import("../../src/client/store.js");
+  const { store } = await import("../../src/client/core/store.js");
   const putMock = t.mock.fn();
   Object.assign(store, {
     get: () => null,
@@ -112,7 +112,7 @@ test("connect_now stores selected host and port before navigation", async (t) =>
     purge: () => {}
   });
 
-  await import(`../../src/client/pages/client-connect.js?connect-now=${Math.random()}`);
+  await import(`../../src/client/entrypoints/client-connect.js?connect-now=${Math.random()}`);
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
   t.mock.timers.tick(10);
   const button = window.document.getElementById("connect_now");

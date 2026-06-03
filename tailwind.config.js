@@ -3,14 +3,14 @@ const config = {
   content: [
     "./views/**/*.ejs",
     "./src/client/**/*.{js,jsx}",
-    "./src/client/react/**/*.{js,jsx}", // ensure React IDE files are scanned
+    "./src/client/features/editor/react/**/*.{js,jsx}", // ensure React IDE files are scanned
   ],
   darkMode: "class",
   theme: {
     extend: {
       colors: {
         // Use CSS variables so light/dark can flip via the `.dark` class.
-        // The variables must be defined in your /src/client/react/ide.css.
+        // The variables must be defined in your /src/client/features/editor/react/ide.css.
         bg: {
           canvas: "rgb(var(--bg-canvas) / <alpha-value>)",
           surface: "rgb(var(--bg-surface) / <alpha-value>)",

@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 import {
   createClientFeatureSet,
   initClient
-} from "../../src/client/z-setup.js";
+} from "../../src/client/core/bootstrap.js";
 
 const setupCompositionDom = () => {
   const dom = new JSDOM(`<!doctype html><html><body>

@@ -6,7 +6,7 @@ import {
   parseObjectPropertyTarget,
   resolveThisReference,
   splitReferenceTarget
-} from "../../src/client/react/editor-ide/targets.js";
+} from "../../src/client/features/editor/react/editor-ide/targets.js";
 import {
   formatEditPropertyCommand,
   formatEditVerbCommand,
@@ -16,7 +16,7 @@ import {
   formatVerbListCommand,
   formatVerbOverlayCommand,
   getSaveMessages
-} from "../../src/client/react/editor-ide/protocol.js";
+} from "../../src/client/features/editor/react/editor-ide/protocol.js";
 import {
   formatObjectPermissions,
   formatOverlayValue,
@@ -26,7 +26,7 @@ import {
   normalizeObjectVerbsPayload,
   sortByLabel,
   sortByPropertyLabel
-} from "../../src/client/react/editor-ide/payloads.js";
+} from "../../src/client/features/editor/react/editor-ide/payloads.js";
 import {
   buildIdeTabs,
   buildTitle,
@@ -35,36 +35,36 @@ import {
   createPropertyBrowserTab,
   pinBrowserTabs,
   TAB_TYPES
-} from "../../src/client/react/editor-ide/tabs.js";
+} from "../../src/client/features/editor/react/editor-ide/tabs.js";
 import {
   ideReducer,
   initialIdeState
-} from "../../src/client/react/editor-ide/state.js";
+} from "../../src/client/features/editor/react/editor-ide/state.js";
 import {
   buildOpenTabPlan,
   classifyEditorCommand,
   DUPLICATE_TAB_MESSAGE
-} from "../../src/client/react/editor-ide/openTabPlan.js";
+} from "../../src/client/features/editor/react/editor-ide/openTabPlan.js";
 import {
   saveTab,
   shouldPromptForVmsNote
-} from "../../src/client/react/editor-ide/useIdeSaveFlow.js";
+} from "../../src/client/features/editor/react/editor-ide/useIdeSaveFlow.js";
 import {
   getAdjacentTabId,
   getShortcutCommand
-} from "../../src/client/react/editor-ide/useIdeKeyboardShortcuts.js";
+} from "../../src/client/features/editor/react/editor-ide/useIdeKeyboardShortcuts.js";
 import {
   applyOverlayPayload,
   buildOverlayPayloadUpdate
-} from "../../src/client/react/editor-ide/overlays.js";
+} from "../../src/client/features/editor/react/editor-ide/overlays.js";
 import {
   getFallbackTabId,
   getNextActiveTabIdAfterClose
-} from "../../src/client/react/editor-ide/useRecentTabs.js";
+} from "../../src/client/features/editor/react/editor-ide/useRecentTabs.js";
 import {
   buildEditingLabel,
   isBrowserActiveTab
-} from "../../src/client/react/editor-ide/editorLabels.js";
+} from "../../src/client/features/editor/react/editor-ide/editorLabels.js";
 
 test("editor IDE target helpers parse and resolve references", () => {
   assert.deepEqual(parseObjectPropertyTarget("#12.name"), {

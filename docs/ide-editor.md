@@ -8,8 +8,8 @@ It runs in a dedicated popup window at:
 
 Core implementation files:
 
-- `src/client/ide.js` (window lifecycle and reuse)
-- `src/client/react/EditorIDE.jsx` (IDE UI and behavior)
+- `src/client/features/editor/ide.js` (window lifecycle and reuse)
+- `src/client/features/editor/react/EditorIDE.jsx` (IDE UI and behavior)
 - `views/editors/ide.ejs` (server-rendered bootstrapping data attrs)
 
 ## Window Lifecycle

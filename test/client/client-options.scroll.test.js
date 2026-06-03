@@ -15,7 +15,7 @@ test("client-options change scrolls buffer", async () => {
   const { window, store } = setupClientOptionsDom(html);
   const output = [];
   let scrolled = false;
-  const options = await import("../../src/client/pages/client-options.js");
+  const options = await import("../../src/client/entrypoints/client-options.js");
   Object.assign(options.store, store);
   options.setClientOptionsActions({
     setClientOption: (name, val) => {

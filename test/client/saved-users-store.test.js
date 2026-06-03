@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createSavedUsersStore } from "../../src/client/saved-users-store.js";
+import { createSavedUsersStore } from "../../src/client/features/connection/saved-users-store.js";
 
 function createMemoryStorage(initialEntries = []) {
   const memory = new Map(initialEntries);

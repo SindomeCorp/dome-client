@@ -17,7 +17,7 @@ test("client modules do not import dome or use window.dome fallbacks", () => {
   files.forEach((file) => {
     const content = readFileSync(resolve(repoRoot, file), "utf8");
     [
-      /import\s+\{[^}]*\bdome\b[^}]*\}\s+from\s+["'][^"']*b-variables\.js["']/,
+      /import\s+\{[^}]*\bdome\b[^}]*\}\s+from\s+["'][^"']*core\/constants\.js["']/,
       /\bwindow\.dome\b/,
       /\bglobalThis\.dome\b/,
       /\bparentWindow\.dome\b/,

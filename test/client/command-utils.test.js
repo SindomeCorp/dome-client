@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseCommand, getCommandLabel } from "../../src/client/command-utils.js";
+import { parseCommand, getCommandLabel } from "../../src/client/core/command-utils.js";
 
 test("parseCommand splits command and target", () => {
   const { command, commandTarget } = parseCommand("@program foo");

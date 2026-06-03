@@ -4,7 +4,7 @@ import {
   createSocketOutputProtocolParser,
   findDotTerminator,
   normalizeSocketNewlines
-} from "../../src/client/socket-output-protocol.js";
+} from "../../src/client/features/terminal/socket-output-protocol.js";
 
 test("normalizeSocketNewlines converts CRLF and CR to LF", () => {
   assert.equal(normalizeSocketNewlines("a\r\nb\rc\n"), "a\nb\nc\n");

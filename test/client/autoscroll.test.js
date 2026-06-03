@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { createClientState } from "../../src/client/client-state.js";
-import { setupAutoscroll } from "../../src/client/t-autoscroll.js";
+import { createClientState } from "../../src/client/core/client-state.js";
+import { setupAutoscroll } from "../../src/client/features/terminal/autoscroll.js";
 
 const client = createClientState();
 
@@ -101,7 +101,7 @@ test("dbl mode scroll calculation and user scroll disables auto-scroll", async (
     preferences: { autoScroll: "dbl" }
   };
 
-  const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
+  const { setupAutoscroll } = await import("../../src/client/features/terminal/autoscroll.js");
   setupAutoscroll(clientLocal, window);
 
   clientLocal.buffer.scrollTop = 0;
@@ -149,7 +149,7 @@ test("long mode scroll calculation and user scroll disables auto-scroll", async 
     timeoutFn = null;
   };
 
-  const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
+  const { setupAutoscroll } = await import("../../src/client/features/terminal/autoscroll.js");
   setupAutoscroll(clientLocal, window);
 
   clientLocal.buffer.scrollTop = 0;
@@ -200,7 +200,7 @@ test("scroll up to pause stops autoscroll until user returns to bottom", async (
     preferences: { autoScroll: "none", scrollUpToPause: true }
   };
 
-  const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
+  const { setupAutoscroll } = await import("../../src/client/features/terminal/autoscroll.js");
   setupAutoscroll(clientLocal, window);
 
   Object.defineProperty(clientLocal.buffer, "scrollHeight", { value: 300, configurable: true });
@@ -243,7 +243,7 @@ test("scroll up to pause can be disabled", async () => {
     preferences: { autoScroll: "none", scrollUpToPause: false }
   };
 
-  const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
+  const { setupAutoscroll } = await import("../../src/client/features/terminal/autoscroll.js");
   setupAutoscroll(clientLocal, window);
 
   Object.defineProperty(clientLocal.buffer, "scrollHeight", { value: 300, configurable: true });
@@ -268,7 +268,7 @@ test("programmatic scroll does not trigger scroll up pause", async () => {
     preferences: { autoScroll: "none", scrollUpToPause: true }
   };
 
-  const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
+  const { setupAutoscroll } = await import("../../src/client/features/terminal/autoscroll.js");
   setupAutoscroll(clientLocal, window);
 
   Object.defineProperty(clientLocal.buffer, "scrollHeight", { value: 300, configurable: true });

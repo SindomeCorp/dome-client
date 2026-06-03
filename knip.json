@@ -3,10 +3,10 @@
   "entry": [
     "src/server.js",
     "src/env.js",
-    "src/client/index.js",
-    "src/client/pages/*.js",
-    "src/client/pages/*.jsx",
-    "src/client/ejs-scripts/*.js",
+    "src/client/entrypoints/index.js",
+    "src/client/entrypoints/*.js",
+    "src/client/entrypoints/*.jsx",
+    "src/client/entrypoints/ejs-scripts/*.js",
     "src/services/build.js",
     "test/**/*.js",
     "eslint.config.js",
@@ -31,22 +31,22 @@
     "public/**",
     "reports/**",
     ".stryker-tmp/**",
-    "src/client/ace/mode-moo.js"
+    "src/client/features/editor/ace/mode-moo.js"
   ],
   "ignoreDependencies": [
     "@stryker-mutator/command-runner"
   ],
   "ignoreIssues": {
-    "src/client/c-preferences.js": [
+    "src/client/core/preferences.js": [
       "exports"
     ],
-    "src/client/store.js": [
+    "src/client/core/store.js": [
       "exports"
     ],
-    "src/client/u-buttons.js": [
+    "src/client/features/terminal/buttons.js": [
       "exports"
     ],
-    "src/client/z-setup.js": [
+    "src/client/core/bootstrap.js": [
       "exports"
     ],
     "src/controllers/socket.js": [

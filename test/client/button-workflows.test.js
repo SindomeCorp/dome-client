@@ -6,7 +6,7 @@ import {
   bindEscapeOverlayClose,
   clearClientBuffer,
   shouldConfirmClearBuffer
-} from "../../src/client/button-workflows.js";
+} from "../../src/client/features/terminal/button-workflows.js";
 
 test("clearClientBuffer empties output and resets renderer state", (t) => {
   const dom = new JSDOM("<!doctype html><div>log</div>");

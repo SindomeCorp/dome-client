@@ -5,7 +5,7 @@ import {
   attachImagePreview,
   buildImagePreviewHtml,
   toggleImagePreview
-} from "../../src/client/image-preview.js";
+} from "../../src/client/features/terminal/image-preview.js";
 
 test("buildImagePreviewHtml creates image, video, and YouTube embeds", () => {
   assert.match(

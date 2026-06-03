@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { logger } from "../../src/client/b-variables.js";
-import { createClientState } from "../../src/client/client-state.js";
-import { setupIdeLauncher } from "../../src/client/ide.js";
+import { logger } from "../../src/client/core/constants.js";
+import { createClientState } from "../../src/client/core/client-state.js";
+import { setupIdeLauncher } from "../../src/client/features/editor/ide.js";
 
 const orig = { window: globalThis.window, document: globalThis.document };
 

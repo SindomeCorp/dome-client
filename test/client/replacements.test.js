@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { urlRegex, ipRegex, hostnameRegex } from "../../src/client/e-replacements.js";
-import { xterm256Colors } from "../../src/client/xterm-colors.js";
-import { createAnsiRenderer } from "../../src/client/ansi-renderer.js";
+import { urlRegex, ipRegex, hostnameRegex } from "../../src/client/features/terminal/replacements.js";
+import { xterm256Colors } from "../../src/client/features/terminal/xterm-colors.js";
+import { createAnsiRenderer } from "../../src/client/features/terminal/ansi-renderer.js";
 
 function reset(regex) {
   if (regex) {

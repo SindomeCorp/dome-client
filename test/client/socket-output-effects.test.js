@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createSocketOutputEventHandler } from "../../src/client/socket-output-effects.js";
+import { createSocketOutputEventHandler } from "../../src/client/features/terminal/socket-output-effects.js";
 
 function createClient(t) {
   return {

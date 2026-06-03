@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 /* global document */
 import setupDom from "../../test-support/setup-dom.js";
-import { createClientState } from "../../src/client/client-state.js";
-import { setupOutputParser } from "../../src/client/f-buffer.js";
+import { createClientState } from "../../src/client/core/client-state.js";
+import { setupOutputParser } from "../../src/client/features/terminal/output-buffer.js";
 
 const client = createClientState();
 

@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { JSDOM, VirtualConsole } from "jsdom";
-import { createClientState } from "../../src/client/client-state.js";
+import { createClientState } from "../../src/client/core/client-state.js";
 import { buildLogHtml } from "../../src/shared/log-template.js";
 
 const setupWindow = async (t) => {
@@ -50,7 +50,7 @@ const setupWindow = async (t) => {
     }
     globalThis.isMultiMud = orig.isMultiMud;
   });
-  const { setupButtons } = await import("../../src/client/u-buttons.js");
+  const { setupButtons } = await import("../../src/client/features/terminal/buttons.js");
   const setupClientButtons = (options = {}) => setupButtons({
     client: dome,
     doc: window.document,

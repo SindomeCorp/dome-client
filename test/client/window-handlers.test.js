@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { SOCKET_STATE_ENUM, defaultHeightOffset } from "../../src/client/b-variables.js";
-import { createClientState } from "../../src/client/client-state.js";
-import { setupClientPreferences } from "../../src/client/c-preferences.js";
-import { setupWindowHandlers } from "../../src/client/e-window.js";
+import { SOCKET_STATE_ENUM, defaultHeightOffset } from "../../src/client/core/constants.js";
+import { createClientState } from "../../src/client/core/client-state.js";
+import { setupClientPreferences } from "../../src/client/core/preferences.js";
+import { setupWindowHandlers } from "../../src/client/features/terminal/window-handlers.js";
 
 const dome = createClientState();
 

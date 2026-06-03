@@ -29,7 +29,7 @@ test("logger falls back to fetch when sendBeacon is unavailable", async (t) => {
     globalThis.fetch = orig.fetch;
   });
 
-  const logger = (await import(`../../src/client/pages/logger.js?cachebust=${Date.now()}`)).default;
+  const logger = (await import(`../../src/client/core/logger.js?cachebust=${Date.now()}`)).default;
 
   logger.warn("fetch fallback");
 
@@ -64,7 +64,7 @@ test("logger sends messages and logs to console", async (t) => {
     console[level] = (...args) => messages[level].push(args.join(" "));
   });
 
-  const logger = (await import(`../../src/client/pages/logger.js?cachebust=${Date.now()}`)).default;
+  const logger = (await import(`../../src/client/core/logger.js?cachebust=${Date.now()}`)).default;
 
   logger.log("hello", "world");
   logger.info("info message");
@@ -124,7 +124,7 @@ test("logger logs to console when endpoint missing", async (t) => {
   const origInfo = console.info;
   console.info = (...args) => messages.push(args.join(" "));
 
-  const logger = (await import(`../../src/client/pages/logger.js?cachebust=${Date.now()}`)).default;
+  const logger = (await import(`../../src/client/core/logger.js?cachebust=${Date.now()}`)).default;
 
   logger.info("hello world");
 

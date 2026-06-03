@@ -81,7 +81,7 @@ test("client-options import/export controls round-trip preferences", async () =>
   window.confirm = () => true;
 
   try {
-    const options = await import(`../../src/client/pages/client-options.js?import-export=${Date.now()}`);
+    const options = await import(`../../src/client/entrypoints/client-options.js?import-export=${Date.now()}`);
     Object.assign(options.store, store);
     setOutputActions(options, output);
     window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
@@ -160,7 +160,7 @@ test("client-options import rejects non-object payload", async () => {
   const originalConfirm = window.confirm;
   window.confirm = () => true;
   try {
-    const options = await import(`../../src/client/pages/client-options.js?import-error=${Date.now()}`);
+    const options = await import(`../../src/client/entrypoints/client-options.js?import-error=${Date.now()}`);
     Object.assign(options.store, store);
     setOutputActions(options, output);
     window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
@@ -195,7 +195,7 @@ test("client-options reset cancellation keeps current preferences", async () => 
   const originalConfirm = window.confirm;
   window.confirm = () => false;
   try {
-    const options = await import(`../../src/client/pages/client-options.js?reset-cancel=${Date.now()}`);
+    const options = await import(`../../src/client/entrypoints/client-options.js?reset-cancel=${Date.now()}`);
     Object.assign(options.store, store);
     setOutputActions(options);
     window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
@@ -232,7 +232,7 @@ test("client-options import applies valid values and reports skipped invalid val
   const originalConfirm = window.confirm;
   window.confirm = () => true;
   try {
-    const options = await import(`../../src/client/pages/client-options.js?partial-invalid=${Date.now()}`);
+    const options = await import(`../../src/client/entrypoints/client-options.js?partial-invalid=${Date.now()}`);
     Object.assign(options.store, store);
     setOutputActions(options, output);
     window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
@@ -276,7 +276,7 @@ test("client-options import cancellation does not open file picker", async () =>
   const originalConfirm = window.confirm;
   window.confirm = () => false;
   try {
-    const options = await import(`../../src/client/pages/client-options.js?import-cancel=${Date.now()}`);
+    const options = await import(`../../src/client/entrypoints/client-options.js?import-cancel=${Date.now()}`);
     Object.assign(options.store, store);
     setOutputActions(options);
     window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
@@ -308,7 +308,7 @@ test("client-options import change with no selected file is a no-op", async () =
   </body></html>`;
   const { window, store } = setupClientOptionsDom(html);
   const output = [];
-  const options = await import(`../../src/client/pages/client-options.js?import-empty=${Date.now()}`);
+  const options = await import(`../../src/client/entrypoints/client-options.js?import-empty=${Date.now()}`);
   Object.assign(options.store, store);
   setOutputActions(options, output);
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));

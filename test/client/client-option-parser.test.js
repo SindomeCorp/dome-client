@@ -8,13 +8,13 @@ import {
   buildPreferenceDefaults,
   getClientOptionStorageKey,
   getPreferenceNameForOptionKey
-} from "../../src/client/client-option-schema.js";
+} from "../../src/shared/client-options.js";
 import {
   parseClientOptionCommandIntent,
   readClientPreferences,
   translateClientOptionName,
   validateClientOptionValue
-} from "../../src/client/client-option-parser.js";
+} from "../../src/client/features/options/client-option-parser.js";
 
 test("readClientPreferences merges defaults, stored values, and valid URL params", () => {
   const stored = new Map([

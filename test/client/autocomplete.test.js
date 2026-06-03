@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { logger } from "../../src/client/b-variables.js";
-import { createClientState } from "../../src/client/client-state.js";
-import { setupAutoCompleteFeature } from "../../src/client/w-autocomplete.js";
+import { logger } from "../../src/client/core/constants.js";
+import { createClientState } from "../../src/client/core/client-state.js";
+import { setupAutoCompleteFeature } from "../../src/client/features/terminal/autocomplete.js";
 
 const dome = createClientState();
 

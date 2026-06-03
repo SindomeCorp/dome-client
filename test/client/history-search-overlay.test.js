@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 /* global document */
 import { setupDom } from "./index.js";
-import { wireHistorySearchOverlay } from "../../src/client/history-search-overlay.js";
+import { wireHistorySearchOverlay } from "../../src/client/features/terminal/history-search-overlay.js";
 
 const setupHistorySearch = (history = ["look"]) => {
   const { window } = setupDom("<!doctype html><html><body><textarea id=\"input\"></textarea><div id=\"history-search-overlay\" class=\"hide\"><div class=\"history-search-content\"><button id=\"button-history-search-close\" type=\"button\">x</button><input id=\"history-search-query\" /><ul id=\"history-search-results\"></ul><div id=\"history-search-empty\" class=\"hide\">No matching commands.</div></div></div></body></html>");

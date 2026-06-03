@@ -5,7 +5,7 @@ import setupDom from "../../test-support/setup-dom.js";
 import {
   createSocketOutputRenderer,
   wrapLinesToDivs
-} from "../../src/client/socket-output-renderer.js";
+} from "../../src/client/features/terminal/socket-output-renderer.js";
 
 function createClient() {
   return {

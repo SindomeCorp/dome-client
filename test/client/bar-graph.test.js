@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import BarGraph from "../../src/client/x-bar-graph.js";
+import BarGraph from "../../src/client/features/health/bar-graph.js";
 
 test("BarGraph draws and animates with size and maxValue", (t) => {
   const fillRects = [];
