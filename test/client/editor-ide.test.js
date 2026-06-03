@@ -524,6 +524,12 @@ test("EditorIDE renders shortcut overlay when bundled with the production JSX ru
   assert.match(window.document.body.textContent, /Edit Verb \/ Prop/);
 });
 
+test("EditorIDE defaults to dark mode without a saved preference", async (t) => {
+  const { window } = await renderEditorIde(t);
+
+  assert.equal(window.document.documentElement.classList.contains("dark"), true);
+});
+
 test("EditorIDE hides reference navigation shortcut when disabled", async (t) => {
   const { window } = await renderEditorIde(t, {
     "data-ide-reference-navigation-enabled": "false"

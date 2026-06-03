@@ -58,7 +58,7 @@ export default function EditorIDE() {
   const [ideState, dispatchIde] = useReducer(ideReducer, initialIdeState);
   const [darkMode, setDarkMode] = usePersistentPreference(
     "ide-dark",
-    false,
+    true,
     (value) => value === "true"
   );
   const [orientation, setOrientation] = usePersistentPreference("ide-orientation", "top");

@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - Added IDE feature flags for Object Browser, Property Browser, hover overlays, reference navigation, and scratch actions so deployments can disable unsupported MOO integrations.
 
 ### Changed
+- Made dark mode the default for the IDE editor while preserving saved theme preferences.
 - Closed the IDE window automatically when closing the last editable tab leaves only Object Browser or Property Browser tabs behind.
 - Highlighted user-defined MOO access receivers with the object-receiver color while keeping built-in variables such as `this` and `player` visually consistent.
 - Added distinct MOO verb editor highlighting for access receivers, cored/direct object receivers, and property names.
