@@ -5,6 +5,7 @@ import "../../ace/keybinding-vim.js";
 import "../../ace/mode-moo.js";
 import "ace-builds/src-noconflict/mode-text.js";
 import { getFontFamily } from "../../ace/fonts.js";
+import { configureMooEditor } from "../../ace/editor-options.js";
 import {
   getDefinitionTargetAtPosition,
   getEditingObjectId,
@@ -83,7 +84,11 @@ export function useAceEditors({
     const lineLimit = getLineLimit(command, lineLimits);
 
     if (editorTheme) ed.setTheme(`ace/theme/${editorTheme}`);
-    ed.getSession().setMode(isProgram ? "ace/mode/moo" : "ace/mode/text");
+    if (isProgram) {
+      configureMooEditor(ed);
+    } else {
+      ed.getSession().setMode("ace/mode/text");
+    }
     if (vimMode) ed.setKeyboardHandler("ace/keyboard/vim");
     ed.setOption("fontFamily", getFontFamily(editorFont));
     ed.setOption("printMarginColumn", 120);

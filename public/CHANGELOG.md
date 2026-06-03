@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-06-03
 
 ### Changed
+- Updated the verb editors to insert two spaces for tabs so indentation matches MOO-shipped source.
 - Routed client-options commands, panel controls, imports, and resets through one controller so preference writes validate, persist, and apply live effects consistently.
 - Refactored the browser-client health UI into a focused controller for status messages, socket errors, panel controls, graph updates, and polling.
 - Clarified MUD/MOO terminology in the README while preserving legacy route, config, and documentation names.

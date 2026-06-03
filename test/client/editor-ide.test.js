@@ -385,6 +385,8 @@ test("EditorIDE keyboard shortcuts preserve current editor behavior", async (t) 
     buffer: "initial"
   });
   const editor = globalThis.__editorIdeAceEditors[0];
+  assert.equal(editor.options.tabSize, 2);
+  assert.equal(editor.options.useSoftTabs, true);
 
   await keydown(window, "1", { ctrlKey: true });
   assert.equal(editor.keyboardHandler, "ace/keyboard/vim");

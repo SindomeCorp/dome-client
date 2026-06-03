@@ -3,6 +3,7 @@ import "ace-builds/src-noconflict/theme-tomorrow_night_blue.js";
 import "../features/editor/ace/keybinding-vim.js";
 import "../features/editor/ace/mode-moo.js";
 import { getFontFamily } from "../features/editor/ace/fonts.js";
+import { configureMooEditor } from "../features/editor/ace/editor-options.js";
 
 ace.config.set("basePath", "/js/ace");
 
@@ -34,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (theme) {
       verbEditor.setTheme(`ace/theme/${theme}`);
     }
-    verbEditor.getSession().setMode("ace/mode/moo");
+    configureMooEditor(verbEditor);
     verbEditor.setOption("fontFamily", getFontFamily());
     verbEditor.commands.addCommand({
       name: "vim-enable",
