@@ -1,6 +1,6 @@
 # SDWC OOB Commands
 
-This document describes Dome Client out-of-band markers sent over MOO output lines (prefixed with `#$# `).
+This document describes Dome Client out-of-band markers sent over MOO output lines and SDWC commands sent from the web client to the MOO.
 
 SDWC markers are used for:
 - Output rendering control (nowrap blocks)
@@ -19,7 +19,7 @@ There are two marker styles in active use:
 #$# dome-client-user
 ```
 
-2. SDWC payload lines using `%%` segments:
+2. SDWC response payload lines using `%%` segments:
 
 ```text
 #$# SDWC%%VERBS%%<json>
@@ -61,7 +61,21 @@ notify(player, "#$# SDWC-END-NOWRAP");
 
 ## IDE Payload Commands
 
-These are consumed by the web client IDE flows (object browser, overlays, etc.).
+These support web client IDE flows such as Object Browser, Property Browser, hover overlays, and reference metadata.
+
+Requests from client to MOO:
+
+```text
+#$# SDWC%%VERBS%%<objectId>
+#$# SDWC%%PROPS%%<objectId>
+#$# SDWC%%VERB-OVERLAY%%<objectId-or-core-ref>%%<verb>
+#$# SDWC%%PROP-OVERLAY%%<objectId-or-core-ref>%%<property>
+```
+
+Request controls:
+- `IDE_OBJECT_BROWSER_ENABLED=false` disables Object Browser tabs and `SDWC%%VERBS%%` requests.
+- `IDE_PROPERTY_BROWSER_ENABLED=false` disables Property Browser tabs and `SDWC%%PROPS%%` requests.
+- `IDE_HOVER_OVERLAYS_ENABLED=false` disables `SDWC%%VERB-OVERLAY%%` and `SDWC%%PROP-OVERLAY%%` requests.
 
 Response payloads from MOO to client:
 
@@ -73,10 +87,11 @@ Response payloads from MOO to client:
 Notes:
 - Payloads should be valid JSON strings.
 - The client parses and forwards these to IDE windows; malformed JSON is ignored with warning logs.
+- Request payloads are plain `%%` segments; response payloads are JSON after the marker type.
 
 ## Connection Metadata Marker (`dome-client-user`)
 
-This marker asks the client to send the MOO a host/IP metadata command. This will include the actual IP/host that the client is connected from, not the webclient's IP (which is what would be sent to the MOO on connection). 
+This marker asks the client to send the MOO a host/IP metadata command. This will include the actual IP/host that the client is connected from, not the web client's IP (which is what would be sent to the MOO on connection).
 
 This is IMPORTANT because you don't want people using your webclient that are newted/toaded/banned/etc. So you may want to integrate the result of these values into various checks to make sure that a webclient user isn't a banned user.
 

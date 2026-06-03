@@ -27,11 +27,7 @@ Include another template with:
 <%- include('partials/mini-controls') %>
 ```
 
-Templates run in Node, so you can require modules if needed:
-
-```ejs
-<% const md5 = require('md5'); %>
-```
+Prefer passing helpers and data from route handlers, middleware, or `res.locals` instead of loading modules directly inside templates.
 
 ## Passing data
 

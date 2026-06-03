@@ -32,7 +32,12 @@ async function bootServer(t, { metricsPath } = {}) {
       localSaveNodeAdminMaxLines: 800,
       localSaveNoteMaxLines: 20,
       ideEditOpenParent: false,
-      ideVmsNoteEnabled: false
+      ideVmsNoteEnabled: false,
+      ideObjectBrowserEnabled: true,
+      idePropertyBrowserEnabled: true,
+      ideHoverOverlaysEnabled: true,
+      ideReferenceNavigationEnabled: true,
+      ideScratchEnabled: true
     },
     shorten: { enabled: false, host: "localhost", port: 5549, path: "/interface/v1/shorten/", domain: "", minimum: 50 },
     remoteAuth: { enabled: true, host: "http://remoteauth.test", path: "/session/authenticate/", remoteSecret: "sekret" },

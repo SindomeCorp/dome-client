@@ -73,7 +73,12 @@ async function bootMultiMudServer(t, { shouldFail = false } = {}) {
       localSaveNodeAdminMaxLines: 800,
       localSaveNoteMaxLines: 20,
       ideEditOpenParent: false,
-      ideVmsNoteEnabled: false
+      ideVmsNoteEnabled: false,
+      ideObjectBrowserEnabled: true,
+      idePropertyBrowserEnabled: true,
+      ideHoverOverlaysEnabled: true,
+      ideReferenceNavigationEnabled: true,
+      ideScratchEnabled: true
     },
     shorten: {
       enabled: false,

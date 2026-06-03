@@ -10,6 +10,24 @@ Run:
 @edit-options +local
 ```
 
+## Optional IDE Feature Flags
+
+These flags default to `true` and can be disabled when the connected MOO does not support the related IDE command flow:
+
+```env
+IDE_OBJECT_BROWSER_ENABLED=true
+IDE_PROPERTY_BROWSER_ENABLED=true
+IDE_HOVER_OVERLAYS_ENABLED=true
+IDE_REFERENCE_NAVIGATION_ENABLED=true
+IDE_SCRATCH_ENABLED=true
+```
+
+- `IDE_OBJECT_BROWSER_ENABLED` controls Object Browser tabs and `SDWC%%VERBS%%` requests.
+- `IDE_PROPERTY_BROWSER_ENABLED` controls Property Browser tabs and `SDWC%%PROPS%%` requests.
+- `IDE_HOVER_OVERLAYS_ENABLED` controls hover metadata requests using `SDWC%%VERB-OVERLAY%%` and `SDWC%%PROP-OVERLAY%%`.
+- `IDE_REFERENCE_NAVIGATION_ENABLED` controls ctrl/cmd-click `@edit <target>` navigation from code references.
+- `IDE_SCRATCH_ENABLED` controls IDE scratch toolbar actions using `@scratch` and `@edit me.scratch`.
+
 ### Scratch Pad Property Requirement
 
 To support saving scratch pad content for users who can invoke the IDE editor, define a `scratch` property on an appropriate descendant object:
@@ -47,7 +65,7 @@ this.scratch = text;
 this:notify("Your .scratch property has been updated with the contents of your scratch pad. Any time you save your scratch it overwrites what was there previously. You can view/edit it with @edit me.scratch");
 ```
 
-## 5) Optional UX Message Hook
+## Optional UX Message Hook
 
 ### `@@editor-message <message>`
 - Why: Client uses it for duplicate-tab feedback routed through MOO output.
@@ -88,7 +106,7 @@ This behavior is controlled by:
 IDE_EDIT_OPEN_PARENT=false
 ```
 
-When `IDE_EDIT_OPEN_PARENT=true` and your `@edit` implementation supports `--open-parent`, you can pass the argument into `#49:parse_invoke` (Verb Editor) so resolution checks not only the object itself but also its parent chain (similar to `@list` behavior).
+When `IDE_REFERENCE_NAVIGATION_ENABLED=true`, `IDE_EDIT_OPEN_PARENT=true`, and your `@edit` implementation supports `--open-parent`, you can pass the argument into `#49:parse_invoke` (Verb Editor) so resolution checks not only the object itself but also its parent chain (similar to `@list` behavior).
 
 Result:
 - Ctrl/cmd-click navigation from the IDE becomes much cleaner for inherited verbs.
@@ -178,7 +196,7 @@ elseif (parts[1] == "props")
 elseif (parts[1] == "PROP-OVERLAY")
   {command, object, property} = parts;
   if (length(object) <= 1)
-    raise(E_ARGS, "failed to do verb-overlay due to incorrect object");
+    raise(E_ARGS, "failed to do prop-overlay due to incorrect object");
     return;
   endif
   object_to_use = toobj(object);
@@ -188,7 +206,7 @@ elseif (parts[1] == "PROP-OVERLAY")
       if ($object_utils:has_property(#0, object[2..$]))
         object_to_use = $sysobj.(object[2..$]);
       else
-        raise(E_ARGS, "failed to do verb-overlay due to invalid cored object");
+        raise(E_ARGS, "failed to do prop-overlay due to invalid cored object");
         return;
       endif
     endif
@@ -374,7 +392,7 @@ Create the verb:
 Then program it with:
 
 ```moo
-@Program <programmer obj>:@@editor-message
+@program <programmer obj>:@@editor-message
 ```
 
 Verb body:
@@ -408,11 +426,11 @@ The web client sends this command as part of connection metadata flow (in respon
 If you want to register the actual IP/hostname connecting to your server, you can implement this command and hook it into `$player.all_connect_places` however you want.
 For detailed marker/response flow and MOO-side implementation examples, see [SDWC OOB Commands](SDWC-OOB.md) (includes `dome-client-user` metadata handshake notes).
 
-## 7) Implementation Checklist
+## Implementation Checklist
 
 - [ ] Implement `@dome-client-user`
-- [ ] Implement/verify `@edit` obj:verb --open-parent` if you want it)
-- [ ] Implement `#0:do_out_of_band_commands` + `$code_utils` verbs
+- [ ] Implement/verify `@edit <obj>:<verb> --open-parent` if you want inherited-verb navigation
+- [ ] Implement `#0:do_out_of_band_command` + `$code_utils` verbs
 - [ ] Implement/verify upload commands and dot-terminated multiline save
 - [ ] Verify obj:verb hover behavior
 - [ ] Verify obj:verb command/control+click behavior

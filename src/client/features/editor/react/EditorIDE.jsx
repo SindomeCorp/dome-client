@@ -44,6 +44,11 @@ export default function EditorIDE() {
   const {
     editorTheme,
     ideEditOpenParent,
+    ideHoverOverlaysEnabled,
+    ideObjectBrowserEnabled,
+    idePropertyBrowserEnabled,
+    ideReferenceNavigationEnabled,
+    ideScratchEnabled,
     ideVmsNoteEnabled,
     localSaveNodeAdminMaxLines,
     localSaveNodeMaxLines,
@@ -85,6 +90,8 @@ export default function EditorIDE() {
     editorFont,
     editorTheme,
     ideEditOpenParent,
+    ideHoverOverlaysEnabled,
+    ideReferenceNavigationEnabled,
     lineLimits: {
       localSaveNodeAdminMaxLines,
       localSaveNodeMaxLines,
@@ -163,16 +170,24 @@ export default function EditorIDE() {
       emitInput(plan.duplicateMessage);
       return;
     }
-    plan.browserEffects.forEach((effect) => dispatchIde(effect));
+    const shouldOpenObjectBrowser = ideObjectBrowserEnabled && plan.objectBrowser;
+    const shouldOpenPropertyBrowser = idePropertyBrowserEnabled && plan.propertyBrowser;
+    plan.browserEffects
+      .filter((effect) =>
+        (effect.type === "upsertObjectVerb" && shouldOpenObjectBrowser) ||
+        (effect.type === "upsertObjectProperty" && shouldOpenPropertyBrowser)
+      )
+      .forEach((effect) => dispatchIde(effect));
     dispatchIde({
       type: "openEditableTab",
-      objectBrowser: plan.objectBrowser,
-      propertyBrowser: plan.propertyBrowser,
+      objectBrowser: shouldOpenObjectBrowser,
+      propertyBrowser: shouldOpenPropertyBrowser,
       tab: plan.tab
     });
   };
 
   const addScratch = () => {
+    if (!ideScratchEnabled) return;
     const title = "Temporary Scratch Pad";
     addTab({
       editorName: title,
@@ -182,6 +197,7 @@ export default function EditorIDE() {
   };
 
   const viewSavedScratch = () => {
+    if (!ideScratchEnabled) return;
     emitInput("@edit me.scratch");
   };
 
@@ -306,6 +322,7 @@ export default function EditorIDE() {
             onToggleWordWrap={toggleWordWrap}
             onViewSavedScratch={viewSavedScratch}
             orientation={orientation}
+            showScratchActions={ideScratchEnabled}
             setOrientation={setOrientationPersist}
             wordWrap={wordWrap}
           />

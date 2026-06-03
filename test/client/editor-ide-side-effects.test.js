@@ -20,6 +20,11 @@ test("useIdeConfig reads root data attributes with defaults", () => {
     data-local-save-note-max-lines="30"
     data-ide-edit-open-parent="true"
     data-ide-vms-note-enabled="true"
+    data-ide-object-browser-enabled="false"
+    data-ide-property-browser-enabled="false"
+    data-ide-hover-overlays-enabled="false"
+    data-ide-reference-navigation-enabled="false"
+    data-ide-scratch-enabled="false"
   ></div></body></html>`);
   try {
     assert.deepEqual(useIdeConfig(), {
@@ -28,7 +33,12 @@ test("useIdeConfig reads root data attributes with defaults", () => {
       localSaveNodeAdminMaxLines: 900,
       localSaveNoteMaxLines: 30,
       ideEditOpenParent: true,
-      ideVmsNoteEnabled: true
+      ideVmsNoteEnabled: true,
+      ideObjectBrowserEnabled: false,
+      idePropertyBrowserEnabled: false,
+      ideHoverOverlaysEnabled: false,
+      ideReferenceNavigationEnabled: false,
+      ideScratchEnabled: false
     });
   } finally {
     cleanup();
@@ -45,7 +55,12 @@ test("useIdeConfig falls back to defaults when document is unavailable", () => {
       localSaveNodeAdminMaxLines: 800,
       localSaveNoteMaxLines: 20,
       ideEditOpenParent: false,
-      ideVmsNoteEnabled: false
+      ideVmsNoteEnabled: false,
+      ideObjectBrowserEnabled: true,
+      idePropertyBrowserEnabled: true,
+      ideHoverOverlaysEnabled: true,
+      ideReferenceNavigationEnabled: true,
+      ideScratchEnabled: true
     });
   } finally {
     globalThis.document = previousDocument;

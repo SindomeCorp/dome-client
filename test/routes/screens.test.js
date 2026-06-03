@@ -12,6 +12,11 @@ const expectedEditor = (readonly) => ({
   localSaveNoteMaxLines: config.editor.localSaveNoteMaxLines,
   ideEditOpenParent: config.editor.ideEditOpenParent,
   ideVmsNoteEnabled: config.editor.ideVmsNoteEnabled,
+  ideObjectBrowserEnabled: config.editor.ideObjectBrowserEnabled,
+  idePropertyBrowserEnabled: config.editor.idePropertyBrowserEnabled,
+  ideHoverOverlaysEnabled: config.editor.ideHoverOverlaysEnabled,
+  ideReferenceNavigationEnabled: config.editor.ideReferenceNavigationEnabled,
+  ideScratchEnabled: config.editor.ideScratchEnabled,
 });
 
 export function createRes() {

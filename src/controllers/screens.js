@@ -64,7 +64,12 @@ export function editor(req, res) {
       "localSaveNodeAdminMaxLines": config.editor.localSaveNodeAdminMaxLines,
       "localSaveNoteMaxLines": config.editor.localSaveNoteMaxLines,
       "ideEditOpenParent": config.editor.ideEditOpenParent,
-      "ideVmsNoteEnabled": config.editor.ideVmsNoteEnabled
+      "ideVmsNoteEnabled": config.editor.ideVmsNoteEnabled,
+      "ideObjectBrowserEnabled": config.editor.ideObjectBrowserEnabled,
+      "idePropertyBrowserEnabled": config.editor.idePropertyBrowserEnabled,
+      "ideHoverOverlaysEnabled": config.editor.ideHoverOverlaysEnabled,
+      "ideReferenceNavigationEnabled": config.editor.ideReferenceNavigationEnabled,
+      "ideScratchEnabled": config.editor.ideScratchEnabled
     },
     "meta": {
       "title": "Untitled Local Editor ",

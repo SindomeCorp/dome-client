@@ -38,7 +38,12 @@ const config = {
     localSaveNodeAdminMaxLines: env.LOCAL_SAVE_NODE_ADMIN_MAX_LINES,
     localSaveNoteMaxLines: env.LOCAL_SAVE_NOTE_MAX_LINES,
     ideEditOpenParent: env.IDE_EDIT_OPEN_PARENT,
-    ideVmsNoteEnabled: env.IDE_VMS_NOTE_ENABLED
+    ideVmsNoteEnabled: env.IDE_VMS_NOTE_ENABLED,
+    ideObjectBrowserEnabled: env.IDE_OBJECT_BROWSER_ENABLED,
+    idePropertyBrowserEnabled: env.IDE_PROPERTY_BROWSER_ENABLED,
+    ideHoverOverlaysEnabled: env.IDE_HOVER_OVERLAYS_ENABLED,
+    ideReferenceNavigationEnabled: env.IDE_REFERENCE_NAVIGATION_ENABLED,
+    ideScratchEnabled: env.IDE_SCRATCH_ENABLED
   },
   shorten: {
     enabled: env.SHORTEN_ENABLED,

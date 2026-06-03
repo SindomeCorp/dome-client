@@ -81,7 +81,19 @@ const sampleData = {
   },
   "views/editors/ide.ejs": {
     req: { query: {} },
-    editor: { readonly: true },
+    editor: {
+      readonly: true,
+      localSaveNodeMaxLines: 200,
+      localSaveNodeAdminMaxLines: 800,
+      localSaveNoteMaxLines: 20,
+      ideEditOpenParent: false,
+      ideVmsNoteEnabled: false,
+      ideObjectBrowserEnabled: true,
+      idePropertyBrowserEnabled: true,
+      ideHoverOverlaysEnabled: true,
+      ideReferenceNavigationEnabled: true,
+      ideScratchEnabled: true
+    },
     meta: { title: "", description: "", keywords: "" },
     decache: (v) => v,
   },

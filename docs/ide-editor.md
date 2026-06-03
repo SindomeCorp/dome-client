@@ -75,6 +75,8 @@ Header actions:
 - `Add Scratch` opens a temporary scratch tab (`@scratch ...` command)
 - `View Saved Scratch` sends `@edit me.scratch`
 
+Controlled by `IDE_SCRATCH_ENABLED` (default: true).
+
 MOO-side setup for scratch is documented in `docs/MOO-SETUP.md`.
 
 ## Object / Property Browsers
@@ -86,6 +88,11 @@ Loading data uses SDWC OOB commands:
 - `#$# SDWC%%VERBS%%<objectId>`
 - `#$# SDWC%%PROPS%%<objectId>`
 
+Controlled by:
+
+- `IDE_OBJECT_BROWSER_ENABLED` (default: true)
+- `IDE_PROPERTY_BROWSER_ENABLED` (default: true)
+
 Selecting a row opens the edit target:
 
 - Verb: `@edit <obj>:<verb>`
@@ -96,6 +103,8 @@ Selecting a row opens the edit target:
 Inside `@program` tabs, Ctrl/Cmd-clicking a detected `obj:verb` or `obj.prop` reference sends:
 
 - `@edit <target>`
+
+Controlled by `IDE_REFERENCE_NAVIGATION_ENABLED` (default: true).
 
 If `IDE_EDIT_OPEN_PARENT=true` and target is a verb (`:` form), IDE appends:
 
@@ -113,6 +122,8 @@ Requests:
 
 - Verb: `#$# SDWC%%VERB-OVERLAY%%<obj>%%<verb>`
 - Property: `#$# SDWC%%PROP-OVERLAY%%<obj>%%<prop>`
+
+Controlled by `IDE_HOVER_OVERLAYS_ENABLED` (default: true).
 
 Responses are routed from buffer parsing to IDE via `postMessage`:
 
@@ -166,6 +177,11 @@ Relevant env toggles:
 
 - `IDE_EDIT_OPEN_PARENT`
 - `IDE_VMS_NOTE_ENABLED`
+- `IDE_OBJECT_BROWSER_ENABLED`
+- `IDE_PROPERTY_BROWSER_ENABLED`
+- `IDE_HOVER_OVERLAYS_ENABLED`
+- `IDE_REFERENCE_NAVIGATION_ENABLED`
+- `IDE_SCRATCH_ENABLED`
 - `LOCAL_SAVE_NODE_MAX_LINES`
 - `LOCAL_SAVE_NODE_ADMIN_MAX_LINES`
 - `LOCAL_SAVE_NOTE_MAX_LINES`

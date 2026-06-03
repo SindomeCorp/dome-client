@@ -54,7 +54,12 @@ test("integration: https startup path initializes ssl server and returns binding
       localSaveNodeAdminMaxLines: 800,
       localSaveNoteMaxLines: 20,
       ideEditOpenParent: false,
-      ideVmsNoteEnabled: false
+      ideVmsNoteEnabled: false,
+      ideObjectBrowserEnabled: true,
+      idePropertyBrowserEnabled: true,
+      ideHoverOverlaysEnabled: true,
+      ideReferenceNavigationEnabled: true,
+      ideScratchEnabled: true
     },
     shorten: {
       enabled: false
@@ -203,7 +208,12 @@ test("integration: https mode serves core routes on app handlers for both http a
       localSaveNodeAdminMaxLines: 800,
       localSaveNoteMaxLines: 20,
       ideEditOpenParent: false,
-      ideVmsNoteEnabled: false
+      ideVmsNoteEnabled: false,
+      ideObjectBrowserEnabled: true,
+      idePropertyBrowserEnabled: true,
+      ideHoverOverlaysEnabled: true,
+      ideReferenceNavigationEnabled: true,
+      ideScratchEnabled: true
     },
     shorten: {
       enabled: false

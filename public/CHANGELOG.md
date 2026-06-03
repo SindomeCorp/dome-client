@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-06-03
 
+### Added
+- Added IDE feature flags for Object Browser, Property Browser, hover overlays, reference navigation, and scratch actions so deployments can disable unsupported MOO integrations.
+
 ### Changed
 - Closed the IDE window automatically when closing the last editable tab leaves only Object Browser or Property Browser tabs behind.
 - Highlighted user-defined MOO access receivers with the object-receiver color while keeping built-in variables such as `this` and `player` visually consistent.
@@ -18,6 +21,7 @@ All notable changes to this project will be documented in this file.
 - Clarified MUD/MOO terminology in the README while preserving legacy route, config, and documentation names.
 
 ### Fixed
+- Corrected setup and MOO integration documentation for local env defaults, IDE feature flags, SDWC request payloads, and MOO-side setup examples.
 - Kept the IDE VMS note field visible while a cleared note input still has focus so notes can be fully replaced without collapsing the editor control.
 - Fixed IDE editor MOO access highlighting so property names and cored/direct receivers use the same distinct colors as standalone editor windows.
 - Fixed MOO verb editor access highlighting so property names and cored/direct object receivers remain visually distinct after Ace themes load.
