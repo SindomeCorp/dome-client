@@ -5,13 +5,12 @@ import { createSocketOutputEventHandler } from "../../src/client/socket-output-e
 function createClient(t) {
   return {
     buffer: { childNodes: [] },
+    health: { showStatus: t.mock.fn() },
     ideWindow: { closed: false, postMessage: t.mock.fn() },
     inputReader: {},
     makeEditor: t.mock.fn(() => ({ id: "editor" })),
-    setFadeText: t.mock.fn(),
     setupAutoComplete: t.mock.fn(),
     spawned: {},
-    statusDisplay: {},
     updateEditorListView: t.mock.fn()
   };
 }
@@ -44,7 +43,7 @@ test("socket output event handler delegates text and fade events", (t) => {
   handler({ type: "fade", message: "status" });
 
   assert.deepEqual(renderer.appendOutputSegment.mock.calls[0].arguments, ["line\n"]);
-  assert.deepEqual(client.setFadeText.mock.calls[0].arguments, [client.statusDisplay, "status"]);
+  assert.deepEqual(client.health.showStatus.mock.calls[0].arguments, ["status"]);
 });
 
 test("socket output event handler updates editor and autocomplete side effects", (t) => {

@@ -8,9 +8,7 @@ const setScrollBuffer = client => {
   client.scrollBuffer = () => {
     if (client.pauseBuffer) {
       client.pausedLines++;
-      if (client.setFadeText && client.statusDisplay) {
-        client.setFadeText(client.statusDisplay, `${client.pausedLines} UNREAD LINES`);
-      }
+      client.health?.showStatus(`${client.pausedLines} UNREAD LINES`);
     } else {
       client._autoScrollProgrammatic = true;
       client.buffer.scrollTop = client.buffer.scrollHeight;
@@ -51,8 +49,8 @@ const setPaused = (client, paused, message = null) => {
   if (!paused) {
     client.pausedLines = 0;
   }
-  if (message && client.setFadeText) {
-    client.setFadeText(client.statusDisplay, message);
+  if (message) {
+    client.health?.showStatus(message);
   }
   setPauseUi(client, paused);
 };

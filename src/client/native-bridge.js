@@ -8,14 +8,10 @@ export const installDomeBridge = ({ client, win = globalThis.window, hasNativeBr
       }
     },
     onStatus(payload) {
-      if (client.setFadeText && client.statusDisplay) {
-        client.setFadeText(client.statusDisplay, String(payload ?? ""));
-      }
+      client.health?.showStatus(String(payload ?? ""));
     },
     onError(payload) {
-      if (client.setFadeText && client.statusDisplay) {
-        client.setFadeText(client.statusDisplay, "ERROR: " + String(payload ?? ""), true);
-      }
+      client.health?.showStatus("ERROR: " + String(payload ?? ""), { persist: true });
     },
     sendInput(command) {
       if (hasNativeBridge && win.DomeNative && typeof win.DomeNative.sendInput === "function") {

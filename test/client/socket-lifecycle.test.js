@@ -37,7 +37,10 @@ dome.disconnectView = {
 
 dome.socketState = SOCKET_STATE_ENUM.BEFORE_FIRST;
 dome.activeEditor = { readingContent: true };
-dome.setFadeText = () => {};
+dome.health = {
+  handleSocketError() {},
+  showStatus() {}
+};
 
 dome.statusDisplay = window.document.querySelector("#statusMsg");
 dome.inputReader = window.document.querySelector("#inputBuffer");
@@ -51,7 +54,6 @@ globalThis.socketUrlSSL = "https://sock";
 globalThis.gameName = "Game";
 globalThis.poweredBy = "Powered";
 dome.setWindowTitle = () => {};
-dome.onErrorHandler = () => {};
 let currentEmitter;
 mock.module("socket.io-client", { namedExports: { io: () => currentEmitter } });
 const { setupSocket } = await import("../../src/client/g-socket-lifecycle.js");
@@ -179,7 +181,7 @@ test("handlers manage reconnect, login branches, and errors", async (t) => {
       return res;
     });
     dome.setWindowTitle = t.mock.fn();
-    dome.onErrorHandler = t.mock.fn();
+    dome.health.handleSocketError = t.mock.fn();
     ioSocket.emit("connected");
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(dome.setWindowTitle.mock.calls[0]?.arguments[0], "User | Game | Powered");
@@ -189,7 +191,7 @@ test("handlers manage reconnect, login branches, and errors", async (t) => {
     assert.equal(removeMock.mock.calls[0]?.arguments[0], "dc-user-login");
     const err = new Error("boom");
     ioSocket.emit("error", err);
-    assert.equal(dome.onErrorHandler.mock.calls[0]?.arguments[0], err);
+    assert.equal(dome.health.handleSocketError.mock.calls[0]?.arguments[0], err);
   }
 
   {

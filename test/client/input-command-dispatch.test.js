@@ -11,11 +11,13 @@ const createHarness = ({ localEcho = true, ackStatus = "command sent" } = {}) =>
         this.appended.push({ pos, value });
       }
     },
+    health: {
+      showStatus(...args) {
+        fadeCalls.push(args);
+      }
+    },
     preferences: { localEcho },
-    statusDisplay: {},
-    setFadeText(...args) {
-      fadeCalls.push(args);
-    }
+    statusDisplay: {}
   };
   const socket = {
     events: [],
@@ -46,19 +48,19 @@ test("normal commands echo and emit socket input", () => {
 });
 
 test("command sent ack updates status display to SENT", () => {
-  const { dispatcher, client, fadeCalls } = createHarness({ ackStatus: "command sent ok" });
+  const { dispatcher, fadeCalls } = createHarness({ ackStatus: "command sent ok" });
 
   dispatcher.sendCommand("look");
 
-  assert.deepEqual(fadeCalls, [[client.statusDisplay, "SENT", false]]);
+  assert.deepEqual(fadeCalls, [["SENT"]]);
 });
 
 test("non-command-sent ack status is passed through", () => {
-  const { dispatcher, client, fadeCalls } = createHarness({ ackStatus: "queued" });
+  const { dispatcher, fadeCalls } = createHarness({ ackStatus: "queued" });
 
   dispatcher.sendCommand("look");
 
-  assert.deepEqual(fadeCalls, [[client.statusDisplay, "queued", false]]);
+  assert.deepEqual(fadeCalls, [["queued"]]);
 });
 
 test("client option commands echo and parse without socket emit", () => {
@@ -114,5 +116,5 @@ test("missing socket reports status instead of throwing", () => {
   const dispatcher = createCommandDispatcher({ client, socket: null });
 
   assert.doesNotThrow(() => dispatcher.sendCommand("say hi"));
-  assert.deepEqual(fadeCalls, [[client.statusDisplay, "ERROR: socket is not connected", true]]);
+  assert.deepEqual(fadeCalls, [["ERROR: socket is not connected", { persist: true }]]);
 });

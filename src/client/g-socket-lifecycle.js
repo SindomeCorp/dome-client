@@ -38,7 +38,7 @@ export function setupSocket({
       client.activeEditor.readingContent = false;
     }
     client.resetSdwcNowrapState?.();
-    if (client.setFadeText && client.statusDisplay) client.setFadeText(client.statusDisplay, "DISCONNECTED", true);
+    client.health?.showStatus("DISCONNECTED", { persist: true });
     client.disconnectView.overlay.classList.remove("hide");
     client.disconnectView.buttonGroup.classList.remove("hide");
   };
@@ -61,7 +61,7 @@ export function setupSocket({
     client.socketState = SOCKET_STATE_ENUM.CONNECTED;
     client.resetSdwcNowrapState?.();
     if (client.inputReader) client.inputReader.focus(); // focus the cursor in the input field
-    if (client.setFadeText && client.statusDisplay) client.setFadeText(client.statusDisplay, "CONNECTED");
+    client.health?.showStatus("CONNECTED");
 
     if (!initialCommand) {
       await sleepFn(2000); // delayed input to account for latency
@@ -119,7 +119,7 @@ export function setupSocket({
     onReconnectFailedHandler();
   });
   ioSocket.on("error", (e) => {
-    if (client.onErrorHandler) client.onErrorHandler(e);
+    client.health?.handleSocketError(e);
   });
 
   return ioSocket;

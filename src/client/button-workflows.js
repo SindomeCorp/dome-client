@@ -53,9 +53,7 @@ export function bindSaveLogButtons({ buttons, client, logger }) {
     if (typeof window !== "undefined" && window.DomeNative && typeof window.DomeNative.downloadLog === "function") {
       try {
         window.DomeNative.downloadLog(filename, htmlDocument);
-        if (client.setFadeText && client.statusDisplay) {
-          client.setFadeText(client.statusDisplay, "SAVING LOG...");
-        }
+        client.health?.showStatus("SAVING LOG...");
         return;
       } catch (err) {
         logger?.warn?.("Native log download failed, falling back to browser download.", err);

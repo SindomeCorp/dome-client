@@ -275,11 +275,11 @@ test("parseSocketData does not show fade text for SDWC meta lines", async (t) =>
   client.buffer.innerHTML = "";
   client.preferences.performanceBuffer = 0;
   client.statusDisplay = {};
-  client.setFadeText = t.mock.fn();
+  client.health = { showStatus: t.mock.fn() };
 
   client.parseSocketData("#$#   sdwc%%unknown%%{\"x\":1}\n");
 
-  assert.equal(client.setFadeText.mock.calls.length, 0);
+  assert.equal(client.health.showStatus.mock.calls.length, 0);
   assert.equal(client.buffer.innerHTML, "");
 });
 

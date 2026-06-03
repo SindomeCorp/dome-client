@@ -7,7 +7,7 @@ export function createSocketOutputEventHandler({
   setupAutoComplete = setupAutoCompleteFeature
 }) {
   const withFadeText = (msg) => {
-    if (client.setFadeText && client.statusDisplay) client.setFadeText(client.statusDisplay, msg);
+    client.health?.showStatus(msg);
   };
 
   const handleEditorContent = (event) => {

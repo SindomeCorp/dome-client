@@ -34,7 +34,7 @@ const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
     preferences: client.preferences,
     inputReader: client.inputReader,
     onToggleAutoScroll: client.onToggleAutoScroll,
-    setFadeText: client.setFadeText,
+    health: client.health,
     statusDisplay: client.statusDisplay
   };
   client.socket = testSocket;
@@ -49,7 +49,7 @@ const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
   client.preferences = { localEcho: true };
   client.inputReader = document.querySelector("#input");
   client.onToggleAutoScroll = () => {};
-  client.setFadeText = () => {};
+  client.health = { showStatus() {} };
   client.statusDisplay = {};
   setupInputReader({ client, doc: document });
   t.after(() => {

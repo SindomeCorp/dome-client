@@ -20,19 +20,13 @@ export const createCommandDispatcher = ({ client, socket, getSocket = () => sock
       echoCommand(client, command);
       const activeSocket = getSocket();
       if (!activeSocket || typeof activeSocket.emit !== "function") {
-        if (client.setFadeText && client.statusDisplay) {
-          client.setFadeText(client.statusDisplay, "ERROR: socket is not connected", true);
-        }
+        client.health?.showStatus("ERROR: socket is not connected", { persist: true });
         return;
       }
       activeSocket.emit("input", command, (state) => {
-        if (client.setFadeText && client.statusDisplay) {
-          client.setFadeText(
-            client.statusDisplay,
-            (state.status && state.status.indexOf("command sent") == 0) ? "SENT" : state.status,
-            false
-          );
-        }
+        client.health?.showStatus(
+          (state.status && state.status.indexOf("command sent") == 0) ? "SENT" : state.status
+        );
       });
     }
   }

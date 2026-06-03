@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-06-03
+
+### Changed
+- Refactored the browser-client health UI into a focused controller for status messages, socket errors, panel controls, graph updates, and polling.
+
 ## 2026-06-02
 
 ### Added
