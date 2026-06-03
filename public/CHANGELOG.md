@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-06-03
 
 ### Changed
-- Distinguished corified object references from direct corified verb calls in the MOO verb editor highlighting.
+- Distinguished builtin functions from in-MOO verb calls and corified object references in the MOO verb editor highlighting.
 - Updated the MOO verb editor mode with ToastStunt error constants, booleans, object and core references, MOO operators, and keyword-block indentation while removing JavaScript-derived highlighting.
 - Updated MOO builtin highlighting in the verb editor to match ToastStunt's builtin function list.
 - Highlighted additional MOO type constants in the verb editor, including `MAP`, `WAIF`, `ANON`, and `BOOL`.

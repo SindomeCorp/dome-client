@@ -268,11 +268,14 @@ var MOOHighlightRules = function() {
                 regex : '"(?=.)',
                 next  : "qqstring"
             }, {
-                token : "support.function.corified",
+                token : "support.function.moo",
                 regex : "\\$" + identifierRe + "(?=\\s*\\()"
             }, {
                 token : "constant.language.core",
                 regex : "\\$" + identifierRe
+            }, {
+                token : ["punctuation.operator", "support.function.moo"],
+                regex : "(:\\s*)(" + identifierRe + ")(?=\\s*\\()"
             }, {
                 token : "constant.language.object",
                 regex : /#-?\d+\b/

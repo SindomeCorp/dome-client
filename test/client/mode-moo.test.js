@@ -184,7 +184,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
     [
       "constant.language.core",
       "punctuation.operator",
-      "identifier",
+      "support.function.moo",
       "paren.lparen",
       "constant.language.object",
       "punctuation.operator",
@@ -203,7 +203,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "$critical(\"some content\")"),
     [
-      "support.function.corified",
+      "support.function.moo",
       "paren.lparen",
       "string",
       "paren.rparen"
@@ -214,9 +214,29 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
     [
       "constant.language.core",
       "punctuation.operator",
-      "identifier",
+      "support.function.moo",
       "paren.lparen",
       "string",
+      "paren.rparen"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "#0:critical()"),
+    [
+      "constant.language.object",
+      "punctuation.operator",
+      "support.function.moo",
+      "paren.lparen",
+      "paren.rparen"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "#15840:verbname()"),
+    [
+      "constant.language.object",
+      "punctuation.operator",
+      "support.function.moo",
+      "paren.lparen",
       "paren.rparen"
     ]
   );
@@ -227,6 +247,18 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
       "punctuation.operator",
       "identifier"
     ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "$code_utils:critical"),
+    [
+      "constant.language.core",
+      "punctuation.operator",
+      "identifier"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "$critical"),
+    ["constant.language.core"]
   );
   assert.deepEqual(
     tokenTypesFor(mode, "items = {@items, [\"key\" -> value][1..$]};"),
