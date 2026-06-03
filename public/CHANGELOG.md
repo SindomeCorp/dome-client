@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - Clarified MUD/MOO terminology in the README while preserving legacy route, config, and documentation names.
 
 ### Fixed
+- Kept the IDE VMS note field visible while a cleared note input still has focus so notes can be fully replaced without collapsing the editor control.
 - Fixed IDE editor MOO access highlighting so property names and cored/direct receivers use the same distinct colors as standalone editor windows.
 - Fixed MOO verb editor access highlighting so property names and cored/direct object receivers remain visually distinct after Ace themes load.
 - Fixed MOO verb editor outdent detection for typed closing block keywords such as `endfor`.

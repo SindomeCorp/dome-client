@@ -376,6 +376,41 @@ test("EditorIDE prompts for VMS notes before saving program tabs when enabled", 
   ]);
 });
 
+test("EditorIDE keeps an empty VMS note field visible until blur", async (t) => {
+  const { window } = await renderEditorIde(t, { "data-ide-vms-note-enabled": "true" });
+
+  await openTab(window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "initial"
+  });
+  await click(window, getButtonByText(window, "Save"));
+
+  const promptInput = window.document.querySelector("input[aria-label='VMS note prompt input']");
+  await act(async () => {
+    const propsKey = Object.keys(promptInput).find((key) => key.startsWith("__reactProps$"));
+    promptInput[propsKey].onChange({ target: { value: "changed look behavior" } });
+  });
+  await click(window, getButtonByText(window, "Submit"));
+
+  const noteInput = window.document.querySelector("input[aria-label='VMS note']");
+  assert.ok(noteInput);
+  await act(async () => {
+    const propsKey = Object.keys(noteInput).find((key) => key.startsWith("__reactProps$"));
+    noteInput[propsKey].onFocus();
+    noteInput[propsKey].onChange({ target: { value: "" } });
+  });
+
+  const emptyNoteInput = window.document.querySelector("input[aria-label='VMS note']");
+  assert.ok(emptyNoteInput);
+  await act(async () => {
+    const propsKey = Object.keys(emptyNoteInput).find((key) => key.startsWith("__reactProps$"));
+    emptyNoteInput[propsKey].onBlur();
+  });
+
+  assert.equal(window.document.querySelector("input[aria-label='VMS note']"), null);
+});
+
 test("EditorIDE keyboard shortcuts preserve current editor behavior", async (t) => {
   const { window, emit } = await renderEditorIde(t);
 
