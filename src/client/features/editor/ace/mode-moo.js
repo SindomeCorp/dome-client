@@ -150,27 +150,39 @@ var MOOHighlightRules = function() {
       "storage.type":
           "const|let|var|function",
       "constant.language":
-          "INT|FLOAT|OBJ|STR|LIST|ERR|NUM",
+          "INT|FLOAT|OBJ|STR|LIST|ERR|NUM|MAP|WAIF|ANON|BOOL",
       "support.function":
-          "abs|file_remove|recycle|acos|file_rename|renumber|add_property|file_rmdir|reset_max_object|" +
-          "add_verb|file_seek|resume|asin|file_size|rindex|atan|file_stat|rmatch|binary_hash|" +
-          "file_tell|seconds_left|boot_player|file_type|server_log|buffered_output_length|file_write|" +
-          "server_version|builtin-index|file_writeline|set_connection_option|call_function|floatstr|" +
-          "set_player_flag|caller_perms|floor|set_property_info|callers|flush_input|set_task_perms|" +
-          "ceil|force_input|set_verb_args|children|function_info|set_verb_code|chparent|idle_seconds|" +
-          "set_verb_info|clear_property|index|setadd|connected_players|is_clear_property|setremove|" +
-          "connected_seconds|is_member|shutdown|connection_name|is_player|sin|connection_option|" +
-          "kill_task|sinh|connection_options|length|sqrt|cos|listappend|strcmp|cosh|listdelete|" +
-          "string_hash|create|listen|strsub|crypt|listeners|substitute|ctime|listinsert|suspend|" +
-          "db_disk_size|listset|tan|decode_binary|log|tanh|delete_property|log10|task_id|delete_verb|" +
-          "match|task_stack|disassemble|max|ticks_left|dump_database|max_object|time|encode_binary|" +
-          "memory_usage|tofloat|equal|messages|toint|eval|min|toliteral|exp|move|tonum|file-io|notify|" +
-          "toobj|file_close|object_bytes|tostr|file_eof|open_network_connection|trunc|" +
-          "file_last_access|output_delimiters|typeof|file_last_change|parent|unlisten|" +
-          "file_last_modify|pass|valid|file_list|pfileinfo|value_bytes|file_mkdir|players|" +
-          "value_hash|file_mode|properties|verb_args|file_name|property_info|verb_code|file_open|" +
-          "queue_info|verb_info|file_openmode|queued_tasks|verbs|file_read|raise|xml_parse_document|" +
-          "file_readline|random|xml_parse_tree|file_readlines|read"
+          "is_member|disassemble|log_cache_stats|verb_cache_stats|call_function|raise|suspend|yin|" +
+          "read|read_http|seconds_left|ticks_left|pass|set_task_perms|task_perms|caller_perms|" +
+          "callers|task_stack|function_info|load_server_options|value_bytes|decode_binary|" +
+          "encode_binary|chr|length|setadd|setremove|listappend|listinsert|listdelete|listset|" +
+          "equal|explode|reverse|slice|sort|all_members|tostr|toliteral|match|rmatch|substitute|" +
+          "index|rindex|strcmp|strsub|strtr|parse_ansi|remove_ansi|server_log|mapdelete|mapkeys|" +
+          "mapvalues|maphaskey|toint|tofloat|min|max|abs|random|reseed_random|frandom|round|" +
+          "random_bytes|time|ctime|ftime|floatstr|sqrt|cbrt|sin|cos|tan|asin|acos|atan|sinh|" +
+          "cosh|tanh|acosh|atanh|asinh|atan2|exp|log|log10|ceil|floor|trunc|distance|" +
+          "relative_heading|toobj|typeof|create|recreate|recycle|object_bytes|valid|chparents|" +
+          "chparent|parents|parent|children|ancestors|descendants|max_object|players|is_player|" +
+          "set_player_flag|move|isa|locate_by_name|occupants|locations|recycled_objects|" +
+          "next_recycled_object|owned_objects|properties|property_info|set_property_info|" +
+          "add_property|delete_property|clear_property|is_clear_property|server_version|renumber|" +
+          "reset_max_object|memory_usage|usage|panic|shutdown|dump_database|db_disk_size|" +
+          "open_network_connection|connected_players|connected_seconds|idle_seconds|" +
+          "connection_name|notify|boot_player|set_connection_option|connection_options|" +
+          "connection_info|connection_name_lookup|listen|unlisten|listeners|buffered_output_length|" +
+          "task_id|queued_tasks|finished_tasks|kill_task|output_delimiters|queue_info|resume|" +
+          "force_input|flush_input|set_task_local|task_local|switch_player|set_thread_mode|verbs|" +
+          "verb_info|set_verb_info|verb_args|set_verb_args|add_verb|delete_verb|verb_code|" +
+          "set_verb_code|respond_to|eval|parse_json|generate_json|xml_parse_tree|" +
+          "xml_parse_document|encode_base64|decode_base64|file_handles|file_open|file_close|" +
+          "file_name|file_openmode|file_readline|file_readlines|file_writeline|file_grep|" +
+          "file_read|file_write|file_flush|file_seek|file_tell|file_eof|file_count_lines|" +
+          "file_list|file_mkdir|file_rmdir|file_remove|file_rename|file_chmod|file_size|" +
+          "file_mode|file_type|file_last_access|file_last_modify|file_last_change|file_stat|" +
+          "getenv|exec|salt|crypt|string_hash|binary_hash|value_hash|string_hmac|binary_hmac|" +
+          "value_hmac|pcre_match|pcre_replace|pcre_cache_stats|threads|thread_pool|new_waif|" +
+          "waif_stats|waifs|simplex_noise|argon2|argon2_verify|spellcheck|curl|url_encode|" +
+          "url_decode|sql_query|sql_connections|sql_open|sql_close|sql_info"
   }, "identifier");
   
     var kwBeforeRe = "case|do|else|finally|in|instanceof|return|throw|try|typeof|yield";
@@ -844,4 +856,3 @@ oop.inherits(FoldMode, BaseFoldMode);
 
 });
 export {};
-

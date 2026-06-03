@@ -72,6 +72,54 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
     tokenTypesFor(mode, "/** TODO @tag */"),
     ["comment.doc", "comment.doc.tag", "comment.doc"]
   );
+  assert.deepEqual(
+    tokenTypesFor(mode, "return {MAP, WAIF, ANON, BOOL};"),
+    [
+      "keyword",
+      "text",
+      "paren.lparen",
+      "constant.language",
+      "punctuation.operator",
+      "text",
+      "constant.language",
+      "punctuation.operator",
+      "text",
+      "constant.language",
+      "punctuation.operator",
+      "text",
+      "constant.language",
+      "paren.rparen",
+      "punctuation.operator"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "return sql_query(curl(url_encode(\"x\")));"),
+    [
+      "keyword",
+      "text",
+      "support.function",
+      "paren.lparen",
+      "support.function",
+      "paren.lparen",
+      "support.function",
+      "paren.lparen",
+      "string",
+      "paren.rparen",
+      "punctuation.operator"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "return tonum(x);"),
+    [
+      "keyword",
+      "text",
+      "identifier",
+      "paren.lparen",
+      "identifier",
+      "paren.rparen",
+      "punctuation.operator"
+    ]
+  );
 });
 
 test("MOO mode tokenizes regular expressions when grammar allows them", () => {
