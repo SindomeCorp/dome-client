@@ -259,7 +259,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "player.name"),
     [
-      "entity.other.object.receiver.moo",
+      "variable.language",
       "punctuation.operator",
       "variable.other.property.moo"
     ]
@@ -267,7 +267,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "this.production_check"),
     [
-      "entity.other.object.receiver.moo",
+      "variable.language",
       "punctuation.operator",
       "variable.other.property.moo"
     ]

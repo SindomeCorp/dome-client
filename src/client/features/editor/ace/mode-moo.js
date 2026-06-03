@@ -185,10 +185,11 @@ var oop = require("../lib/oop");
 var DocCommentHighlightRules = require("./doc_comment_highlight_rules").DocCommentHighlightRules;
 var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
-var MOOHighlightRules = function() {
+  var MOOHighlightRules = function() {
+  var languageVariables = "player|this|caller|verb|args|argstr|dobj|dobjstr|prepstr|iobj|iobjstr";
   var keywordMapper = this.createKeywordMapper({
       "variable.language":
-          "player|this|caller|verb|args|argstr|dobj|dobjstr|prepstr|iobj|iobjstr",                                            
+          languageVariables,
       "keyword":
           "endif|elseif|endfor|endwhile|endtry|endfork|break|except|catch|continue|else|finally|fork|for|" +
           "if|in|return|raise|try|while",
@@ -275,6 +276,9 @@ var MOOHighlightRules = function() {
             }, {
                 token : "entity.other.object.receiver.moo",
                 regex : "#-?\\d+\\b(?=(?:" + propertyAccessRe + "|" + colonAccessRe + "))"
+            }, {
+                token : "variable.language",
+                regex : "(?:" + languageVariables + ")\\b(?=(?:" + propertyAccessRe + "|" + colonAccessRe + "))"
             }, {
                 token : "entity.other.object.receiver.moo",
                 regex : identifierRe + "(?=(?:" + propertyAccessRe + "|" + colonAccessRe + "))"
