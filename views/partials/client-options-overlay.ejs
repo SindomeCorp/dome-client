@@ -30,7 +30,7 @@
         <div class="option-row" id="buffer-option">
           <span class="option-label"><%= clientOptionLabels.buffer %> <i class="glyphicon glyphicon-question-sign" title="This defines the length of your buffer. 0 is infinite (best for logging). Adjust this to a lower number if you are having performance issues. Warning: Your current buffer is saved with the 'Log' button, so lower numbers mean a shorter log."></i></span>
           <div class="option-choices pull-right">
-            <input name="buffer-size" placeholder="0" type="number" min="0" max="96000" value="0" />
+            <input name="buffer-size" placeholder="<%= clientOptionView.buffer.def %>" type="number" min="<%= clientOptionView.buffer.min %>" max="<%= clientOptionView.buffer.max %>" value="<%= clientOptionView.buffer.def %>" />
           </div>
         </div>
         <div class="option-row" id="broadly-option">
@@ -67,7 +67,7 @@
           <span class="option-label pull-left"><%= clientOptionLabels.scroll %></span>
           <select name="auto-scroll-toggle">
             <% clientOptionView.scroll.choices.forEach(function(choice) { %>
-            <option value="<%= choice.value %>"<% if (choice.value === "dbl") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <option value="<%= choice.value %>"<% if (choice.value === clientOptionView.scroll.def) { %> selected="selected"<% } %>><%= choice.label %></option>
             <% }); %>
           </select>
         </div>
@@ -105,21 +105,21 @@
           <span class="option-label"><%= clientOptionLabels.outfont %></span>
           <select name="output-font-choice">
             <% clientOptionView.outfont.choices.forEach(function(choice) { %>
-            <option value="<%= choice.value %>" style="<%= choice.style %>"<% if (choice.value === "standard") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <option value="<%= choice.value %>" style="<%= choice.style %>"<% if (choice.value === clientOptionView.outfont.def) { %> selected="selected"<% } %>><%= choice.label %></option>
             <% }); %>
           </select>
         </div>
         <div class="option-row" id="outfontsize-option">
           <span class="option-label"><%= clientOptionLabels.outfontsize %></span>
           <div class="option-choices pull-right">
-            <input name="output-font-size" type="number" min="8" max="24" step="0.25" value="9.75" />
+            <input name="output-font-size" type="number" min="<%= clientOptionView.outfontsize.min %>" max="<%= clientOptionView.outfontsize.max %>" step="0.25" value="<%= clientOptionView.outfontsize.def %>" />
           </div>
         </div>
         <div class="option-row" id="editorfont-option">
           <span class="option-label"><%= clientOptionLabels.editorfont %></span>
           <select name="editor-font-choice">
             <% clientOptionView.editorfont.choices.forEach(function(choice) { %>
-            <option value="<%= choice.value %>" style="<%= choice.style %>"<% if (choice.value === "standard") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <option value="<%= choice.value %>" style="<%= choice.style %>"<% if (choice.value === clientOptionView.editorfont.def) { %> selected="selected"<% } %>><%= choice.label %></option>
             <% }); %>
           </select>
         </div>
@@ -127,35 +127,35 @@
           <span class="option-label"><%= clientOptionLabels.inputfont %></span>
           <select name="input-font-choice">
             <% clientOptionView.inputfont.choices.forEach(function(choice) { %>
-            <option value="<%= choice.value %>" style="<%= choice.style %>"<% if (choice.value === "standard") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <option value="<%= choice.value %>" style="<%= choice.style %>"<% if (choice.value === clientOptionView.inputfont.def) { %> selected="selected"<% } %>><%= choice.label %></option>
             <% }); %>
           </select>
         </div>
         <div class="option-row" id="inputfontsize-option">
           <span class="option-label"><%= clientOptionLabels.inputfontsize %></span>
           <div class="option-choices pull-right">
-            <input name="input-font-size" type="number" min="8" max="24" step="0.5" value="11" />
+            <input name="input-font-size" type="number" min="<%= clientOptionView.inputfontsize.min %>" max="<%= clientOptionView.inputfontsize.max %>" step="0.5" value="<%= clientOptionView.inputfontsize.def %>" />
           </div>
         </div>
         <div class="option-row" id="inputfontcolor-option">
           <span class="option-label"><%= clientOptionLabels.inputfontcolor %></span>
           <div class="option-choices pull-right color-choice">
-            <input name="input-font-color-picker" type="color" value="#EEEEEE" aria-label="Input font color picker" />
-            <input name="input-font-color-hex" type="text" value="#EEEEEE" maxlength="7" data-color-hex="true" inputmode="text" autocapitalize="none" autocomplete="off" autocorrect="off" aria-label="Input font color hex" />
+            <input name="input-font-color-picker" type="color" value="<%= clientOptionView.inputfontcolor.def %>" aria-label="Input font color picker" />
+            <input name="input-font-color-hex" type="text" value="<%= clientOptionView.inputfontcolor.def %>" maxlength="7" data-color-hex="true" inputmode="text" autocapitalize="none" autocomplete="off" autocorrect="off" aria-label="Input font color hex" />
           </div>
         </div>
         <div class="option-row" id="inputbgcolor-option">
           <span class="option-label"><%= clientOptionLabels.inputbgcolor %></span>
           <div class="option-choices pull-right color-choice">
-            <input name="input-bg-color-picker" type="color" value="#333333" aria-label="Input background color picker" />
-            <input name="input-bg-color-hex" type="text" value="#333333" maxlength="7" data-color-hex="true" inputmode="text" autocapitalize="none" autocomplete="off" autocorrect="off" aria-label="Input background color hex" />
+            <input name="input-bg-color-picker" type="color" value="<%= clientOptionView.inputbgcolor.def %>" aria-label="Input background color picker" />
+            <input name="input-bg-color-hex" type="text" value="<%= clientOptionView.inputbgcolor.def %>" maxlength="7" data-color-hex="true" inputmode="text" autocapitalize="none" autocomplete="off" autocorrect="off" aria-label="Input background color hex" />
           </div>
         </div>
         <div class="option-row" id="colorset-option">
           <span class="option-label"><%= clientOptionLabels.colorset %></span>
           <select name="colorset-choice">
             <% clientOptionView.colorset.choices.forEach(function(choice) { %>
-            <option value="<%= choice.value %>"<% if (choice.value === "normal") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <option value="<%= choice.value %>"<% if (choice.value === clientOptionView.colorset.def) { %> selected="selected"<% } %>><%= choice.label %></option>
             <% }); %>
           </select>
         </div>
@@ -165,7 +165,7 @@
           <span class="option-label"><%= clientOptionLabels.edittype %></span>
           <select name="editor-type-choice">
             <% clientOptionView.edittype.choices.forEach(function(choice) { %>
-            <option value="<%= choice.value %>"<% if (choice.value === "ide") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <option value="<%= choice.value %>"<% if (choice.value === clientOptionView.edittype.def) { %> selected="selected"<% } %>><%= choice.label %></option>
             <% }); %>
           </select>
         </div>
@@ -173,7 +173,7 @@
           <span class="option-label"><%= clientOptionLabels.edittheme %></span>
           <select name="editor-theme-choice">
             <% clientOptionView.edittheme.choices.forEach(function(choice) { %>
-            <option value="<%= choice.value %>"<% if (choice.value === "twilight") { %> selected="selected"<% } %>><%= choice.label %></option>
+            <option value="<%= choice.value %>"<% if (choice.value === clientOptionView.edittheme.def) { %> selected="selected"<% } %>><%= choice.label %></option>
             <% }); %>
           </select>
         </div>

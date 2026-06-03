@@ -13,6 +13,7 @@ export const FONT_CHOICES = [
 ];
 
 export const COLORSET_CHOICES = ["normal", "dim", "slither", "acid", "corpie", "snow"];
+export const CLIENT_OPTION_STORAGE_PREFIX = "dc-toggle-";
 
 const FONT_OPTION_CHOICES = [
   { value: "standard", label: "Source Code Pro", style: "font-family: 'Source Code Pro'" },
@@ -70,7 +71,7 @@ export const CLIENT_OPTION_DEFINITIONS = [
   { key: "scrolluppause", label: "Scroll Up to Pause", param: "up", preferenceName: "scrollUpToPause", def: false, ok: [true, false] },
   { key: "transparent", label: "Transparent Overlays", param: "to", preferenceName: "transparentOverlay", def: true, ok: [true, false] },
   { key: "broadly", label: "Search Command Help", param: "bs", preferenceName: "broadSearch", def: true, ok: [true, false] },
-  { key: "buffer", label: "Scroll Buffer Size", param: "pb", preferenceName: "performanceBuffer", def: 0 }
+  { key: "buffer", label: "Scroll Buffer Size", param: "pb", preferenceName: "performanceBuffer", def: 0, min: 0, max: 96000 }
 ];
 
 const CLIENT_OPTION_BY_KEY = Object.fromEntries(
@@ -96,6 +97,10 @@ export const CLIENT_OPTION_LABELS = Object.fromEntries(
 export const CLIENT_OPTION_VIEW = Object.fromEntries(
   CLIENT_OPTION_DEFINITIONS.map((option) => [option.key, {
     label: option.label,
+    def: option.def,
+    ...(option.min != null ? { min: option.min } : {}),
+    ...(option.max != null ? { max: option.max } : {}),
+    ...(option.type ? { type: option.type } : {}),
     ...(option.choices ? { choices: option.choices } : {})
   }])
 );
@@ -120,6 +125,10 @@ export function buildPreferenceDefaults() {
   return Object.fromEntries(
     CLIENT_OPTION_DEFINITIONS.map((option) => [option.preferenceName, option.def])
   );
+}
+
+export function getClientOptionStorageKey(optionKey, prefix = CLIENT_OPTION_STORAGE_PREFIX) {
+  return `${prefix}${optionKey}`;
 }
 
 export function normalizeHexColor(value) {

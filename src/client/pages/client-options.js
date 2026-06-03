@@ -4,8 +4,10 @@ import {
   COLORSET_CHOICES,
   EDIT_THEMES,
   FONT_CHOICES,
+  CLIENT_OPTION_STORAGE_PREFIX,
   PREF_NAME,
-  buildClientOptionState
+  buildClientOptionState,
+  getClientOptionStorageKey
 } from "../client-option-schema.js";
 import {
   buildClientOptionsExportFilename,
@@ -20,13 +22,16 @@ if (typeof window !== "undefined" && !window.COLORSET_CHOICES) {
 
 const clientOptions = {
   options: buildClientOptionState(),
-  prefix: "dc-toggle-", // namespacing options in localStorage
+  prefix: CLIENT_OPTION_STORAGE_PREFIX,
+  storageKey(name) {
+    return getClientOptionStorageKey(name, this.prefix);
+  },
   get(name) {
     const option = this.options[name];
     if (!option) {
       throw new Error("invalid option name");
     }
-    let state = store.get(this.prefix + name);
+    let state = store.get(this.storageKey(name));
     if (state == null) {
       state = option.def;
     }
@@ -38,7 +43,7 @@ const clientOptions = {
     if (!option) {
       throw new Error("invalid option name");
     }
-    store.put(this.prefix + name, value);
+    store.put(this.storageKey(name), value);
     const indicator = document.getElementById("client-options-save-indicator");
     if (indicator) {
       indicator.classList.remove("hide");

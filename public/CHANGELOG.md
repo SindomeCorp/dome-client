@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Added regression coverage to keep browser-client modules from reintroducing the legacy `dome` singleton.
 
 ### Changed
+- Reduced client options and connect-page debt by moving option storage keys and render defaults into schema helpers and extracting connect-page workflow binders.
 - Replaced the internal browser-client `dome` singleton and shared socket state with explicit client runtime composition.
 - Routed editor and IDE window coordination through injected client state and `postMessage` instead of browser-facing `window.dome` access.
 - Removed legacy browser-client setup wrapper assignments now that startup and tests use explicit setup exports.

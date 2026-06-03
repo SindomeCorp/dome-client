@@ -1,3 +1,5 @@
+import { getClientOptionStorageKey } from "../client-option-schema.js";
+
 const ACE_FONT_FAMILIES = {
   standard: "'Source Code Pro'",
   lucida: "'Lucida Console'",
@@ -12,11 +14,11 @@ const ACE_FONT_FAMILIES = {
 
 export function getPreferredFont() {
   try {
-    const raw = localStorage.getItem("dc-toggle-editorfont");
+    const raw = localStorage.getItem(getClientOptionStorageKey("editorfont"));
     if (raw != null) {
       return JSON.parse(raw);
     }
-    const legacy = localStorage.getItem("dc-toggle-outfont");
+    const legacy = localStorage.getItem(getClientOptionStorageKey("outfont"));
     return legacy ? JSON.parse(legacy) : "standard";
   } catch {
     return "standard";

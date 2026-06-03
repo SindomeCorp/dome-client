@@ -2,8 +2,10 @@ import {
   CLIENT_OPTION_BY_PARAM,
   CLIENT_OPTION_BY_PREFERENCE,
   CLIENT_OPTION_DEFINITIONS,
+  CLIENT_OPTION_STORAGE_PREFIX,
   buildPreferenceDefaults,
-  coerceOptionValue
+  coerceOptionValue,
+  getClientOptionStorageKey
 } from "./client-option-schema.js";
 
 export const CLIENT_OPTION_NAME_ERROR = "Unknown @client-option specified, check @client-options\n";
@@ -41,14 +43,14 @@ export function buildClientOptionsHelp() {
 export function readClientPreferences({
   locationSearch = "",
   getStoredValue = () => null,
-  storagePrefix = "dc-toggle-",
+  storagePrefix = CLIENT_OPTION_STORAGE_PREFIX,
   shortenFeatureEnabled = true
 } = {}) {
   const preferences = buildPreferenceDefaults();
   const persistenceUpdates = [];
 
   CLIENT_OPTION_DEFINITIONS.forEach((option) => {
-    const saved = getStoredValue(storagePrefix + option.key);
+    const saved = getStoredValue(getClientOptionStorageKey(option.key, storagePrefix));
     if (saved !== null) {
       preferences[option.preferenceName] = saved;
     }
@@ -66,14 +68,15 @@ export function readClientPreferences({
     });
   }
 
-  if (getStoredValue(storagePrefix + "editorfont") === null && !(locationSearch && locationSearch.includes("ef="))) {
+  const editorFontStorageKey = getClientOptionStorageKey("editorfont", storagePrefix);
+  if (getStoredValue(editorFontStorageKey) === null && !(locationSearch && locationSearch.includes("ef="))) {
     preferences.editorFont = preferences.lineBufferFont;
-    persistenceUpdates.push({ key: storagePrefix + "editorfont", value: preferences.editorFont });
+    persistenceUpdates.push({ key: editorFontStorageKey, value: preferences.editorFont });
   }
 
   if (!shortenFeatureEnabled) {
     preferences.shortenUrls = false;
-    persistenceUpdates.push({ key: storagePrefix + "shorten", value: false });
+    persistenceUpdates.push({ key: getClientOptionStorageKey("shorten", storagePrefix), value: false });
   }
 
   return { preferences, persistenceUpdates };
