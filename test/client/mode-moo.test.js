@@ -293,7 +293,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "$code_utils:critical"),
     [
-      "constant.language.core",
+      "entity.other.object.receiver.moo",
       "punctuation.operator",
       "identifier"
     ]

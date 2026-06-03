@@ -233,7 +233,7 @@ var MOOHighlightRules = function() {
   
     var identifierRe = "[a-zA-Z\\$_\u00a1-\uffff][a-zA-Z\\d\\$_\u00a1-\uffff]*\\b";
     var propertyAccessRe = "\\s*\\.";
-    var verbCallAccessRe = "\\s*:\\s*" + identifierRe + "\\s*\\(";
+    var colonAccessRe = "\\s*:\\s*" + identifierRe;
 
     var escapedRe = "\\\\(?:x[0-9a-fA-F]{2}|" + // hex
         "u[0-9a-fA-F]{4}|" + // unicode
@@ -271,13 +271,13 @@ var MOOHighlightRules = function() {
                 next  : "qqstring"
             }, {
                 token : "entity.other.object.receiver.moo",
-                regex : "\\$" + identifierRe + "(?=(?:" + propertyAccessRe + "|" + verbCallAccessRe + "))"
+                regex : "\\$" + identifierRe + "(?=(?:" + propertyAccessRe + "|" + colonAccessRe + "))"
             }, {
                 token : "entity.other.object.receiver.moo",
-                regex : "#-?\\d+\\b(?=(?:" + propertyAccessRe + "|" + verbCallAccessRe + "))"
+                regex : "#-?\\d+\\b(?=(?:" + propertyAccessRe + "|" + colonAccessRe + "))"
             }, {
                 token : "variable.other.object.receiver.moo",
-                regex : identifierRe + "(?=(?:" + propertyAccessRe + "|" + verbCallAccessRe + "))"
+                regex : identifierRe + "(?=(?:" + propertyAccessRe + "|" + colonAccessRe + "))"
             }, {
                 token : "entity.name.function.moo",
                 regex : "\\$" + identifierRe + "(?=\\s*\\()"
