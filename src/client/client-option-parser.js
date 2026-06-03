@@ -12,6 +12,7 @@ export const CLIENT_OPTION_NAME_ERROR = "Unknown @client-option specified, check
 export const CLIENT_OPTION_VALUE_ERROR = "Invalid @client-option value, must be one of ";
 
 const OPTION_BY_COMMAND_NAME = {
+  ...Object.fromEntries(CLIENT_OPTION_DEFINITIONS.map((option) => [option.key, option])),
   ...CLIENT_OPTION_BY_PARAM,
   ...CLIENT_OPTION_BY_PREFERENCE
 };

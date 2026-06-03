@@ -35,16 +35,10 @@ function createClientOptionControlBinder({
     const actions = getActions();
     const prefName = getPreferenceNameForOptionKey(name);
     if (prefName && actions.setClientOption) {
-      actions.setClientOption(prefName, value);
-    } else {
-      options.save(name, value);
-      if (name === "scroll") {
-        actions.setPreference("autoScroll", value);
-        actions.refreshAutoscroll();
-      } else if (name === "colorset") {
-        actions.parseClientOptionCommand(`@client-option cl ${value}`);
-      }
+      return actions.setClientOption(prefName, value, { source: "ui" });
     }
+    options.save(name, value);
+    return { ok: true, status: "saved" };
   }
 
   function refreshClientOptions({ root = document } = {}) {
