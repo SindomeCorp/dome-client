@@ -276,7 +276,7 @@ var MOOHighlightRules = function() {
                 token : "entity.other.object.receiver.moo",
                 regex : "#-?\\d+\\b(?=(?:" + propertyAccessRe + "|" + colonAccessRe + "))"
             }, {
-                token : "variable.other.object.receiver.moo",
+                token : "entity.other.object.receiver.moo",
                 regex : identifierRe + "(?=(?:" + propertyAccessRe + "|" + colonAccessRe + "))"
             }, {
                 token : "entity.name.function.moo",
