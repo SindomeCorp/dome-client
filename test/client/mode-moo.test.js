@@ -329,6 +329,11 @@ test("MOO mode toggles comments on selected document rows", () => {
 test("MOO mode indents and outdents keyword-terminated blocks", () => {
   const mode = createMode();
   const endifDoc = createDocument(["if (x)", "  endif"]);
+  const elseifDoc = createDocument(["if (x)", "  elseif (y)"]);
+  const elseDoc = createDocument(["if (x)", "  else"]);
+  const endforDoc = createDocument(["for i in [1..10]", "  endfor"]);
+  const endwhileDoc = createDocument(["while (x)", "  endwhile"]);
+  const endtryDoc = createDocument(["try", "  endtry"]);
   const exceptDoc = createDocument(["try", "  except err (ANY)"]);
   const finallyDoc = createDocument(["try", "  except err (ANY)", "    finally"]);
   const endforkDoc = createDocument(["fork job (5)", "  endfork"]);
@@ -343,15 +348,28 @@ test("MOO mode indents and outdents keyword-terminated blocks", () => {
   assert.equal(mode.getNextLineIndent("doc-start", " * details", "  "), " * ");
   assert.equal(mode.getNextLineIndent("doc-start", " */", "  "), "");
   assert.equal(mode.checkOutdent("start", "  ", "endif"), true);
-  assert.equal(mode.checkOutdent("start", "  endfo", "r"), true);
+  for (const keyword of ["endif", "endfor", "endwhile", "endtry", "endfork", "elseif", "else", "except", "finally"]) {
+    assert.equal(mode.checkOutdent("start", "  ", keyword), true);
+    assert.equal(mode.checkOutdent("start", `  ${keyword.slice(0, -1)}`, keyword.at(-1)), true);
+  }
   assert.equal(mode.checkOutdent("start", "  ", "}"), false);
 
   mode.autoOutdent("start", endifDoc, 1);
+  mode.autoOutdent("start", elseifDoc, 1);
+  mode.autoOutdent("start", elseDoc, 1);
+  mode.autoOutdent("start", endforDoc, 1);
+  mode.autoOutdent("start", endwhileDoc, 1);
+  mode.autoOutdent("start", endtryDoc, 1);
   mode.autoOutdent("start", exceptDoc, 1);
   mode.autoOutdent("start", finallyDoc, 2);
   mode.autoOutdent("start", endforkDoc, 1);
 
   assert.equal(endifDoc.lines[1], "endif");
+  assert.equal(elseifDoc.lines[1], "elseif (y)");
+  assert.equal(elseDoc.lines[1], "else");
+  assert.equal(endforDoc.lines[1], "endfor");
+  assert.equal(endwhileDoc.lines[1], "endwhile");
+  assert.equal(endtryDoc.lines[1], "endtry");
   assert.equal(exceptDoc.lines[1], "except err (ANY)");
   assert.equal(finallyDoc.lines[2], "  finally");
   assert.equal(endforkDoc.lines[1], "endfork");
