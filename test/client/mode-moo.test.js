@@ -55,8 +55,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
       "text",
       "support.function",
       "paren.lparen",
-      "text",
-      "constant.numeric",
+      "constant.language.object",
       "paren.rparen",
       "punctuation.operator",
       "text",
@@ -120,9 +119,183 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
       "punctuation.operator"
     ]
   );
+  assert.deepEqual(
+    tokenTypesFor(mode, "except err (ANY)"),
+    [
+      "keyword",
+      "text",
+      "identifier",
+      "text",
+      "paren.lparen",
+      "constant.language",
+      "paren.rparen"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "return {E_TYPE, E_ARGS, ANY, NONE, TRUE, FALSE, true, false};"),
+    [
+      "keyword",
+      "text",
+      "paren.lparen",
+      "constant.language.error",
+      "punctuation.operator",
+      "text",
+      "constant.language.error",
+      "punctuation.operator",
+      "text",
+      "constant.language",
+      "punctuation.operator",
+      "text",
+      "constant.language",
+      "punctuation.operator",
+      "text",
+      "constant.language.boolean",
+      "punctuation.operator",
+      "text",
+      "constant.language.boolean",
+      "punctuation.operator",
+      "text",
+      "constant.language.boolean",
+      "punctuation.operator",
+      "text",
+      "constant.language.boolean",
+      "paren.rparen",
+      "punctuation.operator"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "fork job (5)"),
+    [
+      "keyword",
+      "text",
+      "identifier",
+      "text",
+      "paren.lparen",
+      "constant.numeric",
+      "paren.rparen"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "endfork"),
+    ["keyword"]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "$player:tell(#-1, $nothing.name);"),
+    [
+      "variable.language",
+      "punctuation.operator",
+      "identifier",
+      "paren.lparen",
+      "constant.language.object",
+      "punctuation.operator",
+      "text",
+      "variable.language",
+      "punctuation.operator",
+      "identifier",
+      "paren.rparen",
+      "punctuation.operator"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "items = {@items, [\"key\" -> value][1..$]};"),
+    [
+      "identifier",
+      "text",
+      "keyword.operator",
+      "text",
+      "paren.lparen",
+      "keyword.operator",
+      "identifier",
+      "punctuation.operator",
+      "text",
+      "paren.lparen",
+      "string",
+      "text",
+      "keyword.operator",
+      "text",
+      "identifier",
+      "paren.rparen",
+      "paren.lparen",
+      "constant.numeric",
+      "keyword.operator",
+      "paren.rparen",
+      "punctuation.operator"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "flag = x &. (1 << 2);"),
+    [
+      "identifier",
+      "text",
+      "keyword.operator",
+      "text",
+      "identifier",
+      "text",
+      "keyword.operator",
+      "text",
+      "paren.lparen",
+      "constant.numeric",
+      "text",
+      "keyword.operator",
+      "text",
+      "constant.numeric",
+      "paren.rparen",
+      "punctuation.operator"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "return const + let + var + function;"),
+    [
+      "keyword",
+      "text",
+      "identifier",
+      "text",
+      "keyword.operator",
+      "text",
+      "identifier",
+      "text",
+      "keyword.operator",
+      "text",
+      "identifier",
+      "text",
+      "keyword.operator",
+      "text",
+      "identifier",
+      "punctuation.operator"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "return new + delete + instanceof + void + throw + yield;"),
+    [
+      "keyword",
+      "text",
+      "identifier",
+      "text",
+      "keyword.operator",
+      "text",
+      "identifier",
+      "text",
+      "keyword.operator",
+      "text",
+      "identifier",
+      "text",
+      "keyword.operator",
+      "text",
+      "identifier",
+      "text",
+      "keyword.operator",
+      "text",
+      "identifier",
+      "text",
+      "keyword.operator",
+      "text",
+      "identifier",
+      "punctuation.operator"
+    ]
+  );
 });
 
-test("MOO mode tokenizes regular expressions when grammar allows them", () => {
+test("MOO mode does not tokenize JavaScript regular expression literals", () => {
   const mode = createMode();
 
   assert.deepEqual(
@@ -130,13 +303,12 @@ test("MOO mode tokenizes regular expressions when grammar allows them", () => {
     [
       "keyword",
       "text",
-      "string.regexp",
-      "constant.language.escape",
-      "string.regexp.charachterclass",
-      "constant.language.escape",
-      "string.regexp.charachterclass",
-      "constant.language.escape",
-      "string.regexp",
+      "keyword.operator",
+      "identifier",
+      "paren.lparen",
+      "constant.numeric",
+      "paren.rparen",
+      "keyword.operator",
       "punctuation.operator"
     ]
   );
@@ -154,18 +326,33 @@ test("MOO mode toggles comments on selected document rows", () => {
   assert.deepEqual(commentDoc.lines, ["//one", "//  two"]);
 });
 
-test("MOO mode preserves indentation rules and delegates outdent behavior", () => {
+test("MOO mode indents and outdents keyword-terminated blocks", () => {
   const mode = createMode();
-  const doc = createDocument(["if (x) {", "  }"]);
+  const endifDoc = createDocument(["if (x)", "  endif"]);
+  const exceptDoc = createDocument(["try", "  except err (ANY)"]);
+  const finallyDoc = createDocument(["try", "  except err (ANY)", "    finally"]);
+  const endforkDoc = createDocument(["fork job (5)", "  endfork"]);
 
-  assert.equal(mode.getNextLineIndent("start", "if (x) {", "  "), "  ");
+  assert.equal(mode.getNextLineIndent("start", "if (x)", "  "), "  ");
+  assert.equal(mode.getNextLineIndent("start", "try", "  "), "  ");
+  assert.equal(mode.getNextLineIndent("start", "except err (ANY)", "  "), "  ");
+  assert.equal(mode.getNextLineIndent("start", "finally", "  "), "  ");
+  assert.equal(mode.getNextLineIndent("start", "fork job (5)", "  "), "  ");
+  assert.equal(mode.getNextLineIndent("start", "items = {@items, x};", "  "), "");
   assert.equal(mode.getNextLineIndent("start", "  // comment", "  "), "  ");
   assert.equal(mode.getNextLineIndent("doc-start", " * details", "  "), " * ");
   assert.equal(mode.getNextLineIndent("doc-start", " */", "  "), "");
-  assert.equal(mode.checkOutdent("start", "  ", "}"), true);
+  assert.equal(mode.checkOutdent("start", "  ", "endif"), true);
+  assert.equal(mode.checkOutdent("start", "  ", "}"), false);
 
-  mode.autoOutdent("start", doc, 1);
+  mode.autoOutdent("start", endifDoc, 1);
+  mode.autoOutdent("start", exceptDoc, 1);
+  mode.autoOutdent("start", finallyDoc, 2);
+  mode.autoOutdent("start", endforkDoc, 1);
 
-  assert.equal(doc.lines[1], "}");
+  assert.equal(endifDoc.lines[1], "endif");
+  assert.equal(exceptDoc.lines[1], "except err (ANY)");
+  assert.equal(finallyDoc.lines[2], "  finally");
+  assert.equal(endforkDoc.lines[1], "endfork");
   assert.equal(mode.createWorker(), null);
 });

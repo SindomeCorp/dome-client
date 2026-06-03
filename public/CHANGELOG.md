@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-06-03
 
 ### Changed
+- Updated the MOO verb editor mode with ToastStunt error constants, booleans, object and core references, MOO operators, and keyword-block indentation while removing JavaScript-derived highlighting.
 - Updated MOO builtin highlighting in the verb editor to match ToastStunt's builtin function list.
 - Highlighted additional MOO type constants in the verb editor, including `MAP`, `WAIF`, `ANON`, and `BOOL`.
 - Updated the verb editors to insert two spaces for tabs so indentation matches MOO-shipped source.
