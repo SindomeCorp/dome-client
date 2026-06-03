@@ -18,7 +18,7 @@
     "test:mutation:full": "stryker run",
     "test:find-slow": "NODE_ENV=test node --experimental-test-module-mocks --import=./test/mock-module.js --test --test-reporter=tap 2>&1 | tee test-output.log | awk -v THRESHOLD=200 -f ./scripts/filter-slow-tap.awk",
     "test:views": "node --test test/views/views.test.js",
-    "coverage": "NODE_ENV=test c8 --check-coverage --lines 80 --functions 80 --statements 80 node --experimental-test-module-mocks --import=./test/mock-module.js --experimental-test-coverage --test",
+    "coverage": "NODE_ENV=test c8 --check-coverage --lines 80 --functions 80 --statements 80 --branches 80 node --experimental-test-module-mocks --import=./test/mock-module.js --experimental-test-coverage --test",
     "lint": "ESLINT_USE_FLAT_CONFIG=true eslint .",
     "lint:fix": "ESLINT_USE_FLAT_CONFIG=true eslint . --fix",
     "deadcode": "knip",

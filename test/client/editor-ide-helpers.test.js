@@ -110,6 +110,73 @@ test("editor IDE protocol helpers preserve command strings", () => {
   ]);
 });
 
+test("editor IDE recent tab helpers choose stable fallback tabs", () => {
+  const tabs = [{ id: "a" }, { id: "b" }, { id: "c" }];
+
+  assert.equal(getFallbackTabId(["missing", "a", "b"], tabs), "b");
+  assert.equal(getFallbackTabId([], []), null);
+  assert.deepEqual(getNextActiveTabIdAfterClose({
+    active: "a",
+    closedId: "b",
+    recentTabIds: ["a", "b", "c"],
+    tabs
+  }), {
+    nextActiveId: "a",
+    nextRecentTabIds: ["a", "c"],
+    nextTabs: [{ id: "a" }, { id: "c" }]
+  });
+  assert.deepEqual(getNextActiveTabIdAfterClose({
+    active: "b",
+    closedId: "b",
+    recentTabIds: ["a", "b", "c"],
+    tabs
+  }), {
+    nextActiveId: "c",
+    nextRecentTabIds: ["a", "c"],
+    nextTabs: [{ id: "a" }, { id: "c" }]
+  });
+});
+
+test("editor IDE save helpers cover prompt and failure branches", (t) => {
+  const tab = {
+    id: "tab-1",
+    command: "@program",
+    commandTarget: "#12:look",
+    uploadCommand: "@program #12:look",
+    vmsNote: ""
+  };
+  const dispatchIde = t.mock.fn();
+  const emitInput = t.mock.fn(() => true);
+
+  assert.equal(shouldPromptForVmsNote(tab, true), true);
+  assert.equal(shouldPromptForVmsNote({ ...tab, vmsNote: "note" }, true), false);
+  assert.equal(shouldPromptForVmsNote({ ...tab, command: "@edit" }, true), false);
+  assert.equal(saveTab({
+    dispatchIde,
+    emitInput,
+    getEditorValue: () => null,
+    tab
+  }), false);
+  assert.equal(saveTab({
+    dispatchIde,
+    emitInput: () => false,
+    getEditorValue: () => "content",
+    tab
+  }), false);
+  assert.equal(saveTab({
+    dispatchIde,
+    emitInput,
+    getEditorValue: () => "content",
+    tab,
+    vmsNoteLine: "changed"
+  }), true);
+  assert.deepEqual(dispatchIde.mock.calls[0].arguments[0], {
+    type: "markDocumentSaved",
+    id: "tab-1",
+    content: "content"
+  });
+});
+
 test("editor IDE payload helpers normalize object browser payloads", () => {
   assert.deepEqual(normalizeObjectVerbsPayload([
     "#12",
@@ -197,6 +264,71 @@ test("editor IDE payload helpers normalize property browser payloads", () => {
     { propertyName: "zeta" }
   ]);
   assert.equal(formatObjectPermissions({ r: 1, w: true, f: false, wiz: true, prog: "true" }), "+rw+wiz+prog");
+});
+
+test("editor IDE reducer covers panel, document, object, and property state branches", () => {
+  const doc = {
+    id: "doc-1",
+    name: "Look",
+    content: "old",
+    savedContent: "old",
+    dirty: false
+  };
+  let state = ideReducer(initialIdeState, {
+    type: "openEditableTab",
+    tab: doc,
+    objectBrowser: true
+  });
+
+  assert.equal(state.active, "doc-1");
+  assert.equal(state.panels.objectBrowser, true);
+  assert.equal(ideReducer(state, { type: "openEditableTab", tab: { ...doc, id: "doc-2" } }).documents.length, 1);
+
+  state = ideReducer(state, { type: "markDocumentChanged", id: "doc-1", content: "new" });
+  assert.equal(state.documents[0].dirty, true);
+  state = ideReducer(state, { type: "markDocumentSaved", id: "doc-1", content: "new" });
+  assert.equal(state.documents[0].dirty, false);
+  state = ideReducer(state, { type: "updateVmsNote", id: "doc-1", vmsNote: "note" });
+  assert.equal(state.documents[0].vmsNote, "note");
+
+  state = ideReducer(state, { type: "upsertObjectVerb", objectId: "#12", verbLabel: "look" });
+  const sameVerbState = ideReducer(state, { type: "upsertObjectVerb", objectId: "#12", verbLabel: "look" });
+  assert.equal(sameVerbState, state);
+  state = ideReducer(state, {
+    type: "replaceObjectVerbs",
+    objectId: "#12",
+    rows: [{ verbName: "" }, { verbName: "tell" }, { verbName: "tell", permissions: "r" }]
+  });
+  assert.deepEqual(state.objectGraph["#12"], [{ verbName: "tell", permissions: "r" }]);
+  state = ideReducer(state, { type: "loadObjectVerbs", objectId: "#12" });
+  assert.equal(state.collapsedObjects["#12"], false);
+  state = ideReducer(state, { type: "toggleObjectCollapsed", objectId: "#12" });
+  assert.equal(state.collapsedObjects["#12"], true);
+
+  state = ideReducer(state, { type: "upsertObjectProperty", objectId: "#12", propertyLabel: "name" });
+  const samePropertyState = ideReducer(state, { type: "upsertObjectProperty", objectId: "#12", propertyLabel: "name" });
+  assert.equal(samePropertyState, state);
+  state = ideReducer(state, {
+    type: "replaceObjectProperties",
+    objectId: "#12",
+    rows: [{ propertyName: "" }, { propertyName: "name" }, { propertyName: "name", owner: "#2" }],
+    objectMeta: { parent: "#1" }
+  });
+  assert.deepEqual(state.propertyGraph["#12"], [{ propertyName: "name", owner: "#2" }]);
+  assert.deepEqual(state.propertyObjectMeta["#12"], { parent: "#1" });
+  state = ideReducer(state, { type: "loadObjectProperties", objectId: "#12" });
+  assert.equal(state.collapsedProperties["#12"], false);
+  state = ideReducer(state, { type: "togglePropertyCollapsed", objectId: "#12" });
+  assert.equal(state.collapsedProperties["#12"], true);
+
+  state = ideReducer(state, { type: "openPanels", propertyBrowser: true });
+  state = ideReducer(state, { type: "closeTab", id: TAB_TYPES.objectBrowser, nextActiveId: "doc-1" });
+  assert.equal(state.panels.objectBrowser, false);
+  state = ideReducer(state, { type: "closeTab", id: TAB_TYPES.propertyBrowser, nextActiveId: "doc-1" });
+  assert.equal(state.panels.propertyBrowser, false);
+  state = ideReducer(state, { type: "closeTab", id: "doc-1", nextActiveId: null });
+  assert.equal(state.documents.length, 0);
+  assert.equal(ideReducer(state, { type: "unknown" }), state);
 });
 
 test("editor IDE overlay payload helpers preserve display behavior", () => {
