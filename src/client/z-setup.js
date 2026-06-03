@@ -1,4 +1,5 @@
 import { createClientState } from "./client-state.js";
+import { createClientCapabilities } from "./client-capabilities.js";
 import { setupChevronToggle } from "./chevron-toggle.js";
 import { setupInputReader } from "./d-inputreader.js";
 import { setupWindowHandlers } from "./e-window.js";
@@ -88,7 +89,8 @@ const applyTransparentOverlayPreference = ({ client, doc }) => {
 export const applyInitialClientPreferences = ({
   client,
   doc = globalThis.document,
-  features = createClientFeatureSet()
+  features = createClientFeatureSet(),
+  capabilities = createClientCapabilities({ client, doc })
 }) => {
   const preferences = client.readPreferences();
   client.preferences = preferences;
@@ -106,7 +108,7 @@ export const applyInitialClientPreferences = ({
   client.applyInputReaderColorPreferences?.();
 
   if (client.inputReader) {
-    features.setupInputReader({ client, doc });
+    features.setupInputReader({ client, doc, capabilities: capabilities.autocomplete });
     if (preferences.commandSuggestions && typeof client.setupAutoComplete === "function") {
       const acSetup = client.setupAutoComplete?.(client.inputReader, client.userType);
       if (acSetup && typeof acSetup.then === "function") {
@@ -124,16 +126,17 @@ export const setupClientFeatures = ({
   client,
   doc = globalThis.document,
   win = globalThis.window,
-  features = createClientFeatureSet()
+  features = createClientFeatureSet(),
+  capabilities = createClientCapabilities({ client, doc, win })
 } = {}) => {
-  features.setupWindowHandlers({ client, doc, win });
-  features.setupIdeLauncher?.({ client, win, getSocket: () => client.socket });
-  features.setupEditorSupport({ client, doc, win });
-  features.setupAutoscroll({ client, doc, win });
-  features.setupButtons({ client, doc, win });
-  features.setupChevronToggle({ client, doc, win });
-  features.setupHealthCheck({ client, doc, win });
-  features.setupOutputParser({ client, doc, win });
+  features.setupWindowHandlers({ client, doc, win, capabilities: capabilities.uiControls });
+  features.setupIdeLauncher?.({ client, win, getSocket: capabilities.editor.getSocket, capabilities: capabilities.editor });
+  features.setupEditorSupport({ client, doc, win, capabilities: capabilities.editor });
+  features.setupAutoscroll({ client, doc, win, capabilities: capabilities.uiControls });
+  features.setupButtons({ client, doc, win, capabilities: capabilities.uiControls });
+  features.setupChevronToggle({ client, doc, win, capabilities: capabilities.uiControls });
+  features.setupHealthCheck({ client, doc, win, capabilities: capabilities.health });
+  features.setupOutputParser({ client, doc, win, capabilities: capabilities.socketOutput });
 };
 
 export const initClient = ({
@@ -145,10 +148,11 @@ export const initClient = ({
   const hasNativeBridge = !!win.DomeNative && typeof win.DomeNative.sendInput === "function";
 
   assignClientDomReferences({ client, doc });
-  features.setupClientPreferences?.({ client, doc, win });
-  features.setupAutoCompleteFeature({ client, doc, win });
-  applyInitialClientPreferences({ client, doc, features });
-  setupClientFeatures({ client, doc, win, features });
+  const capabilities = createClientCapabilities({ client, doc, win });
+  features.setupClientPreferences?.({ client, doc, win, capabilities: capabilities.preferences });
+  features.setupAutoCompleteFeature({ client, doc, win, capabilities: capabilities.autocomplete });
+  applyInitialClientPreferences({ client, doc, features, capabilities });
+  setupClientFeatures({ client, doc, win, features, capabilities });
   installDomeBridge({ client, win, hasNativeBridge });
   notifyNativeBridgeReady({ win });
   startClientSocket({ client, doc, win, features, hasNativeBridge });

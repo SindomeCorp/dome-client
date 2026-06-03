@@ -66,6 +66,20 @@ const { server, httpMgr, sslServer, httpsMgr } = createHttpServers({
   SocketServer: Server
 });
 
+let socketManagersBound = false;
+let uncaughtExceptionBound = false;
+
+function bindStartupSideEffects() {
+  if (!socketManagersBound) {
+    bindSocketManagers({ httpMgr, httpsMgr, socket });
+    socketManagersBound = true;
+  }
+  if (!uncaughtExceptionBound) {
+    process.on("uncaughtException", onUncaughtException);
+    uncaughtExceptionBound = true;
+  }
+}
+
 export async function start(options = {}) {
   const {
     port = config.node.port,
@@ -73,6 +87,7 @@ export async function start(options = {}) {
     httpsPort = config.ssl?.port,
     skipBuild = false
   } = options;
+  bindStartupSideEffects();
   if (!skipBuild) {
     try {
       await build();
@@ -115,17 +130,16 @@ export async function stop() {
   await close(server);
   await close(httpsMgr);
   await close(sslServer);
-  process.removeListener("uncaughtException", onUncaughtException);
+  if (uncaughtExceptionBound) {
+    process.removeListener("uncaughtException", onUncaughtException);
+    uncaughtExceptionBound = false;
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   start();
 }
 
-bindSocketManagers({ httpMgr, httpsMgr, socket });
-
 function onUncaughtException(err) {
   logger.error("uncaught exception", err);
 }
-
-process.on("uncaughtException", onUncaughtException);

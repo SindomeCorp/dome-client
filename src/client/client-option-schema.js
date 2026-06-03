@@ -141,7 +141,7 @@ export function buildClientOptionState() {
   ]));
 }
 
-export function getClientOptionDefinitionByKey(optionKey) {
+function getClientOptionDefinitionByKey(optionKey) {
   return CLIENT_OPTION_BY_KEY[optionKey] ?? null;
 }
 

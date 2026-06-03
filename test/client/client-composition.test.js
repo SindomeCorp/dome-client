@@ -48,17 +48,42 @@ test("initClient composes setup hooks with explicit client context", () => {
     parseSocketData: () => {}
   };
   const features = {
-    setupAutoCompleteFeature: () => {
+    setupAutoCompleteFeature: (args) => {
       calls.push("setupAutoCompleteFeature");
+      assert.equal(args.capabilities.inputReader, window.document.querySelector("#inputBuffer"));
     },
-    setupInputReader: () => calls.push("setupInputReader"),
-    setupWindowHandlers: () => calls.push("setupWindowHandlers"),
-    setupEditorSupport: () => calls.push("setupEditorSupport"),
-    setupAutoscroll: () => calls.push("setupAutoscroll"),
-    setupButtons: () => calls.push("setupButtons"),
-    setupChevronToggle: () => calls.push("setupChevronToggle"),
-    setupHealthCheck: () => calls.push("setupHealthCheck"),
-    setupOutputParser: () => calls.push("setupOutputParser"),
+    setupInputReader: (args) => {
+      calls.push("setupInputReader");
+      assert.equal(args.capabilities.userType, "p");
+    },
+    setupWindowHandlers: (args) => {
+      calls.push("setupWindowHandlers");
+      assert.equal(args.capabilities.buttons.reconnect, window.document.querySelector("#button-reconnect"));
+    },
+    setupEditorSupport: (args) => {
+      calls.push("setupEditorSupport");
+      assert.equal(args.capabilities.listView, window.document.querySelector("#editor-list-view"));
+    },
+    setupAutoscroll: (args) => {
+      calls.push("setupAutoscroll");
+      assert.equal(args.capabilities.buttons.scroll, window.document.querySelector("#button-auto-scroll"));
+    },
+    setupButtons: (args) => {
+      calls.push("setupButtons");
+      assert.equal(args.capabilities.overlays.clientOptions, window.document.querySelector("#client-options-overlay"));
+    },
+    setupChevronToggle: (args) => {
+      calls.push("setupChevronToggle");
+      assert.equal(args.capabilities.buttons.clear, window.document.querySelector("#button-clear-buffer"));
+    },
+    setupHealthCheck: (args) => {
+      calls.push("setupHealthCheck");
+      assert.equal(args.capabilities.display, window.document.querySelector("#gameHealth"));
+    },
+    setupOutputParser: (args) => {
+      calls.push("setupOutputParser");
+      assert.equal(args.capabilities.buffer, window.document.querySelector("#lineBuffer"));
+    },
     setupSocket: () => {
       calls.push("setupSocket");
       return socket;

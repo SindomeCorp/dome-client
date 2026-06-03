@@ -5,65 +5,7 @@ import path from "node:path";
 import { JSDOM } from "jsdom";
 import request from "supertest";
 import nock from "nock";
-
-async function bootServer(t, configOverrides) {
-  const moduleMock = typeof t.mock.module === "function"
-    ? t.mock.module.bind(t.mock)
-    : t.mock.import.bind(t.mock);
-
-  const config = {
-    node: {
-      mode: "test",
-      port: 0,
-      socketUrl: "",
-      socketUrlSSL: "",
-      socketProxied: false,
-      multiMud: false,
-      poweredBy: "Dome Client",
-      session: { secret: "integration-test-secret" }
-    },
-    moo: { name: "Integration MUD", host: "127.0.0.1", port: 4444 },
-    website: { signupUrl: "" },
-    guest: { connectCommand: "connect guest" },
-    autocomplete: { enabled: false },
-    editor: {
-      localSaveNodeMaxLines: 200,
-      localSaveNodeAdminMaxLines: 800,
-      localSaveNoteMaxLines: 20,
-      ideEditOpenParent: false,
-      ideVmsNoteEnabled: false
-    },
-    shorten: { enabled: false, host: "localhost", port: 5549, path: "/interface/v1/shorten/", domain: "", minimum: 50 },
-    remoteAuth: { enabled: true, host: "http://remoteauth.test", path: "/session/authenticate/", remoteSecret: "sekret" },
-    status: { serviceUrl: "" }
-  };
-
-  if (configOverrides.node) Object.assign(config.node, configOverrides.node);
-  if (configOverrides.remoteAuth) Object.assign(config.remoteAuth, configOverrides.remoteAuth);
-  if (configOverrides.status) Object.assign(config.status, configOverrides.status);
-
-  moduleMock("../../../src/config/index.js", { defaultExport: config });
-  moduleMock("../../../src/logger.js", {
-    namedExports: {
-      named: () => ({ info() {}, warn() {}, error() {}, debug() {} })
-    }
-  });
-  moduleMock("../../../src/controllers/socket.js", {
-    namedExports: { connection() {}, error() {} }
-  });
-
-  const { start, stop } = await import(`../../../src/server.js?snapshot=${Date.now()}-${Math.random()}`);
-  const runtime = await start({ port: 0, ip: "127.0.0.1", skipBuild: true });
-
-  t.after(async () => {
-    await stop();
-    t.mock.restoreAll();
-    nock.cleanAll();
-    nock.enableNetConnect();
-  });
-
-  return `http://127.0.0.1:${runtime.http.port}`;
-}
+import { bootServer } from "./boot-server.js";
 
 function textContent(node) {
   return node ? node.textContent.trim().replace(/\s+/g, " ") : "";
@@ -111,7 +53,11 @@ export async function runHtmlSnapshotCase(t, {
       }, { "Content-Type": "application/json" });
   }
 
-  const baseUrl = await bootServer(t, configOverrides || {});
+  const snapshotConfig = {
+    status: { serviceUrl: "" },
+    ...(configOverrides || {})
+  };
+  const { baseUrl } = await bootServer(t, snapshotConfig);
   const res = await request(baseUrl).get(urlPath).expect(200);
   const snapshot = projectSnapshot(res.text, urlPath);
 

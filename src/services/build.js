@@ -7,6 +7,11 @@ import autoprefixer from "autoprefixer";
 import tailwindcss from "tailwindcss";
 
 import { fileURLToPath } from "node:url";
+import {
+  browserOutputFiles,
+  pageEntries,
+  playerClientEntries
+} from "./browser-entry-manifest.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -64,41 +69,17 @@ async function compileJs(outDir = path.join(__dirname, "..", "..", "public", "js
   const srcDir = path.join(__dirname, "..", "client");
   const pagesDir = path.join(srcDir, "pages");
   await fs.mkdir(outDir, { recursive: true });
-  const pageFiles = [
-    "client-connect.js",
-    "client-options.js",
-    "editor-window.js",
-    "note-editor-window.js",
-    "logger.js"
-  ];
-  await Promise.all([
-    fs.rm(path.join(outDir, "player-client.js"), { force: true }),
-    fs.rm(path.join(outDir, "player-client.min.js"), { force: true }),
-    ...pageFiles.map(f => fs.rm(path.join(outDir, f), { force: true }))
-  ]);
-  const entry = path.join(srcDir, "index.js");
-  await esbuild.build({
-    bundle: true,
-    entryPoints: [entry],
-    format: "iife",
-    outfile: path.join(outDir, "player-client.js")
-  });
-  await esbuild.build({
-    bundle: true,
-    entryPoints: [entry],
-    format: "iife",
-    minify: true,
-    outfile: path.join(outDir, "player-client.min.js")
-  });
-  const builds = [
-    { file: "client-connect.js", external: ["./logger.js"] },
-    { file: "client-options.js", external: ["./logger.js"] },
-    { file: "editor-window.js", external: ["./logger.js"] },
-    { file: "note-editor-window.js", external: [] },
-    { file: "logger.js", external: [] },
-    { file: "ide-editor-window.js", entry: "ide-editor-window.jsx", external: ["./logger.js"] }
-  ];
-  for (const { file, entry = file, external } of builds) {
+  await Promise.all(browserOutputFiles.map(f => fs.rm(path.join(outDir, f), { force: true })));
+  for (const { entry, file, format, minify } of playerClientEntries) {
+    await esbuild.build({
+      bundle: true,
+      entryPoints: [path.join(srcDir, entry)],
+      format,
+      minify,
+      outfile: path.join(outDir, file)
+    });
+  }
+  for (const { file, entry, external } of pageEntries) {
     await esbuild.build({
       bundle: true,
       entryPoints: [path.join(pagesDir, entry)],
