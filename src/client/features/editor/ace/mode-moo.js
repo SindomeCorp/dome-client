@@ -268,13 +268,13 @@ var MOOHighlightRules = function() {
                 regex : '"(?=.)',
                 next  : "qqstring"
             }, {
-                token : "support.function.moo",
+                token : "entity.name.function.moo",
                 regex : "\\$" + identifierRe + "(?=\\s*\\()"
             }, {
                 token : "constant.language.core",
                 regex : "\\$" + identifierRe
             }, {
-                token : ["punctuation.operator", "support.function.moo"],
+                token : ["punctuation.operator", "entity.name.function.moo"],
                 regex : "(:\\s*)(" + identifierRe + ")(?=\\s*\\()"
             }, {
                 token : "constant.language.object",
