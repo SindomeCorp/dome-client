@@ -1,0 +1,24 @@
+<div class="option-row" id="<%= option.key %>-option">
+  <span class="option-label<% if (option.labelClass) { %> <%= option.labelClass %><% } %>"><%= option.label %><% if (option.tooltip) { %> <i class="glyphicon glyphicon-question-sign" title="<%= option.tooltip %>"></i><% } %></span>
+  <% if (option.control === "toggle") { %>
+  <div class="option-choices pull-right">
+    <button class="btn enabled-state" data-val="true"<% if (option.enabledTitle) { %> title="<%= option.enabledTitle %>"<% } %>>Yes</button>
+    <button class="btn disabled-state" data-val="false"<% if (option.disabledTitle) { %> title="<%= option.disabledTitle %>"<% } %>>No</button>
+  </div>
+  <% } else if (option.control === "select") { %>
+  <select name="<%= option.inputName %>">
+    <% option.choices.forEach(function(choice) { %>
+    <option value="<%= choice.value %>"<% if (choice.style) { %> style="<%= choice.style %>"<% } %><% if (choice.value === option.def) { %> selected="selected"<% } %>><%= choice.label %></option>
+    <% }); %>
+  </select>
+  <% } else if (option.control === "number") { %>
+  <div class="option-choices pull-right">
+    <input name="<%= option.inputName %>" placeholder="<%= option.def %>" type="number" min="<%= option.min %>" max="<%= option.max %>"<% if (option.step) { %> step="<%= option.step %>"<% } %> value="<%= option.def %>" />
+  </div>
+  <% } else if (option.control === "color") { %>
+  <div class="option-choices pull-right color-choice">
+    <input name="<%= option.inputName %>-picker" type="color" value="<%= option.def %>" aria-label="<%= option.label %> picker" />
+    <input name="<%= option.inputName %>-hex" type="text" value="<%= option.def %>" maxlength="7" data-color-hex="true" inputmode="text" autocapitalize="none" autocomplete="off" autocorrect="off" aria-label="<%= option.label %> hex" />
+  </div>
+  <% } %>
+</div>

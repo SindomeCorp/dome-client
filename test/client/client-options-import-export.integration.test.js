@@ -1,7 +1,40 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { setupClientOptionsDom } from "./index.js";
-import { dome } from "../../src/client/b-variables.js";
+
+const setOutputActions = (options, output = []) => {
+  options.setClientOptionsActions({
+    setClientOption(name, value) {
+      const keyByPreference = {
+        commandSuggestions: "commands",
+        shortenUrls: "shorten",
+        localEcho: "localecho",
+        playDing: "playding",
+        imagePreview: "imageview",
+        autoScroll: "scroll",
+        scrollUpToPause: "scrolluppause",
+        broadSearch: "broadly",
+        transparentOverlay: "transparent",
+        inlineLogCss: "logcss",
+        sdwcNowrapBlocks: "sdwcnowrap",
+        lineBufferFont: "outfont",
+        lineBufferFontSizePt: "outfontsize",
+        inputFont: "inputfont",
+        inputFontSizePt: "inputfontsize",
+        inputFontColor: "inputfontcolor",
+        inputBackgroundColor: "inputbgcolor",
+        editorFont: "editorfont",
+        edittheme: "edittheme",
+        editorType: "edittype",
+        colorSet: "colorset",
+        performanceBuffer: "buffer"
+      };
+      options.clientOptions.save(keyByPreference[name], value);
+    },
+    appendOutput: (text) => output.push(text),
+    scrollBuffer() {}
+  });
+};
 
 test("client-options import/export controls round-trip preferences", async () => {
   const html = `<!doctype html><html><body>
@@ -30,12 +63,6 @@ test("client-options import/export controls round-trip preferences", async () =>
 
   const { window, store } = setupClientOptionsDom(html);
   const output = [];
-  Object.assign(dome, {
-    buffer: {
-      append: (text) => output.push(text)
-    },
-    scrollBuffer() {}
-  });
 
   let exportedBlob;
   let exportedFilename;
@@ -56,6 +83,7 @@ test("client-options import/export controls round-trip preferences", async () =>
   try {
     const options = await import(`../../src/client/pages/client-options.js?import-export=${Date.now()}`);
     Object.assign(options.store, store);
+    setOutputActions(options, output);
     window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
 
     options.clientOptions.save("commands", false);
@@ -129,17 +157,12 @@ test("client-options import rejects non-object payload", async () => {
   </body></html>`;
   const { window, store } = setupClientOptionsDom(html);
   const output = [];
-  Object.assign(dome, {
-    buffer: {
-      append: (text) => output.push(text)
-    },
-    scrollBuffer() {}
-  });
   const originalConfirm = window.confirm;
   window.confirm = () => true;
   try {
     const options = await import(`../../src/client/pages/client-options.js?import-error=${Date.now()}`);
     Object.assign(options.store, store);
+    setOutputActions(options, output);
     window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
     const importInput = window.document.getElementById("client-options-import-file");
     Object.defineProperty(importInput, "files", {
@@ -169,15 +192,12 @@ test("client-options reset cancellation keeps current preferences", async () => 
   </div>
   </body></html>`;
   const { window, store } = setupClientOptionsDom(html);
-  Object.assign(dome, {
-    buffer: { append() {} },
-    scrollBuffer() {}
-  });
   const originalConfirm = window.confirm;
   window.confirm = () => false;
   try {
     const options = await import(`../../src/client/pages/client-options.js?reset-cancel=${Date.now()}`);
     Object.assign(options.store, store);
+    setOutputActions(options);
     window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
     options.clientOptions.save("commands", false);
     window.document.getElementById("client-options-reset-defaults").click();
@@ -209,15 +229,12 @@ test("client-options import applies valid values and reports skipped invalid val
   </body></html>`;
   const { window, store } = setupClientOptionsDom(html);
   const output = [];
-  Object.assign(dome, {
-    buffer: { append: (text) => output.push(text) },
-    scrollBuffer() {}
-  });
   const originalConfirm = window.confirm;
   window.confirm = () => true;
   try {
     const options = await import(`../../src/client/pages/client-options.js?partial-invalid=${Date.now()}`);
     Object.assign(options.store, store);
+    setOutputActions(options, output);
     window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
 
     const importInput = window.document.getElementById("client-options-import-file");
@@ -256,15 +273,12 @@ test("client-options import cancellation does not open file picker", async () =>
   </div>
   </body></html>`;
   const { window, store } = setupClientOptionsDom(html);
-  Object.assign(dome, {
-    buffer: { append() {} },
-    scrollBuffer() {}
-  });
   const originalConfirm = window.confirm;
   window.confirm = () => false;
   try {
     const options = await import(`../../src/client/pages/client-options.js?import-cancel=${Date.now()}`);
     Object.assign(options.store, store);
+    setOutputActions(options);
     window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
     const importInput = window.document.getElementById("client-options-import-file");
     let clickCount = 0;
@@ -294,12 +308,9 @@ test("client-options import change with no selected file is a no-op", async () =
   </body></html>`;
   const { window, store } = setupClientOptionsDom(html);
   const output = [];
-  Object.assign(dome, {
-    buffer: { append: (text) => output.push(text) },
-    scrollBuffer() {}
-  });
   const options = await import(`../../src/client/pages/client-options.js?import-empty=${Date.now()}`);
   Object.assign(options.store, store);
+  setOutputActions(options, output);
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
 
   const importInput = window.document.getElementById("client-options-import-file");

@@ -2,7 +2,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
+import { initClient } from "../../src/client/z-setup.js";
 
 // Ensure transparent overlay class applied after async setupAutoComplete
 
@@ -30,6 +31,7 @@ const domHtml = `<!doctype html><html><body>
 </body></html>`;
 
 test("z-setup applies transparent overlay after async autocomplete setup", async (t) => {
+  const dome = createClientState();
   const dom = new JSDOM(domHtml, { pretendToBeVisual: true });
   const { window } = dom;
   const orig = { window: globalThis.window, document: globalThis.document, setTimeout: globalThis.setTimeout };
@@ -43,28 +45,32 @@ test("z-setup applies transparent overlay after async autocomplete setup", async
   });
 
   dome.readPreferences = () => ({ transparentOverlay: true, commandSuggestions: true });
-  dome.autoComplete = () => {};
-  dome.setupInputReader = () => {};
-  dome.setupWindowHandlers = () => {};
-  dome.setupEditorSupport = () => {};
-  dome.setupAutoscroll = () => {};
-  dome.setupButtons = () => {};
-  dome.setupChevronToggle = () => {};
-  dome.setupHealthCheck = () => {};
-  dome.setupOutputParser = () => {};
-  dome.setupSocket = () => ({ on: () => {} });
   dome.parseSocketData = () => {};
 
-  dome.setupAutoComplete = () => new Promise((resolve) => {
-    Promise.resolve().then(() => {
-      const ac = document.createElement("div");
-      ac.className = "ui-autocomplete ui-opaque-overlay";
-      document.body.appendChild(ac);
-      resolve();
-    });
-  });
+  const features = {
+    setupAutoCompleteFeature: ({ client }) => {
+      client.setupAutoComplete = () => new Promise((resolve) => {
+        Promise.resolve().then(() => {
+          const ac = document.createElement("div");
+          ac.className = "ui-autocomplete ui-opaque-overlay";
+          document.body.appendChild(ac);
+          resolve();
+        });
+      });
+    },
+    setupInputReader: () => {},
+    setupWindowHandlers: () => {},
+    setupEditorSupport: () => {},
+    setupAutoscroll: () => {},
+    setupButtons: () => {},
+    setupChevronToggle: () => {},
+    setupHealthCheck: () => {},
+    setupOutputParser: () => {},
+    setupSocket: () => ({ on: () => {} })
+  };
 
-  await import("../../src/client/z-setup.js");
+  initClient({ client: dome, win: window, doc: window.document, features });
+  await Promise.resolve();
   await Promise.resolve();
   const ac = document.querySelector(".ui-autocomplete");
   assert.ok(ac.classList.contains("ui-transparent-overlay"));

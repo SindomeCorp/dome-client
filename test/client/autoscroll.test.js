@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
+import { setupAutoscroll } from "../../src/client/t-autoscroll.js";
+
+const client = createClientState();
 
 test.afterEach(() => {
   delete globalThis.window;
@@ -22,42 +25,41 @@ test("none mode toggle updates DOM and state", async () => {
   const { document } = window;
   globalThis.window = window;
   globalThis.document = document;
-  Object.assign(dome, {
+  Object.assign(client, {
     buffer: document.querySelector("#buffer"),
     scrollButton: document.querySelector("#scrollButton"),
     statusDisplay: document.querySelector("#status"),
     preferences: { autoScroll: "none" }
   });
 
-  await import("../../src/client/t-autoscroll.js");
-  dome.setupAutoscroll();
+  setupAutoscroll({ client, win: window, doc: document });
 
-  dome.buffer.scrollTop = 0;
-  Object.defineProperty(dome.buffer, "scrollHeight", { value: 100, configurable: true });
-  dome.scrollBuffer();
-  assert.equal(dome.buffer.scrollTop, 100);
-  assert.equal(dome.pausedLines, 0);
+  client.buffer.scrollTop = 0;
+  Object.defineProperty(client.buffer, "scrollHeight", { value: 100, configurable: true });
+  client.scrollBuffer();
+  assert.equal(client.buffer.scrollTop, 100);
+  assert.equal(client.pausedLines, 0);
 
-  dome.pauseBuffer = true;
-  dome.buffer.scrollTop = 0;
-  dome.scrollBuffer();
-  assert.equal(dome.buffer.scrollTop, 0);
-  assert.equal(dome.pausedLines, 1);
+  client.pauseBuffer = true;
+  client.buffer.scrollTop = 0;
+  client.scrollBuffer();
+  assert.equal(client.buffer.scrollTop, 0);
+  assert.equal(client.pausedLines, 1);
 
-  dome.pauseBuffer = false;
-  dome.pausedLines = 0;
+  client.pauseBuffer = false;
+  client.pausedLines = 0;
 
-  dome.onToggleAutoScroll();
-  assert.equal(dome.pauseBuffer, true);
-  assert.ok(dome.buffer.classList.contains("scroll-disabled"));
-  assert.ok(dome.scrollButton.classList.contains("btn-danger"));
-  assert.equal(dome.scrollButton.querySelector("span.hidden-xs").textContent, "RESUME SCROLL");
+  client.onToggleAutoScroll();
+  assert.equal(client.pauseBuffer, true);
+  assert.ok(client.buffer.classList.contains("scroll-disabled"));
+  assert.ok(client.scrollButton.classList.contains("btn-danger"));
+  assert.equal(client.scrollButton.querySelector("span.hidden-xs").textContent, "RESUME SCROLL");
 
-  dome.onToggleAutoScroll();
-  assert.equal(dome.pauseBuffer, false);
-  assert.ok(!dome.buffer.classList.contains("scroll-disabled"));
-  assert.ok(dome.scrollButton.classList.contains("btn-primary"));
-  assert.equal(dome.scrollButton.querySelector("span.hidden-xs").textContent, "PAUSE SCROLL");
+  client.onToggleAutoScroll();
+  assert.equal(client.pauseBuffer, false);
+  assert.ok(!client.buffer.classList.contains("scroll-disabled"));
+  assert.ok(client.scrollButton.classList.contains("btn-primary"));
+  assert.equal(client.scrollButton.querySelector("span.hidden-xs").textContent, "PAUSE SCROLL");
 });
 
 test("changing autoScroll to none removes dblclick handler", async () => {
@@ -66,25 +68,24 @@ test("changing autoScroll to none removes dblclick handler", async () => {
   const { document } = window;
   globalThis.window = window;
   globalThis.document = document;
-  const domeLocal = {
+  const clientLocal = {
     buffer: document.querySelector("#buffer"),
     scrollButton: document.querySelector("#scrollButton"),
     statusDisplay: document.querySelector("#status"),
     preferences: { autoScroll: "dbl" }
   };
 
-  const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
-  setupAutoscroll(domeLocal, window);
+  setupAutoscroll(clientLocal, window);
 
-  domeLocal.buffer.dispatchEvent(new window.Event("dblclick"));
-  assert.equal(domeLocal.pauseBuffer, true);
+  clientLocal.buffer.dispatchEvent(new window.Event("dblclick"));
+  assert.equal(clientLocal.pauseBuffer, true);
 
-  domeLocal.preferences.autoScroll = "none";
-  setupAutoscroll(domeLocal, window);
+  clientLocal.preferences.autoScroll = "none";
+  setupAutoscroll(clientLocal, window);
 
-  domeLocal.pauseBuffer = false;
-  domeLocal.buffer.dispatchEvent(new window.Event("dblclick"));
-  assert.equal(domeLocal.pauseBuffer, false);
+  clientLocal.pauseBuffer = false;
+  clientLocal.buffer.dispatchEvent(new window.Event("dblclick"));
+  assert.equal(clientLocal.pauseBuffer, false);
 });
 
 test("dbl mode scroll calculation and user scroll disables auto-scroll", async () => {
@@ -93,7 +94,7 @@ test("dbl mode scroll calculation and user scroll disables auto-scroll", async (
   const { document } = window;
   globalThis.window = window;
   globalThis.document = document;
-  const domeLocal = {
+  const clientLocal = {
     buffer: document.querySelector("#buffer"),
     scrollButton: document.querySelector("#scrollButton"),
     statusDisplay: document.querySelector("#status"),
@@ -101,28 +102,28 @@ test("dbl mode scroll calculation and user scroll disables auto-scroll", async (
   };
 
   const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
-  setupAutoscroll(domeLocal, window);
+  setupAutoscroll(clientLocal, window);
 
-  domeLocal.buffer.scrollTop = 0;
-  Object.defineProperty(domeLocal.buffer, "scrollHeight", { value: 150, configurable: true });
-  domeLocal.scrollBuffer();
-  assert.equal(domeLocal.buffer.scrollTop, 150);
+  clientLocal.buffer.scrollTop = 0;
+  Object.defineProperty(clientLocal.buffer, "scrollHeight", { value: 150, configurable: true });
+  clientLocal.scrollBuffer();
+  assert.equal(clientLocal.buffer.scrollTop, 150);
 
-  domeLocal.buffer.dispatchEvent(new window.Event("dblclick"));
-  assert.equal(domeLocal.pauseBuffer, true);
+  clientLocal.buffer.dispatchEvent(new window.Event("dblclick"));
+  assert.equal(clientLocal.pauseBuffer, true);
 
-  domeLocal.buffer.scrollTop = 25;
-  domeLocal.buffer.dispatchEvent(new window.Event("mouseover"));
-  domeLocal.buffer.dispatchEvent(new window.Event("scroll"));
-  domeLocal.scrollBuffer();
-  assert.equal(domeLocal.buffer.scrollTop, 25);
-  assert.equal(domeLocal.pausedLines, 1);
+  clientLocal.buffer.scrollTop = 25;
+  clientLocal.buffer.dispatchEvent(new window.Event("mouseover"));
+  clientLocal.buffer.dispatchEvent(new window.Event("scroll"));
+  clientLocal.scrollBuffer();
+  assert.equal(clientLocal.buffer.scrollTop, 25);
+  assert.equal(clientLocal.pausedLines, 1);
 
-  domeLocal.buffer.dispatchEvent(new window.Event("dblclick"));
-  domeLocal.buffer.scrollTop = 0;
-  domeLocal.pausedLines = 0;
-  domeLocal.scrollBuffer();
-  assert.equal(domeLocal.buffer.scrollTop, 150);
+  clientLocal.buffer.dispatchEvent(new window.Event("dblclick"));
+  clientLocal.buffer.scrollTop = 0;
+  clientLocal.pausedLines = 0;
+  clientLocal.scrollBuffer();
+  assert.equal(clientLocal.buffer.scrollTop, 150);
 });
 
 test("long mode scroll calculation and user scroll disables auto-scroll", async () => {
@@ -131,7 +132,7 @@ test("long mode scroll calculation and user scroll disables auto-scroll", async 
   const { document } = window;
   globalThis.window = window;
   globalThis.document = document;
-  const domeLocal = {
+  const clientLocal = {
     buffer: document.querySelector("#buffer"),
     scrollButton: document.querySelector("#scrollButton"),
     preferences: { autoScroll: "long" }
@@ -149,40 +150,40 @@ test("long mode scroll calculation and user scroll disables auto-scroll", async 
   };
 
   const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
-  setupAutoscroll(domeLocal, window);
+  setupAutoscroll(clientLocal, window);
 
-  domeLocal.buffer.scrollTop = 0;
-  Object.defineProperty(domeLocal.buffer, "scrollHeight", { value: 200, configurable: true });
-  domeLocal.scrollBuffer();
-  assert.equal(domeLocal.buffer.scrollTop, 200);
+  clientLocal.buffer.scrollTop = 0;
+  Object.defineProperty(clientLocal.buffer, "scrollHeight", { value: 200, configurable: true });
+  clientLocal.scrollBuffer();
+  assert.equal(clientLocal.buffer.scrollTop, 200);
 
-  domeLocal.buffer.dispatchEvent(new window.Event("mousedown"));
+  clientLocal.buffer.dispatchEvent(new window.Event("mousedown"));
   assert.ok(timeoutFn);
 
-  domeLocal.buffer.dispatchEvent(new window.Event("mouseup"));
+  clientLocal.buffer.dispatchEvent(new window.Event("mouseup"));
   assert.equal(timeoutFn, null);
   assert.ok(cleared);
-  assert.equal(domeLocal.pauseBuffer, false);
+  assert.equal(clientLocal.pauseBuffer, false);
 
   cleared = false;
-  domeLocal.buffer.dispatchEvent(new window.Event("mousedown"));
+  clientLocal.buffer.dispatchEvent(new window.Event("mousedown"));
   assert.ok(timeoutFn);
   timeoutFn();
-  assert.equal(domeLocal.pauseBuffer, true);
+  assert.equal(clientLocal.pauseBuffer, true);
 
-  domeLocal.buffer.scrollTop = 80;
-  domeLocal.buffer.dispatchEvent(new window.Event("mouseover"));
-  domeLocal.buffer.dispatchEvent(new window.Event("scroll"));
-  domeLocal.scrollBuffer();
-  assert.equal(domeLocal.buffer.scrollTop, 80);
-  assert.equal(domeLocal.pausedLines, 1);
+  clientLocal.buffer.scrollTop = 80;
+  clientLocal.buffer.dispatchEvent(new window.Event("mouseover"));
+  clientLocal.buffer.dispatchEvent(new window.Event("scroll"));
+  clientLocal.scrollBuffer();
+  assert.equal(clientLocal.buffer.scrollTop, 80);
+  assert.equal(clientLocal.pausedLines, 1);
 
-  domeLocal.buffer.dispatchEvent(new window.Event("mousedown"));
+  clientLocal.buffer.dispatchEvent(new window.Event("mousedown"));
   timeoutFn();
-  domeLocal.buffer.scrollTop = 0;
-  domeLocal.pausedLines = 0;
-  domeLocal.scrollBuffer();
-  assert.equal(domeLocal.buffer.scrollTop, 200);
+  clientLocal.buffer.scrollTop = 0;
+  clientLocal.pausedLines = 0;
+  clientLocal.scrollBuffer();
+  assert.equal(clientLocal.buffer.scrollTop, 200);
 
 });
 
@@ -192,7 +193,7 @@ test("scroll up to pause stops autoscroll until user returns to bottom", async (
   const { document } = window;
   globalThis.window = window;
   globalThis.document = document;
-  const domeLocal = {
+  const clientLocal = {
     buffer: document.querySelector("#buffer"),
     scrollButton: document.querySelector("#scrollButton"),
     statusDisplay: document.querySelector("#status"),
@@ -200,33 +201,33 @@ test("scroll up to pause stops autoscroll until user returns to bottom", async (
   };
 
   const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
-  setupAutoscroll(domeLocal, window);
+  setupAutoscroll(clientLocal, window);
 
-  Object.defineProperty(domeLocal.buffer, "scrollHeight", { value: 300, configurable: true });
-  Object.defineProperty(domeLocal.buffer, "clientHeight", { value: 100, configurable: true });
-  domeLocal.buffer.scrollTop = 50;
-  domeLocal.buffer.dispatchEvent(new window.Event("scroll"));
+  Object.defineProperty(clientLocal.buffer, "scrollHeight", { value: 300, configurable: true });
+  Object.defineProperty(clientLocal.buffer, "clientHeight", { value: 100, configurable: true });
+  clientLocal.buffer.scrollTop = 50;
+  clientLocal.buffer.dispatchEvent(new window.Event("scroll"));
 
-  assert.equal(domeLocal.pauseBuffer, true);
-  assert.ok(domeLocal.buffer.classList.contains("scroll-disabled"));
-  assert.ok(domeLocal.scrollButton.classList.contains("btn-danger"));
-  assert.equal(domeLocal.scrollButton.querySelector("span.hidden-xs").textContent, "RESUME SCROLL");
+  assert.equal(clientLocal.pauseBuffer, true);
+  assert.ok(clientLocal.buffer.classList.contains("scroll-disabled"));
+  assert.ok(clientLocal.scrollButton.classList.contains("btn-danger"));
+  assert.equal(clientLocal.scrollButton.querySelector("span.hidden-xs").textContent, "RESUME SCROLL");
 
-  domeLocal.scrollBuffer();
-  assert.equal(domeLocal.buffer.scrollTop, 50);
-  assert.equal(domeLocal.pausedLines, 1);
+  clientLocal.scrollBuffer();
+  assert.equal(clientLocal.buffer.scrollTop, 50);
+  assert.equal(clientLocal.pausedLines, 1);
 
-  domeLocal.buffer.scrollTop = 276;
-  domeLocal.buffer.dispatchEvent(new window.Event("scroll"));
+  clientLocal.buffer.scrollTop = 276;
+  clientLocal.buffer.dispatchEvent(new window.Event("scroll"));
 
-  assert.equal(domeLocal.pauseBuffer, false);
-  assert.equal(domeLocal.pausedLines, 0);
-  assert.ok(!domeLocal.buffer.classList.contains("scroll-disabled"));
-  assert.ok(domeLocal.scrollButton.classList.contains("btn-primary"));
-  assert.equal(domeLocal.scrollButton.querySelector("span.hidden-xs").textContent, "PAUSE SCROLL");
+  assert.equal(clientLocal.pauseBuffer, false);
+  assert.equal(clientLocal.pausedLines, 0);
+  assert.ok(!clientLocal.buffer.classList.contains("scroll-disabled"));
+  assert.ok(clientLocal.scrollButton.classList.contains("btn-primary"));
+  assert.equal(clientLocal.scrollButton.querySelector("span.hidden-xs").textContent, "PAUSE SCROLL");
 
-  domeLocal.scrollBuffer();
-  assert.equal(domeLocal.buffer.scrollTop, 300);
+  clientLocal.scrollBuffer();
+  assert.equal(clientLocal.buffer.scrollTop, 300);
 });
 
 test("scroll up to pause can be disabled", async () => {
@@ -235,7 +236,7 @@ test("scroll up to pause can be disabled", async () => {
   const { document } = window;
   globalThis.window = window;
   globalThis.document = document;
-  const domeLocal = {
+  const clientLocal = {
     buffer: document.querySelector("#buffer"),
     scrollButton: document.querySelector("#scrollButton"),
     statusDisplay: document.querySelector("#status"),
@@ -243,15 +244,15 @@ test("scroll up to pause can be disabled", async () => {
   };
 
   const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
-  setupAutoscroll(domeLocal, window);
+  setupAutoscroll(clientLocal, window);
 
-  Object.defineProperty(domeLocal.buffer, "scrollHeight", { value: 300, configurable: true });
-  Object.defineProperty(domeLocal.buffer, "clientHeight", { value: 100, configurable: true });
-  domeLocal.buffer.scrollTop = 50;
-  domeLocal.buffer.dispatchEvent(new window.Event("scroll"));
+  Object.defineProperty(clientLocal.buffer, "scrollHeight", { value: 300, configurable: true });
+  Object.defineProperty(clientLocal.buffer, "clientHeight", { value: 100, configurable: true });
+  clientLocal.buffer.scrollTop = 50;
+  clientLocal.buffer.dispatchEvent(new window.Event("scroll"));
 
-  assert.equal(domeLocal.pauseBuffer, false);
-  assert.ok(!domeLocal.buffer.classList.contains("scroll-disabled"));
+  assert.equal(clientLocal.pauseBuffer, false);
+  assert.ok(!clientLocal.buffer.classList.contains("scroll-disabled"));
 });
 
 test("programmatic scroll does not trigger scroll up pause", async () => {
@@ -260,7 +261,7 @@ test("programmatic scroll does not trigger scroll up pause", async () => {
   const { document } = window;
   globalThis.window = window;
   globalThis.document = document;
-  const domeLocal = {
+  const clientLocal = {
     buffer: document.querySelector("#buffer"),
     scrollButton: document.querySelector("#scrollButton"),
     statusDisplay: document.querySelector("#status"),
@@ -268,12 +269,12 @@ test("programmatic scroll does not trigger scroll up pause", async () => {
   };
 
   const { setupAutoscroll } = await import("../../src/client/t-autoscroll.js");
-  setupAutoscroll(domeLocal, window);
+  setupAutoscroll(clientLocal, window);
 
-  Object.defineProperty(domeLocal.buffer, "scrollHeight", { value: 300, configurable: true });
-  Object.defineProperty(domeLocal.buffer, "clientHeight", { value: 100, configurable: true });
-  domeLocal.scrollBuffer();
-  domeLocal.buffer.dispatchEvent(new window.Event("scroll"));
+  Object.defineProperty(clientLocal.buffer, "scrollHeight", { value: 300, configurable: true });
+  Object.defineProperty(clientLocal.buffer, "clientHeight", { value: 100, configurable: true });
+  clientLocal.scrollBuffer();
+  clientLocal.buffer.dispatchEvent(new window.Event("scroll"));
 
-  assert.equal(domeLocal.pauseBuffer, false);
+  assert.equal(clientLocal.pauseBuffer, false);
 });

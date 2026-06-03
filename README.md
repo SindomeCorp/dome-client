@@ -61,12 +61,16 @@ In this mode, the splash page is host/port-first and users can connect to differ
 - Node.js 22+
 - npm
 
+## Terminology
+
+`MUD` is the generic product and runtime term in Dome Client. `MOO` is retained for MOO-specific protocol behavior, editor language support, status-route compatibility such as `/moo/status/`, and legacy internal config object names. Environment variables, routes, data files, storage keys, and public docs links keep their existing names for compatibility.
+
 ## Features
 
 - Browser-based MUD play over WebSocket with no installation.
 - Two connection modes:
   - Single-MUD mode (`MULTI_MUD=false`): fixed game from `MUD_HOST`/`MUD_PORT`.
-  - Multi-MUD mode (`MULTI_MUD=true`): user enters host/port to enter connect flow with per-game analytics.
+  - Multi-MUD mode (`MULTI_MUD=true`): user enters host/port to enter connect flow with persisted per-game metrics.
 - Terminal-accurate ANSI rendering with a stateful parser (including reset/inverse handling), full Xterm256 support, and TrueColor (`38;2`/`48;2`) foreground/background rendering in both live output and exported logs.
 - HTTPS support.
 - Automatic URL linkification in output buffer.
@@ -88,7 +92,7 @@ In this mode, the splash page is host/port-first and users can connect to differ
 - Optional status-service integration.
 - Native bridge integration support (`window.DomeBridge` / `window.DomeNative`) for mobile wrappers, including queued startup event handling and native log-download routing when available.
 - Fully bundled client styling (local LESS/CSS and glyph assets), removing runtime dependency on external `dome.css` for consistent mobile/desktop rendering.
-- Optional multi-game landing mode (`MULTI_MUD`) with host/port-first connect flow and persisted per-game connection analytics.
+- Optional multi-game landing mode (`MULTI_MUD`) with host/port-first connect flow and persisted per-game connection metrics.
 
 ## Connection Modes
 
@@ -223,6 +227,17 @@ sudo setcap 'cap_net_bind_service=+ep' $(which node)
 ```bash
 npm run lint
 ```
+
+## Static Analysis
+
+```bash
+npm run deadcode
+npm run deadcode:deps
+npm run deadcode:exports
+npm run deadcode:files
+```
+
+Dead-code analysis uses Knip and is configured to scan source, tests, templates, and tooling while ignoring generated assets under `public/`.
 
 ## Testing
 

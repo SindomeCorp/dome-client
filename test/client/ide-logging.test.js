@@ -1,17 +1,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome, setSocket, logger } from "../../src/client/b-variables.js";
+import { logger } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
+import { setupIdeLauncher } from "../../src/client/ide.js";
 
-const orig = { window: globalThis.window, document: globalThis.document, openIDE: dome.openIDE };
+const orig = { window: globalThis.window, document: globalThis.document };
 
 test("openIDE logs complete command info", async (t) => {
+  const dome = createClientState();
   const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost" });
   const { window } = dom;
   globalThis.window = window;
   globalThis.document = window.document;
   dome.preferences = { edittheme: "dark" };
-  setSocket({});
+  dome.socket = {};
 
   window.open = () => ({
     closed: false,
@@ -22,7 +25,7 @@ test("openIDE logs complete command info", async (t) => {
 
   const logMock = t.mock.method(logger, "info");
 
-  await import("../../src/client/ide.js");
+  setupIdeLauncher({ client: dome, win: window });
 
   dome.openIDE({
     uploadCommand: "@program foo",
@@ -43,8 +46,6 @@ test("openIDE logs complete command info", async (t) => {
   t.after(() => {
     globalThis.window = orig.window;
     globalThis.document = orig.document;
-    dome.openIDE = orig.openIDE;
-    delete dome.preferences;
     logMock.mock.restore();
   });
 });

@@ -1,8 +1,41 @@
-import { dome, logger } from "./b-variables.js";
+import { logger } from "./b-variables.js";
 
-dome.autoCommands = [];
+const SUGGESTION_INPUT_GAP_PX = 16;
+const SUGGESTION_ROW_HEIGHT_PX = 24;
 
-dome.autoComplete = () => {
+const getSuggestionListHeight = (list, availableHeight) => {
+  const measuredHeight = list.getBoundingClientRect().height
+    || list.offsetHeight
+    || list.scrollHeight
+    || (list.children.length * SUGGESTION_ROW_HEIGHT_PX);
+
+  return Math.min(measuredHeight, availableHeight);
+};
+
+const positionSuggestionList = ({ list, inputBuffer, win = globalThis.window }) => {
+  const rect = inputBuffer.getBoundingClientRect();
+  const availableAbove = Math.max(0, rect.top - SUGGESTION_INPUT_GAP_PX);
+  const listHeight = getSuggestionListHeight(list, availableAbove);
+  const top = Math.max(
+    win.scrollY,
+    rect.top + win.scrollY - listHeight - SUGGESTION_INPUT_GAP_PX
+  );
+
+  list.style.position = "absolute";
+  list.style.left = `${rect.left + win.scrollX}px`;
+  list.style.width = `${rect.width}px`;
+  list.style.maxHeight = `${availableAbove}px`;
+  list.style.overflowY = "auto";
+  list.style.top = `${top}px`;
+};
+
+export function setupAutoCompleteFeature({
+  client,
+  doc = globalThis.document,
+  win = globalThis.window,
+  fetchFn = (...args) => globalThis.fetch(...args),
+  log = logger
+} = {}) {
   const commandArgumentPattern = /<[-A-Z a-z]+>/g;
 
   const prettyCommandArguments = (unformattedString) => {
@@ -16,26 +49,26 @@ dome.autoComplete = () => {
     );
   };
 
-  dome.autoCommands = [];
+  client.autoCommands = [];
 
-  dome.setupAutoComplete = async (inputBuffer, userType) => {
+  client.setupAutoComplete = async (inputBuffer, userType) => {
     if (
       !inputBuffer ||
-      (window.location.search && window.location.search.includes("ac=no"))
+      (win.location.search && win.location.search.includes("ac=no"))
     ) {
       return;
     }
 
-    if (dome.autoCommands.length > 0) {
+    if (client.autoCommands.length > 0) {
       if (typeof inputBuffer.commandSuggestions === "function") {
         inputBuffer.commandSuggestions("destroy");
       }
     }
 
     try {
-      const res = await fetch(`/ac/${userType}`);
+      const res = await fetchFn(`/ac/${userType}`);
       const data = await res.json();
-      dome.autoCommands = data.reduce((out, line) => {
+      client.autoCommands = data.reduce((out, line) => {
         let commandValue = line.trim();
         let commandSearch = commandValue;
         let commandHelp = `<div class="command-syntax">${commandValue}</div>`;
@@ -52,7 +85,7 @@ dome.autoComplete = () => {
             commandSyntax
           )}</div>`;
           const commandInstruction = parts[1].trim();
-          if (dome.preferences.broadSearch) {
+          if (client.preferences.broadSearch) {
             commandSearch += commandInstruction;
           }
           commandHelp += `<div class="command-instruction">${prettyCommandArguments(
@@ -60,7 +93,7 @@ dome.autoComplete = () => {
           )}</div>`;
           if (parts.length > 2 && parts[2] !== "") {
             const commandRequires = parts[2].trim();
-            if (dome.preferences.broadSearch) {
+            if (client.preferences.broadSearch) {
               commandSearch += commandRequires;
             }
             commandHelp += `<div class="command-requires">${commandRequires}</div>`;
@@ -81,7 +114,7 @@ dome.autoComplete = () => {
           const term = new RegExp(
             (req.term.length === 2 ? "^" : "") + req.term
           );
-          const matches = dome.autoCommands.filter((item) =>
+          const matches = client.autoCommands.filter((item) =>
             term.test(item.label)
           );
           next(matches);
@@ -91,11 +124,11 @@ dome.autoComplete = () => {
       if (typeof inputBuffer.commandSuggestions === "function") {
         inputBuffer.commandSuggestions(options);
       } else {
-        const list = document.createElement("ul");
+        const list = doc.createElement("ul");
         list.className = "command-suggestions ui-autocomplete ui-front";
         list.style.display = "none";
         list.style.zIndex = "1000";
-        document.body.appendChild(list);
+        doc.body.appendChild(list);
 
         const render = (matches) => {
           list.innerHTML = "";
@@ -104,7 +137,7 @@ dome.autoComplete = () => {
             return;
           }
           matches.forEach((item) => {
-            const li = document.createElement("li");
+            const li = doc.createElement("li");
             li.className = "ui-menu-item";
             li.innerHTML = item.display;
             li.addEventListener("mousedown", (e) => {
@@ -115,15 +148,7 @@ dome.autoComplete = () => {
             list.appendChild(li);
           });
           list.style.display = "block";
-          const rect = inputBuffer.getBoundingClientRect();
-          const top = Math.max(
-            0,
-            rect.top + window.scrollY - list.offsetHeight
-          );
-          list.style.position = "absolute";
-          list.style.left = `${rect.left + window.scrollX}px`;
-          list.style.width = `${rect.width}px`;
-          list.style.top = `${top}px`;
+          positionSuggestionList({ list, inputBuffer, win });
         };
 
         const onInput = () => {
@@ -152,7 +177,7 @@ dome.autoComplete = () => {
         inputBuffer.commandSuggestions(options);
       }
     } catch (err) {
-      logger.warn(`Failed to load autocomplete commands: ${err}`);
+      log.warn(`Failed to load autocomplete commands: ${err}`);
     }
   };
-};
+}

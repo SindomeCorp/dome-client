@@ -1,0 +1,62 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/server.js",
+    "src/env.js",
+    "src/client/index.js",
+    "src/client/pages/*.js",
+    "src/client/pages/*.jsx",
+    "src/client/ejs-scripts/*.js",
+    "src/services/build.js",
+    "test/**/*.js",
+    "eslint.config.js",
+    "postcss.config.js",
+    "stryker*.json"
+  ],
+  "project": [
+    "src/**/*.js",
+    "src/**/*.jsx",
+    "test/**/*.js",
+    "less/**/*.less",
+    "views/**/*.ejs",
+    "scripts/**/*.{awk,sh}",
+    "*.js",
+    "*.json"
+  ],
+  "ignore": [
+    "coverage/**",
+    "data/**",
+    "docs/**",
+    "node_modules/**",
+    "public/**",
+    "reports/**",
+    ".stryker-tmp/**",
+    "src/client/ace/mode-moo.js"
+  ],
+  "ignoreDependencies": [
+    "@stryker-mutator/command-runner"
+  ],
+  "ignoreIssues": {
+    "src/client/c-preferences.js": [
+      "exports"
+    ],
+    "src/client/store.js": [
+      "exports"
+    ],
+    "src/client/u-buttons.js": [
+      "exports"
+    ],
+    "src/client/z-setup.js": [
+      "exports"
+    ],
+    "src/controllers/socket.js": [
+      "exports"
+    ],
+    "src/middleware/error.js": [
+      "exports"
+    ],
+    "package.json": [
+      "binaries"
+    ]
+  }
+}

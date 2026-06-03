@@ -4,6 +4,7 @@ import setupDom from "../../test-support/setup-dom.js";
 
 test("client-connect flow integration: guest/manual/connect-now update local storage and navigation target", async (t) => {
   t.mock.timers.enable();
+  t.mock.method(console, "info", () => {});
   const html = "<!doctype html><html><body>"
     + "<a class=\"btn-connect-guest\" href=\"/player-client/\"></a>"
     + "<a class=\"btn-connect-other\" href=\"/player-client/\"></a>"
@@ -13,7 +14,7 @@ test("client-connect flow integration: guest/manual/connect-now update local sto
     + "<input id=\"moo-port\" value=\"7777\" />"
     + "<button id=\"connect_now\"></button>"
     + "</body></html>";
-  const { window } = setupDom(t, html);
+  const { window } = setupDom(t, html, { suppressNavigationErrors: true });
   const { store } = await import("../../src/client/store.js");
 
   const memory = new Map();
@@ -67,6 +68,7 @@ test("client-connect flow integration: guest/manual/connect-now update local sto
 
 test("client-connect flow integration: auto query connects known stored user and falls back to default host and port", async (t) => {
   t.mock.timers.enable();
+  t.mock.method(console, "info", () => {});
   const html = "<!doctype html><html><body>"
     + "<div id=\"user-picker\" class=\"hide\">"
     + "<button class=\"dropdown-toggle\"></button>"
@@ -81,7 +83,7 @@ test("client-connect flow integration: auto query connects known stored user and
     + "<input id=\"moo-port\" value=\"\" />"
     + "<button id=\"connect_now\"></button>"
     + "</body></html>";
-  const { window } = setupDom(t, html);
+  const { window } = setupDom(t, html, { suppressNavigationErrors: true });
   const { store } = await import("../../src/client/store.js");
 
   const memory = new Map();

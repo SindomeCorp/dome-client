@@ -3,10 +3,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome, setSocket } from "../src/client/b-variables.js";
+import { createClientState } from "../src/client/client-state.js";
+import { setupClientPreferences } from "../src/client/c-preferences.js";
 
 // Typing @client-options should display preferences without a server response.
 test("@client-options prints preferences locally", async (t) => {
+  const client = createClientState();
   const dom = new JSDOM("<input id=\"input\" />", { pretendToBeVisual: true, url: "https://example.com/" });
   const { window } = dom;
   const orig = {
@@ -34,28 +36,26 @@ test("@client-options prints preferences locally", async (t) => {
 
   const output = [];
   let scrolled = false;
-  Object.assign(dome, {
+  Object.assign(client, {
     inputReader: document.querySelector("#input"),
     buffer: {
       insertAdjacentHTML: (pos, text) => output.push(text),
       append: (text) => output.push(text)
     },
-    preferences: { commandSuggestions: true },
-    scrollBuffer: () => { scrolled = true; }
+    preferences: { commandSuggestions: true }
   });
   globalThis.store = { get: () => [], put() {} };
   let emitted = false;
-  const prevSocket = dome.socket;
-  setSocket({ emit: () => { emitted = true; } });
-  t.after(() => setSocket(prevSocket));
+  client.socket = { emit: () => { emitted = true; } };
 
-  await import("../src/client/c-preferences.js");
-  await import("../src/client/d-inputreader.js");
+  setupClientPreferences({ client, doc: window.document, win: window });
+  const { setupInputReader } = await import("../src/client/d-inputreader.js");
+  client.scrollBuffer = () => { scrolled = true; };
 
-  dome.setupInputReader();
+  setupInputReader({ client, doc: window.document });
 
-  dome.inputReader.value = "@client-options";
-  dome.inputReader.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
+  client.inputReader.value = "@client-options";
+  client.inputReader.dispatchEvent(new window.KeyboardEvent("keypress", { key: "Enter", shiftKey: false }));
 
   assert.ok(output.some((line) => line.includes("commandSuggestions")));
   assert.ok(!emitted);

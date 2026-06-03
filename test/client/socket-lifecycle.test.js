@@ -2,8 +2,12 @@ import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { JSDOM } from "jsdom";
-import { dome, SOCKET_STATE_ENUM, logger } from "../../src/client/b-variables.js";
+import { SOCKET_STATE_ENUM, logger } from "../../src/client/b-variables.js";
+import { createClientState } from "../../src/client/client-state.js";
+import { setupClientPreferences } from "../../src/client/c-preferences.js";
 import { store as clientStore } from "../../src/client/store.js";
+
+const dome = createClientState();
 
 const { window } = new JSDOM(`<!doctype html><html><body>
   <div id="disconnect-overlay" class="hide"></div>
@@ -33,23 +37,26 @@ dome.disconnectView = {
 
 dome.socketState = SOCKET_STATE_ENUM.BEFORE_FIRST;
 dome.activeEditor = { readingContent: true };
-dome.setFadeText = () => {};
+dome.health = {
+  handleSocketError() {},
+  showStatus() {}
+};
 
 dome.statusDisplay = window.document.querySelector("#statusMsg");
 dome.inputReader = window.document.querySelector("#inputBuffer");
 
 dome.preferences = { shortenUrls: false };
+setupClientPreferences({ client: dome, doc: window.document, win: window });
 
 Object.assign(clientStore, { get: () => null, remove: () => {}, put: () => {} });
-await import("../../src/client/c-preferences.js");
 globalThis.socketUrl = "http://sock";
 globalThis.socketUrlSSL = "https://sock";
 globalThis.gameName = "Game";
 globalThis.poweredBy = "Powered";
 dome.setWindowTitle = () => {};
-dome.onErrorHandler = () => {};
 let currentEmitter;
 mock.module("socket.io-client", { namedExports: { io: () => currentEmitter } });
+const { setupSocket } = await import("../../src/client/g-socket-lifecycle.js");
 
 dome.alert = {};
 
@@ -73,9 +80,7 @@ test("socket lifecycle updates state and disconnect view", async (t) => {
   currentEmitter = new EventEmitter();
   currentEmitter.disconnect = () => {};
 
-  await import(`../../src/client/g-socket-lifecycle.js?cache=${Math.random()}`);
-
-  const ioSocket = dome.setupSocket();
+  const ioSocket = setupSocket({ client: dome });
 
   ioSocket.emit("connected");
   assert.equal(dome.socketState, SOCKET_STATE_ENUM.CONNECTED);
@@ -101,8 +106,7 @@ const createSocket = async (t) => {
   globalThis.setTimeout = (fn) => { fn(); };
   currentEmitter = new EventEmitter();
   currentEmitter.disconnect = () => {};
-  await import(`../../src/client/g-socket-lifecycle.js?cache=${Math.random()}`);
-  const ioSocket = dome.setupSocket();
+  const ioSocket = setupSocket({ client: dome });
   const origStore = { get: clientStore.get, remove: clientStore.remove, put: clientStore.put };
   t.after(() => {
     globalThis.setTimeout = origTimeout;
@@ -177,7 +181,7 @@ test("handlers manage reconnect, login branches, and errors", async (t) => {
       return res;
     });
     dome.setWindowTitle = t.mock.fn();
-    dome.onErrorHandler = t.mock.fn();
+    dome.health.handleSocketError = t.mock.fn();
     ioSocket.emit("connected");
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(dome.setWindowTitle.mock.calls[0]?.arguments[0], "User | Game | Powered");
@@ -187,7 +191,7 @@ test("handlers manage reconnect, login branches, and errors", async (t) => {
     assert.equal(removeMock.mock.calls[0]?.arguments[0], "dc-user-login");
     const err = new Error("boom");
     ioSocket.emit("error", err);
-    assert.equal(dome.onErrorHandler.mock.calls[0]?.arguments[0], err);
+    assert.equal(dome.health.handleSocketError.mock.calls[0]?.arguments[0], err);
   }
 
   {
@@ -229,8 +233,7 @@ test("setupSocket disconnects existing socket", async (t) => {
   currentEmitter = new EventEmitter();
   currentEmitter.connected = false;
   currentEmitter.disconnect = () => {};
-  await import(`../../src/client/g-socket-lifecycle.js?cache=${Math.random()}`);
-  const newSocket = dome.setupSocket();
+  const newSocket = setupSocket({ client: dome });
   assert.equal(oldEmitter.disconnect.mock.callCount(), 1);
   assert.equal(newSocket.connected, false);
   assert.strictEqual(newSocket, currentEmitter);

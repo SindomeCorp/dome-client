@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import less from "less";
 import * as buildModule from "../../src/services/build.js";
+import { browserOutputFiles, pageEntries, playerClientEntries } from "../../src/services/browser-entry-manifest.js";
 import { fileURLToPath } from "node:url";
 
 const serviceDir = path.dirname(fileURLToPath(new URL("../../src/services/build.js", import.meta.url)));
@@ -96,11 +97,30 @@ test("compileJs bundles entry and produces normal and minified outputs", async t
     "client-connect.js",
     "client-options.js",
     "editor-window.js",
+    "ide-editor-window.js",
     "logger.js",
     "note-editor-window.js",
     "player-client.js",
     "player-client.min.js"
   ].sort());
+});
+
+test("browser entry manifest declares expected output files once", () => {
+  const expected = [
+    "player-client.js",
+    "player-client.min.js",
+    "client-connect.js",
+    "client-options.js",
+    "editor-window.js",
+    "note-editor-window.js",
+    "logger.js",
+    "ide-editor-window.js"
+  ];
+
+  assert.deepStrictEqual(browserOutputFiles, expected);
+  assert.deepStrictEqual(playerClientEntries.map(({ file }) => file), expected.slice(0, 2));
+  assert.deepStrictEqual(pageEntries.map(({ file }) => file), expected.slice(2));
+  assert.equal(pageEntries.find(({ file }) => file === "ide-editor-window.js").entry, "ide-editor-window.jsx");
 });
 
 test("compileJs rejects when cleanup fails", async t => {
@@ -176,4 +196,3 @@ test("build rejects when a step fails and memoizes the error", async t => {
   assert.strictEqual(first, second);
   await assert.rejects(() => first, /boom/);
 });
-

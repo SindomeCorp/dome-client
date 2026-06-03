@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import request from "supertest";
 import nock from "nock";
 import { io as createSocketClient } from "socket.io-client";
+import { bootServer } from "./helpers/boot-server.js";
+import { mockStatusOk } from "./helpers/status-service.js";
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -22,141 +24,11 @@ async function waitFor(assertion, { timeoutMs = 2500, intervalMs = 100 } = {}) {
   await assertion();
 }
 
-async function bootServer(t, {
-  remoteAuth = { enabled: true, host: "http://remoteauth.test", path: "/session/authenticate/", remoteSecret: "sekret" },
-  status = { serviceUrl: "http://status.test/moo/status/" },
-  node = {},
-  moo = {},
-  website = {},
-  autocomplete = {},
-  acmeWebroot,
-  screensController
-} = {}) {
-  const moduleMock = typeof t.mock.module === "function"
-    ? t.mock.module.bind(t.mock)
-    : t.mock.import.bind(t.mock);
-
-  const config = {
-    node: {
-      mode: "test",
-      port: 0,
-      socketUrl: "",
-      socketUrlSSL: "",
-      socketProxied: false,
-      multiMud: false,
-      poweredBy: "Dome Client",
-      session: {
-        secret: "integration-test-secret"
-      }
-    },
-    moo: {
-      name: "Integration MUD",
-      host: "127.0.0.1",
-      port: 4444
-    },
-    website: {
-      signupUrl: ""
-    },
-    guest: {
-      connectCommand: "connect guest"
-    },
-    autocomplete: {
-      enabled: false,
-      p: "data/autocomplete/player.txt",
-      j: "data/autocomplete/justice.txt",
-      a: "data/autocomplete/agent.txt",
-      c: "data/autocomplete/creator.txt",
-      w: "data/autocomplete/watcher.txt",
-      o: "data/autocomplete/guest.txt"
-    },
-    editor: {
-      localSaveNodeMaxLines: 200,
-      localSaveNodeAdminMaxLines: 800,
-      localSaveNoteMaxLines: 20,
-      ideEditOpenParent: false,
-      ideVmsNoteEnabled: false
-    },
-    shorten: {
-      enabled: false,
-      host: "localhost",
-      port: 5549,
-      path: "/interface/v1/shorten/",
-      domain: "",
-      minimum: 50
-    },
-    remoteAuth,
-    status
-  };
-  Object.assign(config.node, node);
-  Object.assign(config.moo, moo);
-  Object.assign(config.website, website);
-  Object.assign(config.autocomplete, autocomplete);
-
-  const originalAcmeWebroot = process.env.ACME_WEBROOT;
-  if (typeof acmeWebroot === "string") {
-    process.env.ACME_WEBROOT = acmeWebroot;
-  }
-
-  moduleMock("../../src/config/index.js", { defaultExport: config });
-  moduleMock("../../src/logger.js", {
-    namedExports: {
-      named: () => ({
-        info() {},
-        warn() {},
-        error() {},
-        debug() {},
-      })
-    }
-  });
-  moduleMock("../../src/controllers/socket.js", {
-    namedExports: {
-      connection() {},
-      error() {},
-    }
-  });
-  if (screensController) {
-    moduleMock("../../src/controllers/screens.js", {
-      namedExports: screensController
-    });
-  }
-
-  const { start, stop } = await import(`../../src/server.js?integration=${Date.now()}`);
-  const runtime = await start({ port: 0, ip: "127.0.0.1", skipBuild: true });
-  t.after(async () => {
-    if (typeof acmeWebroot === "string") {
-      if (originalAcmeWebroot === undefined) {
-        delete process.env.ACME_WEBROOT;
-      } else {
-        process.env.ACME_WEBROOT = originalAcmeWebroot;
-      }
-    }
-    await stop();
-    t.mock.restoreAll();
-    nock.cleanAll();
-    nock.enableNetConnect();
-  });
-  return {
-    runtime,
-    baseUrl: `http://127.0.0.1:${runtime.http.port}`
-  };
-}
-
 test("integration: serves routes and accepts socket.io connections", async (t) => {
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -192,18 +64,7 @@ test("integration: website login sets session and redirects", async (t) => {
     .post("/session/authenticate/")
     .reply(200, { status: "ok", user: { perms: [1], chars: [{ name: "hero" }] } });
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const agent = request.agent(baseUrl);
@@ -226,18 +87,7 @@ test("integration: unauthenticated session does not render play-as controls", as
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const home = await request(baseUrl).get("/").expect(200);
@@ -249,18 +99,7 @@ test("integration: connect page renders for both get and post", async (t) => {
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -270,96 +109,11 @@ test("integration: connect page renders for both get and post", async (t) => {
   assert.match(postRes.text, /Connect as a Guest/i);
 });
 
-test("integration: player client route renders and includes status health anchors", async (t) => {
-  nock.disableNetConnect();
-  nock.enableNetConnect("127.0.0.1");
-
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
-
-  const { baseUrl } = await bootServer(t);
-  const res = await request(baseUrl).get("/player-client/").expect(200);
-  assert.match(res.text, /id="lineBuffer"/);
-  assert.match(res.text, /id="gameHealth"/);
-  assert.match(res.text, /id="gameHealthDetail"/);
-});
-
-test("integration: player client shows health widget and link when status service is configured", async (t) => {
-  nock.disableNetConnect();
-  nock.enableNetConnect("127.0.0.1");
-
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
-
-  const serviceUrl = "http://status.test/moo/status/";
-  const { baseUrl } = await bootServer(t, {
-    status: { serviceUrl }
-  });
-  const res = await request(baseUrl).get("/player-client/").expect(200);
-  assert.match(res.text, /id="gameHealth"/);
-  assert.match(res.text, /id="gameHealthDetail"/);
-  assert.match(res.text, /href="http:\/\/status\.test\/moo\/status\/"/);
-});
-
-test("integration: game owner questions route is not found in default mode", async (t) => {
-  nock.disableNetConnect();
-  nock.enableNetConnect("127.0.0.1");
-
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
-
-  const { baseUrl } = await bootServer(t, {
-    node: { multiMud: false }
-  });
-  await request(baseUrl).get("/game-owner-questions/").expect(404);
-});
-
 test("integration: editor route resolves known types and falls back unknown to basic", async (t) => {
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -386,18 +140,7 @@ test("integration: editor theme query applies allowed theme and rejects unknown 
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -415,52 +158,11 @@ test("integration: editor theme query applies allowed theme and rejects unknown 
   assert.match(verbFallback.text, /data-editor-theme="twilight"/);
 });
 
-test("integration: autocomplete endpoint returns empty list when disabled", async (t) => {
-  nock.disableNetConnect();
-  nock.enableNetConnect("127.0.0.1");
-
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
-
-  const { baseUrl } = await bootServer(t, {
-    autocomplete: {
-      enabled: false
-    }
-  });
-  const http = request(baseUrl);
-  const known = await http.get("/ac/p").expect(200);
-  assert.deepEqual(known.body, []);
-
-  const unknown = await http.get("/ac/unknown").expect(200);
-  assert.deepEqual(unknown.body, []);
-});
-
 test("integration: autocomplete endpoint returns JSON content type", async (t) => {
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const res = await request(baseUrl).get("/ac/p").expect(200);
@@ -471,18 +173,7 @@ test("integration: acme challenge route returns 404 for missing token", async (t
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -499,18 +190,8 @@ test("integration: website login session state is isolated per agent", async (t)
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "error", message: "Invalid credentials" });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const agentA = request.agent(baseUrl);
@@ -540,18 +221,8 @@ test("integration: website login gogogo redirects to first character", async (t)
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "ok", user: { perms: [1], chars: [{ name: "hero" }, { name: "other" }] } });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const response = await request(baseUrl)
@@ -569,18 +240,8 @@ test("integration: website login gogogo with no chars does not auto-route", asyn
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "ok", user: { perms: [1], chars: [] } });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const response = await request(baseUrl)
@@ -601,18 +262,8 @@ test("integration: website login return parameter honors safe path and ignores u
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "ok", user: { perms: [1], chars: [{ name: "hero" }] } });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -639,18 +290,8 @@ test("integration: website login return takes precedence over gogogo", async (t)
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "ok", user: { perms: [1], chars: [{ name: "hero" }] } });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const response = await request(baseUrl)
@@ -833,18 +474,8 @@ test("integration: website login failure sets session error and redirects", asyn
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "error", message: "Invalid credentials" });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const agent = request.agent(baseUrl);
@@ -867,18 +498,8 @@ test("integration: website login error is shown once and then cleared from sessi
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "error", message: "Invalid credentials" });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const agent = request.agent(baseUrl);
@@ -899,18 +520,7 @@ test("integration: health connection count reflects live socket clients", async 
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -943,18 +553,7 @@ test("integration: health endpoint response schema stays stable", async (t) => {
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -981,18 +580,8 @@ test("integration: website login network failure sets session error and redirect
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .replyWithError("upstream unavailable");
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const agent = request.agent(baseUrl);
@@ -1015,18 +604,8 @@ test("integration: website login timeout-like upstream failure sets session erro
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .replyWithError({ code: "ETIMEDOUT", message: "request timed out" });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const agent = request.agent(baseUrl);
@@ -1052,18 +631,8 @@ test("integration: website login malformed upstream responses set session errors
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "ok", user: "not-an-object" });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const agent = request.agent(baseUrl);
@@ -1097,18 +666,8 @@ test("integration: failed auth then successful auth in same session clears error
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "ok", user: { perms: [1], chars: [{ name: "hero" }] } });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const agent = request.agent(baseUrl);
@@ -1143,18 +702,8 @@ test("integration: concurrent failed and successful auth in one session ends in 
     .post("/session/authenticate/")
     .delay(120)
     .reply(200, { status: "ok", user: { perms: [1], chars: [{ name: "hero" }] } });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const agent = request.agent(baseUrl);
@@ -1175,18 +724,8 @@ test("integration: website login session persists across socket connect-disconne
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "ok", user: { perms: [1], chars: [{ name: "hero" }] } });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const agent = request.agent(baseUrl);
@@ -1221,18 +760,7 @@ test("integration: repeated socket reconnect cycles do not leak health connectio
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -1263,18 +791,7 @@ test("integration: concurrent reconnect storm settles to baseline connection cou
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -1329,18 +846,7 @@ test("integration: static assets and security headers baseline", async (t) => {
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -1360,18 +866,7 @@ test("integration: core routes keep consistent baseline security headers", async
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -1399,18 +894,8 @@ test("integration: website login sets expected session cookie attributes", async
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "ok", user: { perms: [1], chars: [{ name: "hero" }] } });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -1430,18 +915,7 @@ test("integration: website login is blocked when remote auth is disabled", async
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t, {
     remoteAuth: {
@@ -1467,18 +941,7 @@ test("integration: save log endpoint returns downloadable html and sanitizes fil
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -1501,18 +964,7 @@ test("integration: save log filename keeps reserved characters encoded after bas
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -1530,18 +982,7 @@ test("integration: save log handles empty and unicode buffers and encodes filena
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -1573,60 +1014,11 @@ test("integration: save log handles empty and unicode buffers and encodes filena
   assert.match(big.text, /<title>Web Client Buffer<\/title>/);
 });
 
-test("integration: save log handles large mixed unicode and ansi-like content", async (t) => {
-  nock.disableNetConnect();
-  nock.enableNetConnect("127.0.0.1");
-
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
-
-  const { baseUrl } = await bootServer(t);
-  const http = request(baseUrl);
-  const line = "alpha \u001b[31mred\u001b[0m こんにちは 🌙\n";
-  const buffer = `<pre>${line.repeat(3000)}</pre>`;
-
-  const started = Date.now();
-  const response = await http
-    .post("/save/ansi-unicode-stress.html")
-    .type("form")
-    .send({ buffer })
-    .expect(200);
-  const elapsed = Date.now() - started;
-
-  assert.match(response.headers["content-type"] || "", /text\/html/);
-  assert.match(response.text, /<title>Web Client Buffer<\/title>/);
-  assert.match(response.text, /こんにちは/);
-  assert.match(response.text, /red/);
-  assert.ok(response.text.length > 40000);
-  assert.ok(elapsed < 3000);
-});
-
 test("integration: save log accepts missing and non-string buffer payloads", async (t) => {
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);
@@ -1654,71 +1046,6 @@ test("integration: save log accepts missing and non-string buffer payloads", asy
   assert.match(objectLike.text, /<div id="lineBuffer">/);
 });
 
-test("integration: save log preserves style-like payload safely in html output", async (t) => {
-  nock.disableNetConnect();
-  nock.enableNetConnect("127.0.0.1");
-
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
-
-  const { baseUrl } = await bootServer(t);
-  const http = request(baseUrl);
-  const payload = "<span></style><script>bad()</script></span>";
-  const response = await http
-    .post("/save/style-like.html")
-    .type("form")
-    .send({ buffer: payload })
-    .expect(200);
-
-  assert.match(response.text, /<style>/);
-  assert.match(response.text, /<span><\/style><script>bad\(\)<\/script><\/span>/);
-  assert.match(response.text, /<div id="lineBuffer"><span><\/style><script>bad\(\)<\/script><\/span><\/div>/);
-});
-
-test("integration: save log preserves html envelope with malformed nested markup and large payload", async (t) => {
-  nock.disableNetConnect();
-  nock.enableNetConnect("127.0.0.1");
-
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
-
-  const { baseUrl } = await bootServer(t);
-  const http = request(baseUrl);
-  const payload = ("<!--x--><div><span><p></div></span>" + "<script>noop()</script>").repeat(8000);
-  const response = await http
-    .post("/save/malformed-large.html")
-    .type("form")
-    .send({ buffer: payload })
-    .expect(200);
-
-  assert.match(response.headers["content-type"] || "", /text\/html/);
-  assert.match(response.text, /<html><head>/);
-  assert.match(response.text, /<title>Web Client Buffer<\/title>/);
-  assert.match(response.text, /<div id="lineBuffer">/);
-  assert.match(response.text, /<\/div><\/div><\/body><\/html>/);
-  assert.ok(response.text.length > 50000);
-});
-
 test("integration: happy-path smoke login socket status health and save", async (t) => {
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
@@ -1726,18 +1053,8 @@ test("integration: happy-path smoke login socket status health and save", async 
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "ok", user: { perms: [1], chars: [{ name: "hero" }] } });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const agent = request.agent(baseUrl);
@@ -1777,18 +1094,8 @@ test("integration: session journey covers login connect client editor and save r
   nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .reply(200, { status: "ok", user: { perms: [1], chars: [{ name: "hero" }] } });
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const agent = request.agent(baseUrl);
@@ -1823,18 +1130,7 @@ test("integration: missing static assets return 404", async (t) => {
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
-    .get("/moo/status/")
-    .reply(200, {
-      message: "moo ok",
-      cpu: 0,
-      memory: 0,
-      checked: Date.now(),
-      users: 0,
-      interval: 15,
-      state: "OK"
-    }, { "Content-Type": "application/json" });
+  mockStatusOk();
 
   const { baseUrl } = await bootServer(t);
   const http = request(baseUrl);

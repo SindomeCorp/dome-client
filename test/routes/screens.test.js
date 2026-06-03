@@ -62,6 +62,28 @@ test("client renders client with metadata", () => {
   });
 });
 
+test("client hides status health UI when status service is blank", () => {
+  const original = config.status.serviceUrl;
+  config.status.serviceUrl = "";
+  const { res, result } = createRes();
+  screens.client({}, res);
+  config.status.serviceUrl = original;
+  assert.equal(result.template, "client");
+  assert.equal(result.locals.showStatusService, false);
+  assert.equal(result.locals.statusServiceUrl, "");
+});
+
+test("client exposes trimmed status service URL when configured", () => {
+  const original = config.status.serviceUrl;
+  config.status.serviceUrl = " https://status.example.test/moo/status/ ";
+  const { res, result } = createRes();
+  screens.client({}, res);
+  config.status.serviceUrl = original;
+  assert.equal(result.template, "client");
+  assert.equal(result.locals.showStatusService, true);
+  assert.equal(result.locals.statusServiceUrl, "https://status.example.test/moo/status/");
+});
+
 test("gameOwnerQuestions returns 404 outside multi-mud mode", () => {
   const original = config.node.multiMud;
   config.node.multiMud = false;

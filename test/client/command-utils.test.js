@@ -8,6 +8,29 @@ test("parseCommand splits command and target", () => {
   assert.equal(commandTarget, "foo");
 });
 
+test("parseCommand preserves editor targets used by the IDE", () => {
+  assert.deepEqual(parseCommand("@program #1:verb"), {
+    command: "@program",
+    commandTarget: "#1:verb"
+  });
+  assert.deepEqual(parseCommand("@edit #1:verb"), {
+    command: "@edit",
+    commandTarget: "#1:verb"
+  });
+  assert.deepEqual(parseCommand("@edit #1.prop"), {
+    command: "@edit",
+    commandTarget: "#1.prop"
+  });
+  assert.deepEqual(parseCommand("@set-note-string #1.prop"), {
+    command: "@set-note-string",
+    commandTarget: "#1.prop"
+  });
+  assert.deepEqual(parseCommand("@set-note-text #1.prop"), {
+    command: "@set-note-text",
+    commandTarget: "#1.prop"
+  });
+});
+
 test("parseCommand handles missing target", () => {
   const { command, commandTarget } = parseCommand("@@set_note");
   assert.equal(command, "@@set_note");

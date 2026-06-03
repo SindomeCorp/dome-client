@@ -33,3 +33,25 @@ test("buildLogHtml escapes style end tags in css payload", () => {
 
   assert.match(html, /<style>\/\* test \*\/ <\\\/style><script>bad\(\)<\/script><\/style>/);
 });
+
+test("buildLogHtml preserves style-like buffer payload", () => {
+  const payload = "<span></style><script>bad()</script></span>";
+  const html = buildLogHtml(payload, "body{}");
+
+  assert.match(html, /<style>body\{\}<\/style>/);
+  assert.match(html, /<div id="lineBuffer"><span><\/style><script>bad\(\)<\/script><\/span><\/div>/);
+});
+
+test("buildLogHtml preserves large unicode and malformed markup payloads", () => {
+  const line = "alpha \u001b[31mred\u001b[0m \u3053\u3093\u306b\u3061\u306f \ud83c\udf19\n";
+  const payload = `<pre>${line.repeat(3000)}</pre>` + ("<!--x--><div><span><p></div></span>" + "<script>noop()</script>").repeat(1000);
+  const html = buildLogHtml(payload, "body{}");
+
+  assert.match(html, /<html><head>/);
+  assert.match(html, /<title>Web Client Buffer<\/title>/);
+  assert.match(html, /\u3053\u3093\u306b\u3061\u306f/);
+  assert.match(html, /red/);
+  assert.match(html, /<div id="lineBuffer">/);
+  assert.match(html, /<\/div><\/div><\/body><\/html>/);
+  assert.ok(html.length > 40000);
+});

@@ -22,6 +22,9 @@ nohup.out
 .stryker-tmp/
 reports/mutation/
 reports/stryker-incremental.json
+REFACTOR.md
+.brooks-lint-history.json
+.br4ooks-lint-history.json
 .agents/
 .codex/
 play.sindome.org.pem

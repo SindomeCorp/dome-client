@@ -1,9 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { dome } from "../../src/client/b-variables.js";
-
-const prefUrl = "../../src/client/c-preferences.js";
+import { createClientState } from "../../src/client/client-state.js";
+import { setupClientPreferences } from "../../src/client/c-preferences.js";
 
 const setupWindow = async (
   t,
@@ -13,6 +12,7 @@ const setupWindow = async (
   editThemes = ["twilight", "chaos"],
   colorSets = ["acid", "dim"]
 ) => {
+  const dome = createClientState();
   const dom = new JSDOM("<!doctype html><html><body></body></html>", { url });
   const { window } = dom;
   Object.defineProperty(window.navigator, "appVersion", { value: appVersion, configurable: true });
@@ -49,15 +49,7 @@ const setupWindow = async (
       store.put(this.prefix + name, value);
     }
   };
-  const clientOptionsMock = t.mock.module("../../src/client/pages/client-options.js", {
-    namedExports: {
-      store,
-      clientOptions,
-      EDIT_THEMES: globalThis.EDIT_THEMES || [],
-      FONT_CHOICES: globalThis.FONT_CHOICES || [],
-      COLORSET_CHOICES: globalThis.COLORSET_CHOICES || []
-    }
-  });
+  window.testClientOptions = clientOptions;
   t.after(() => {
     Object.defineProperty(globalThis, "window", { value: orig.window, configurable: true, writable: true });
     Object.defineProperty(globalThis, "document", { value: orig.document, configurable: true, writable: true });
@@ -68,8 +60,7 @@ const setupWindow = async (
     global.EDIT_THEMES = orig.EDIT_THEMES;
     global.COLORSET_CHOICES = orig.COLORSET_CHOICES;
   });
-  t.after(() => clientOptionsMock.restore());
-  await import(`${prefUrl}?c=${Date.now()}`);
+  setupClientPreferences({ client: dome, doc: window.document, win: window, storage: store, options: clientOptions });
   return window;
 };
 
@@ -278,16 +269,14 @@ test("readPreferences defaults performanceBuffer to unlimited", async (t) => {
 
 test("readPreferences loads saved colorSet from localStorage", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
-  const { clientOptions } = await import("../../src/client/pages/client-options.js");
-  clientOptions.save("colorset", "acid");
+  win.testClientOptions.save("colorset", "acid");
   const prefs = win.dome.readPreferences();
   assert.equal(prefs.colorSet, "acid");
 });
 
 test("readPreferences loads saved scrollUpToPause from localStorage", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
-  const { clientOptions } = await import("../../src/client/pages/client-options.js");
-  clientOptions.save("scrolluppause", true);
+  win.testClientOptions.save("scrolluppause", true);
   const prefs = win.dome.readPreferences();
   assert.equal(prefs.scrollUpToPause, true);
 });
@@ -295,11 +284,10 @@ test("readPreferences loads saved scrollUpToPause from localStorage", async (t) 
 test("parseClientOptionCommand persists preference", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
   const saved = [];
-  const { clientOptions } = await import("../../src/client/pages/client-options.js");
-  const origSave = clientOptions.save;
-  clientOptions.save = (key, val) => saved.push({ key, val });
+  const origSave = win.testClientOptions.save;
+  win.testClientOptions.save = (key, val) => saved.push({ key, val });
   t.after(() => {
-    clientOptions.save = origSave;
+    win.testClientOptions.save = origSave;
   });
   win.dome.buffer = { append() {} };
   win.dome.scrollBuffer = () => {};
@@ -374,6 +362,11 @@ test("parseClientOptionCommand reapplies overlay classes after autocomplete rebu
   win.dome.inputReader = {
     commandSuggestions(arg) {
       if (arg === "destroy") destroyed = true;
+      if (typeof arg === "object") {
+        const ac = win.document.createElement("div");
+        ac.className = "ui-autocomplete ui-transparent-overlay";
+        win.document.body.appendChild(ac);
+      }
     }
   };
   win.dome.userType = "p";
@@ -381,16 +374,16 @@ test("parseClientOptionCommand reapplies overlay classes after autocomplete rebu
   win.dome.preferences.transparentOverlay = false;
   win.dome.preferences.commandSuggestions = true;
   win.dome.preferences.broadSearch = true;
-  win.dome.autoComplete = () => {};
-  win.dome.setupAutoComplete = () => Promise.resolve().then(() => {
-    const ac = win.document.createElement("div");
-    ac.className = "ui-autocomplete ui-transparent-overlay";
-    win.document.body.appendChild(ac);
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    json: async () => ["look"]
+  });
+  t.after(() => {
+    globalThis.fetch = origFetch;
   });
 
   win.dome.parseClientOptionCommand("@client-option broadSearch false");
-  await Promise.resolve();
-  await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
 
   const ac = win.document.querySelector(".ui-autocomplete");
   assert.equal(destroyed, true);
@@ -412,14 +405,11 @@ test("@client-option pb accepts numeric values", async (t) => {
 
 test("parseClientOptionCommand refreshes autoscroll when scrollUpToPause changes", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
-  let setupCount = 0;
-  win.dome.buffer = { append() {} };
+  win.dome.buffer = win.document.createElement("div");
+  win.document.body.appendChild(win.dome.buffer);
   win.dome.scrollBuffer = () => {};
-  win.dome.setupAutoscroll = () => {
-    setupCount++;
-  };
   win.dome.preferences = win.dome.readPreferences();
   win.dome.parseClientOptionCommand("@client-option scrollUpToPause true");
   assert.equal(win.dome.preferences.scrollUpToPause, true);
-  assert.equal(setupCount, 1);
+  assert.equal(typeof win.dome.onToggleAutoScroll, "function");
 });

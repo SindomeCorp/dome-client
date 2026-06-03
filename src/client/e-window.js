@@ -1,103 +1,110 @@
-import { dome, socket, SOCKET_STATE_ENUM, defaultHeightOffset } from "./b-variables.js";
+import { SOCKET_STATE_ENUM, defaultHeightOffset } from "./b-variables.js";
 
-dome.setupWindowHandlers = function() {
+export function setupWindowHandlers({
+  client,
+  win = globalThis.window,
+  doc = globalThis.document,
+  navigatorRef = globalThis.navigator,
+  AudioCtor = globalThis.Audio
+} = {}) {
+  const AlertAudio = AudioCtor ?? win.Audio;
 
-  dome.alert = {
-    tone       : new Audio("/notice.wav"),
+  client.alert = {
+    tone       : new AlertAudio("/notice.wav"),
     pattern    : null,
     active     : false,
     titleProc  : null
   };
 
   const primeAlertTone = function() {
-    if (!dome.alert.tone) return;
+    if (!client.alert.tone) return;
 
-    dome.alert.tone.muted = true;
-    const playAttempt = dome.alert.tone.play();
+    client.alert.tone.muted = true;
+    const playAttempt = client.alert.tone.play();
 
     if (playAttempt?.then) {
       playAttempt.then(() => {
-        dome.alert.tone.pause();
-        dome.alert.tone.currentTime = 0;
-        dome.alert.tone.muted = false;
+        client.alert.tone.pause();
+        client.alert.tone.currentTime = 0;
+        client.alert.tone.muted = false;
       }).catch(() => {
-        dome.alert.tone.muted = false;
+        client.alert.tone.muted = false;
       });
     } else {
-      dome.alert.tone.muted = false;
+      client.alert.tone.muted = false;
     }
 
-    window.removeEventListener("pointerdown", primeAlertTone);
-    window.removeEventListener("keydown", primeAlertTone);
-    window.removeEventListener("touchstart", primeAlertTone);
+    win.removeEventListener("pointerdown", primeAlertTone);
+    win.removeEventListener("keydown", primeAlertTone);
+    win.removeEventListener("touchstart", primeAlertTone);
   };
 
-  dome.urlPatterns = {
+  client.urlPatterns = {
     images: /png|jpg|gif|jpeg$/,
     videos: /mp4|gifv$/,
     youtube: /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/
   };
 
-  dome.parseYouTubeID = function ( url ) {
-    const match = url.match(dome.urlPatterns.youtube);
+  client.parseYouTubeID = function ( url ) {
+    const match = url.match(client.urlPatterns.youtube);
     return (match&&match[7].length==11)? match[7] : false;
   };
 
   const onUnloadHandler = function() {
-    if (dome.socketState == SOCKET_STATE_ENUM.CONNECTED) socket.emit("input", "@quit\r\n");
+    if (client.socketState == SOCKET_STATE_ENUM.CONNECTED) client.socket?.emit("input", "@quit\r\n");
   };
 
   const onBeforeUnloadHandler = function(event) {
-    if (dome.socketState === SOCKET_STATE_ENUM.CONNECTED) {
+    if (client.socketState === SOCKET_STATE_ENUM.CONNECTED) {
       event.preventDefault();
       event.returnValue = "";
     }
   };
 
   const onFocusHandler = function() {
-    dome.alert.active = false;
-    if (dome.alert.titleProc != null) {
-      window.clearInterval(dome.alert.titleProc);
-      dome.alert.titleProc = null;
-      document.title = dome.titleBarText;
+    client.alert.active = false;
+    if (client.alert.titleProc != null) {
+      win.clearInterval(client.alert.titleProc);
+      client.alert.titleProc = null;
+      doc.title = client.titleBarText;
     }
-    if (dome.inputReader) {
-      dome.inputReader.focus();
+    if (client.inputReader) {
+      client.inputReader.focus();
     }
   };
 
-  dome.setWindowTitle = function(newTitle) {
-    document.title = dome.titleBarText = newTitle;
+  client.setWindowTitle = function(newTitle) {
+    doc.title = client.titleBarText = newTitle;
   };
 
   const onBlurHandler = function() {
-    if (dome.preferences.playDing) dome.alert.active = true;
+    if (client.preferences.playDing) client.alert.active = true;
   };
 
   const onResizeHandler = function() {
-    dome.client.style.height = `${window.innerHeight}px`;
-    dome.buffer.style.height = `${window.innerHeight - defaultHeightOffset}px`;
+    client.client.style.height = `${win.innerHeight}px`;
+    client.buffer.style.height = `${win.innerHeight - defaultHeightOffset}px`;
   };
 
   const inViewport = function(elem) {
     const bounds = elem.getBoundingClientRect();
     return !(bounds.right < 0 ||
-             bounds.left > window.innerWidth ||
+             bounds.left > win.innerWidth ||
              bounds.bottom < 0 ||
-             bounds.top > window.innerHeight);
+             bounds.top > win.innerHeight);
   };
 
   const onScrollHandler = function() {
-    const shownImages = dome.buffer.querySelectorAll(".shown-image");
+    const shownImages = client.buffer.querySelectorAll(".shown-image");
     shownImages.forEach(image => {
       if (!inViewport(image)) {
         const imageId = image.id;
-        const control = document.getElementById(`b${imageId}`);
+        const control = doc.getElementById(`b${imageId}`);
         if (control) {
           control.classList.remove("icon-chevron-down");
           control.classList.add("icon-chevron-up");
         }
-        const span = dome.buffer.querySelector(`span#s${imageId}`);
+        const span = client.buffer.querySelector(`span#s${imageId}`);
         if (span) span.innerHTML = "";
       }
     });
@@ -106,39 +113,39 @@ dome.setupWindowHandlers = function() {
   let titleAlerted = false;
   const alertTitle = function() {
     if (!titleAlerted) {
-      document.title = "!! " + dome.titleBarText;
+      doc.title = "!! " + client.titleBarText;
       titleAlerted=true;
     } else {
-      document.title = dome.titleBarText;
+      doc.title = client.titleBarText;
       titleAlerted=false;
     }
   };
 
-  dome.windowAlert = function() {
-    if (dome.alert.titleProc != null) {
+  client.windowAlert = function() {
+    if (client.alert.titleProc != null) {
       return;
     }
 
-    dome.alert.titleProc = window.setInterval(alertTitle, 500);
+    client.alert.titleProc = win.setInterval(alertTitle, 500);
   };
 
 
   // this is needed because the 'resize' event fires inappropriately in iOS
-  const iOS = ( navigator.userAgent.match(/(iPad|iPhone|iPod)/g) ? true : false );
+  const iOS = ( navigatorRef.userAgent.match(/(iPad|iPhone|iPod)/g) ? true : false );
 
-  window.addEventListener("focus", onFocusHandler);
-  window.addEventListener("blur", onBlurHandler);
+  win.addEventListener("focus", onFocusHandler);
+  win.addEventListener("blur", onBlurHandler);
   if (!iOS) {
-    window.addEventListener("resize", onResizeHandler);
+    win.addEventListener("resize", onResizeHandler);
   }
-  window.addEventListener("orientationchange", onResizeHandler);
-  window.addEventListener("beforeunload", onBeforeUnloadHandler);
-  window.addEventListener("unload", onUnloadHandler);
-  dome.buffer.addEventListener("scroll", onScrollHandler);
+  win.addEventListener("orientationchange", onResizeHandler);
+  win.addEventListener("beforeunload", onBeforeUnloadHandler);
+  win.addEventListener("unload", onUnloadHandler);
+  client.buffer.addEventListener("scroll", onScrollHandler);
 
-  window.addEventListener("pointerdown", primeAlertTone, { once: true });
-  window.addEventListener("keydown", primeAlertTone, { once: true });
-  window.addEventListener("touchstart", primeAlertTone, { once: true });
+  win.addEventListener("pointerdown", primeAlertTone, { once: true });
+  win.addEventListener("keydown", primeAlertTone, { once: true });
+  win.addEventListener("touchstart", primeAlertTone, { once: true });
 
   onResizeHandler();
-};
+}

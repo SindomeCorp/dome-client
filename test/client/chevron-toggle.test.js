@@ -1,13 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { JSDOM } from "jsdom";
-import { dome as baseDome } from "../../src/client/b-variables.js";
+import { JSDOM, VirtualConsole } from "jsdom";
+import { createClientState } from "../../src/client/client-state.js";
 
 test("chevron click toggles image", async (t) => {
-  const dom = new JSDOM("<!doctype html><html><body><div id='lineBuffer'></div></body></html>", { runScripts: "outside-only" });
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on("jsdomError", (err) => {
+    if (!String(err?.message || "").includes("Not implemented: navigation")) {
+      throw err;
+    }
+  });
+  const dom = new JSDOM("<!doctype html><html><body><div id='lineBuffer'></div></body></html>", { runScripts: "outside-only", virtualConsole });
   const { window } = dom;
   const buffer = window.document.getElementById("lineBuffer");
-  const dome = Object.assign(baseDome, {
+  const dome = Object.assign(createClientState(), {
     buffer,
     preferences: { imagePreview: false, localEcho: true },
     parseYouTubeID: () => false
@@ -19,11 +25,11 @@ test("chevron click toggles image", async (t) => {
     globalThis.window = orig.window;
     globalThis.document = orig.document;
   });
-  await import("../../src/client/u-buttons.js");
-  await import("../../src/client/chevron-toggle.js");
+  const { setupButtons } = await import("../../src/client/u-buttons.js");
+  const { setupChevronToggle } = await import("../../src/client/chevron-toggle.js");
 
-  dome.setupButtons();
-  dome.setupChevronToggle();
+  setupButtons({ client: dome, doc: window.document });
+  setupChevronToggle({ client: dome });
 
   buffer.innerHTML = "<span id=\"simg1\"></span><i id=\"bimg1\" class=\"icon-white icon-chevron-up\" data-image-id=\"img1\" data-image-url=\"https://example.com/img.png\"></i>";
   const control = buffer.querySelector("#bimg1");

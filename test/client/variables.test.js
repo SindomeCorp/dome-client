@@ -54,17 +54,15 @@ test("sets exported constants", async (t) => {
   assert.strictEqual(globalThis.dome, undefined);
 });
 
-test("setSocket overwrites existing socket", async () => {
-  const moduleUrl = new URL("../../src/client/b-variables.js", import.meta.url).href;
-  const mod = await import(`${moduleUrl}?set-socket`);
-
+test("client state owns socket references", async () => {
+  const { createClientState } = await import("../../src/client/client-state.js");
+  const client = createClientState();
   const mockSocket1 = {};
-  mod.setSocket(mockSocket1);
-  assert.strictEqual(mod.socket, mockSocket1);
+  client.socket = mockSocket1;
+  assert.strictEqual(client.socket, mockSocket1);
 
   const mockSocket2 = {};
-  mod.setSocket(mockSocket2);
-  assert.strictEqual(mod.socket, mockSocket2);
-  assert.notStrictEqual(mod.socket, mockSocket1);
+  client.socket = mockSocket2;
+  assert.strictEqual(client.socket, mockSocket2);
+  assert.notStrictEqual(client.socket, mockSocket1);
 });
-

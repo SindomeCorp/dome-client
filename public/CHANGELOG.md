@@ -2,6 +2,57 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-06-03
+
+### Changed
+- Routed client-options commands, panel controls, imports, and resets through one controller so preference writes validate, persist, and apply live effects consistently.
+- Refactored the browser-client health UI into a focused controller for status messages, socket errors, panel controls, graph updates, and polling.
+- Clarified MUD/MOO terminology in the README while preserving legacy route, config, and documentation names.
+
+## 2026-06-02
+
+### Added
+- Added Knip dead-code analysis commands for finding unused files, exports, and dependencies.
+- Added regression coverage to keep browser-client modules from reintroducing the legacy `dome` singleton.
+
+### Changed
+- Reduced client-options maintenance debt by rendering option rows from schema metadata and documenting intentional Knip suppressions.
+- Reduced client options and connect-page debt by moving option storage keys and render defaults into schema helpers and extracting connect-page workflow binders.
+- Replaced the internal browser-client `dome` singleton and shared socket state with explicit client runtime composition.
+- Routed editor and IDE window coordination through injected client state and `postMessage` instead of browser-facing `window.dome` access.
+- Removed legacy browser-client setup wrapper assignments now that startup and tests use explicit setup exports.
+- Reduced legacy browser-client setup hook usage in reconnect, preferences, and socket-output flows.
+- Split server listen, close, and bound-address helpers out of the server startup path.
+- Split Socket.IO manager binding out of the server startup path.
+- Split HTTP and HTTPS server creation out of the server startup path.
+- Split Express app creation out of the server startup path while preserving route and middleware behavior.
+- Wired socket lifecycle setup through explicit client composition exports.
+- Wired health-check setup through explicit client composition exports.
+- Wired input-reader and autocomplete setup through explicit client composition exports.
+- Wired autoscroll and output parser setup through explicit client composition exports.
+- Wired window-handler and editor-support setup through explicit client composition exports.
+- Wired button and chevron setup through explicit client composition exports instead of standalone side-effect startup imports.
+- Split button workflows for reconnect, log download, clear-buffer confirmation, overlays, and image preview into focused helpers.
+- Extracted health status classification, connection-error diagnosis, detail rendering, and graph-series shaping from the health UI setup.
+- Extracted connect-page saved-user storage and connection intent helpers so local profile persistence and player-client URL building are tested outside DOM setup.
+- Removed obsolete connect-page migration for legacy `dc-username` and `dc-password` local profile keys.
+- Split client options import/export helpers and schema-driven dropdown metadata out of the options DOM setup.
+- Replaced the Editor IDE technical debt plan with a roadmap focused on tab planning, save flow, shortcuts, overlays, and orchestration cleanup.
+- Refactored the Editor IDE internals into focused planning, save-flow, shortcut, overlay, browser command, recent-tab, and label helpers while preserving existing behavior.
+- Centralized client option display names in the shared option schema so option UI labels stay aligned with command and preference metadata.
+- Extracted client option preference parsing, command parsing, and validation into pure helpers to reduce client options side-effect coupling.
+- Split socket output rendering from protocol side effects so buffer rendering, SDWC nowrap handling, IDE messages, alerts, and scrollback pruning are easier to maintain.
+- Introduced an explicit client composition initializer so browser setup can be wired with injectable setup hooks while preserving existing startup behavior.
+- Decomposed server socket handling into focused address resolution, MUD connection, data flow, and session event helpers while preserving connection behavior.
+
+### Fixed
+- Suppressed intentional Knip export warnings for internal test seams and setup APIs while preserving file and dependency checks.
+- Removed stale dead-code findings for unused replacement data and same-module-only helper exports.
+- Fixed the dead-code dependency check by removing unused test helper packages and ignoring Stryker's built-in command runner false positive.
+- Kept fallback autocomplete suggestions above the input buffer with a readable gap instead of overlapping typed commands.
+- Fixed Enter-key command submission when the input buffer is initialized before the socket connection is assigned.
+- Hardened the IDE editor against malformed window messages and unavailable socket, opener, root, or Ace editor APIs.
+
 ## 2026-06-01
 
 ### Added

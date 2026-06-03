@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import request from "supertest";
 import nock from "nock";
+import { bootServer as bootIntegrationServer } from "./boot-server.js";
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -18,65 +19,6 @@ async function waitFor(assertion, { timeoutMs = 2500, intervalMs = 100 } = {}) {
     }
   }
   await assertion();
-}
-
-async function bootServer(t, {
-  remoteAuthEnabled,
-  multiMud,
-  statusServiceUrl
-}) {
-  const moduleMock = typeof t.mock.module === "function"
-    ? t.mock.module.bind(t.mock)
-    : t.mock.import.bind(t.mock);
-
-  const config = {
-    node: {
-      mode: "test",
-      port: 0,
-      socketUrl: "",
-      socketUrlSSL: "",
-      socketProxied: false,
-      multiMud,
-      poweredBy: "Dome Client",
-      session: { secret: "integration-test-secret" }
-    },
-    moo: { name: "Integration MUD", host: "127.0.0.1", port: 4444 },
-    website: { signupUrl: "" },
-    guest: { connectCommand: "connect guest" },
-    autocomplete: { enabled: false },
-    editor: {
-      localSaveNodeMaxLines: 200,
-      localSaveNodeAdminMaxLines: 800,
-      localSaveNoteMaxLines: 20,
-      ideEditOpenParent: false,
-      ideVmsNoteEnabled: false
-    },
-    shorten: { enabled: false, host: "localhost", port: 5549, path: "/interface/v1/shorten/", domain: "", minimum: 50 },
-    remoteAuth: { enabled: remoteAuthEnabled, host: "http://remoteauth.test", path: "/session/authenticate/", remoteSecret: "sekret" },
-    status: { serviceUrl: statusServiceUrl }
-  };
-
-  moduleMock("../../../src/config/index.js", { defaultExport: config });
-  moduleMock("../../../src/logger.js", {
-    namedExports: {
-      named: () => ({ info() {}, warn() {}, error() {}, debug() {} })
-    }
-  });
-  moduleMock("../../../src/controllers/socket.js", {
-    namedExports: { connection() {}, error() {} }
-  });
-
-  const { start, stop } = await import(`../../../src/server.js?matrix-case=${Date.now()}-${Math.random()}`);
-  const runtime = await start({ port: 0, ip: "127.0.0.1", skipBuild: true });
-
-  t.after(async () => {
-    await stop();
-    t.mock.restoreAll();
-    nock.cleanAll();
-    nock.enableNetConnect();
-  });
-
-  return `http://127.0.0.1:${runtime.http.port}`;
 }
 
 export async function runMatrixCase(t, matrixCase) {
@@ -98,7 +40,11 @@ export async function runMatrixCase(t, matrixCase) {
       }, { "Content-Type": "application/json" });
   }
 
-  const baseUrl = await bootServer(t, matrixCase);
+  const { baseUrl } = await bootIntegrationServer(t, {
+    node: { multiMud: matrixCase.multiMud },
+    remoteAuth: { enabled: matrixCase.remoteAuthEnabled },
+    status: { serviceUrl: matrixCase.statusServiceUrl }
+  });
   const home = await request(baseUrl).get("/").expect(200);
 
   if (matrixCase.expect.homeHas) {
