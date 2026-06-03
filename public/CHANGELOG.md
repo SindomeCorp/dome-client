@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file.
 - Clarified MUD/MOO terminology in the README while preserving legacy route, config, and documentation names.
 
 ### Fixed
+- Hid the IDE reference-jump shortcut from the shortcuts overlay when ctrl/cmd-click navigation is disabled.
 - Corrected setup and MOO integration documentation for local env defaults, IDE feature flags, SDWC request payloads, and MOO-side setup examples.
 - Kept the IDE VMS note field visible while a cleared note input still has focus so notes can be fully replaced without collapsing the editor control.
 - Fixed IDE editor MOO access highlighting so property names and cored/direct receivers use the same distinct colors as standalone editor windows.

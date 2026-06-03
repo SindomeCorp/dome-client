@@ -521,6 +521,20 @@ test("EditorIDE renders shortcut overlay when bundled with the production JSX ru
 
   assert.match(window.document.body.textContent, /Editor Shortcuts/);
   assert.match(window.document.body.textContent, /Save tab/);
+  assert.match(window.document.body.textContent, /Edit Verb \/ Prop/);
+});
+
+test("EditorIDE hides reference navigation shortcut when disabled", async (t) => {
+  const { window } = await renderEditorIde(t, {
+    "data-ide-reference-navigation-enabled": "false"
+  });
+
+  await keydown(window, "/", { ctrlKey: true });
+
+  assert.match(window.document.body.textContent, /Editor Shortcuts/);
+  assert.match(window.document.body.textContent, /Save tab/);
+  assert.doesNotMatch(window.document.body.textContent, /Edit Verb \/ Prop/);
+  assert.doesNotMatch(window.document.body.textContent, /Ctrl Click ref/);
 });
 
 test("EditorIDE hover overlays request and reuse cached SDWC payloads", async (t) => {

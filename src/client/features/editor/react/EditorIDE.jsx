@@ -304,7 +304,12 @@ export default function EditorIDE() {
 
   return (
     <div className="h-dvh w-dvw bg-bg-canvas text-ink">
-      {showShortcuts && <ShortcutDialog onClose={() => setShowShortcuts(false)} />}
+      {showShortcuts && (
+        <ShortcutDialog
+          onClose={() => setShowShortcuts(false)}
+          referenceNavigationEnabled={ideReferenceNavigationEnabled}
+        />
+      )}
       <div className="h-full w-full p-1">
         <div className="h-full w-full mx-auto rounded-xl bg-bg-surface shadow-card border border-line-subtle overflow-hidden flex flex-col">
 
