@@ -232,6 +232,8 @@ var MOOHighlightRules = function() {
   }, "identifier");
   
     var identifierRe = "[a-zA-Z\\$_\u00a1-\uffff][a-zA-Z\\d\\$_\u00a1-\uffff]*\\b";
+    var propertyAccessRe = "\\s*\\.";
+    var verbCallAccessRe = "\\s*:\\s*" + identifierRe + "\\s*\\(";
 
     var escapedRe = "\\\\(?:x[0-9a-fA-F]{2}|" + // hex
         "u[0-9a-fA-F]{4}|" + // unicode
@@ -268,6 +270,15 @@ var MOOHighlightRules = function() {
                 regex : '"(?=.)',
                 next  : "qqstring"
             }, {
+                token : "variable.other.object.receiver.moo",
+                regex : "\\$" + identifierRe + "(?=(?:" + propertyAccessRe + "|" + verbCallAccessRe + "))"
+            }, {
+                token : "variable.other.object.receiver.moo",
+                regex : "#-?\\d+\\b(?=(?:" + propertyAccessRe + "|" + verbCallAccessRe + "))"
+            }, {
+                token : "variable.other.object.receiver.moo",
+                regex : identifierRe + "(?=(?:" + propertyAccessRe + "|" + verbCallAccessRe + "))"
+            }, {
                 token : "entity.name.function.moo",
                 regex : "\\$" + identifierRe + "(?=\\s*\\()"
             }, {
@@ -294,6 +305,9 @@ var MOOHighlightRules = function() {
             }, {
                 token : "keyword.operator",
                 regex : /->|\.\.|&\.|&&|\|\||==|!=|<=|>=|<>|\+=|\-=|\*=|\/=|%=|[!$%&*\/+\-~<>=^@]/
+            }, {
+                token : ["punctuation.operator", "variable.other.property.moo"],
+                regex : "(\\.\\s*)(" + identifierRe + ")"
             }, {
                 token : "punctuation.operator",
                 regex : /\?|\:|\||\,|\;|\./

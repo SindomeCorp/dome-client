@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-06-03
 
 ### Changed
+- Added distinct MOO verb editor highlighting for access receivers and property names.
 - Distinguished builtin functions from in-MOO verb calls and corified object references in the MOO verb editor highlighting, including separate call-name coloring for MOO verb invocations.
 - Updated the MOO verb editor mode with ToastStunt error constants, booleans, object and core references, MOO operators, and keyword-block indentation while removing JavaScript-derived highlighting.
 - Updated MOO builtin highlighting in the verb editor to match ToastStunt's builtin function list.

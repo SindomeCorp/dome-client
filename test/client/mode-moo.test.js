@@ -182,16 +182,16 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "$player:tell(#-1, $nothing.name);"),
     [
-      "constant.language.core",
+      "variable.other.object.receiver.moo",
       "punctuation.operator",
       "entity.name.function.moo",
       "paren.lparen",
       "constant.language.object",
       "punctuation.operator",
       "text",
-      "constant.language.core",
+      "variable.other.object.receiver.moo",
       "punctuation.operator",
-      "identifier",
+      "variable.other.property.moo",
       "paren.rparen",
       "punctuation.operator"
     ]
@@ -212,7 +212,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "$code_utils:critical(\"some content\")"),
     [
-      "constant.language.core",
+      "variable.other.object.receiver.moo",
       "punctuation.operator",
       "entity.name.function.moo",
       "paren.lparen",
@@ -223,7 +223,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "#0:critical()"),
     [
-      "constant.language.object",
+      "variable.other.object.receiver.moo",
       "punctuation.operator",
       "entity.name.function.moo",
       "paren.lparen",
@@ -233,7 +233,7 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "#15840:verbname()"),
     [
-      "constant.language.object",
+      "variable.other.object.receiver.moo",
       "punctuation.operator",
       "entity.name.function.moo",
       "paren.lparen",
@@ -243,9 +243,43 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "$code_utils.name"),
     [
-      "constant.language.core",
+      "variable.other.object.receiver.moo",
       "punctuation.operator",
-      "identifier"
+      "variable.other.property.moo"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "#15840.some_prop"),
+    [
+      "variable.other.object.receiver.moo",
+      "punctuation.operator",
+      "variable.other.property.moo"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "player.name"),
+    [
+      "variable.other.object.receiver.moo",
+      "punctuation.operator",
+      "variable.other.property.moo"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "dude.name"),
+    [
+      "variable.other.object.receiver.moo",
+      "punctuation.operator",
+      "variable.other.property.moo"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "dude:some_verb()"),
+    [
+      "variable.other.object.receiver.moo",
+      "punctuation.operator",
+      "entity.name.function.moo",
+      "paren.lparen",
+      "paren.rparen"
     ]
   );
   assert.deepEqual(
