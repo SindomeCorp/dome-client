@@ -8,7 +8,7 @@ import defaultMorgan from "morgan";
 import { deviceCapture as defaultDeviceCapture } from "../services/ua.js";
 import { getLogExportCss as defaultGetLogExportCss } from "../services/log-export-style.js";
 import defaultRouter from "../routes/index.js";
-import { CLIENT_OPTION_LABELS, CLIENT_OPTION_VIEW } from "../client/client-option-schema.js";
+import { CLIENT_OPTION_GROUPS, CLIENT_OPTION_LABELS, CLIENT_OPTION_VIEW } from "../client/client-option-schema.js";
 
 const __dirname = fileURLToPath(new URL("..", import.meta.url));
 
@@ -77,6 +77,7 @@ export function createApp({
     res.locals.shortenEnabled = config.shorten.enabled;
     res.locals.clientOptionLabels = CLIENT_OPTION_LABELS;
     res.locals.clientOptionView = CLIENT_OPTION_VIEW;
+    res.locals.clientOptionGroups = CLIENT_OPTION_GROUPS;
     res.locals.logExportCss = getLogExportCss();
     res.locals.showReporter = function(req) {
       let ua = req.headers["user-agent"];

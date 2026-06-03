@@ -50,29 +50,35 @@ const EDITOR_TYPE_CHOICES = [
 const EDIT_THEME_CHOICES = EDIT_THEMES.map((theme) => ({ value: theme, label: theme }));
 
 export const CLIENT_OPTION_DEFINITIONS = [
-  { key: "commands", label: "Use Command Hints", param: "cs", preferenceName: "commandSuggestions", def: true, ok: [true, false] },
-  { key: "shorten", label: "Shorten Long Web Links", param: "su", preferenceName: "shortenUrls", def: true, ok: [true, false] },
-  { key: "scroll", label: "Toggle Scroll & Auto Scroll", param: "as", preferenceName: "autoScroll", def: "dbl", ok: ["dbl", "long", "none"], choices: SCROLL_TOGGLE_CHOICES },
-  { key: "edittheme", label: "Editor Theme", param: "et", preferenceName: "edittheme", def: "twilight", ok: EDIT_THEMES, choices: EDIT_THEME_CHOICES },
-  { key: "edittype", label: "Editor Type", param: "ed", preferenceName: "editorType", def: "ide", ok: ["ide", "windows"], choices: EDITOR_TYPE_CHOICES },
-  { key: "colorset", label: "Theme", param: "cl", preferenceName: "colorSet", def: "normal", ok: COLORSET_CHOICES, choices: COLORSET_OPTION_CHOICES },
-  { key: "outfont", label: "Output Font", param: "of", preferenceName: "lineBufferFont", def: "standard", ok: FONT_CHOICES, choices: FONT_OPTION_CHOICES },
-  { key: "outfontsize", label: "Output Font Size (pt)", param: "oz", preferenceName: "lineBufferFontSizePt", def: 9.75, min: 8, max: 24 },
-  { key: "inputfont", label: "Input Font", param: "if", preferenceName: "inputFont", def: "standard", ok: FONT_CHOICES, choices: FONT_OPTION_CHOICES },
-  { key: "inputfontsize", label: "Input Font Size (pt)", param: "iz", preferenceName: "inputFontSizePt", def: 11, min: 8, max: 24 },
-  { key: "inputfontcolor", label: "Input Font Color", param: "ic", preferenceName: "inputFontColor", def: "#EEEEEE", type: "color" },
-  { key: "inputbgcolor", label: "Input Background Color", param: "ib", preferenceName: "inputBackgroundColor", def: "#333333", type: "color" },
-  { key: "editorfont", label: "Editor Font", param: "ef", preferenceName: "editorFont", def: "standard", ok: FONT_CHOICES, choices: FONT_OPTION_CHOICES },
-  { key: "playding", label: "Play Sound on Name", param: "pd", preferenceName: "playDing", def: true, ok: [true, false] },
-  { key: "localecho", label: "Enable Local Echo", param: "le", preferenceName: "localEcho", def: false, ok: [true, false] },
-  { key: "imageview", label: "Show Preview of Images", param: "iv", preferenceName: "imagePreview", def: false, ok: [true, false] },
-  { key: "logcss", label: "Embed CSS In Saved Logs", param: "lc", preferenceName: "inlineLogCss", def: true, ok: [true, false] },
-  { key: "sdwcnowrap", label: "Mobile Friendly Text Wrap", param: "nw", preferenceName: "sdwcNowrapBlocks", def: false, ok: [true, false] },
-  { key: "scrolluppause", label: "Scroll Up to Pause", param: "up", preferenceName: "scrollUpToPause", def: false, ok: [true, false] },
-  { key: "transparent", label: "Transparent Overlays", param: "to", preferenceName: "transparentOverlay", def: true, ok: [true, false] },
-  { key: "broadly", label: "Search Command Help", param: "bs", preferenceName: "broadSearch", def: true, ok: [true, false] },
-  { key: "buffer", label: "Scroll Buffer Size", param: "pb", preferenceName: "performanceBuffer", def: 0, min: 0, max: 96000 }
+  { key: "commands", label: "Use Command Hints", param: "cs", preferenceName: "commandSuggestions", def: true, ok: [true, false], group: "general", control: "toggle" },
+  { key: "shorten", label: "Shorten Long Web Links", param: "su", preferenceName: "shortenUrls", def: true, ok: [true, false], group: "general", control: "toggle", visibleWhen: "shortenEnabled" },
+  { key: "scroll", label: "Toggle Scroll & Auto Scroll", param: "as", preferenceName: "autoScroll", def: "dbl", ok: ["dbl", "long", "none"], choices: SCROLL_TOGGLE_CHOICES, group: "general", control: "select", labelClass: "pull-left", inputName: "auto-scroll-toggle" },
+  { key: "edittheme", label: "Editor Theme", param: "et", preferenceName: "edittheme", def: "twilight", ok: EDIT_THEMES, choices: EDIT_THEME_CHOICES, group: "editor", control: "select", inputName: "editor-theme-choice" },
+  { key: "edittype", label: "Editor Type", param: "ed", preferenceName: "editorType", def: "ide", ok: ["ide", "windows"], choices: EDITOR_TYPE_CHOICES, group: "editor", control: "select", inputName: "editor-type-choice" },
+  { key: "colorset", label: "Theme", param: "cl", preferenceName: "colorSet", def: "normal", ok: COLORSET_CHOICES, choices: COLORSET_OPTION_CHOICES, group: "fonts", control: "select", inputName: "colorset-choice" },
+  { key: "outfont", label: "Output Font", param: "of", preferenceName: "lineBufferFont", def: "standard", ok: FONT_CHOICES, choices: FONT_OPTION_CHOICES, group: "fonts", control: "select", inputName: "output-font-choice" },
+  { key: "outfontsize", label: "Output Font Size (pt)", param: "oz", preferenceName: "lineBufferFontSizePt", def: 9.75, min: 8, max: 24, group: "fonts", control: "number", inputName: "output-font-size", step: 0.25 },
+  { key: "inputfont", label: "Input Font", param: "if", preferenceName: "inputFont", def: "standard", ok: FONT_CHOICES, choices: FONT_OPTION_CHOICES, group: "fonts", control: "select", inputName: "input-font-choice" },
+  { key: "inputfontsize", label: "Input Font Size (pt)", param: "iz", preferenceName: "inputFontSizePt", def: 11, min: 8, max: 24, group: "fonts", control: "number", inputName: "input-font-size", step: 0.5 },
+  { key: "inputfontcolor", label: "Input Font Color", param: "ic", preferenceName: "inputFontColor", def: "#EEEEEE", type: "color", group: "fonts", control: "color", inputName: "input-font-color" },
+  { key: "inputbgcolor", label: "Input Background Color", param: "ib", preferenceName: "inputBackgroundColor", def: "#333333", type: "color", group: "fonts", control: "color", inputName: "input-bg-color" },
+  { key: "editorfont", label: "Editor Font", param: "ef", preferenceName: "editorFont", def: "standard", ok: FONT_CHOICES, choices: FONT_OPTION_CHOICES, group: "fonts", control: "select", inputName: "editor-font-choice" },
+  { key: "playding", label: "Play Sound on Name", param: "pd", preferenceName: "playDing", def: true, ok: [true, false], group: "general", control: "toggle", enabledTitle: "When the window is out of focus, play a notification sound when your login name is seen in the scrollback." },
+  { key: "localecho", label: "Enable Local Echo", param: "le", preferenceName: "localEcho", def: false, ok: [true, false], group: "general", control: "toggle" },
+  { key: "imageview", label: "Show Preview of Images", param: "iv", preferenceName: "imagePreview", def: false, ok: [true, false], group: "general", control: "toggle" },
+  { key: "logcss", label: "Embed CSS In Saved Logs", param: "lc", preferenceName: "inlineLogCss", def: true, ok: [true, false], group: "general", control: "toggle", enabledTitle: "Default: save logs with inline stylesheet for fully self-contained files.", disabledTitle: "Legacy mode: save logs that link to https://sindome.org/css/dome.css for smaller files." },
+  { key: "sdwcnowrap", label: "Mobile Friendly Text Wrap", param: "nw", preferenceName: "sdwcNowrapBlocks", def: false, ok: [true, false], group: "general", control: "toggle", tooltip: "With this option enabled, the client will create non-wrapped content that can be horizontally scrolled for text that the MOO deems should be visually presented as is, and not wrapped on small screens.", enabledTitle: "Render SDWC-START-NOWRAP/SDWC-END-NOWRAP sections in a horizontal-scroll block without text wrapping.", disabledTitle: "Ignore SDWC nowrap markers and keep normal line wrapping." },
+  { key: "scrolluppause", label: "Scroll Up to Pause", param: "up", preferenceName: "scrollUpToPause", def: false, ok: [true, false], group: "general", control: "toggle", tooltip: "When enabled, scrolling up in the output buffer pauses automatic scroll-to-bottom so new text does not pull you away from what you are reading. Scroll back to the bottom to resume normal automatic scrolling.", enabledTitle: "Pause automatic scrolling when you scroll up in the output buffer.", disabledTitle: "Keep automatic scrolling behavior controlled only by the pause/resume controls." },
+  { key: "transparent", label: "Transparent Overlays", param: "to", preferenceName: "transparentOverlay", def: true, ok: [true, false], group: "general", control: "toggle", enabledTitle: "Make dialogs for autocomplete, help, etc transparent enough to see MOO text underneath.", disabledTitle: "Make dialogs for autocomplete, help, etc opaque. This can be helpful for performance." },
+  { key: "broadly", label: "Search Command Help", param: "bs", preferenceName: "broadSearch", def: true, ok: [true, false], group: "general", control: "toggle", enabledTitle: "Search command instructions and requirements when Command Hints are enabled.", disabledTitle: "Just search command syntax when Command Hints are enabled. This can be helpful for performance." },
+  { key: "buffer", label: "Scroll Buffer Size", param: "pb", preferenceName: "performanceBuffer", def: 0, min: 0, max: 96000, group: "general", control: "number", inputName: "buffer-size", tooltip: "This defines the length of your buffer. 0 is infinite (best for logging). Adjust this to a lower number if you are having performance issues. Warning: Your current buffer is saved with the 'Log' button, so lower numbers mean a shorter log." }
 ];
+
+const CLIENT_OPTION_GROUP_ORDER = {
+  general: ["localecho", "commands", "buffer", "broadly", "shorten", "imageview", "playding", "scroll", "scrolluppause", "transparent", "logcss", "sdwcnowrap"],
+  fonts: ["outfont", "outfontsize", "editorfont", "inputfont", "inputfontsize", "inputfontcolor", "inputbgcolor", "colorset"],
+  editor: ["edittype", "edittheme"]
+};
 
 const CLIENT_OPTION_BY_KEY = Object.fromEntries(
   CLIENT_OPTION_DEFINITIONS.map((option) => [option.key, option])
@@ -98,11 +104,28 @@ export const CLIENT_OPTION_VIEW = Object.fromEntries(
   CLIENT_OPTION_DEFINITIONS.map((option) => [option.key, {
     label: option.label,
     def: option.def,
+    key: option.key,
+    group: option.group,
+    control: option.control,
+    inputName: option.inputName,
+    labelClass: option.labelClass,
+    visibleWhen: option.visibleWhen,
+    tooltip: option.tooltip,
+    enabledTitle: option.enabledTitle,
+    disabledTitle: option.disabledTitle,
+    ...(option.step != null ? { step: option.step } : {}),
     ...(option.min != null ? { min: option.min } : {}),
     ...(option.max != null ? { max: option.max } : {}),
     ...(option.type ? { type: option.type } : {}),
     ...(option.choices ? { choices: option.choices } : {})
   }])
+);
+
+export const CLIENT_OPTION_GROUPS = Object.fromEntries(
+  Object.entries(CLIENT_OPTION_GROUP_ORDER).map(([group, keys]) => [
+    group,
+    keys.map((key) => CLIENT_OPTION_VIEW[key]).filter(Boolean)
+  ])
 );
 
 export function buildClientOptionState() {

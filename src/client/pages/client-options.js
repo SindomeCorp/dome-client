@@ -4,68 +4,25 @@ import {
   COLORSET_CHOICES,
   EDIT_THEMES,
   FONT_CHOICES,
-  CLIENT_OPTION_STORAGE_PREFIX,
-  PREF_NAME,
-  buildClientOptionState,
-  getClientOptionStorageKey
+  PREF_NAME
 } from "../client-option-schema.js";
+import { createClientOptionsStore } from "../client-options-store.js";
+import { showClientOptionsSaved, showImportExportToast } from "../client-options-toast.js";
 import {
-  buildClientOptionsExportFilename,
-  buildClientOptionsExportPayload,
-  buildClientOptionsImportPlan
-} from "../client-options-import-export.js";
+  bindImportExportControls as bindImportExportControlsUi,
+  buildExportPayload as buildExportPayloadForOptions,
+  importClientOptionsJson as importClientOptionsJsonForOptions
+} from "../client-options-import-export-ui.js";
 
 // Expose color set choices for modules that read from the window object.
 if (typeof window !== "undefined" && !window.COLORSET_CHOICES) {
   window.COLORSET_CHOICES = COLORSET_CHOICES;
 }
 
-const clientOptions = {
-  options: buildClientOptionState(),
-  prefix: CLIENT_OPTION_STORAGE_PREFIX,
-  storageKey(name) {
-    return getClientOptionStorageKey(name, this.prefix);
-  },
-  get(name) {
-    const option = this.options[name];
-    if (!option) {
-      throw new Error("invalid option name");
-    }
-    let state = store.get(this.storageKey(name));
-    if (state == null) {
-      state = option.def;
-    }
-    option.state = state == "true" ? true : state == "false" ? false : state;
-    return option;
-  },
-  save(name, value) {
-    const option = this.options[name];
-    if (!option) {
-      throw new Error("invalid option name");
-    }
-    store.put(this.storageKey(name), value);
-    const indicator = document.getElementById("client-options-save-indicator");
-    if (indicator) {
-      indicator.classList.remove("hide");
-      if (indicator._hideTimer) {
-        clearTimeout(indicator._hideTimer);
-      }
-      indicator._hideTimer = setTimeout(() => {
-        indicator.classList.add("hide");
-      }, 1000);
-      indicator._hideTimer.unref?.();
-    }
-  },
-  buildQueryString() {
-    let qs = "";
-    for (const name in clientOptions.options) {
-      const option = this.get(name);
-      qs += qs == "" ? "" : "&";
-      qs += option.param + "=" + encodeURIComponent(option.state);
-    }
-    return qs;
-  }
-};
+const clientOptions = createClientOptionsStore({
+  storage: store,
+  onSave: () => showClientOptionsSaved()
+});
 
 const createDefaultActions = () => ({
   setClientOption() {},
@@ -186,147 +143,28 @@ function applyOptionValue(name, value) {
   }
 }
 
-function showClientOptionsToast(message, isError = false) {
-  const indicator = document.getElementById("client-options-save-indicator");
-  if (!indicator) return;
-  indicator.textContent = message;
-  indicator.classList.toggle("is-error", isError);
-  indicator.classList.remove("hide");
-  if (indicator._hideTimer) {
-    clearTimeout(indicator._hideTimer);
-  }
-  indicator._hideTimer = setTimeout(() => {
-    indicator.classList.add("hide");
-    indicator.classList.remove("is-error");
-    indicator.textContent = "Saved";
-  }, 1800);
-  indicator._hideTimer.unref?.();
-}
-
-function showImportExportToast(message, isError = false) {
-  const indicator = document.getElementById("client-options-import-export-indicator");
-  if (!indicator) return;
-  indicator.textContent = message;
-  indicator.classList.toggle("is-error", isError);
-  indicator.classList.remove("hide");
-  if (indicator._hideTimer) {
-    clearTimeout(indicator._hideTimer);
-  }
-  indicator._hideTimer = setTimeout(() => {
-    indicator.classList.add("hide");
-    indicator.classList.remove("is-error");
-    indicator.textContent = "Saved";
-  }, 2200);
-  indicator._hideTimer.unref?.();
-}
-
 function buildExportPayload() {
-  return buildClientOptionsExportPayload({
-    optionNames: Object.keys(clientOptions.options),
-    getOptionState: (name) => clientOptions.get(name).state
-  });
-}
-
-function downloadClientOptionsJson() {
-  if (typeof document === "undefined" || typeof Blob === "undefined") {
-    clientActions.appendOutput("Client options export is not supported in this environment.\n");
-    clientActions.scrollBuffer();
-    return;
-  }
-  const payload = buildExportPayload();
-  const filename = buildClientOptionsExportFilename();
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
-
-  const nav = typeof navigator !== "undefined" ? navigator : null;
-  if (nav?.msSaveOrOpenBlob) {
-    nav.msSaveOrOpenBlob(blob, filename);
-    showImportExportToast("Preferences exported.");
-    return;
-  }
-
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-  showImportExportToast("Preferences exported.");
+  return buildExportPayloadForOptions({ options: clientOptions });
 }
 
 async function importClientOptionsJson(file) {
-  if (!file) return;
-  let parsed;
-  try {
-    const text = await file.text();
-    parsed = JSON.parse(text);
-  } catch {
-    clientActions.appendOutput("Client options import error: invalid JSON file.\n");
-    clientActions.scrollBuffer();
-    showImportExportToast("Import failed.", true);
-    return;
-  }
-
-  const plan = buildClientOptionsImportPlan({
-    parsed,
-    options: clientOptions.options
+  await importClientOptionsJsonForOptions({
+    file,
+    options: clientOptions,
+    actions: clientActions,
+    applyOptionValue,
+    refreshClientOptions,
+    showToast: showImportExportToast
   });
-  if (!plan.valid) {
-    clientActions.appendOutput(`Client options import error: ${plan.error}\n`);
-    clientActions.scrollBuffer();
-    showImportExportToast("Import failed.", true);
-    return;
-  }
-
-  plan.applied.forEach(({ name, value }) => {
-    applyOptionValue(name, value);
-  });
-  refreshClientOptions();
-  clientActions.scrollBuffer();
-  const applied = plan.applied.length;
-  const skipped = plan.skipped;
-  clientActions.appendOutput(`Imported ${applied} client option${applied === 1 ? "" : "s"}.\n`);
-  if (skipped > 0) {
-    clientActions.appendOutput(`Skipped ${skipped} invalid imported option value${skipped === 1 ? "" : "s"}.\n`);
-  }
-  showImportExportToast("Preferences imported.");
 }
 
 function bindImportExportControls() {
-  const exportButton = document.getElementById("client-options-export");
-  const importButton = document.getElementById("client-options-import");
-  const importFileInput = document.getElementById("client-options-import-file");
-  const resetDefaultsButton = document.getElementById("client-options-reset-defaults");
-  if (!exportButton || !importButton || !importFileInput || !resetDefaultsButton) return;
-
-  exportButton.addEventListener("click", () => {
-    downloadClientOptionsJson();
-  });
-
-  importButton.addEventListener("click", () => {
-    const message = "Importing preferences will overwrite your current settings. This is destructive. Export a backup first. Continue?";
-    if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm(message)) return;
-    importFileInput.click();
-  });
-
-  importFileInput.addEventListener("change", async () => {
-    const [file] = importFileInput.files || [];
-    await importClientOptionsJson(file);
-    importFileInput.value = "";
-  });
-
-  resetDefaultsButton.addEventListener("click", () => {
-    const message = "Resetting to defaults will overwrite your current settings. This is destructive. Export a backup first. Continue?";
-    if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm(message)) return;
-
-    Object.entries(clientOptions.options).forEach(([name, optionDef]) => {
-      applyOptionValue(name, optionDef.def);
-    });
-    refreshClientOptions();
-    clientActions.appendOutput("Reset all client options to defaults.\n");
-    clientActions.scrollBuffer();
-    showImportExportToast("Defaults restored.");
+  bindImportExportControlsUi({
+    options: clientOptions,
+    actions: clientActions,
+    applyOptionValue,
+    refreshClientOptions,
+    showToast: showImportExportToast
   });
 }
 
