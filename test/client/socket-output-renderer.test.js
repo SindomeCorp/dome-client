@@ -103,3 +103,63 @@ test("socket output renderer routes nowrap output into marker block", (t) => {
   );
   assert.equal(logger.info.mock.callCount(), 2);
 });
+
+test("socket output renderer renders image, video, and YouTube previews", (t) => {
+  setupDom(t, "<!doctype html><html><body><div id=\"buffer\"></div></body></html>");
+  let now = 1;
+  const client = createClient();
+  Object.defineProperty(client.buffer, "clientWidth", { value: 640, configurable: true });
+  client.parseYouTubeID = (url) => url.includes("youtu.be") ? "abc123" : null;
+  client.preferences.imagePreview = true;
+  client.urlPatterns = {
+    images: /\.(png|jpg)$/i,
+    videos: /\.(gifv|mp4)$/i
+  };
+  const renderer = createSocketOutputRenderer({
+    client,
+    logger: createLogger(t),
+    ansiRenderer: { renderChunk: (segment) => segment, resetState: () => {} },
+    nowMs: () => now++
+  });
+
+  renderer.appendOutputSegment("http://example.com/a.png http://example.com/clip.gifv https://youtu.be/watch\n");
+
+  assert.match(client.buffer.innerHTML, /<img class="shown-image"/);
+  assert.match(client.buffer.innerHTML, /<video class="shown-image"/);
+  assert.match(client.buffer.innerHTML, /clip\.mp4/);
+  assert.match(client.buffer.innerHTML, /https:\/\/www\.youtube\.com\/embed\/abc123/);
+  assert.match(client.buffer.innerHTML, /icon-chevron-down/);
+});
+
+test("socket output renderer handles alert strings, hostnames, nowrap warnings, and stale blocks", (t) => {
+  setupDom(t, "<!doctype html><html><body><div id=\"buffer\"></div></body></html>");
+  const client = createClient();
+  client.alert = {
+    active: true,
+    pattern: "danger",
+    tone: { play: t.mock.fn() }
+  };
+  client.windowAlert = t.mock.fn();
+  client.preferences.sdwcNowrapBlocks = true;
+  const logger = createLogger(t);
+  const renderer = createSocketOutputRenderer({
+    client,
+    logger,
+    ansiRenderer: { renderChunk: (segment) => segment, resetState: t.mock.fn() }
+  });
+
+  assert.equal(renderer.appendOutputSegment(""), 0);
+  renderer.appendOutputSegment("[host=moo.example.org] danger\n");
+  renderer.startSdwcNowrapBlock();
+  renderer.startSdwcNowrapBlock();
+  client.buffer.lastChild.remove();
+  renderer.appendOutputSegment("after stale block\n");
+  renderer.endSdwcNowrapBlock();
+  renderer.endSdwcNowrapBlock();
+
+  assert.match(client.buffer.innerHTML, /hostname-ip\?DOMAINNAME=moo\.example\.org/);
+  assert.match(client.buffer.innerHTML, /after stale block/);
+  assert.equal(client.alert.tone.play.mock.callCount(), 1);
+  assert.equal(client.windowAlert.mock.callCount(), 1);
+  assert.equal(logger.warn.mock.callCount(), 3);
+});
