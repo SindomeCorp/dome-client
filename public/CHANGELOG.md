@@ -37,6 +37,8 @@ All notable changes to this project will be documented in this file.
 - Decomposed server socket handling into focused address resolution, MUD connection, data flow, and session event helpers while preserving connection behavior.
 
 ### Fixed
+- Suppressed intentional Knip export warnings for internal test seams and setup APIs while preserving file and dependency checks.
+- Removed stale dead-code findings for unused replacement data and same-module-only helper exports.
 - Fixed the dead-code dependency check by removing unused test helper packages and ignoring Stryker's built-in command runner false positive.
 - Kept fallback autocomplete suggestions above the input buffer with a readable gap instead of overlapping typed commands.
 - Fixed Enter-key command submission when the input buffer is initialized before the socket connection is assigned.

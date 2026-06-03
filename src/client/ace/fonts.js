@@ -1,4 +1,4 @@
-export const ACE_FONT_FAMILIES = {
+const ACE_FONT_FAMILIES = {
   standard: "'Source Code Pro'",
   lucida: "'Lucida Console'",
   courier: "'Courier New'",

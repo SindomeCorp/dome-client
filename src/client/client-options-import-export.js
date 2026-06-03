@@ -64,8 +64,6 @@ function buildClientOptionsImportPlan({ parsed, options }) {
 }
 
 export {
-  EXPORT_TYPE,
-  EXPORT_VERSION,
   buildClientOptionsExportFilename,
   buildClientOptionsExportPayload,
   buildClientOptionsImportPlan,

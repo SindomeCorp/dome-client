@@ -37,6 +37,24 @@
     "@stryker-mutator/command-runner"
   ],
   "ignoreIssues": {
+    "src/client/c-preferences.js": [
+      "exports"
+    ],
+    "src/client/store.js": [
+      "exports"
+    ],
+    "src/client/u-buttons.js": [
+      "exports"
+    ],
+    "src/client/z-setup.js": [
+      "exports"
+    ],
+    "src/controllers/socket.js": [
+      "exports"
+    ],
+    "src/middleware/error.js": [
+      "exports"
+    ],
     "package.json": [
       "binaries"
     ]

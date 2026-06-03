@@ -14,7 +14,7 @@ export const FONT_CHOICES = [
 
 export const COLORSET_CHOICES = ["normal", "dim", "slither", "acid", "corpie", "snow"];
 
-export const FONT_OPTION_CHOICES = [
+const FONT_OPTION_CHOICES = [
   { value: "standard", label: "Source Code Pro", style: "font-family: 'Source Code Pro'" },
   { value: "lucida", label: "Lucida Console", style: "font-family: 'Lucida Console'" },
   { value: "courier", label: "Courier New", style: "font-family: 'Courier New'" },
@@ -26,7 +26,7 @@ export const FONT_OPTION_CHOICES = [
   { value: "consolas", label: "Consolas", style: "font-family: 'Consolas'" },
 ];
 
-export const COLORSET_OPTION_CHOICES = [
+const COLORSET_OPTION_CHOICES = [
   { value: "normal", label: "Normal Colors" },
   { value: "dim", label: "Not So Bright" },
   { value: "slither", label: "Switch Bright White/Green" },
@@ -35,18 +35,18 @@ export const COLORSET_OPTION_CHOICES = [
   { value: "snow", label: "Office Documents" },
 ];
 
-export const SCROLL_TOGGLE_CHOICES = [
+const SCROLL_TOGGLE_CHOICES = [
   { value: "dbl", label: "Double Click" },
   { value: "long", label: "Long Click" },
   { value: "none", label: "Pause Button Only" },
 ];
 
-export const EDITOR_TYPE_CHOICES = [
+const EDITOR_TYPE_CHOICES = [
   { value: "ide", label: "IDE" },
   { value: "windows", label: "Individual Windows" },
 ];
 
-export const EDIT_THEME_CHOICES = EDIT_THEMES.map((theme) => ({ value: theme, label: theme }));
+const EDIT_THEME_CHOICES = EDIT_THEMES.map((theme) => ({ value: theme, label: theme }));
 
 export const CLIENT_OPTION_DEFINITIONS = [
   { key: "commands", label: "Use Command Hints", param: "cs", preferenceName: "commandSuggestions", def: true, ok: [true, false] },
@@ -73,7 +73,7 @@ export const CLIENT_OPTION_DEFINITIONS = [
   { key: "buffer", label: "Scroll Buffer Size", param: "pb", preferenceName: "performanceBuffer", def: 0 }
 ];
 
-export const CLIENT_OPTION_BY_KEY = Object.fromEntries(
+const CLIENT_OPTION_BY_KEY = Object.fromEntries(
   CLIENT_OPTION_DEFINITIONS.map((option) => [option.key, option])
 );
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getSaveMessages } from "./protocol.js";
 
-export const EMPTY_VMS_PROMPT_STATE = { open: false, tabId: null, value: "" };
+const EMPTY_VMS_PROMPT_STATE = { open: false, tabId: null, value: "" };
 
 export function shouldPromptForVmsNote(tab, ideVmsNoteEnabled) {
   return Boolean(

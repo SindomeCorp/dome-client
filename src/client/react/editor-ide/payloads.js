@@ -73,7 +73,7 @@ export function normalizeObjectPropertiesPayload(payload) {
   };
 }
 
-export function getOverlayResolvedObjectId(requestObjectId, payload) {
+function getOverlayResolvedObjectId(requestObjectId, payload) {
   const resolvedObjectId = String(payload?.resolved_object || payload?.resolvedObject || "").trim();
   return resolvedObjectId || String(requestObjectId || "").trim();
 }

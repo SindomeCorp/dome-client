@@ -3,7 +3,7 @@ import defaultHttp from "node:http";
 import defaultHttps from "node:https";
 import { Server as DefaultSocketServer } from "socket.io";
 
-export function createSslOptions({ config, fs = defaultFs }) {
+function createSslOptions({ config, fs = defaultFs }) {
   if (!config.ssl) {
     return null;
   }

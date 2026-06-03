@@ -11,7 +11,7 @@ import {
 export const DUPLICATE_TAB_MESSAGE =
   "@@editor-message There was already a tab with that information open so we have switched the view to that. We did not update the contents.";
 
-export function createEditorTabId() {
+function createEditorTabId() {
   return Date.now() + Math.random();
 }
 
