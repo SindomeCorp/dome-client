@@ -1,13 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { MOO_STATUS_ENUM } from "../../src/client/b-variables.js";
+import { MOO_STATUS_ENUM } from "../../src/client/core/constants.js";
 import {
   buildHealthDetails,
   classifyHealthStatus,
   createPollingErrorHealth,
   diagnoseConnectionError,
   shapeHealthGraphSeries
-} from "../../src/client/health-status.js";
+} from "../../src/client/features/health/health-status.js";
 
 test("classifyHealthStatus maps healthy, warning, and fatal states", () => {
   assert.equal(classifyHealthStatus({

@@ -15,7 +15,7 @@ test("client-connect flow integration: guest/manual/connect-now update local sto
     + "<button id=\"connect_now\"></button>"
     + "</body></html>";
   const { window } = setupDom(t, html, { suppressNavigationErrors: true });
-  const { store } = await import("../../src/client/store.js");
+  const { store } = await import("../../src/client/core/store.js");
 
   const memory = new Map();
   Object.assign(store, {
@@ -31,7 +31,7 @@ test("client-connect flow integration: guest/manual/connect-now update local sto
   });
   window.guestConnectCommand = "connect guest";
 
-  await import(`../../src/client/pages/client-connect.js?flow-int=${Date.now()}`);
+  await import(`../../src/client/entrypoints/client-connect.js?flow-int=${Date.now()}`);
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
   t.mock.timers.tick(20);
 
@@ -84,7 +84,7 @@ test("client-connect flow integration: auto query connects known stored user and
     + "<button id=\"connect_now\"></button>"
     + "</body></html>";
   const { window } = setupDom(t, html, { suppressNavigationErrors: true });
-  const { store } = await import("../../src/client/store.js");
+  const { store } = await import("../../src/client/core/store.js");
 
   const memory = new Map();
   memory.set("stored-users", ["hero"]);
@@ -97,7 +97,7 @@ test("client-connect flow integration: auto query connects known stored user and
   });
 
   window.history.replaceState({}, "", "/?auto=hero");
-  await import(`../../src/client/pages/client-connect.js?flow-int-auto=${Date.now()}`);
+  await import(`../../src/client/entrypoints/client-connect.js?flow-int-auto=${Date.now()}`);
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
   t.mock.timers.tick(20);
 

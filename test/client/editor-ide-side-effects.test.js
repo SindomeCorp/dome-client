@@ -3,13 +3,13 @@ import assert from "node:assert/strict";
 import React, { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import setupDom from "../../test-support/setup-dom.js";
-import { emitInput } from "../../src/client/react/editor-ide/socketAdapter.js";
-import { useIdeConfig } from "../../src/client/react/editor-ide/useIdeConfig.js";
-import { useIdeMessages } from "../../src/client/react/editor-ide/useIdeMessages.js";
-import { useIdeSaveFlow } from "../../src/client/react/editor-ide/useIdeSaveFlow.js";
-import { useIdeKeyboardShortcuts } from "../../src/client/react/editor-ide/useIdeKeyboardShortcuts.js";
-import { useIdeBrowserCommands } from "../../src/client/react/editor-ide/useIdeBrowserCommands.js";
-import { usePersistentPreference } from "../../src/client/react/editor-ide/usePersistentPreference.js";
+import { emitInput } from "../../src/client/features/editor/react/editor-ide/socketAdapter.js";
+import { useIdeConfig } from "../../src/client/features/editor/react/editor-ide/useIdeConfig.js";
+import { useIdeMessages } from "../../src/client/features/editor/react/editor-ide/useIdeMessages.js";
+import { useIdeSaveFlow } from "../../src/client/features/editor/react/editor-ide/useIdeSaveFlow.js";
+import { useIdeKeyboardShortcuts } from "../../src/client/features/editor/react/editor-ide/useIdeKeyboardShortcuts.js";
+import { useIdeBrowserCommands } from "../../src/client/features/editor/react/editor-ide/useIdeBrowserCommands.js";
+import { usePersistentPreference } from "../../src/client/features/editor/react/editor-ide/usePersistentPreference.js";
 
 test("useIdeConfig reads root data attributes with defaults", () => {
   const { cleanup } = setupDom(null, `<!doctype html><html><body><div

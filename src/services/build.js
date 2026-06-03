@@ -51,7 +51,7 @@ async function compileLess() {
 }
 
 async function compileReactCss() {
-  const srcFile = path.join(__dirname, "..", "client", "react", "ide.css");
+  const srcFile = path.join(__dirname, "..", "client", "features", "editor", "react", "ide.css");
   const outDir = path.join(__dirname, "..", "..", "public", "css");
   await fs.mkdir(outDir, { recursive: true });
   try {
@@ -66,8 +66,7 @@ async function compileReactCss() {
 }
 
 async function compileJs(outDir = path.join(__dirname, "..", "..", "public", "js")) {
-  const srcDir = path.join(__dirname, "..", "client");
-  const pagesDir = path.join(srcDir, "pages");
+  const srcDir = path.join(__dirname, "..", "client", "entrypoints");
   await fs.mkdir(outDir, { recursive: true });
   await Promise.all(browserOutputFiles.map(f => fs.rm(path.join(outDir, f), { force: true })));
   for (const { entry, file, format, minify } of playerClientEntries) {
@@ -82,7 +81,7 @@ async function compileJs(outDir = path.join(__dirname, "..", "..", "public", "js
   for (const { file, entry, external } of pageEntries) {
     await esbuild.build({
       bundle: true,
-      entryPoints: [path.join(pagesDir, entry)],
+      entryPoints: [path.join(srcDir, entry)],
       format: "esm",
       external,
       outfile: path.join(outDir, file)
@@ -91,7 +90,7 @@ async function compileJs(outDir = path.join(__dirname, "..", "..", "public", "js
 }
 
 async function compileEjsScripts(outDir = path.join(__dirname, "..", "..", "public", "js")) {
-  const srcDir = path.join(__dirname, "..", "client", "ejs-scripts");
+  const srcDir = path.join(__dirname, "..", "client", "entrypoints", "ejs-scripts");
   try {
     const files = (await fs.readdir(srcDir)).filter(f => f.endsWith(".js"));
     await Promise.all(files.map(f => fs.rm(path.join(outDir, f), { force: true })));

@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { MOO_STATUS_ENUM, SOCKET_STATE_ENUM, logger } from "../../src/client/b-variables.js";
-import { createClientState } from "../../src/client/client-state.js";
+import { MOO_STATUS_ENUM, SOCKET_STATE_ENUM, logger } from "../../src/client/core/constants.js";
+import { createClientState } from "../../src/client/core/client-state.js";
 
 const flushPromises = () => new Promise(resolve => setImmediate(resolve));
 
@@ -81,7 +81,7 @@ async function setup(t, { perfBuffer = 0, withHealthDom = true } = {}) {
 
   const graphs = [];
   globalThis.__healthTestGraphs = graphs;
-  t.mock.module("../../src/client/x-bar-graph.js", {
+  t.mock.module("../../src/client/features/health/bar-graph.js", {
     defaultExport: class {
       constructor() {
         this.update = t.mock.fn();
@@ -103,7 +103,7 @@ async function setup(t, { perfBuffer = 0, withHealthDom = true } = {}) {
     t.mock.restoreAll();
   });
 
-  const { setupHealthCheck } = await import(`../../src/client/y-health.js?cachebust=${Date.now()}-${Math.random()}`);
+  const { setupHealthCheck } = await import(`../../src/client/features/health/health-check.js?cachebust=${Date.now()}-${Math.random()}`);
   const health = setupHealthCheck({ client: dome, doc: document });
   return {
     window,

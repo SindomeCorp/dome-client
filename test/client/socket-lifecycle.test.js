@@ -2,10 +2,10 @@ import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { JSDOM } from "jsdom";
-import { SOCKET_STATE_ENUM, logger } from "../../src/client/b-variables.js";
-import { createClientState } from "../../src/client/client-state.js";
-import { setupClientPreferences } from "../../src/client/c-preferences.js";
-import { store as clientStore } from "../../src/client/store.js";
+import { SOCKET_STATE_ENUM, logger } from "../../src/client/core/constants.js";
+import { createClientState } from "../../src/client/core/client-state.js";
+import { setupClientPreferences } from "../../src/client/core/preferences.js";
+import { store as clientStore } from "../../src/client/core/store.js";
 
 const dome = createClientState();
 
@@ -56,7 +56,7 @@ globalThis.poweredBy = "Powered";
 dome.setWindowTitle = () => {};
 let currentEmitter;
 mock.module("socket.io-client", { namedExports: { io: () => currentEmitter } });
-const { setupSocket } = await import("../../src/client/g-socket-lifecycle.js");
+const { setupSocket } = await import("../../src/client/features/terminal/socket-lifecycle.js");
 
 dome.alert = {};
 

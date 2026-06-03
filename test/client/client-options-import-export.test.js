@@ -1,12 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildClientOptionState } from "../../src/client/client-option-schema.js";
+import { buildClientOptionState } from "../../src/shared/client-options.js";
 import {
   buildClientOptionsExportFilename,
   buildClientOptionsExportPayload,
   buildClientOptionsImportPlan,
   normalizeImportedValue
-} from "../../src/client/client-options-import-export.js";
+} from "../../src/client/features/options/client-options-import-export.js";
 
 test("buildClientOptionsExportPayload captures selected option state", () => {
   const exportedAt = new Date("2026-06-02T12:34:56.000Z");

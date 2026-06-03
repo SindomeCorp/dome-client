@@ -97,4 +97,4 @@ Mutation testing notes:
 
 When adding new views that require locals, update representative locals in:
 
-- `test/views.test.js`
+- `test/views/views.test.js`

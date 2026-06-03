@@ -10,7 +10,7 @@ export default [
       ".stryker-tmp/**",
       "public/**",
       // Mode file pulled from ace-builds; skip linting
-      "src/client/ace/mode-moo.js",
+      "src/client/features/editor/ace/mode-moo.js",
     ],
   },
   js.configs.recommended,

@@ -6,7 +6,7 @@ import {
   buildMooConnectCommand,
   buildPlayerClientUrl,
   resolvePlayerClientAddress
-} from "../../src/client/client-connect-intent.js";
+} from "../../src/client/features/connection/client-connect-intent.js";
 
 test("buildMooConnectCommand creates character login commands", () => {
   assert.equal(buildMooConnectCommand({ username: "hero", password: "pass" }), "connect hero pass");

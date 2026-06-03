@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createCommandDispatcher } from "../../src/client/input-command-dispatch.js";
+import { createCommandDispatcher } from "../../src/client/features/terminal/input-command-dispatch.js";
 
 const createHarness = ({ localEcho = true, ackStatus = "command sent" } = {}) => {
   const fadeCalls = [];

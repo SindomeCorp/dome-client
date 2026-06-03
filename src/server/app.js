@@ -8,7 +8,7 @@ import defaultMorgan from "morgan";
 import { deviceCapture as defaultDeviceCapture } from "../services/ua.js";
 import { getLogExportCss as defaultGetLogExportCss } from "../services/log-export-style.js";
 import defaultRouter from "../routes/index.js";
-import { CLIENT_OPTION_GROUPS, CLIENT_OPTION_LABELS, CLIENT_OPTION_VIEW } from "../client/client-option-schema.js";
+import { CLIENT_OPTION_GROUPS, CLIENT_OPTION_LABELS, CLIENT_OPTION_VIEW } from "../shared/client-options.js";
 
 const __dirname = fileURLToPath(new URL("..", import.meta.url));
 

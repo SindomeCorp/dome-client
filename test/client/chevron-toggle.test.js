@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM, VirtualConsole } from "jsdom";
-import { createClientState } from "../../src/client/client-state.js";
+import { createClientState } from "../../src/client/core/client-state.js";
 
 test("chevron click toggles image", async (t) => {
   const virtualConsole = new VirtualConsole();
@@ -25,8 +25,8 @@ test("chevron click toggles image", async (t) => {
     globalThis.window = orig.window;
     globalThis.document = orig.document;
   });
-  const { setupButtons } = await import("../../src/client/u-buttons.js");
-  const { setupChevronToggle } = await import("../../src/client/chevron-toggle.js");
+  const { setupButtons } = await import("../../src/client/features/terminal/buttons.js");
+  const { setupChevronToggle } = await import("../../src/client/features/terminal/chevron-toggle.js");
 
   setupButtons({ client: dome, doc: window.document });
   setupChevronToggle({ client: dome });

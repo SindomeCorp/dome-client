@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { formatDate } from "../../src/client/a-date-format-date.js";
+import { formatDate } from "../../src/client/core/date-format.js";
 
 test("formats dates using tokens in UTC when requested", () => {
   const d = new Date("2020-01-02T03:04:05Z");

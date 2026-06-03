@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 async function setup(t, { fault } = {}) {
   const logs = { error: t.mock.fn(), warn: t.mock.fn(), info() {}, debug() {} };
-  const loggerMock = t.mock.module("../../src/client/pages/logger.js", { defaultExport: logs });
+  const loggerMock = t.mock.module("../../src/client/core/logger.js", { defaultExport: logs });
   const data = new Map();
   const ls = {
     setItem: t.mock.fn((k, v) => { data.set(k, v); }),
@@ -20,7 +20,7 @@ async function setup(t, { fault } = {}) {
     ls.removeItem.mock.mockImplementation(() => { throw new Error("fail"); });
   }
   Object.defineProperty(globalThis, "localStorage", { value: ls, configurable: true });
-  const mod = await import("../../src/client/store.js?c=" + Date.now());
+  const mod = await import("../../src/client/core/store.js?c=" + Date.now());
   loggerMock.restore();
   t.after(() => {
     delete globalThis.localStorage;

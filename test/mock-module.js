@@ -9,7 +9,7 @@ if (typeof mock.module !== "function" && typeof mock.import === "function") {
   mock.module = mock.import.bind(mock);
 }
 
-await import("../src/client/b-variables.js");
+await import("../src/client/core/constants.js");
 
 globalThis.dome = globalThis.dome || {};
 

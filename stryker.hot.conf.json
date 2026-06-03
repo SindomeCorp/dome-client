@@ -2,7 +2,7 @@
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "testRunner": "command",
   "commandRunner": {
-    "command": "NODE_ENV=test node --experimental-test-module-mocks --import=./test/mock-module.js --test test/auth-login.test.js test/routes/auth.test.js test/routes/save.test.js test/routes/socket.test.js test/routes/status.test.js test/services/multi-mud-metrics.test.js test/integration/multi-mud-metrics.integration.js test/integration/socket-runtime.integration.js test/integration/socket-tcp-bridge.integration.js test/integration/socket-chaos.integration.js test/integration/server-html-snapshot.*.integration.js test/integration/server-config-matrix.*.integration.js"
+    "command": "NODE_ENV=test node --experimental-test-module-mocks --import=./test/mock-module.js --test test/server/auth-login.test.js test/routes/auth.test.js test/routes/save.test.js test/routes/socket.test.js test/routes/status.test.js test/services/multi-mud-metrics.test.js test/integration/multi-mud-metrics.integration.js test/integration/socket-runtime.integration.js test/integration/socket-tcp-bridge.integration.js test/integration/socket-chaos.integration.js test/integration/server-html-snapshot.*.integration.js test/integration/server-config-matrix.*.integration.js"
   },
   "mutate": [
     "src/controllers/socket.js",

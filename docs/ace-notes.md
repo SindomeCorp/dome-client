@@ -12,7 +12,7 @@ This project bundles Ace v1.43.2.
   - 2 keybinding modules as `keybinding-*.js`
   - 9 web workers as `worker-*.js`
   - `snippets/` folder with 142 snippet files for code templates
-- `src/client/ace` – project-specific modules bundled with the client
+- `src/client/features/editor/ace` - project-specific modules bundled with the client
   - `keybinding-vim.js` adjusts the Vim keymap and retains multi-cursor support
   - `mode-moo.js` adds syntax highlighting, indentation, and linting support for the MOO language
 
@@ -36,7 +36,6 @@ This mode is not present in upstream Ace. The project version:
 
 ## Customizing modules
 
-1. Add new files under `src/client/ace/`.
-2. Import them from the relevant page script such as `src/client/pages/editor-window.js`.
+1. Add new files under `src/client/features/editor/ace/`.
+2. Import them from the relevant page script such as `src/client/entrypoints/editor-window.js`.
 3. Run `npm start` or `npm run build` to copy the Ace distribution and bundle the new modules.
-

@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { createClientState } from "../../src/client/client-state.js";
-import { setupIdeLauncher } from "../../src/client/ide.js";
+import { createClientState } from "../../src/client/core/client-state.js";
+import { setupIdeLauncher } from "../../src/client/features/editor/ide.js";
 
 // ensure clean environment
 const orig = { window: globalThis.window, document: globalThis.document };

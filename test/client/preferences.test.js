@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { createClientState } from "../../src/client/client-state.js";
-import { setupClientPreferences } from "../../src/client/c-preferences.js";
+import { createClientState } from "../../src/client/core/client-state.js";
+import { setupClientPreferences } from "../../src/client/core/preferences.js";
 
 const setupWindow = async (
   t,
@@ -114,7 +114,7 @@ test("readPreferences parses additional url options", async (t) => {
 
 test("setClientOption applies output font size to line buffer", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
-  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const { clientOptions } = await import("../../src/client/entrypoints/client-options.js");
   const origSave = clientOptions.save;
   clientOptions.save = () => {};
   t.after(() => {
@@ -135,7 +135,7 @@ test("setClientOption applies output font size to line buffer", async (t) => {
 
 test("setClientOption rejects non-numeric and out-of-range font sizes", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
-  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const { clientOptions } = await import("../../src/client/entrypoints/client-options.js");
   const origSave = clientOptions.save;
   clientOptions.save = () => {};
   t.after(() => {
@@ -165,7 +165,7 @@ test("setClientOption rejects non-numeric and out-of-range font sizes", async (t
 
 test("setClientOption applies input font and size to input reader", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
-  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const { clientOptions } = await import("../../src/client/entrypoints/client-options.js");
   const origSave = clientOptions.save;
   clientOptions.save = () => {};
   t.after(() => {
@@ -189,7 +189,7 @@ test("setClientOption applies input font and size to input reader", async (t) =>
 
 test("setClientOption applies input colors and validates hex", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
-  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const { clientOptions } = await import("../../src/client/entrypoints/client-options.js");
   const origSave = clientOptions.save;
   clientOptions.save = () => {};
   t.after(() => {
@@ -216,7 +216,7 @@ test("setClientOption applies input colors and validates hex", async (t) => {
 
 test("setClientOption updates output/input font family and size immediately", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
-  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const { clientOptions } = await import("../../src/client/entrypoints/client-options.js");
   const origSave = clientOptions.save;
   clientOptions.save = () => {};
   t.after(() => {
@@ -300,7 +300,7 @@ test("parseClientOptionCommand persists preference", async (t) => {
 
 test("parseClientOptionCommand sets overlay classes", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
-  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const { clientOptions } = await import("../../src/client/entrypoints/client-options.js");
   const origSave = clientOptions.save;
   clientOptions.save = () => {};
   t.after(() => {
@@ -350,7 +350,7 @@ test("parseClientOptionCommand sets overlay classes", async (t) => {
 
 test("parseClientOptionCommand reapplies overlay classes after autocomplete rebuild", async (t) => {
   const win = await setupWindow(t, "https://example.com/", "Chrome/78");
-  const { clientOptions } = await import("../../src/client/pages/client-options.js");
+  const { clientOptions } = await import("../../src/client/entrypoints/client-options.js");
   const origSave = clientOptions.save;
   clientOptions.save = () => {};
   t.after(() => {

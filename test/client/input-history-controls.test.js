@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 /* global document */
 import { setupDom } from "./index.js";
-import { createHistoryState, rememberDraftInput } from "../../src/client/input-history.js";
-import { wireInputHistoryControls } from "../../src/client/input-history-controls.js";
+import { createHistoryState, rememberDraftInput } from "../../src/client/features/terminal/input-history.js";
+import { wireInputHistoryControls } from "../../src/client/features/terminal/input-history-controls.js";
 
 const setupHistoryControls = (history = ["look"]) => {
   const { window } = setupDom("<!doctype html><html><body><textarea id=\"input\"></textarea><button id=\"button-input-history-up\" type=\"button\"></button><button id=\"button-input-history-down\" type=\"button\"></button></body></html>");

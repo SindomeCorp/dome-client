@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { createClientPreferenceDomAppliers } from "../../src/client/client-preference-dom.js";
+import { createClientPreferenceDomAppliers } from "../../src/client/features/options/client-preference-dom.js";
 
 test("preference DOM appliers update input text and color styles", () => {
   const dom = new JSDOM("<!doctype html><textarea id=\"inputBuffer\"></textarea><div id=\"lineBuffer\"></div>");

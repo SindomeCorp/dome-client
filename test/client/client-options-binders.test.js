@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { createClientOptionControlBinder } from "../../src/client/client-options-page/controls.js";
-import { setupClientOptionsTabs } from "../../src/client/client-options-page/tabs.js";
+import { createClientOptionControlBinder } from "../../src/client/features/options/page/controls.js";
+import { setupClientOptionsTabs } from "../../src/client/features/options/page/tabs.js";
 
 test("client options tab binder activates one panel", () => {
   const dom = new JSDOM(`<!doctype html><html><body>

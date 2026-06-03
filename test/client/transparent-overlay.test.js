@@ -2,8 +2,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { createClientState } from "../../src/client/client-state.js";
-import { initClient } from "../../src/client/z-setup.js";
+import { createClientState } from "../../src/client/core/client-state.js";
+import { initClient } from "../../src/client/core/bootstrap.js";
 
 // Ensure transparent overlay class applied after async setupAutoComplete
 

@@ -112,7 +112,7 @@ async function buildEditorIdeBundle(t) {
   const tmpDir = await fs.mkdtemp(path.resolve(".editor-ide-test-"));
   const outfile = path.join(tmpDir, "EditorIDE.bundle.mjs");
   await esbuild.build({
-    entryPoints: [path.resolve("src/client/react/EditorIDE.jsx")],
+    entryPoints: [path.resolve("src/client/features/editor/react/EditorIDE.jsx")],
     outfile,
     bundle: true,
     format: "esm",
@@ -134,7 +134,7 @@ async function buildEditorIdeBundle(t) {
             path: args.path.endsWith("fonts.js") ? "fonts" : "empty",
             namespace: "editor-ide-stub"
           }));
-          build.onResolve({ filter: /(^|\/)s-editor\.js$/ }, () => ({
+          build.onResolve({ filter: /(^|\/)editor-support\.js$/ }, () => ({
             path: "socket",
             namespace: "editor-ide-stub"
           }));

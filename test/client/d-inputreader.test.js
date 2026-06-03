@@ -2,16 +2,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 /* global document */
 import { setupDom } from "./index.js";
-import { logger } from "../../src/client/b-variables.js";
-import { createClientState } from "../../src/client/client-state.js";
-import { setupInputReader } from "../../src/client/d-inputreader.js";
+import { logger } from "../../src/client/core/constants.js";
+import { createClientState } from "../../src/client/core/client-state.js";
+import { setupInputReader } from "../../src/client/features/terminal/input-reader.js";
 
 const client = createClientState();
 
 const loadInputReader = async (t, { ack = true, history = ["look"] } = {}) => {
   const { window } = setupDom("<!doctype html><html><body><textarea id=\"input\"></textarea><button id=\"button-input-history-up\" type=\"button\"></button><button id=\"button-input-history-down\" type=\"button\"></button><div id=\"history-search-overlay\" class=\"hide\"><div class=\"history-search-content\"><button id=\"button-history-search-close\" type=\"button\">x</button><input id=\"history-search-query\" /><ul id=\"history-search-results\"></ul><div id=\"history-search-empty\" class=\"hide\">No matching commands.</div></div></div></body></html>");
   const origGlobals = { window: globalThis.window, document: globalThis.document };
-  const { store } = await import("../../src/client/store.js");
+  const { store } = await import("../../src/client/core/store.js");
   Object.assign(store, {
     history,
     get() {

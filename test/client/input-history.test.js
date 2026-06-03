@@ -7,7 +7,7 @@ import {
   navigateHistory,
   recordSubmittedCommand,
   rememberDraftInput
-} from "../../src/client/input-history.js";
+} from "../../src/client/features/terminal/input-history.js";
 
 test("navigates previous and next history entries", () => {
   const state = createHistoryState(["look", "inventory"]);

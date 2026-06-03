@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import setupDom from "../../test-support/setup-dom.js";
-import { setupEditor, attachUpload, attachAbort } from "../../src/client/pages/editor-utils.js";
+import { setupEditor, attachUpload, attachAbort } from "../../src/client/features/editor/editor-utils.js";
 
 const bodyHtml = `
   <div class="editor"><textarea></textarea></div>
@@ -31,7 +31,7 @@ test("editor window", async (t) => {
     window.uploadSocket = socket;
     parent = { postMessage: t.mock.fn() };
     window.parentWindow = parent;
-    await import("../../src/client/pages/editor-window.js");
+    await import("../../src/client/entrypoints/editor-window.js");
   });
 
   t.afterEach(() => {

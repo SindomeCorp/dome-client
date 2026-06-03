@@ -31,7 +31,7 @@ test("client-options updates state and persists to store", async (t) => {
       data.set(key, value);
     }
   };
-  const options = await import("../../src/client/pages/client-options.js");
+  const options = await import("../../src/client/entrypoints/client-options.js");
   Object.assign(options.store, store);
   const { clientOptions } = options;
   const originalOptions = clientOptions.options;
@@ -72,7 +72,7 @@ test("client-options updates state and persists to store", async (t) => {
 test("clientOptions throws on invalid option", async () => {
   const html = "<!doctype html><html><body><div class=\"client-options-page\"></div></body></html>";
   const { window, store } = setupClientOptionsDom(html);
-  const options = await import("../../src/client/pages/client-options.js");
+  const options = await import("../../src/client/entrypoints/client-options.js");
   Object.assign(options.store, store);
   const { clientOptions } = options;
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
@@ -83,7 +83,7 @@ test("clientOptions throws on invalid option", async () => {
 test("clientOptions query string includes scroll up to pause", async () => {
   const html = "<!doctype html><html><body><div class=\"client-options-page\"></div></body></html>";
   const { window, store } = setupClientOptionsDom(html);
-  const options = await import("../../src/client/pages/client-options.js?scrolluppause");
+  const options = await import("../../src/client/entrypoints/client-options.js?scrolluppause");
   Object.assign(options.store, store);
   const { clientOptions } = options;
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
@@ -105,7 +105,7 @@ test("client options tabs show one panel at a time", async () => {
   </div>
   </body></html>`;
   const { window, store } = setupClientOptionsDom(html);
-  const options = await import("../../src/client/pages/client-options.js?tabs");
+  const options = await import("../../src/client/entrypoints/client-options.js?tabs");
   Object.assign(options.store, store);
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
 

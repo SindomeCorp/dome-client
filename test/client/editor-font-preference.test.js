@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { createClientState } from "../../src/client/client-state.js";
-import { setupClientPreferences } from "../../src/client/c-preferences.js";
+import { createClientState } from "../../src/client/core/client-state.js";
+import { setupClientPreferences } from "../../src/client/core/preferences.js";
 
 test("setClientOption broadcasts editorFont", async (t) => {
   const dome = createClientState();

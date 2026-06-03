@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { createClientOptionsController } from "../../src/client/client-options-controller.js";
-import { createClientOptionsStore } from "../../src/client/client-options-store.js";
+import { createClientOptionsController } from "../../src/client/features/options/client-options-controller.js";
+import { createClientOptionsStore } from "../../src/client/features/options/client-options-store.js";
 
 function createMapStorage() {
   const data = new Map();

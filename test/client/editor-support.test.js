@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { logger } from "../../src/client/b-variables.js";
-import { createClientState } from "../../src/client/client-state.js";
+import { logger } from "../../src/client/core/constants.js";
+import { createClientState } from "../../src/client/core/client-state.js";
 
 // global setup for module side effects
 const dom = new JSDOM("<!doctype html><html><body><div id=\"editor-list-view\"></div></body></html>", { pretendToBeVisual: true });
@@ -15,7 +15,7 @@ globalThis.document = window.document;
 
 Object.assign(dome, { spawned: {}, preferences: { edittheme: "dark", editorType: "ide" }, editorListView: window.document.querySelector("#editor-list-view"), socket: {} });
 
-const { setupEditorSupport } = await import("../../src/client/s-editor.js");
+const { setupEditorSupport } = await import("../../src/client/features/editor/editor-support.js");
 
 test.after(() => {
   globalThis.window = orig.window;

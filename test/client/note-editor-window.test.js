@@ -5,7 +5,7 @@ import {
   setupEditor,
   attachUpload,
   attachAbort
-} from "../../src/client/pages/editor-utils.js";
+} from "../../src/client/features/editor/editor-utils.js";
 
 test("note editor window", async (t) => {
   let buildDom;
@@ -50,7 +50,7 @@ test("note editor window", async (t) => {
     setupGlobals(window);
     initialBody = window.document.body.innerHTML;
 
-    await import("../../src/client/pages/note-editor-window.js");
+    await import("../../src/client/entrypoints/note-editor-window.js");
   });
 
   t.beforeEach(() => {

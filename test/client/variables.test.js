@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 test("sets exported constants", async (t) => {
-  const moduleUrl = new URL("../../src/client/b-variables.js", import.meta.url).href;
+  const moduleUrl = new URL("../../src/client/core/constants.js", import.meta.url).href;
 
   const orig = { dome: globalThis.dome, specialHeightOffset: globalThis.specialHeightOffset };
   t.after(() => {
@@ -45,7 +45,7 @@ test("sets exported constants", async (t) => {
     BEFORE_FIRST: 2
   });
 
-  const loggerMod = await import("../../src/client/pages/logger.js");
+  const loggerMod = await import("../../src/client/core/logger.js");
   assert.equal(mod2.logger, loggerMod.default);
   ["debug", "info", "warn", "error"].forEach((m) => {
     assert.equal(typeof mod2.logger[m], "function");
@@ -55,7 +55,7 @@ test("sets exported constants", async (t) => {
 });
 
 test("client state owns socket references", async () => {
-  const { createClientState } = await import("../../src/client/client-state.js");
+  const { createClientState } = await import("../../src/client/core/client-state.js");
   const client = createClientState();
   const mockSocket1 = {};
   client.socket = mockSocket1;

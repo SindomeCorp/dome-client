@@ -6,7 +6,7 @@ import {
   formatLogTimestamp,
   resolveLogBaseName,
   sanitizeLogBaseName
-} from "../../src/client/log-download.js";
+} from "../../src/client/features/terminal/log-download.js";
 
 test("formatLogTimestamp uses log filename timestamp format", () => {
   assert.equal(formatLogTimestamp(new Date(2026, 0, 2, 0, 5)), "01_02_2026_1205am");
