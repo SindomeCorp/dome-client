@@ -182,18 +182,50 @@ test("MOO mode tokenizes common MOO syntax and doc comments", () => {
   assert.deepEqual(
     tokenTypesFor(mode, "$player:tell(#-1, $nothing.name);"),
     [
-      "variable.language",
+      "constant.language.core",
       "punctuation.operator",
       "identifier",
       "paren.lparen",
       "constant.language.object",
       "punctuation.operator",
       "text",
-      "variable.language",
+      "constant.language.core",
       "punctuation.operator",
       "identifier",
       "paren.rparen",
       "punctuation.operator"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "$code_utils"),
+    ["constant.language.core"]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "$critical(\"some content\")"),
+    [
+      "support.function.corified",
+      "paren.lparen",
+      "string",
+      "paren.rparen"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "$code_utils:critical(\"some content\")"),
+    [
+      "constant.language.core",
+      "punctuation.operator",
+      "identifier",
+      "paren.lparen",
+      "string",
+      "paren.rparen"
+    ]
+  );
+  assert.deepEqual(
+    tokenTypesFor(mode, "$code_utils.name"),
+    [
+      "constant.language.core",
+      "punctuation.operator",
+      "identifier"
     ]
   );
   assert.deepEqual(

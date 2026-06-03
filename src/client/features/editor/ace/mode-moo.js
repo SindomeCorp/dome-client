@@ -268,7 +268,10 @@ var MOOHighlightRules = function() {
                 regex : '"(?=.)',
                 next  : "qqstring"
             }, {
-                token : "variable.language",
+                token : "support.function.corified",
+                regex : "\\$" + identifierRe + "(?=\\s*\\()"
+            }, {
+                token : "constant.language.core",
                 regex : "\\$" + identifierRe
             }, {
                 token : "constant.language.object",
