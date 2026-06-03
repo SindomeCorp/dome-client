@@ -18,10 +18,11 @@ Sindome provides a hosted version of the client that can connect to any MUD. You
 [Sindome Public Client](https://pubclient.sindome.org)
 
 ## Single-MUD Quick Start
-```
+```bash
 git clone git@github.com:SindomeCorp/dome-client.git
 cd dome-client
 npm i
+cp .env-example-local .env
 npm start
 ```
 Open in Browser: http://localhost:8080
@@ -120,6 +121,8 @@ In this mode, the splash page is host/port-first and users can connect to differ
 - Scratch pad workflow (`@scratch` / `@edit me.scratch`) for temporary editing and recall.
 - Optional individual editor-window mode (non-IDE) with unsaved-change protection.
 
+Optional IDE integrations can be disabled per deployment when the connected MOO does not support their command flows. See [docs/ide-editor.md](docs/ide-editor.md) for the related environment flags.
+
 ## Screenshots
 
 ### Client Options
@@ -144,7 +147,7 @@ In this mode, the splash page is host/port-first and users can connect to differ
 2. Clone the repository and install npm packages:
    ```bash
    git clone https://github.com/SindomeCorp/dome-client.git
-   cd dome-client.js
+   cd dome-client
    npm install
    ```
 3. Copy `.env-example-local` (for local/dev) or `.env-example-production` (for production) to `.env` and adjust for your environment.

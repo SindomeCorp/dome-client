@@ -174,6 +174,11 @@ function setupEditorDom(attributes = {}) {
     "data-local-save-note-max-lines": "20",
     "data-ide-edit-open-parent": "false",
     "data-ide-vms-note-enabled": "false",
+    "data-ide-object-browser-enabled": "true",
+    "data-ide-property-browser-enabled": "true",
+    "data-ide-hover-overlays-enabled": "true",
+    "data-ide-reference-navigation-enabled": "true",
+    "data-ide-scratch-enabled": "true",
     ...attributes
   };
   const attrText = Object.entries(dataAttrs)
@@ -328,6 +333,27 @@ test("EditorIDE pins the property browser before editable property tabs", async 
   assert.doesNotMatch(window.document.querySelector("[role='tab']").textContent, /Saved|Unsaved/);
 });
 
+test("EditorIDE does not pin browser tabs when browser features are disabled", async (t) => {
+  const { window } = await renderEditorIde(t, {
+    "data-ide-object-browser-enabled": "false",
+    "data-ide-property-browser-enabled": "false"
+  });
+
+  await openTab(window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "initial"
+  });
+  assert.deepEqual(getTabs(window), ["Look"]);
+
+  await openTab(window, {
+    editorName: "Name",
+    uploadCommand: "@edit #12.name",
+    buffer: "old name"
+  });
+  assert.deepEqual(getTabs(window), ["Look", "Name"]);
+});
+
 test("EditorIDE closes browser panels without destroying editable documents", async (t) => {
   const { window, emit } = await renderEditorIde(t);
 
@@ -347,6 +373,48 @@ test("EditorIDE closes browser panels without destroying editable documents", as
     ["input", "@program #12:look"],
     ["input", "initial\n."]
   ]);
+});
+
+test("EditorIDE closes the window when only browser panels remain", async (t) => {
+  const { window } = await renderEditorIde(t);
+  let closeCalls = 0;
+  window.close = () => {
+    closeCalls += 1;
+  };
+
+  await openTab(window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "initial"
+  });
+  await click(window, getButtonByText(window, "Close"));
+
+  await waitFor(() => {
+    assert.equal(closeCalls, 1);
+  });
+});
+
+test("EditorIDE does not close the window while editable tabs remain", async (t) => {
+  const { window } = await renderEditorIde(t);
+  let closeCalls = 0;
+  window.close = () => {
+    closeCalls += 1;
+  };
+
+  await openTab(window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "initial"
+  });
+  await openTab(window, {
+    editorName: "Tell",
+    uploadCommand: "@program #12:tell",
+    buffer: "second"
+  });
+  await click(window, getButtonByText(window, "Close"));
+
+  assert.equal(closeCalls, 0);
+  assert.deepEqual(getTabs(window), ["Object Browser", "Look"]);
 });
 
 test("EditorIDE prompts for VMS notes before saving program tabs when enabled", async (t) => {
@@ -374,6 +442,48 @@ test("EditorIDE prompts for VMS notes before saving program tabs when enabled", 
     ["input", "initial\n."],
     ["input", "changed look behavior"]
   ]);
+});
+
+test("EditorIDE hides scratch actions when scratch support is disabled", async (t) => {
+  const { window } = await renderEditorIde(t, { "data-ide-scratch-enabled": "false" });
+
+  assert.equal(getButtonByText(window, "Add Scratch"), undefined);
+  assert.equal(getButtonByText(window, "View Scratch"), undefined);
+});
+
+test("EditorIDE keeps an empty VMS note field visible until blur", async (t) => {
+  const { window } = await renderEditorIde(t, { "data-ide-vms-note-enabled": "true" });
+
+  await openTab(window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "initial"
+  });
+  await click(window, getButtonByText(window, "Save"));
+
+  const promptInput = window.document.querySelector("input[aria-label='VMS note prompt input']");
+  await act(async () => {
+    const propsKey = Object.keys(promptInput).find((key) => key.startsWith("__reactProps$"));
+    promptInput[propsKey].onChange({ target: { value: "changed look behavior" } });
+  });
+  await click(window, getButtonByText(window, "Submit"));
+
+  const noteInput = window.document.querySelector("input[aria-label='VMS note']");
+  assert.ok(noteInput);
+  await act(async () => {
+    const propsKey = Object.keys(noteInput).find((key) => key.startsWith("__reactProps$"));
+    noteInput[propsKey].onFocus();
+    noteInput[propsKey].onChange({ target: { value: "" } });
+  });
+
+  const emptyNoteInput = window.document.querySelector("input[aria-label='VMS note']");
+  assert.ok(emptyNoteInput);
+  await act(async () => {
+    const propsKey = Object.keys(emptyNoteInput).find((key) => key.startsWith("__reactProps$"));
+    emptyNoteInput[propsKey].onBlur();
+  });
+
+  assert.equal(window.document.querySelector("input[aria-label='VMS note']"), null);
 });
 
 test("EditorIDE keyboard shortcuts preserve current editor behavior", async (t) => {
@@ -411,6 +521,20 @@ test("EditorIDE renders shortcut overlay when bundled with the production JSX ru
 
   assert.match(window.document.body.textContent, /Editor Shortcuts/);
   assert.match(window.document.body.textContent, /Save tab/);
+  assert.match(window.document.body.textContent, /Edit Verb \/ Prop/);
+});
+
+test("EditorIDE hides reference navigation shortcut when disabled", async (t) => {
+  const { window } = await renderEditorIde(t, {
+    "data-ide-reference-navigation-enabled": "false"
+  });
+
+  await keydown(window, "/", { ctrlKey: true });
+
+  assert.match(window.document.body.textContent, /Editor Shortcuts/);
+  assert.match(window.document.body.textContent, /Save tab/);
+  assert.doesNotMatch(window.document.body.textContent, /Edit Verb \/ Prop/);
+  assert.doesNotMatch(window.document.body.textContent, /Ctrl Click ref/);
 });
 
 test("EditorIDE hover overlays request and reuse cached SDWC payloads", async (t) => {
@@ -458,4 +582,71 @@ test("EditorIDE hover overlays request and reuse cached SDWC payloads", async (t
   );
   assert.equal(overlayRequests.length, 1);
   assert.match(window.document.body.textContent, /line one\s+line two/);
+});
+
+test("EditorIDE does not request hover overlays when disabled", async (t) => {
+  const { window, emit } = await renderEditorIde(t, {
+    "data-ide-hover-overlays-enabled": "false"
+  });
+
+  await openTab(window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "return this:foo();"
+  });
+  const editor = globalThis.__editorIdeAceEditors[0];
+
+  await act(async () => {
+    editor.emitEditorEvent("mousemove", {
+      getDocumentPosition: () => ({ row: 0, column: 13 }),
+      domEvent: { clientX: 10, clientY: 20 }
+    });
+  });
+
+  assert.equal(emit.mock.calls.length, 0);
+  assert.equal(window.document.querySelector(".sdwc-hover-overlay"), null);
+});
+
+test("EditorIDE Ctrl/Cmd-click reference navigation emits edit commands by default", async (t) => {
+  const { window, emit } = await renderEditorIde(t);
+
+  await openTab(window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "return this:foo();"
+  });
+  await act(async () => {
+    globalThis.__editorIdeAceEditors[0].emitEditorEvent("click", {
+      getDocumentPosition: () => ({ row: 0, column: 13 }),
+      domEvent: {
+        ctrlKey: true,
+        preventDefault() {},
+        stopPropagation() {}
+      }
+    });
+  });
+  assert.deepEqual(emit.mock.calls.at(-1).arguments, ["input", "@edit #12:foo"]);
+});
+
+test("EditorIDE disables Ctrl/Cmd-click reference navigation when configured", async (t) => {
+  const { window, emit } = await renderEditorIde(t, {
+    "data-ide-reference-navigation-enabled": "false"
+  });
+
+  await openTab(window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "return this:foo();"
+  });
+  await act(async () => {
+    globalThis.__editorIdeAceEditors.at(-1).emitEditorEvent("click", {
+      getDocumentPosition: () => ({ row: 0, column: 13 }),
+      domEvent: {
+        ctrlKey: true,
+        preventDefault() {},
+        stopPropagation() {}
+      }
+    });
+  });
+  assert.equal(emit.mock.calls.length, 0);
 });

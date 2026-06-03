@@ -49,3 +49,11 @@
 body.ide-editor {
   padding-top: 0 !important;
 }
+
+.ace_editor .ace_entity.ace_other.ace_object.ace_receiver.ace_moo {
+  color: #9B859D !important;
+}
+
+.ace_editor .ace_variable.ace_other.ace_property.ace_moo {
+  color: #E9C062 !important;
+}

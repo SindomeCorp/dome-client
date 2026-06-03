@@ -4,11 +4,29 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-06-03
 
+### Added
+- Added IDE feature flags for Object Browser, Property Browser, hover overlays, reference navigation, and scratch actions so deployments can disable unsupported MOO integrations.
+
 ### Changed
+- Closed the IDE window automatically when closing the last editable tab leaves only Object Browser or Property Browser tabs behind.
+- Highlighted user-defined MOO access receivers with the object-receiver color while keeping built-in variables such as `this` and `player` visually consistent.
+- Added distinct MOO verb editor highlighting for access receivers, cored/direct object receivers, and property names.
+- Distinguished builtin functions from in-MOO verb calls and corified object references in the MOO verb editor highlighting, including separate call-name coloring for MOO verb invocations.
+- Updated the MOO verb editor mode with ToastStunt error constants, booleans, object and core references, MOO operators, and keyword-block indentation while removing JavaScript-derived highlighting.
+- Updated MOO builtin highlighting in the verb editor to match ToastStunt's builtin function list.
+- Highlighted additional MOO type constants in the verb editor, including `MAP`, `WAIF`, `ANON`, and `BOOL`.
 - Updated the verb editors to insert two spaces for tabs so indentation matches MOO-shipped source.
 - Routed client-options commands, panel controls, imports, and resets through one controller so preference writes validate, persist, and apply live effects consistently.
 - Refactored the browser-client health UI into a focused controller for status messages, socket errors, panel controls, graph updates, and polling.
 - Clarified MUD/MOO terminology in the README while preserving legacy route, config, and documentation names.
+
+### Fixed
+- Hid the IDE reference-jump shortcut from the shortcuts overlay when ctrl/cmd-click navigation is disabled.
+- Corrected setup and MOO integration documentation for local env defaults, IDE feature flags, SDWC request payloads, and MOO-side setup examples.
+- Kept the IDE VMS note field visible while a cleared note input still has focus so notes can be fully replaced without collapsing the editor control.
+- Fixed IDE editor MOO access highlighting so property names and cored/direct receivers use the same distinct colors as standalone editor windows.
+- Fixed MOO verb editor access highlighting so property names and cored/direct object receivers remain visually distinct after Ace themes load.
+- Fixed MOO verb editor outdent detection for typed closing block keywords such as `endfor`.
 
 ## 2026-06-02
 

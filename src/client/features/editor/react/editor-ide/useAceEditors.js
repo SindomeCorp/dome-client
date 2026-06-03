@@ -26,6 +26,8 @@ export function useAceEditors({
   editorFont,
   editorTheme,
   ideEditOpenParent,
+  ideHoverOverlaysEnabled,
+  ideReferenceNavigationEnabled,
   lineLimits,
   onContentChange,
   onHoverOverlay,
@@ -116,6 +118,7 @@ export function useAceEditors({
     });
     ed.on("click", (event) => {
       if (!isProgram) return;
+      if (!ideReferenceNavigationEnabled) return;
       const domEvent = event?.domEvent;
       if (!domEvent || !(domEvent.metaKey || domEvent.ctrlKey)) return;
       const pos = event?.getDocumentPosition?.();
@@ -129,6 +132,7 @@ export function useAceEditors({
       if (editCommand) emitInput(editCommand);
     });
     ed.on("mousemove", (event) => {
+      if (!ideHoverOverlaysEnabled) return;
       const pos = event?.getDocumentPosition?.();
       const domEvent = event?.domEvent;
       if (!pos || !domEvent) return;

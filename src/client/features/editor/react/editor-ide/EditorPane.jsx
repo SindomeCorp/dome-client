@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { ObjectBrowser } from "./ObjectBrowser.jsx";
 import { PropertyBrowser } from "./PropertyBrowser.jsx";
 import { TAB_TYPES } from "./tabs.js";
@@ -35,9 +35,14 @@ function EditableDocument({
   setEditorRef,
   tab
 }) {
+  const [isVmsNoteFocused, setIsVmsNoteFocused] = useState(false);
+  const shouldShowVmsNote = ideVmsNoteEnabled
+    && tab.command === "@program"
+    && (isVmsNoteFocused || String(tab.vmsNote || "").trim() !== "");
+
   return (
     <div className="w-full h-full flex flex-col">
-      {ideVmsNoteEnabled && tab.command === "@program" && String(tab.vmsNote || "").trim() !== "" && (
+      {shouldShowVmsNote && (
         <div className="px-4 pt-4 pb-2 border-b border-line-subtle bg-bg-surface">
           <label className="block text-sm font-medium text-ink-muted mb-1" htmlFor={`vms-note-${tab.id}`}>
             VMS Note
@@ -47,6 +52,8 @@ function EditableDocument({
             type="text"
             value={tab.vmsNote || ""}
             onChange={(e) => onUpdateVmsNote(tab.id, e.target.value)}
+            onBlur={() => setIsVmsNoteFocused(false)}
+            onFocus={() => setIsVmsNoteFocused(true)}
             className="w-full px-3 py-2 rounded-md border border-line-subtle bg-bg-sunken text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
             placeholder="Enter VMS note"
             aria-label="VMS note"

@@ -1,6 +1,6 @@
 import React from "react";
 
-export function ShortcutDialog({ onClose }) {
+export function ShortcutDialog({ onClose, referenceNavigationEnabled = true }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50"
@@ -68,11 +68,13 @@ export function ShortcutDialog({ onClose }) {
               <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ /</kbd></td>
               <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl /</kbd></td>
             </tr>
-            <tr>
-              <td className="py-1 px-2 sm:px-4">Edit Verb / Prop</td>
-              <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ Click ref</kbd></td>
-              <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl Click ref</kbd></td>
-            </tr>
+            {referenceNavigationEnabled && (
+              <tr>
+                <td className="py-1 px-2 sm:px-4">Edit Verb / Prop</td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ Click ref</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl Click ref</kbd></td>
+              </tr>
+            )}
             </tbody>
           </table>
         </div>

@@ -15,6 +15,7 @@ export function EditorToolbar({
   onViewSavedScratch,
   orientation,
   setOrientation,
+  showScratchActions,
   wordWrap
 }) {
   return (
@@ -83,21 +84,25 @@ export function EditorToolbar({
             ⌨
           </button>
 
-          <button
-            onClick={onAddScratch}
-            className="px-1 py-0.5 text-[11px] md:px-4 md:py-2 md:text-base rounded-md border border-line-subtle bg-bg-sunken hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-            title="Add temporary scratch pad"
-          >
-            Add Scratch
-          </button>
+          {showScratchActions && (
+            <>
+              <button
+                onClick={onAddScratch}
+                className="px-1 py-0.5 text-[11px] md:px-4 md:py-2 md:text-base rounded-md border border-line-subtle bg-bg-sunken hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+                title="Add temporary scratch pad"
+              >
+                Add Scratch
+              </button>
 
-          <button
-            onClick={onViewSavedScratch}
-            className="px-1 py-0.5 text-[11px] md:px-4 md:py-2 md:text-base rounded-md border border-line-subtle bg-bg-sunken hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-            title="View saved scratch pad"
-          >
-            View Scratch
-          </button>
+              <button
+                onClick={onViewSavedScratch}
+                className="px-1 py-0.5 text-[11px] md:px-4 md:py-2 md:text-base rounded-md border border-line-subtle bg-bg-sunken hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+                title="View saved scratch pad"
+              >
+                View Scratch
+              </button>
+            </>
+          )}
         </div>
 
         <div className="hidden md:block flex-1 min-w-0 text-center text-lg text-ink-muted truncate">
