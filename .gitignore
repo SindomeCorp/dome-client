@@ -1,4 +1,6 @@
 node_modules
+fullchain.pem
+privkey.pem
 .env
 coverage/
 public/*
