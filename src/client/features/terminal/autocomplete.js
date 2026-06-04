@@ -2,6 +2,19 @@ import { logger } from "../../core/constants.js";
 
 const SUGGESTION_INPUT_GAP_PX = 16;
 const SUGGESTION_ROW_HEIGHT_PX = 24;
+const USER_TYPE_ALIASES = {
+  player: "p",
+  justice: "j",
+  agent: "a",
+  creator: "c",
+  watcher: "w",
+  guest: "o"
+};
+
+export const normalizeAutocompleteUserType = (userType = "p") => {
+  const normalized = String(userType || "p").trim().toLowerCase();
+  return USER_TYPE_ALIASES[normalized] || normalized || "p";
+};
 
 const getSuggestionListHeight = (list, availableHeight) => {
   const measuredHeight = list.getBoundingClientRect().height
@@ -66,7 +79,7 @@ export function setupAutoCompleteFeature({
     }
 
     try {
-      const res = await fetchFn(`/ac/${userType}`);
+      const res = await fetchFn(`/ac/${normalizeAutocompleteUserType(userType)}`);
       const data = await res.json();
       client.autoCommands = data.reduce((out, line) => {
         let commandValue = line.trim();
@@ -160,19 +173,27 @@ export function setupAutoCompleteFeature({
           inputBuffer.commandSuggestionsOptions.source({ term }, render);
         };
 
+        let isListening = false;
         inputBuffer.commandSuggestions = function (arg) {
           if (typeof arg === "string") {
             if (arg === "destroy") {
-              inputBuffer.removeEventListener("input", onInput);
+              if (isListening) {
+                inputBuffer.removeEventListener("input", onInput);
+                isListening = false;
+              }
               list.remove();
               delete inputBuffer.commandSuggestionsOptions;
+              delete inputBuffer.commandSuggestions;
             } else if (arg === "close") {
               list.style.display = "none";
             }
             return;
           }
           inputBuffer.commandSuggestionsOptions = arg;
-          inputBuffer.addEventListener("input", onInput);
+          if (!isListening) {
+            inputBuffer.addEventListener("input", onInput);
+            isListening = true;
+          }
         };
         inputBuffer.commandSuggestions(options);
       }

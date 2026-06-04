@@ -98,17 +98,10 @@ function createClientOptionControlBinder({
         if (!name) return;
         const otherBtn = row.querySelector(btn.classList.contains("enabled-state") ? "button.disabled-state" : "button.enabled-state");
 
-        if (btn.classList.contains("btn-primary")) {
-          btn.classList.remove("btn-primary");
-          if (otherBtn) {
-            otherBtn.classList.add("btn-primary");
-          }
-        } else {
-          if (otherBtn) {
-            otherBtn.classList.remove("btn-primary");
-          }
-          btn.classList.add("btn-primary");
+        if (otherBtn) {
+          otherBtn.classList.remove("btn-primary");
         }
+        btn.classList.add("btn-primary");
         applyOptionValue(name, val);
         getActions().scrollBuffer();
       });
