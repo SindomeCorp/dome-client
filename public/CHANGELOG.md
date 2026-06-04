@@ -4,7 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-06-04
 
+### Added
+- Added documentation for the `/health/` endpoint response shape and configuration.
+
 ### Changed
+- Added `HEALTH_ENDPOINT_ENABLED` so deployments can disable the `/health/` endpoint.
 - Added help text to all General client options so each option shows a question-mark tooltip explaining its behavior.
 
 ### Fixed

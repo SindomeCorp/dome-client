@@ -56,6 +56,21 @@ test("integration: serves routes and accepts socket.io connections", async (t) =
   });
 });
 
+test("integration: health endpoint can be disabled", async (t) => {
+  nock.disableNetConnect();
+  nock.enableNetConnect("127.0.0.1");
+
+  mockStatusOk();
+
+  const { baseUrl } = await bootServer(t, {
+    node: {
+      healthEndpointEnabled: false
+    }
+  });
+
+  await request(baseUrl).get("/health/").expect(404);
+});
+
 test("integration: website login sets session and redirects", async (t) => {
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");

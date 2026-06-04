@@ -23,6 +23,7 @@ const env = cleanEnv(process.env, {
   NODE_SOCKET_URL_SSL: str({ default: "" }),
   NODE_SOCKET_PROXIED: bool({ default: false }),
   MULTI_MUD: bool({ default: false }),
+  HEALTH_ENDPOINT_ENABLED: bool({ default: true }),
   NODE_POWERED_BY: str({ default: "Dome Client" }),
   LOG_LEVEL: str({ default: "info" }),
   SESSION_SECRET: str({ default: "dev-session-secret-change-me" }),

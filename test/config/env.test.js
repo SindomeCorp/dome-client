@@ -67,6 +67,7 @@ test("config/env applies defaults for node configuration", async (t) => {
     NODE_SOCKET_URL_SSL: "",
     NODE_SOCKET_PROXIED: false,
     MULTI_MUD: false,
+    HEALTH_ENDPOINT_ENABLED: true,
     NODE_POWERED_BY: "Dome Client",
     SESSION_SECRET: "dev-session-secret-change-me"
   };
@@ -93,6 +94,7 @@ test("config/env applies defaults for node configuration", async (t) => {
     socketUrlSSL: "",
     socketProxied: false,
     multiMud: false,
+    healthEndpointEnabled: true,
     poweredBy: "Dome Client",
     session: { secret: "dev-session-secret-change-me" }
   });
@@ -107,6 +109,7 @@ test("config/env uses overrides for node configuration", async (t) => {
     NODE_SOCKET_URL_SSL: "https://secure",
     NODE_SOCKET_PROXIED: "true",
     MULTI_MUD: "true",
+    HEALTH_ENDPOINT_ENABLED: "false",
     NODE_POWERED_BY: "Overridden",
     SESSION_SECRET: "shhh"
   };
@@ -133,6 +136,7 @@ test("config/env uses overrides for node configuration", async (t) => {
     socketUrlSSL: "https://secure",
     socketProxied: true,
     multiMud: true,
+    healthEndpointEnabled: false,
     poweredBy: "Overridden",
     session: { secret: "shhh" }
   });
