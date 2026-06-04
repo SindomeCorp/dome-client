@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-06-04
 
+### Changed
+- Added help text to all General client options so each option shows a question-mark tooltip explaining its behavior.
+
 ### Fixed
 - Fixed client-options Yes/No buttons so clicking the active value no longer flips the visual state away from the value being saved.
 - Fixed command hints so toggling them off and back on rebuilds a visible suggestions overlay and respects the Command Hints preference when user type metadata arrives.

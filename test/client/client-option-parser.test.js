@@ -99,6 +99,16 @@ test("client option schema includes labels for every option surface", () => {
   });
 });
 
+test("general client options expose help tooltips", () => {
+  CLIENT_OPTION_DEFINITIONS
+    .filter((option) => option.group === "general")
+    .forEach((option) => {
+      assert.equal(typeof option.tooltip, "string", `${option.key} is missing a tooltip`);
+      assert.notEqual(option.tooltip.trim(), "", `${option.key} has an empty tooltip`);
+      assert.equal(CLIENT_OPTION_VIEW[option.key].tooltip, option.tooltip);
+    });
+});
+
 test("client option schema owns localStorage keys", () => {
   assert.equal(getClientOptionStorageKey("colorset"), "dc-toggle-colorset");
   assert.equal(getClientOptionStorageKey("colorset", "custom-"), "custom-colorset");
