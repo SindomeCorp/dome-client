@@ -9,6 +9,7 @@ import { deviceCapture as defaultDeviceCapture } from "../services/ua.js";
 import { getLogExportCss as defaultGetLogExportCss } from "../services/log-export-style.js";
 import defaultRouter from "../routes/index.js";
 import { CLIENT_OPTION_GROUPS, CLIENT_OPTION_LABELS, CLIENT_OPTION_VIEW } from "../shared/client-options.js";
+import { createIpBlocklistMiddleware } from "../middleware/ip-blocklist.js";
 
 const __dirname = fileURLToPath(new URL("..", import.meta.url));
 
@@ -25,7 +26,8 @@ export function createApp({
   router = defaultRouter,
   appStartTime = new Date(),
   versionHash,
-  appVersion
+  appVersion,
+  ipBlocklist
 }) {
   const app = express();
   app.disable("x-powered-by");
@@ -49,6 +51,11 @@ export function createApp({
     }
   }));
 
+  app.use(createIpBlocklistMiddleware({
+    blocklist: ipBlocklist,
+    logger,
+    proxied: config.node.socketProxied
+  }));
   app.use(deviceCapture());
   app.use(cookieParser());
   app.use(express.urlencoded({

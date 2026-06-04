@@ -12,6 +12,9 @@ const defaults = {
   NODE_SOCKET_URL: "http://localhost:8080",
   NODE_SOCKET_URL_SSL: "",
   NODE_SOCKET_PROXIED: false,
+  MULTI_MUD: false,
+  HEALTH_ENDPOINT_ENABLED: true,
+  IP_BLOCKLIST_PATH: "",
   NODE_POWERED_BY: "Dome Client",
   LOG_LEVEL: "info",
   SESSION_SECRET: "dev-session-secret-change-me",
@@ -51,6 +54,7 @@ const defaults = {
   REMOTEAUTH_HOST: "http://localhost",
   REMOTEAUTH_PATH: "/session/authenticate/",
   REMOTEAUTH_REMOTE_SECRET: "dev-remoteauth-secret-change-me",
+  STATUS_SERVICE_URL: "",
   GIT_HASH: "cafebabe"
 };
 

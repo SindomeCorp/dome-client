@@ -11,6 +11,7 @@ export async function bootServer(t, {
   autocomplete = {},
   editor = {},
   shorten = {},
+  security = {},
   acmeWebroot,
   screensController,
   loggerModule,
@@ -27,7 +28,8 @@ export async function bootServer(t, {
     website,
     autocomplete,
     editor,
-    shorten
+    shorten,
+    security
   };
   if (remoteAuth) {
     configOverrides.remoteAuth = remoteAuth;
