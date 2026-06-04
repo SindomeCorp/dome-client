@@ -130,6 +130,6 @@ test("protocol parser emits ping and user-type events", () => {
   assert.deepEqual(parser.parse("#$# - PING!\n"), [{ type: "ping" }]);
   assert.deepEqual(
     parser.parse("#$# user user-type staff\n"),
-    [{ type: "user-type", userType: "st" }]
+    [{ type: "user-type", userType: "staff" }]
   );
 });

@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { logger } from "../../src/client/core/constants.js";
 import { createClientState } from "../../src/client/core/client-state.js";
-import { setupAutoCompleteFeature } from "../../src/client/features/terminal/autocomplete.js";
+import {
+  normalizeAutocompleteUserType,
+  setupAutoCompleteFeature
+} from "../../src/client/features/terminal/autocomplete.js";
 
 const dome = createClientState();
 
@@ -115,6 +118,51 @@ test("typing displays matching suggestions", async () => {
   assert.equal(list.style.top, "60px");
   assert.equal(list.style.maxHeight, "84px");
   assert.equal(list.style.overflowY, "auto");
+});
+
+test("setupAutoComplete rebuilds visible suggestions after destroy", async () => {
+  const { window, input } = await setup(["say | say something"]);
+  input.commandSuggestions("destroy");
+
+  await dome.setupAutoComplete(input, "user");
+  input.getBoundingClientRect = () => ({
+    left: 5,
+    top: 100,
+    bottom: 110,
+    width: 150,
+    height: 10,
+    right: 155
+  });
+  input.value = "sa";
+  input.dispatchEvent(new window.Event("input"));
+
+  const list = window.document.querySelector(".command-suggestions");
+  assert.ok(list);
+  assert.equal(list.children.length, 1);
+  assert.ok(list.innerHTML.includes("say"));
+  assert.equal(list.style.display, "block");
+});
+
+test("setupAutoComplete normalizes named user types for autocomplete endpoints", async () => {
+  const dom = new JSDOM("<!doctype html><html><body><input id=\"input\" /></body></html>", {
+    url: "https://example.com/",
+    pretendToBeVisual: true
+  });
+  const { window } = dom;
+  globalThis.window = window;
+  globalThis.document = window.document;
+  dome.preferences = { broadSearch: false };
+  let requestedUrl = "";
+  globalThis.fetch = (url) => {
+    requestedUrl = url;
+    return Promise.resolve({ json: () => Promise.resolve(["@look_place"]) });
+  };
+  setupAutoCompleteFeature({ client: dome, doc: window.document, win: window });
+
+  await dome.setupAutoComplete(window.document.querySelector("#input"), "player");
+
+  assert.equal(requestedUrl, "/ac/p");
+  assert.equal(normalizeAutocompleteUserType("guest"), "o");
 });
 
 test("keyboard navigation and selection of suggestions", async () => {

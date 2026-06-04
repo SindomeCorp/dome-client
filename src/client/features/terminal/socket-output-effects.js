@@ -90,7 +90,7 @@ export function createSocketOutputEventHandler({
       withFadeText(event.message);
     } else if (event.type === "user-type") {
       client.userType = event.userType;
-      if (client.inputReader) {
+      if (client.inputReader && client.preferences?.commandSuggestions) {
         setupAutoComplete({ client });
         client.setupAutoComplete?.(client.inputReader, client.userType);
       }

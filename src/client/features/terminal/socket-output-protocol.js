@@ -199,9 +199,10 @@ export function createSocketOutputProtocolParser() {
         } else if (metaCommand && metaCommand.indexOf("user") === 0) {
           const typeStart = metaLine.indexOf("user-type");
           if (typeStart > -1) {
+            const userType = metaLine.slice(typeStart).split(/\s+/)[1] || "";
             events.push({
               type: "user-type",
-              userType: metaLine.slice(typeStart, typeStart + 12).split(" ")[1]
+              userType
             });
           }
           segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);

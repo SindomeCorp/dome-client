@@ -87,3 +87,55 @@ test("client options control binder applies button, select, and input values", (
   ]);
   assert.equal(scrolls, 3);
 });
+
+test("client options button binder keeps selected yes/no state when active button is clicked", () => {
+  const dom = new JSDOM(`<!doctype html><html><body>
+    <div class="client-options-page">
+      <div class="option-row" id="commands-option">
+        <button class="enabled-state btn-primary" data-val="true"></button>
+        <button class="disabled-state" data-val="false"></button>
+      </div>
+      <div class="option-row" id="scrolluppause-option">
+        <button class="enabled-state" data-val="true"></button>
+        <button class="disabled-state btn-primary" data-val="false"></button>
+      </div>
+    </div>
+  </body></html>`);
+  const { document } = dom.window;
+  const applied = [];
+  const options = {
+    options: {
+      commands: { state: true, ok: [true, false] },
+      scrolluppause: { state: false, ok: [true, false] }
+    },
+    get(name) {
+      return this.options[name];
+    },
+    save(name, value) {
+      this.options[name].state = value;
+    }
+  };
+  const binder = createClientOptionControlBinder({
+    options,
+    getActions: () => ({
+      scrollBuffer() {},
+      setClientOption: (name, value) => {
+        applied.push([name, value]);
+      }
+    }),
+    logger: { debug() {} }
+  });
+
+  binder.bindOptionButtons({ root: document });
+  document.querySelector("#commands-option .enabled-state").click();
+  document.querySelector("#scrolluppause-option .disabled-state").click();
+
+  assert.deepEqual(applied, [
+    ["commandSuggestions", true],
+    ["scrollUpToPause", false]
+  ]);
+  assert.equal(document.querySelector("#commands-option .enabled-state").classList.contains("btn-primary"), true);
+  assert.equal(document.querySelector("#commands-option .disabled-state").classList.contains("btn-primary"), false);
+  assert.equal(document.querySelector("#scrolluppause-option .enabled-state").classList.contains("btn-primary"), false);
+  assert.equal(document.querySelector("#scrolluppause-option .disabled-state").classList.contains("btn-primary"), true);
+});

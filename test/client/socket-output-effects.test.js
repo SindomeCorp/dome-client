@@ -9,6 +9,7 @@ function createClient(t) {
     ideWindow: { closed: false, postMessage: t.mock.fn() },
     inputReader: {},
     makeEditor: t.mock.fn(() => ({ id: "editor" })),
+    preferences: { commandSuggestions: true },
     setupAutoComplete: t.mock.fn(),
     spawned: {},
     updateEditorListView: t.mock.fn()
@@ -70,6 +71,24 @@ test("socket output event handler updates editor and autocomplete side effects",
   assert.equal(client.updateEditorListView.mock.callCount(), 1);
   assert.equal(client.userType, "staff");
   assert.deepEqual(client.setupAutoComplete.mock.calls[0].arguments, [client.inputReader, "staff"]);
+});
+
+test("socket output event handler does not initialize autocomplete when command hints are disabled", (t) => {
+  const client = createClient(t);
+  client.preferences.commandSuggestions = false;
+  const setupAutoComplete = t.mock.fn();
+  const handler = createSocketOutputEventHandler({
+    client,
+    logger: createLogger(t),
+    renderer: createRenderer(t),
+    setupAutoComplete
+  });
+
+  handler({ type: "user-type", userType: "player" });
+
+  assert.equal(client.userType, "player");
+  assert.equal(setupAutoComplete.mock.callCount(), 0);
+  assert.equal(client.setupAutoComplete.mock.callCount(), 0);
 });
 
 test("socket output event handler forwards SDWC IDE messages", (t) => {
