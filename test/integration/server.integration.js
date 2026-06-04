@@ -1,6 +1,9 @@
 /* eslint indent: ["error", 2], quotes: ["error", "double"], semi: ["error", "always"] */
 import test from "node:test";
 import assert from "node:assert/strict";
+import os from "node:os";
+import path from "node:path";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import request from "supertest";
 import nock from "nock";
 import { io as createSocketClient } from "socket.io-client";
@@ -69,6 +72,54 @@ test("integration: health endpoint can be disabled", async (t) => {
   });
 
   await request(baseUrl).get("/health/").expect(404);
+});
+
+test("integration: IP blocklist rejects HTTP and socket.io clients", async (t) => {
+  nock.disableNetConnect();
+  nock.enableNetConnect("127.0.0.1");
+
+  mockStatusOk();
+
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "dome-ip-blocklist-"));
+  t.after(async () => {
+    await rm(tempDir, { force: true, recursive: true });
+  });
+  const blocklistPath = path.join(tempDir, "blocked.txt");
+  await writeFile(blocklistPath, "203.0.113.10\n", "utf8");
+
+  const { baseUrl } = await bootServer(t, {
+    node: {
+      socketProxied: true
+    },
+    security: {
+      ipBlocklistPath: blocklistPath
+    }
+  });
+
+  await request(baseUrl)
+    .get("/health/")
+    .set("X-Forwarded-For", "203.0.113.10")
+    .expect(403, "Forbidden");
+
+  await new Promise((resolve, reject) => {
+    const socket = createSocketClient(baseUrl, {
+      extraHeaders: {
+        "X-Forwarded-For": "203.0.113.10"
+      },
+      reconnection: false,
+      timeout: 2000,
+      transports: ["websocket"]
+    });
+    socket.on("connect", () => {
+      socket.disconnect();
+      reject(new Error("blocked socket connected"));
+    });
+    socket.on("connect_error", (err) => {
+      socket.disconnect();
+      assert.match(String(err.message), /Forbidden|websocket error|xhr poll error/);
+      resolve();
+    });
+  });
 });
 
 test("integration: website login sets session and redirects", async (t) => {

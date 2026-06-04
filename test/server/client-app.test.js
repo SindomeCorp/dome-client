@@ -123,8 +123,8 @@ async function loadClientApp(t, config, options = {}) {
   }));
   mockCtxs.push(mock.module("socket.io", {
     namedExports: {
-      Server: function(server, opts) {
-        return opts ? httpsMgr : httpMgr;
+      Server: function(server) {
+        return server === httpsServer ? httpsMgr : httpMgr;
       }
     }
   }));

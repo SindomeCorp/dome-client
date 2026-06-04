@@ -68,6 +68,7 @@ test("config/env applies defaults for node configuration", async (t) => {
     NODE_SOCKET_PROXIED: false,
     MULTI_MUD: false,
     HEALTH_ENDPOINT_ENABLED: true,
+    IP_BLOCKLIST_PATH: "",
     NODE_POWERED_BY: "Dome Client",
     SESSION_SECRET: "dev-session-secret-change-me"
   };
@@ -98,6 +99,9 @@ test("config/env applies defaults for node configuration", async (t) => {
     poweredBy: "Dome Client",
     session: { secret: "dev-session-secret-change-me" }
   });
+  assert.deepEqual(cfg.security, {
+    ipBlocklistPath: ""
+  });
 });
 
 test("config/env uses overrides for node configuration", async (t) => {
@@ -110,6 +114,7 @@ test("config/env uses overrides for node configuration", async (t) => {
     NODE_SOCKET_PROXIED: "true",
     MULTI_MUD: "true",
     HEALTH_ENDPOINT_ENABLED: "false",
+    IP_BLOCKLIST_PATH: "config/ip-blocklist.txt",
     NODE_POWERED_BY: "Overridden",
     SESSION_SECRET: "shhh"
   };
@@ -139,5 +144,8 @@ test("config/env uses overrides for node configuration", async (t) => {
     healthEndpointEnabled: false,
     poweredBy: "Overridden",
     session: { secret: "shhh" }
+  });
+  assert.deepEqual(cfg.security, {
+    ipBlocklistPath: "config/ip-blocklist.txt"
   });
 });

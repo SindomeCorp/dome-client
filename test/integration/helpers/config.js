@@ -61,6 +61,9 @@ const defaultIntegrationConfig = {
   },
   status: {
     serviceUrl: "http://status.test/moo/status/"
+  },
+  security: {
+    ipBlocklistPath: ""
   }
 };
 

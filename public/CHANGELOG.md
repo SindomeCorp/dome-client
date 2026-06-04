@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Added documentation for the `/health/` endpoint response shape and configuration.
+- Added a configurable IP block list for rejecting exact client IPs across HTTP and Socket.io requests.
 
 ### Changed
 - Added `HEALTH_ENDPOINT_ENABLED` so deployments can disable the `/health/` endpoint.

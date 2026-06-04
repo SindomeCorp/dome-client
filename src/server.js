@@ -21,6 +21,7 @@ import { createApp } from "./server/app.js";
 import { createHttpServers } from "./server/servers.js";
 import { bindSocketManagers } from "./server/socket-managers.js";
 import { close, listen, resolveBoundAddress } from "./server/lifecycle.js";
+import { loadIpBlocklist } from "./services/ip-blocklist.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const logger = named("client-app");
@@ -39,6 +40,11 @@ function getPackageVersion() {
 const versionHash = process.env.GIT_HASH || "t" + new Date().getTime();
 const APP_START_TIME = new Date();
 const appVersion = process.env.APP_VERSION || getPackageVersion();
+const ipBlocklist = loadIpBlocklist({
+  filePath: config.security?.ipBlocklistPath,
+  fs,
+  logger
+});
 
 /** Build Express & Start the HTTP Server **/
 const app = createApp({
@@ -54,12 +60,14 @@ const app = createApp({
   router,
   appStartTime: APP_START_TIME,
   versionHash,
-  appVersion
+  appVersion,
+  ipBlocklist
 });
 const { server, httpMgr, sslServer, httpsMgr } = createHttpServers({
   app,
   config,
   logger,
+  ipBlocklist,
   fs,
   http,
   https,

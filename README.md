@@ -202,6 +202,12 @@ All application code resides in `src/` and follows a layered design:
 
 Controllers may depend on services and configuration, but services remain independent of Express. Tests live in `test/` and mirror this structure.
 
+## IP Block List
+
+Set `IP_BLOCKLIST_PATH` to a plain-text file to reject exact client IPs before serving web pages, static assets, or Socket.io connections. Leave it empty to disable blocking. The file is loaded when the web client starts, accepts one IP per line, and ignores blank lines or `#` comments. Invalid entries are logged and skipped.
+
+When `NODE_SOCKET_PROXIED=true`, block-list checks use the left-most `X-Forwarded-For` address for both HTTP and Socket.io requests. Enable that only behind a trusted reverse proxy.
+
 ## Editor
 
 The in-browser editor uses [Ace](https://ace.c9.io/) v1.43.2 with a custom MOO mode and optional Vim keybindings. Custom modules live under `src/client/features/editor/ace` and are bundled during the build. Run `npm start` or `npm run build` after editing these modules to regenerate client assets. See [docs/ace-notes.md](docs/ace-notes.md) for details.

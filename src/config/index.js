@@ -62,6 +62,9 @@ const config = {
   },
   status: {
     serviceUrl: env.STATUS_SERVICE_URL
+  },
+  security: {
+    ipBlocklistPath: env.IP_BLOCKLIST_PATH
   }
 };
 
