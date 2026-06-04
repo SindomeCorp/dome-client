@@ -92,6 +92,12 @@ export function createApp({
   app.use("/css", express.static(path.join(__dirname, "../public/css"), { dotfiles: "ignore" }));
   app.use(express.static(path.join(__dirname, "../public"), { dotfiles: "ignore" }));
 
+  if (config.node.healthEndpointEnabled === false) {
+    app.use(["/health", "/health/"], (req, res) => {
+      res.status(404).send("Not Found");
+    });
+  }
+
   app.use(router);
 
   app.use((err, req, res, next) => {

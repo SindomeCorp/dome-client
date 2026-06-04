@@ -7,6 +7,7 @@ const defaultIntegrationConfig = {
     socketUrlSSL: "",
     socketProxied: false,
     multiMud: false,
+    healthEndpointEnabled: true,
     poweredBy: "Dome Client",
     session: {
       secret: "integration-test-secret"

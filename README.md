@@ -218,6 +218,7 @@ If you want the IDE to function properly you'll need to make a few verb changes/
 - [URL Shortener](docs/URL-SHORTENER.md)
 - [Website Auth](docs/WEBSITE-AUTH.md)
 - [Status Service](docs/STATUS-SERVICE.md)
+- [Health Endpoint](docs/HEALTH_ENDPOINT.md)
 
 ## Dealing with port 80 and file permissions
 

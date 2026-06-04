@@ -8,6 +8,7 @@ const config = {
     socketUrlSSL: env.NODE_SOCKET_URL_SSL,
     socketProxied: env.NODE_SOCKET_PROXIED,
     multiMud: env.MULTI_MUD,
+    healthEndpointEnabled: env.HEALTH_ENDPOINT_ENABLED,
     poweredBy: env.NODE_POWERED_BY,
     session: {
       secret: env.SESSION_SECRET
