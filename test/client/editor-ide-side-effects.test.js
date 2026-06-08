@@ -25,6 +25,7 @@ test("useIdeConfig reads root data attributes with defaults", () => {
     data-ide-hover-overlays-enabled="false"
     data-ide-reference-navigation-enabled="false"
     data-ide-scratch-enabled="false"
+    data-editor-parser="MOO"
   ></div></body></html>`);
   try {
     assert.deepEqual(useIdeConfig(), {
@@ -38,7 +39,8 @@ test("useIdeConfig reads root data attributes with defaults", () => {
       idePropertyBrowserEnabled: false,
       ideHoverOverlaysEnabled: false,
       ideReferenceNavigationEnabled: false,
-      ideScratchEnabled: false
+      ideScratchEnabled: false,
+      editorParser: "MOO"
     });
   } finally {
     cleanup();
@@ -60,7 +62,8 @@ test("useIdeConfig falls back to defaults when document is unavailable", () => {
       idePropertyBrowserEnabled: true,
       ideHoverOverlaysEnabled: true,
       ideReferenceNavigationEnabled: true,
-      ideScratchEnabled: true
+      ideScratchEnabled: true,
+      editorParser: ""
     });
   } finally {
     globalThis.document = previousDocument;

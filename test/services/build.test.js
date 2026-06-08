@@ -85,7 +85,8 @@ test("compileJs bundles entry and produces normal and minified outputs", async t
     "editor-window.js",
     "note-editor-window.js",
     "logger.js",
-    "ide-editor-window.js"
+    "ide-editor-window.js",
+    "moo-parser-worker.js"
   ];
   assert.deepStrictEqual(built.sort(), expected.slice().sort());
   for (const file of expected) {
@@ -99,6 +100,7 @@ test("compileJs bundles entry and produces normal and minified outputs", async t
     "editor-window.js",
     "ide-editor-window.js",
     "logger.js",
+    "moo-parser-worker.js",
     "note-editor-window.js",
     "player-client.js",
     "player-client.min.js"
@@ -114,7 +116,8 @@ test("browser entry manifest declares expected output files once", () => {
     "editor-window.js",
     "note-editor-window.js",
     "logger.js",
-    "ide-editor-window.js"
+    "ide-editor-window.js",
+    "moo-parser-worker.js"
   ];
 
   assert.deepStrictEqual(browserOutputFiles, expected);
@@ -156,6 +159,26 @@ test("copyAce copies ace-builds assets to destination", async t => {
   assert.strictEqual(content, "// placeholder");
 });
 
+test("copyMooParserWasm copies packaged tree-sitter-moo wasm", async () => {
+  const outDir = await fs.mkdtemp(path.join(os.tmpdir(), "moo-parser-"));
+  await buildModule.copyMooParserWasm(outDir);
+
+  const copiedMoo = await fs.readFile(path.join(outDir, "tree-sitter-moo.wasm"));
+  const sourceMoo = await fs.readFile(fileURLToPath(import.meta.resolve("tree-sitter-moo/wasm")));
+  assert.deepStrictEqual(copiedMoo, sourceMoo);
+
+  const copiedRuntime = await fs.readFile(path.join(outDir, "web-tree-sitter.wasm"));
+  const sourceRuntime = await fs.readFile(fileURLToPath(import.meta.resolve("web-tree-sitter/web-tree-sitter.wasm")));
+  assert.deepStrictEqual(copiedRuntime, sourceRuntime);
+
+  const copiedRuntimeJs = await fs.readFile(path.join(outDir, "web-tree-sitter.js"), "utf8");
+  const sourceRuntimeJs = await fs.readFile(
+    path.join(path.dirname(fileURLToPath(import.meta.resolve("web-tree-sitter/web-tree-sitter.wasm"))), "web-tree-sitter.js"),
+    "utf8"
+  );
+  assert.deepStrictEqual(copiedRuntimeJs, sourceRuntimeJs);
+});
+
 test("build executes only once", async t => {
   t.mock.method(fs, "mkdir", async () => {});
   t.mock.method(fs, "readdir", async dir => dir === realCssDir ? [] : []);
@@ -169,8 +192,9 @@ test("build executes only once", async t => {
   esbuild.build = async () => {};
   const { default: build } = await import(`../../src/services/build.js?mock=${Date.now()}`);
   const outDir = await fs.mkdtemp(path.join(os.tmpdir(), "js-"));
-  const first = build({ jsOutDir: outDir });
-  const second = build({ jsOutDir: outDir });
+  const parserOutDir = await fs.mkdtemp(path.join(os.tmpdir(), "parsers-"));
+  const first = build({ jsOutDir: outDir, parserOutDir });
+  const second = build({ jsOutDir: outDir, parserOutDir });
   assert.strictEqual(first, second);
   await first;
   const calls = rm.mock.calls.length;

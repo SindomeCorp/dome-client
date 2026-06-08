@@ -149,3 +149,28 @@ test("config/env uses overrides for node configuration", async (t) => {
     ipBlocklistPath: "config/ip-blocklist.txt"
   });
 });
+
+test("config/env normalizes editor parser values", async (t) => {
+  const configMock = t.mock.method(dotenv, "config", () => ({}));
+  const previous = process.env.EDITOR_IDE_PARSER;
+  t.after(() => {
+    configMock.mock.restore();
+    if (previous === undefined) {
+      delete process.env.EDITOR_IDE_PARSER;
+    } else {
+      process.env.EDITOR_IDE_PARSER = previous;
+    }
+  });
+
+  delete process.env.EDITOR_IDE_PARSER;
+  let { default: cfg } = await importConfig();
+  assert.equal(cfg.editor.parser, "");
+
+  process.env.EDITOR_IDE_PARSER = "MOO";
+  ({ default: cfg } = await importConfig());
+  assert.equal(cfg.editor.parser, "moo");
+
+  process.env.EDITOR_IDE_PARSER = "python";
+  ({ default: cfg } = await importConfig());
+  assert.equal(cfg.editor.parser, "");
+});

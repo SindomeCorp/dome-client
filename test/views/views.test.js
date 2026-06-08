@@ -65,7 +65,7 @@ const sampleData = {
   },
   "views/editors/verb.ejs": {
     req: { query: {} },
-    editor: { readonly: true },
+    editor: { readonly: true, parser: "" },
     meta: { title: "", description: "", keywords: "" },
     decache: (v) => v,
   },
@@ -92,7 +92,8 @@ const sampleData = {
       idePropertyBrowserEnabled: true,
       ideHoverOverlaysEnabled: true,
       ideReferenceNavigationEnabled: true,
-      ideScratchEnabled: true
+      ideScratchEnabled: true,
+      parser: ""
     },
     meta: { title: "", description: "", keywords: "" },
     decache: (v) => v,

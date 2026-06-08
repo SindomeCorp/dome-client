@@ -43,6 +43,7 @@ import { VmsPromptDialog } from "./editor-ide/VmsPromptDialog.jsx";
 export default function EditorIDE() {
   const {
     editorTheme,
+    editorParser,
     ideEditOpenParent,
     ideHoverOverlaysEnabled,
     ideObjectBrowserEnabled,
@@ -88,6 +89,7 @@ export default function EditorIDE() {
   } = useAceEditors({
     active,
     editorFont,
+    editorParser,
     editorTheme,
     ideEditOpenParent,
     ideHoverOverlaysEnabled,

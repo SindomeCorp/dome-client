@@ -5,7 +5,8 @@ import "../../ace/keybinding-vim.js";
 import "../../ace/mode-moo.js";
 import "ace-builds/src-noconflict/mode-text.js";
 import { getFontFamily } from "../../ace/fonts.js";
-import { configureMooEditor } from "../../ace/editor-options.js";
+import { configureEditorParser } from "../../ace/editor-options.js";
+import { attachMooParserDiagnostics } from "../../parser/moo-parser-diagnostics.js";
 import {
   getDefinitionTargetAtPosition,
   getEditingObjectId,
@@ -24,6 +25,7 @@ ace?.config?.set?.("basePath", "/js/ace");
 export function useAceEditors({
   active,
   editorFont,
+  editorParser,
   editorTheme,
   ideEditOpenParent,
   ideHoverOverlaysEnabled,
@@ -39,6 +41,7 @@ export function useAceEditors({
   wordWrap
 }) {
   const editors = useRef({});
+  const diagnostics = useRef({});
 
   useEffect(() => {
     const id = setTimeout(() => editors.current[active]?.resize(), 0);
@@ -87,7 +90,7 @@ export function useAceEditors({
 
     if (editorTheme) ed.setTheme(`ace/theme/${editorTheme}`);
     if (isProgram) {
-      configureMooEditor(ed);
+      configureEditorParser(ed, editorParser);
     } else {
       ed.getSession().setMode("ace/mode/text");
     }
@@ -99,6 +102,9 @@ export function useAceEditors({
     ed.setOption("wrap", wordWrap ? "free" : "off");
     ed.renderer.updateFull();
     ed.setValue(content, -1);
+    if (isProgram) {
+      diagnostics.current[id] = attachMooParserDiagnostics(ed, editorParser);
+    }
     ed.on("change", () => {
       if (lineLimit) {
         const currentSession = ed.getSession();
@@ -172,6 +178,8 @@ export function useAceEditors({
   };
 
   const destroyEditor = (id) => {
+    diagnostics.current[id]?.();
+    delete diagnostics.current[id];
     editors.current[id]?.destroy();
     delete editors.current[id];
   };

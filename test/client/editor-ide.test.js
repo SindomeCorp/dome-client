@@ -179,6 +179,7 @@ function setupEditorDom(attributes = {}) {
     "data-ide-hover-overlays-enabled": "true",
     "data-ide-reference-navigation-enabled": "true",
     "data-ide-scratch-enabled": "true",
+    "data-editor-parser": "",
     ...attributes
   };
   const attrText = Object.entries(dataAttrs)
@@ -293,6 +294,27 @@ test("EditorIDE pins browser tabs and saves an editable program tab", async (t) 
     ["input", "@program #12:look"],
     ["input", "initial\n."]
   ]);
+});
+
+test("EditorIDE applies MOO mode when configured", async (t) => {
+  const rendered = await renderEditorIde(t, { "data-editor-parser": "MOO" });
+  await openTab(rendered.window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "initial"
+  });
+  assert.equal(globalThis.__editorIdeAceEditors[0].session.mode, "ace/mode/moo");
+  assert.equal(globalThis.__editorIdeAceEditors[0].options.tabSize, 2);
+});
+
+test("EditorIDE falls back to text mode for unsupported parser values", async (t) => {
+  const rendered = await renderEditorIde(t, { "data-editor-parser": "python" });
+  await openTab(rendered.window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "initial"
+  });
+  assert.equal(globalThis.__editorIdeAceEditors[0].session.mode, "ace/mode/text");
 });
 
 test("EditorIDE reuses duplicate tabs without replacing contents", async (t) => {
@@ -487,7 +509,7 @@ test("EditorIDE keeps an empty VMS note field visible until blur", async (t) => 
 });
 
 test("EditorIDE keyboard shortcuts preserve current editor behavior", async (t) => {
-  const { window, emit } = await renderEditorIde(t);
+  const { window, emit } = await renderEditorIde(t, { "data-editor-parser": "moo" });
 
   await openTab(window, {
     editorName: "Look",

@@ -21,7 +21,8 @@ export function useIdeConfig() {
     idePropertyBrowserEnabled: readEnabledAttribute(rootEl, "data-ide-property-browser-enabled"),
     ideHoverOverlaysEnabled: readEnabledAttribute(rootEl, "data-ide-hover-overlays-enabled"),
     ideReferenceNavigationEnabled: readEnabledAttribute(rootEl, "data-ide-reference-navigation-enabled"),
-    ideScratchEnabled: readEnabledAttribute(rootEl, "data-ide-scratch-enabled")
+    ideScratchEnabled: readEnabledAttribute(rootEl, "data-ide-scratch-enabled"),
+    editorParser: rootEl?.getAttribute("data-editor-parser") || ""
   };
 }
 

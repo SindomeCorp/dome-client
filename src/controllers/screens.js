@@ -69,7 +69,8 @@ export function editor(req, res) {
       "idePropertyBrowserEnabled": config.editor.idePropertyBrowserEnabled,
       "ideHoverOverlaysEnabled": config.editor.ideHoverOverlaysEnabled,
       "ideReferenceNavigationEnabled": config.editor.ideReferenceNavigationEnabled,
-      "ideScratchEnabled": config.editor.ideScratchEnabled
+      "ideScratchEnabled": config.editor.ideScratchEnabled,
+      "parser": config.editor.parser
     },
     "meta": {
       "title": "Untitled Local Editor ",

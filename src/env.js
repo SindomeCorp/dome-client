@@ -54,6 +54,7 @@ const env = cleanEnv(process.env, {
   IDE_HOVER_OVERLAYS_ENABLED: bool({ default: true }),
   IDE_REFERENCE_NAVIGATION_ENABLED: bool({ default: true }),
   IDE_SCRATCH_ENABLED: bool({ default: true }),
+  EDITOR_IDE_PARSER: str({ default: "" }),
   SHORTEN_ENABLED: bool({ default: false }),
   SHORTEN_HOST: str({ default: "localhost" }),
   SHORTEN_PORT: num({ default: 5549 }),

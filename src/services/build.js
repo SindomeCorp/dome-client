@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { createRequire } from "node:module";
 import less from "less";
 import esbuild from "esbuild";
 import postcss from "postcss";
@@ -14,6 +15,7 @@ import {
 } from "./browser-entry-manifest.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const require = createRequire(import.meta.url);
 
 let buildPromise;
 
@@ -126,7 +128,27 @@ async function copyAce(outDir = path.join(__dirname, "..", "..", "public", "js",
   await fs.cp(srcDir, outDir, { recursive: true });
 }
 
-export { cleanDir, compileLess, compileReactCss, compileJs, compileEjsScripts, copyAce };
+async function copyMooParserWasm(outDir = path.join(__dirname, "..", "..", "public", "js", "parsers")) {
+  const mooWasm = require.resolve("tree-sitter-moo/wasm");
+  const runtimeWasm = require.resolve("web-tree-sitter/web-tree-sitter.wasm");
+  const runtimeJs = path.join(path.dirname(runtimeWasm), "web-tree-sitter.js");
+  await fs.mkdir(outDir, { recursive: true });
+  await Promise.all([
+    fs.copyFile(mooWasm, path.join(outDir, "tree-sitter-moo.wasm")),
+    fs.copyFile(runtimeJs, path.join(outDir, "web-tree-sitter.js")),
+    fs.copyFile(runtimeWasm, path.join(outDir, "web-tree-sitter.wasm"))
+  ]);
+}
+
+export {
+  cleanDir,
+  compileLess,
+  compileReactCss,
+  compileJs,
+  compileEjsScripts,
+  copyAce,
+  copyMooParserWasm
+};
 
 export default function build(options = {}) {
   if (!buildPromise) {
@@ -137,6 +159,7 @@ export default function build(options = {}) {
         compileJs(options.jsOutDir),
         compileEjsScripts(options.jsOutDir),
         copyAce(options.aceOutDir),
+        copyMooParserWasm(options.parserOutDir),
       ]);
     })();
   }

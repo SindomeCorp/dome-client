@@ -1,5 +1,10 @@
 import env from "../env.js";
 
+function normalizeEditorParser(value) {
+  const parser = String(value || "").trim().toLowerCase();
+  return parser === "moo" ? "moo" : "";
+}
+
 const config = {
   node: {
     mode: env.NODE_MODE,
@@ -44,7 +49,8 @@ const config = {
     idePropertyBrowserEnabled: env.IDE_PROPERTY_BROWSER_ENABLED,
     ideHoverOverlaysEnabled: env.IDE_HOVER_OVERLAYS_ENABLED,
     ideReferenceNavigationEnabled: env.IDE_REFERENCE_NAVIGATION_ENABLED,
-    ideScratchEnabled: env.IDE_SCRATCH_ENABLED
+    ideScratchEnabled: env.IDE_SCRATCH_ENABLED,
+    parser: normalizeEditorParser(env.EDITOR_IDE_PARSER)
   },
   shorten: {
     enabled: env.SHORTEN_ENABLED,
