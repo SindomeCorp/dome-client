@@ -64,9 +64,9 @@ function createEditor(node) {
     },
     markers: [],
     removedMarkers: [],
-    addMarker(range, className, type) {
+    addMarker(range, className, type, inFront) {
       const id = this.markers.length + 1;
-      this.markers.push({ id, range, className, type });
+      this.markers.push({ id, range, className, type, inFront });
       return id;
     },
     removeMarker(id) {
@@ -386,6 +386,7 @@ test("EditorIDE blocks program save and flashes first parser error when configur
   assert.deepEqual(editor.scrollToLineCalls[0], { row: 0, center: true, animate: true, callback: null });
   assert.equal(editor.session.markers[0].className, "moo-parser-blocked-save-line");
   assert.equal(editor.session.markers[0].type, "fullLine");
+  assert.equal(editor.session.markers[0].inFront, true);
 });
 
 test("EditorIDE applies MOO mode when configured", async (t) => {

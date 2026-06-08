@@ -239,7 +239,8 @@ function flashBlockedSaveLine(markersRef, id, editor, row) {
   const markerId = session.addMarker(
     new Range(row, 0, row, Number.MAX_SAFE_INTEGER),
     BLOCKED_SAVE_MARKER_CLASS,
-    "fullLine"
+    "fullLine",
+    true
   );
   const timeout = setTimeout(() => {
     clearBlockedSaveMarker(markersRef, id, editor);

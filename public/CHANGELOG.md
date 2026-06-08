@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Fixed MOO parser loading by using a browser-valid Wasm parser artifact from the packaged `tree-sitter-moo` release.
 - Fixed MOO Ace highlighting so single-quoted text such as `'ANON'` is no longer highlighted as a string.
+- Fixed blocked MOO parser saves so the IDE editor visibly flashes the first error line.
 
 ## 2026-06-04
 
