@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-06-08
+
+### Added
+- Added optional MOO parser support for verb editors behind `EDITOR_IDE_PARSER=moo`, including Tree-sitter diagnostics in the classic editor and EditorIDE.
+- Added MOO block-balance diagnostics that report missing `endif`, `endfor`, `endwhile`, `endtry`, and `endfork` markers on the opening block line with a final-line summary for nested missing terminators.
+
+### Changed
+- Updated verb editor MOO parser assets to use the `tree-sitter-moo` `v0.2.0` release package.
+
+### Fixed
+- Fixed MOO parser loading by using a browser-valid Wasm parser artifact from the packaged `tree-sitter-moo` release.
+- Fixed MOO Ace highlighting so single-quoted text such as `'ANON'` is no longer highlighted as a string.
+
 ## 2026-06-04
 
 ### Added
