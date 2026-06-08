@@ -1,4 +1,5 @@
 import { Language, Parser } from "/js/parsers/web-tree-sitter.js";
+import { collectMooBlockDiagnostics } from "../features/editor/parser/moo-block-diagnostics.js";
 
 const RUNTIME_WASM_PATH = "/js/parsers/web-tree-sitter.wasm";
 const MOO_WASM_PATH = "/js/parsers/tree-sitter-moo.wasm";
@@ -35,15 +36,29 @@ function annotationForNode(node) {
   };
 }
 
-function collectSyntaxAnnotations(node, annotations = []) {
+function isBroadErrorNode(node) {
+  return node?.isError && node.startPosition?.row === 0 && node.endPosition?.row > 0;
+}
+
+function collectSyntaxAnnotations(node, annotations = [], options = {}) {
   if (!node?.hasError) return annotations;
-  if (node.isError || node.isMissing) {
+  if ((node.isError || node.isMissing) && !(options.suppressBroadErrors && isBroadErrorNode(node))) {
     annotations.push(annotationForNode(node));
   }
   for (const child of node.children || []) {
-    collectSyntaxAnnotations(child, annotations);
+    collectSyntaxAnnotations(child, annotations, options);
   }
   return annotations;
+}
+
+function dedupeAnnotations(annotations) {
+  const seen = new Set();
+  return annotations.filter((annotation) => {
+    const key = `${annotation.row}:${annotation.column}:${annotation.text}:${annotation.type}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 self.addEventListener("message", async (event) => {
@@ -51,9 +66,14 @@ self.addEventListener("message", async (event) => {
   if (type !== "parse") return;
 
   try {
+    const sourceText = String(source || "");
     const parser = await getParser();
-    const tree = parser.parse(String(source || ""));
-    const annotations = collectSyntaxAnnotations(tree.rootNode);
+    const tree = parser.parse(sourceText);
+    const blockAnnotations = collectMooBlockDiagnostics(sourceText);
+    const syntaxAnnotations = collectSyntaxAnnotations(tree.rootNode, [], {
+      suppressBroadErrors: blockAnnotations.length > 0
+    });
+    const annotations = dedupeAnnotations([...blockAnnotations, ...syntaxAnnotations]);
     self.postMessage({ id, annotations });
     tree.delete();
   } catch (err) {
