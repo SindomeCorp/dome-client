@@ -264,10 +264,6 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
                 regex : /\/\/.*$/
             }, {
                 token : "string",
-                regex : "'(?=.)",
-                next  : "qstring"
-            }, {
-                token : "string",
                 regex : '"(?=.)',
                 next  : "qqstring"
             }, {
@@ -354,26 +350,6 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
             }, {
                 token : "string",
                 regex : '"|$',
-                next  : "start",
-                merge : true
-            }
-        ],
-        "qstring" : [
-            {
-                token : "constant.language.escape",
-                regex : escapedRe
-            }, {
-                token : "string",
-                regex : "[^'\\\\]+",
-                merge : true
-            }, {
-                token : "string",
-                regex : "\\\\$",
-                next  : "qstring",
-                merge : true
-            }, {
-                token : "string",
-                regex : "'|$",
                 next  : "start",
                 merge : true
             }

@@ -420,6 +420,21 @@ test("MOO mode does not tokenize JavaScript regular expression literals", () => 
   );
 });
 
+test("MOO mode does not tokenize single-quoted text as a string", () => {
+  const mode = createMode();
+
+  assert.deepEqual(
+    tokenTypesFor(mode, "return 'ANON';"),
+    [
+      "keyword",
+      "text",
+      "constant.language",
+      "text",
+      "punctuation.operator"
+    ]
+  );
+});
+
 test("MOO mode toggles comments on selected document rows", () => {
   const mode = createMode();
   const uncommentDoc = createDocument(["  //one", "//two"]);
