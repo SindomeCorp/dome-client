@@ -42,6 +42,7 @@ export function useAceEditors({
 }) {
   const editors = useRef({});
   const diagnostics = useRef({});
+  const parserAnnotations = useRef({});
 
   useEffect(() => {
     const id = setTimeout(() => editors.current[active]?.resize(), 0);
@@ -103,7 +104,11 @@ export function useAceEditors({
     ed.renderer.updateFull();
     ed.setValue(content, -1);
     if (isProgram) {
-      diagnostics.current[id] = attachMooParserDiagnostics(ed, editorParser);
+      diagnostics.current[id] = attachMooParserDiagnostics(ed, editorParser, {
+        onAnnotations: (annotations) => {
+          parserAnnotations.current[id] = annotations;
+        }
+      });
     }
     ed.on("change", () => {
       if (lineLimit) {
@@ -180,11 +185,29 @@ export function useAceEditors({
   const destroyEditor = (id) => {
     diagnostics.current[id]?.();
     delete diagnostics.current[id];
+    delete parserAnnotations.current[id];
     editors.current[id]?.destroy();
     delete editors.current[id];
   };
 
   const getEditorValue = (id) => editors.current[id]?.getValue();
+
+  const getParserAnnotations = (id) => parserAnnotations.current[id] || [];
+
+  const revealParserAnnotation = (id, annotation) => {
+    const editor = editors.current[id];
+    if (!editor || !annotation) return;
+    const row = Number(annotation.row) || 0;
+    const column = Number(annotation.column) || 0;
+    editor.focus?.();
+    if (typeof editor.gotoLine === "function") {
+      editor.gotoLine(row + 1, column, true);
+    } else {
+      editor.moveCursorTo?.(row, column);
+    }
+    editor.scrollToLine?.(row, true, true, null);
+    editor.clearSelection?.();
+  };
 
   const resizeActiveEditor = () => {
     setTimeout(() => editors.current[active]?.resize(), 0);
@@ -194,6 +217,8 @@ export function useAceEditors({
     destroyEditor,
     editors,
     getEditorValue,
+    getParserAnnotations,
+    revealParserAnnotation,
     resizeActiveEditor,
     setEditorRef
   };

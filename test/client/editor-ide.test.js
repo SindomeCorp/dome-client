@@ -180,6 +180,7 @@ function setupEditorDom(attributes = {}) {
     "data-ide-reference-navigation-enabled": "true",
     "data-ide-scratch-enabled": "true",
     "data-editor-parser": "",
+    "data-editor-parser-block-save": "false",
     ...attributes
   };
   const attrText = Object.entries(dataAttrs)

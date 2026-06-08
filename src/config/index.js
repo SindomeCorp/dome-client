@@ -50,7 +50,8 @@ const config = {
     ideHoverOverlaysEnabled: env.IDE_HOVER_OVERLAYS_ENABLED,
     ideReferenceNavigationEnabled: env.IDE_REFERENCE_NAVIGATION_ENABLED,
     ideScratchEnabled: env.IDE_SCRATCH_ENABLED,
-    parser: normalizeEditorParser(env.EDITOR_IDE_PARSER)
+    parser: normalizeEditorParser(env.EDITOR_IDE_PARSER),
+    parserBlockSave: env.EDITOR_IDE_PARSER_BLOCK_SAVE
   },
   shorten: {
     enabled: env.SHORTEN_ENABLED,

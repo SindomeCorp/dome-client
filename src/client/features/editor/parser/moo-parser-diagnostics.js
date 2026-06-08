@@ -5,7 +5,7 @@ import {
 
 const PARSE_DEBOUNCE_MS = 300;
 
-export function attachMooParserDiagnostics(editor, parser) {
+export function attachMooParserDiagnostics(editor, parser, options = {}) {
   if (normalizeEditorParser(parser) !== MOO_EDITOR_PARSER) {
     return () => {};
   }
@@ -37,7 +37,9 @@ export function attachMooParserDiagnostics(editor, parser) {
   worker.addEventListener("message", (event) => {
     const { id, annotations } = event.data || {};
     if (!active || id !== sequence) return;
-    session.setAnnotations(Array.isArray(annotations) ? annotations : []);
+    const nextAnnotations = Array.isArray(annotations) ? annotations : [];
+    session.setAnnotations(nextAnnotations);
+    options.onAnnotations?.(nextAnnotations);
   });
 
   const handleChange = () => scheduleParse();
@@ -51,6 +53,7 @@ export function attachMooParserDiagnostics(editor, parser) {
       editor.off("change", handleChange);
     }
     session.setAnnotations([]);
+    options.onAnnotations?.([]);
     worker.terminate();
   };
 }

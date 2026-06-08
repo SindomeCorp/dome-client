@@ -18,6 +18,7 @@ const expectedEditor = (readonly) => ({
   ideReferenceNavigationEnabled: config.editor.ideReferenceNavigationEnabled,
   ideScratchEnabled: config.editor.ideScratchEnabled,
   parser: config.editor.parser,
+  parserBlockSave: config.editor.parserBlockSave
 });
 
 export function createRes() {

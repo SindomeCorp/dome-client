@@ -152,25 +152,37 @@ test("config/env uses overrides for node configuration", async (t) => {
 
 test("config/env normalizes editor parser values", async (t) => {
   const configMock = t.mock.method(dotenv, "config", () => ({}));
-  const previous = process.env.EDITOR_IDE_PARSER;
+  const previousParser = process.env.EDITOR_IDE_PARSER;
+  const previousBlockSave = process.env.EDITOR_IDE_PARSER_BLOCK_SAVE;
   t.after(() => {
     configMock.mock.restore();
-    if (previous === undefined) {
+    if (previousParser === undefined) {
       delete process.env.EDITOR_IDE_PARSER;
     } else {
-      process.env.EDITOR_IDE_PARSER = previous;
+      process.env.EDITOR_IDE_PARSER = previousParser;
+    }
+    if (previousBlockSave === undefined) {
+      delete process.env.EDITOR_IDE_PARSER_BLOCK_SAVE;
+    } else {
+      process.env.EDITOR_IDE_PARSER_BLOCK_SAVE = previousBlockSave;
     }
   });
 
   delete process.env.EDITOR_IDE_PARSER;
+  delete process.env.EDITOR_IDE_PARSER_BLOCK_SAVE;
   let { default: cfg } = await importConfig();
   assert.equal(cfg.editor.parser, "");
+  assert.equal(cfg.editor.parserBlockSave, false);
 
   process.env.EDITOR_IDE_PARSER = "MOO";
+  process.env.EDITOR_IDE_PARSER_BLOCK_SAVE = "true";
   ({ default: cfg } = await importConfig());
   assert.equal(cfg.editor.parser, "moo");
+  assert.equal(cfg.editor.parserBlockSave, true);
 
   process.env.EDITOR_IDE_PARSER = "python";
+  process.env.EDITOR_IDE_PARSER_BLOCK_SAVE = "false";
   ({ default: cfg } = await importConfig());
   assert.equal(cfg.editor.parser, "");
+  assert.equal(cfg.editor.parserBlockSave, false);
 });

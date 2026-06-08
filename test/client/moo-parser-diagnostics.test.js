@@ -75,7 +75,10 @@ test("attachMooParserDiagnostics posts editor content and applies current annota
 
   try {
     const editor = createEditor();
-    const cleanup = attachMooParserDiagnostics(editor, "MOO");
+    const annotationUpdates = [];
+    const cleanup = attachMooParserDiagnostics(editor, "MOO", {
+      onAnnotations: (annotations) => annotationUpdates.push(annotations)
+    });
     await new Promise((resolve) => setTimeout(resolve, 350));
 
     assert.equal(workers.length, 1);
@@ -107,10 +110,12 @@ test("attachMooParserDiagnostics posts editor content and applies current annota
     const annotations = [{ row: 0, column: 7, text: "MOO syntax error", type: "error" }];
     workers[0].handlers.message({ data: { id: 2, annotations } });
     assert.deepEqual(editor.session.annotations, annotations);
+    assert.deepEqual(annotationUpdates, [annotations]);
 
     cleanup();
     assert.equal(workers[0].terminated, true);
     assert.deepEqual(editor.session.annotations, []);
+    assert.deepEqual(annotationUpdates, [annotations, []]);
     assert.equal(editor.offCalls[0][0], "change");
   } finally {
     globalThis.Worker = previousWorker;

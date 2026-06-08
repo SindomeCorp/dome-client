@@ -70,7 +70,8 @@ export function editor(req, res) {
       "ideHoverOverlaysEnabled": config.editor.ideHoverOverlaysEnabled,
       "ideReferenceNavigationEnabled": config.editor.ideReferenceNavigationEnabled,
       "ideScratchEnabled": config.editor.ideScratchEnabled,
-      "parser": config.editor.parser
+      "parser": config.editor.parser,
+      "parserBlockSave": config.editor.parserBlockSave
     },
     "meta": {
       "title": "Untitled Local Editor ",

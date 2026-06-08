@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Added optional MOO parser support for verb editors behind `EDITOR_IDE_PARSER=moo`, including Tree-sitter diagnostics in the classic editor and EditorIDE.
+- Added `EDITOR_IDE_PARSER_BLOCK_SAVE` so deployments can block IDE `@program` saves while MOO parser errors are visible and move the editor to the first error.
 - Added MOO block-balance diagnostics that report missing `endif`, `endfor`, `endwhile`, `endtry`, and `endfork` markers on the opening block line with a final-line summary for nested missing terminators.
 
 ### Changed

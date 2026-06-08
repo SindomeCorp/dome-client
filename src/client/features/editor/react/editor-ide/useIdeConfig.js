@@ -22,7 +22,8 @@ export function useIdeConfig() {
     ideHoverOverlaysEnabled: readEnabledAttribute(rootEl, "data-ide-hover-overlays-enabled"),
     ideReferenceNavigationEnabled: readEnabledAttribute(rootEl, "data-ide-reference-navigation-enabled"),
     ideScratchEnabled: readEnabledAttribute(rootEl, "data-ide-scratch-enabled"),
-    editorParser: rootEl?.getAttribute("data-editor-parser") || ""
+    editorParser: rootEl?.getAttribute("data-editor-parser") || "",
+    editorParserBlockSave: rootEl?.getAttribute("data-editor-parser-block-save") === "true"
   };
 }
 

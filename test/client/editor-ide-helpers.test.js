@@ -167,6 +167,8 @@ test("editor IDE save helpers cover prompt and failure branches", (t) => {
     dispatchIde,
     emitInput,
     getEditorValue: () => "content",
+    getParserAnnotations: () => [{ row: 2, column: 0, text: "Missing endif", type: "error" }],
+    parserBlockSave: false,
     tab,
     vmsNoteLine: "changed"
   }), true);
@@ -175,6 +177,34 @@ test("editor IDE save helpers cover prompt and failure branches", (t) => {
     id: "tab-1",
     content: "content"
   });
+
+  const revealParserAnnotation = t.mock.fn();
+  assert.equal(saveTab({
+    dispatchIde,
+    emitInput,
+    getEditorValue: () => "content",
+    getParserAnnotations: () => [
+      { row: 0, column: 0, text: "MOO parser failed", type: "warning" },
+      { row: 4, column: 2, text: "Missing endif", type: "error" }
+    ],
+    parserBlockSave: true,
+    revealParserAnnotation,
+    tab
+  }), false);
+  assert.equal(revealParserAnnotation.mock.callCount(), 1);
+  assert.deepEqual(revealParserAnnotation.mock.calls[0].arguments, [
+    "tab-1",
+    { row: 4, column: 2, text: "Missing endif", type: "error" }
+  ]);
+
+  assert.equal(saveTab({
+    dispatchIde,
+    emitInput,
+    getEditorValue: () => "content",
+    getParserAnnotations: () => [{ row: 0, column: 0, text: "MOO parser failed", type: "warning" }],
+    parserBlockSave: true,
+    tab
+  }), true);
 });
 
 test("editor IDE payload helpers normalize object browser payloads", () => {

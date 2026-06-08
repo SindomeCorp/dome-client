@@ -44,6 +44,7 @@ export default function EditorIDE() {
   const {
     editorTheme,
     editorParser,
+    editorParserBlockSave,
     ideEditOpenParent,
     ideHoverOverlaysEnabled,
     ideObjectBrowserEnabled,
@@ -84,6 +85,8 @@ export default function EditorIDE() {
   const {
     destroyEditor,
     getEditorValue,
+    getParserAnnotations,
+    revealParserAnnotation,
     resizeActiveEditor,
     setEditorRef
   } = useAceEditors({
@@ -124,7 +127,10 @@ export default function EditorIDE() {
     dispatchIde,
     emitInput,
     getEditorValue,
+    getParserAnnotations,
     ideVmsNoteEnabled,
+    parserBlockSave: editorParserBlockSave,
+    revealParserAnnotation,
     tabs
   });
 
