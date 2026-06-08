@@ -108,11 +108,33 @@ function missingBlockAnnotation(block) {
   };
 }
 
+function endPosition(source) {
+  const lines = source.split("\n");
+  return {
+    row: lines.length - 1,
+    column: lines[lines.length - 1].length
+  };
+}
+
+function missingBlockSummaryAnnotation(blocks, source) {
+  const position = endPosition(source);
+  const terminators = blocks.map((block) => block.end);
+  return {
+    row: position.row,
+    column: position.column,
+    text: terminators.length === 1
+      ? `Missing block terminator: ${terminators[0]}`
+      : `Missing block terminators: ${terminators.join(", ")}`,
+    type: "error"
+  };
+}
+
 export function collectMooBlockDiagnostics(source) {
+  const sourceText = String(source || "");
   const stack = [];
   const annotations = [];
 
-  for (const token of readTokens(String(source || ""))) {
+  for (const token of readTokens(sourceText)) {
     const expectedEnd = BLOCKS[token.text];
     if (expectedEnd) {
       stack.push({ ...token, end: expectedEnd });
@@ -140,8 +162,12 @@ export function collectMooBlockDiagnostics(source) {
     }
   }
 
-  for (const block of stack.reverse()) {
+  const missingBlocks = [...stack].reverse();
+  for (const block of missingBlocks) {
     annotations.push(missingBlockAnnotation(block));
+  }
+  if (missingBlocks.length > 0) {
+    annotations.push(missingBlockSummaryAnnotation(missingBlocks, sourceText));
   }
 
   return annotations;
