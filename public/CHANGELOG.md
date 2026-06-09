@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 - Added MOO block-balance diagnostics that report missing `endif`, `endfor`, `endwhile`, `endtry`, and `endfork` markers on the opening block line with a final-line summary for nested missing terminators.
 
 ### Changed
-- Updated verb editor MOO parser assets to use the `tree-sitter-moo` `v0.2.0` release package.
+- Updated verb editor MOO parser assets to use the published `tree-sitter-moo` npm package.
 
 ### Fixed
 - Fixed MOO parser loading by using a browser-valid Wasm parser artifact from the packaged `tree-sitter-moo` release.
