@@ -43,7 +43,8 @@ const defaultIntegrationConfig = {
     idePropertyBrowserEnabled: true,
     ideHoverOverlaysEnabled: true,
     ideReferenceNavigationEnabled: true,
-    ideScratchEnabled: true
+    ideScratchEnabled: true,
+    parser: ""
   },
   shorten: {
     enabled: false,

@@ -57,3 +57,23 @@ body.ide-editor {
 .ace_editor .ace_variable.ace_other.ace_property.ace_moo {
   color: #E9C062 !important;
 }
+
+.ace_editor .moo-parser-blocked-save-line {
+  position: absolute;
+  z-index: 6;
+  background: rgba(255, 190, 80, 0.34);
+  box-shadow: inset 3px 0 0 rgba(255, 92, 64, 0.95);
+  animation: moo-parser-blocked-save-flash 1.4s ease-out;
+}
+
+@keyframes moo-parser-blocked-save-flash {
+  0% {
+    background: rgba(255, 92, 64, 0.48);
+  }
+  40% {
+    background: rgba(255, 212, 96, 0.42);
+  }
+  100% {
+    background: rgba(255, 190, 80, 0.18);
+  }
+}

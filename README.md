@@ -118,6 +118,7 @@ In this mode, the splash page is host/port-first and users can connect to differ
 - Ctrl/Cmd-click code navigation in the IDE (`@edit` target jumps), with optional parent-chain lookup support.
 - Hover overlays in the IDE for verb/property metadata lookups via SDWC out-of-band commands.
 - Optional VMS note workflow for program saves (can append a commit-style note line after `@program` saves).
+- Optional MOO parser diagnostics for verb editors, with a deployment flag to block `@program` saves while parser errors are visible.
 - Scratch pad workflow (`@scratch` / `@edit me.scratch`) for temporary editing and recall.
 - Optional individual editor-window mode (non-IDE) with unsaved-change protection.
 

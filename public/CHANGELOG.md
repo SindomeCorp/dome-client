@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-06-08
+
+### Added
+- Added optional MOO parser support for verb editors behind `EDITOR_IDE_PARSER=moo`, including Tree-sitter diagnostics in the classic editor and EditorIDE.
+- Added `EDITOR_IDE_PARSER_BLOCK_SAVE` so deployments can block IDE `@program` saves while MOO parser errors are visible and move the editor to the first error.
+- Added MOO block-balance diagnostics that report missing `endif`, `endfor`, `endwhile`, `endtry`, and `endfork` markers on the opening block line with a final-line summary for nested missing terminators.
+
+### Changed
+- Updated verb editor MOO parser assets to use the published `tree-sitter-moo` npm package.
+
+### Fixed
+- Fixed MOO parser loading by using a browser-valid Wasm parser artifact from the packaged `tree-sitter-moo` release.
+- Fixed MOO Ace highlighting so single-quoted text such as `'ANON'` is no longer highlighted as a string.
+- Fixed blocked MOO parser saves so the IDE editor visibly flashes the first error line.
+
 ## 2026-06-04
 
 ### Added

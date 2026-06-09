@@ -54,6 +54,11 @@ Save action (`Ctrl/Cmd+S`) behavior:
 
 Only tabs with a real `commandTarget` are saveable.
 
+When `EDITOR_IDE_PARSER=moo`, the IDE can show local MOO parser diagnostics in
+`@program` tabs. If `EDITOR_IDE_PARSER_BLOCK_SAVE=true`, visible parser errors
+block `@program` saves and move the editor to the first error. When the block
+flag is false, diagnostics remain local-only and saves continue to send.
+
 ## Supported Edit Commands
 
 The IDE is command-aware and currently handles:
@@ -182,6 +187,8 @@ Relevant env toggles:
 - `IDE_HOVER_OVERLAYS_ENABLED`
 - `IDE_REFERENCE_NAVIGATION_ENABLED`
 - `IDE_SCRATCH_ENABLED`
+- `EDITOR_IDE_PARSER`
+- `EDITOR_IDE_PARSER_BLOCK_SAVE`
 - `LOCAL_SAVE_NODE_MAX_LINES`
 - `LOCAL_SAVE_NODE_ADMIN_MAX_LINES`
 - `LOCAL_SAVE_NOTE_MAX_LINES`

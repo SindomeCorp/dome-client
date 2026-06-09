@@ -5,7 +5,8 @@ import "../../ace/keybinding-vim.js";
 import "../../ace/mode-moo.js";
 import "ace-builds/src-noconflict/mode-text.js";
 import { getFontFamily } from "../../ace/fonts.js";
-import { configureMooEditor } from "../../ace/editor-options.js";
+import { configureEditorParser } from "../../ace/editor-options.js";
+import { attachMooParserDiagnostics } from "../../parser/moo-parser-diagnostics.js";
 import {
   getDefinitionTargetAtPosition,
   getEditingObjectId,
@@ -21,9 +22,13 @@ import { emitInput } from "./socketAdapter.js";
 
 ace?.config?.set?.("basePath", "/js/ace");
 
+const BLOCKED_SAVE_MARKER_CLASS = "moo-parser-blocked-save-line";
+const BLOCKED_SAVE_MARKER_MS = 1400;
+
 export function useAceEditors({
   active,
   editorFont,
+  editorParser,
   editorTheme,
   ideEditOpenParent,
   ideHoverOverlaysEnabled,
@@ -39,6 +44,9 @@ export function useAceEditors({
   wordWrap
 }) {
   const editors = useRef({});
+  const diagnostics = useRef({});
+  const parserAnnotations = useRef({});
+  const blockedSaveMarkers = useRef({});
 
   useEffect(() => {
     const id = setTimeout(() => editors.current[active]?.resize(), 0);
@@ -87,7 +95,7 @@ export function useAceEditors({
 
     if (editorTheme) ed.setTheme(`ace/theme/${editorTheme}`);
     if (isProgram) {
-      configureMooEditor(ed);
+      configureEditorParser(ed, editorParser);
     } else {
       ed.getSession().setMode("ace/mode/text");
     }
@@ -99,6 +107,13 @@ export function useAceEditors({
     ed.setOption("wrap", wordWrap ? "free" : "off");
     ed.renderer.updateFull();
     ed.setValue(content, -1);
+    if (isProgram) {
+      diagnostics.current[id] = attachMooParserDiagnostics(ed, editorParser, {
+        onAnnotations: (annotations) => {
+          parserAnnotations.current[id] = annotations;
+        }
+      });
+    }
     ed.on("change", () => {
       if (lineLimit) {
         const currentSession = ed.getSession();
@@ -172,11 +187,33 @@ export function useAceEditors({
   };
 
   const destroyEditor = (id) => {
+    diagnostics.current[id]?.();
+    delete diagnostics.current[id];
+    delete parserAnnotations.current[id];
+    clearBlockedSaveMarker(blockedSaveMarkers, id, editors.current[id]);
     editors.current[id]?.destroy();
     delete editors.current[id];
   };
 
   const getEditorValue = (id) => editors.current[id]?.getValue();
+
+  const getParserAnnotations = (id) => parserAnnotations.current[id] || [];
+
+  const revealParserAnnotation = (id, annotation) => {
+    const editor = editors.current[id];
+    if (!editor || !annotation) return;
+    const row = Number(annotation.row) || 0;
+    const column = Number(annotation.column) || 0;
+    editor.focus?.();
+    if (typeof editor.gotoLine === "function") {
+      editor.gotoLine(row + 1, column, true);
+    } else {
+      editor.moveCursorTo?.(row, column);
+    }
+    editor.scrollToLine?.(row, true, true, null);
+    editor.clearSelection?.();
+    flashBlockedSaveLine(blockedSaveMarkers, id, editor, row);
+  };
 
   const resizeActiveEditor = () => {
     setTimeout(() => editors.current[active]?.resize(), 0);
@@ -186,9 +223,37 @@ export function useAceEditors({
     destroyEditor,
     editors,
     getEditorValue,
+    getParserAnnotations,
+    revealParserAnnotation,
     resizeActiveEditor,
     setEditorRef
   };
+}
+
+function flashBlockedSaveLine(markersRef, id, editor, row) {
+  const session = editor?.getSession?.();
+  if (!session || typeof session.addMarker !== "function") return;
+  clearBlockedSaveMarker(markersRef, id, editor);
+  const Range = ace?.require?.("ace/range")?.Range;
+  if (typeof Range !== "function") return;
+  const markerId = session.addMarker(
+    new Range(row, 0, row, Number.MAX_SAFE_INTEGER),
+    BLOCKED_SAVE_MARKER_CLASS,
+    "fullLine",
+    true
+  );
+  const timeout = setTimeout(() => {
+    clearBlockedSaveMarker(markersRef, id, editor);
+  }, BLOCKED_SAVE_MARKER_MS);
+  markersRef.current[id] = { markerId, timeout };
+}
+
+function clearBlockedSaveMarker(markersRef, id, editor) {
+  const marker = markersRef.current[id];
+  if (!marker) return;
+  clearTimeout(marker.timeout);
+  editor?.getSession?.()?.removeMarker?.(marker.markerId);
+  delete markersRef.current[id];
 }
 
 function getLineLimit(command, lineLimits) {

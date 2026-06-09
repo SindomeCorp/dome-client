@@ -15,9 +15,20 @@ export function saveTab({
   dispatchIde,
   emitInput,
   getEditorValue,
+  getParserAnnotations = () => [],
+  parserBlockSave = false,
+  revealParserAnnotation = () => {},
   tab,
   vmsNoteLine = null
 }) {
+  if (parserBlockSave && tab.command === "@program") {
+    const firstError = getParserAnnotations(tab.id)
+      .find((annotation) => annotation?.type === "error");
+    if (firstError) {
+      revealParserAnnotation(tab.id, firstError);
+      return false;
+    }
+  }
   const val = getEditorValue(tab.id);
   if (typeof val !== "string") return false;
   const messages = getSaveMessages(tab, val, vmsNoteLine);
@@ -31,6 +42,9 @@ export function useIdeSaveFlow({
   dispatchIde,
   emitInput,
   getEditorValue,
+  getParserAnnotations = () => [],
+  parserBlockSave = false,
+  revealParserAnnotation = () => {},
   ideVmsNoteEnabled,
   tabs
 }) {
@@ -48,6 +62,9 @@ export function useIdeSaveFlow({
     dispatchIde,
     emitInput,
     getEditorValue,
+    getParserAnnotations,
+    parserBlockSave,
+    revealParserAnnotation,
     tab,
     vmsNoteLine
   });
@@ -55,6 +72,14 @@ export function useIdeSaveFlow({
   const onSave = () => {
     const tab = tabs.find((t) => t.id === active);
     if (!tab || !tab.commandTarget || tab.commandTarget === "none") return;
+    if (parserBlockSave && tab.command === "@program") {
+      const firstError = getParserAnnotations(tab.id)
+        .find((annotation) => annotation?.type === "error");
+      if (firstError) {
+        revealParserAnnotation(tab.id, firstError);
+        return;
+      }
+    }
     if (shouldPromptForVmsNote(tab, ideVmsNoteEnabled)) {
       setVmsPrompt({ open: true, tabId: tab.id, value: tab.vmsNote || "" });
       return;

@@ -19,7 +19,8 @@ const pageEntries = [
   { entry: "editor-window.js", file: "editor-window.js", external: ["./logger.js"] },
   { entry: "note-editor-window.js", file: "note-editor-window.js", external: [] },
   { entry: "logger.js", file: "logger.js", external: [] },
-  { entry: "ide-editor-window.jsx", file: "ide-editor-window.js", external: ["./logger.js"] }
+  { entry: "ide-editor-window.jsx", file: "ide-editor-window.js", external: ["./logger.js"] },
+  { entry: "moo-parser-worker.js", file: "moo-parser-worker.js", external: ["/js/parsers/web-tree-sitter.js"] }
 ];
 
 const browserOutputFiles = [

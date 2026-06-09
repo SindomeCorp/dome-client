@@ -14,7 +14,17 @@ const ace = {
     set() {},
     setModuleUrl() {}
   },
-  require() {
+  require(name) {
+    if (name === "ace/range") {
+      return {
+        Range: class {
+          constructor(startRow, startColumn, endRow, endColumn) {
+            this.start = { row: startRow, column: startColumn };
+            this.end = { row: endRow, column: endColumn };
+          }
+        }
+      };
+    }
     return {
       CodeMirror: {
         Vim: {
@@ -43,11 +53,24 @@ function createEditor(node) {
     setUseWrapMode(nextWrapMode) {
       this.useWrapMode = nextWrapMode;
     },
+    setAnnotations(nextAnnotations) {
+      this.annotations = nextAnnotations;
+    },
     getLength() {
       return value.split("\\n").length;
     },
     getLine(row) {
       return value.split("\\n")[row] || "";
+    },
+    markers: [],
+    removedMarkers: [],
+    addMarker(range, className, type, inFront) {
+      const id = this.markers.length + 1;
+      this.markers.push({ id, range, className, type, inFront });
+      return id;
+    },
+    removeMarker(id) {
+      this.removedMarkers.push(id);
     }
   };
 
@@ -58,6 +81,9 @@ function createEditor(node) {
     session,
     keyboardHandler: "",
     destroyed: false,
+    focused: false,
+    gotoLineCalls: [],
+    scrollToLineCalls: [],
     resizeCalls: 0,
     renderer: {
       updateFull() {}
@@ -93,6 +119,15 @@ function createEditor(node) {
     undo() {},
     getCursorPosition() {
       return { row: 0, column: 0 };
+    },
+    focus() {
+      this.focused = true;
+    },
+    gotoLine(row, column, animate) {
+      this.gotoLineCalls.push({ row, column, animate });
+    },
+    scrollToLine(row, center, animate, callback) {
+      this.scrollToLineCalls.push({ row, center, animate, callback });
     },
     moveCursorTo() {},
     clearSelection() {},
@@ -179,6 +214,8 @@ function setupEditorDom(attributes = {}) {
     "data-ide-hover-overlays-enabled": "true",
     "data-ide-reference-navigation-enabled": "true",
     "data-ide-scratch-enabled": "true",
+    "data-editor-parser": "",
+    "data-editor-parser-block-save": "false",
     ...attributes
   };
   const attrText = Object.entries(dataAttrs)
@@ -293,6 +330,84 @@ test("EditorIDE pins browser tabs and saves an editable program tab", async (t) 
     ["input", "@program #12:look"],
     ["input", "initial\n."]
   ]);
+});
+
+test("EditorIDE blocks program save and flashes first parser error when configured", async (t) => {
+  const previousWorker = globalThis.Worker;
+  const workers = [];
+  class WorkerStub {
+    constructor(url, options) {
+      this.url = url;
+      this.options = options;
+      this.handlers = {};
+      this.messages = [];
+      workers.push(this);
+    }
+    addEventListener(eventName, handler) {
+      this.handlers[eventName] = handler;
+    }
+    postMessage(message) {
+      this.messages.push(message);
+    }
+    terminate() {}
+  }
+  globalThis.Worker = WorkerStub;
+  t.after(() => {
+    if (previousWorker === undefined) {
+      delete globalThis.Worker;
+    } else {
+      globalThis.Worker = previousWorker;
+    }
+  });
+  const { window, emit } = await renderEditorIde(t, {
+    "data-editor-parser": "moo",
+    "data-editor-parser-block-save": "true"
+  });
+
+  await openTab(window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "if (x)\\n  return 1;"
+  });
+  await waitFor(() => assert.equal(workers[0]?.messages.length, 1));
+  workers[0].handlers.message({
+    data: {
+      id: 1,
+      annotations: [{ row: 0, column: 0, text: "Missing endif", type: "error" }]
+    }
+  });
+
+  await click(window, getButtonByText(window, "Save"));
+
+  const editor = globalThis.__editorIdeAceEditors[0];
+  assert.deepEqual(emit.mock.calls, []);
+  assert.equal(editor.focused, true);
+  assert.deepEqual(editor.gotoLineCalls[0], { row: 1, column: 0, animate: true });
+  assert.deepEqual(editor.scrollToLineCalls[0], { row: 0, center: true, animate: true, callback: null });
+  assert.equal(editor.session.markers[0].className, "moo-parser-blocked-save-line");
+  assert.equal(editor.session.markers[0].type, "fullLine");
+  assert.equal(editor.session.markers[0].inFront, true);
+});
+
+test("EditorIDE applies MOO mode when configured", async (t) => {
+  const rendered = await renderEditorIde(t, { "data-editor-parser": "MOO" });
+  await openTab(rendered.window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "initial"
+  });
+  assert.equal(globalThis.__editorIdeAceEditors[0].session.mode, "ace/mode/moo");
+  assert.equal(globalThis.__editorIdeAceEditors[0].options.tabSize, 2);
+});
+
+test("EditorIDE falls back to text mode for unsupported parser values", async (t) => {
+  const rendered = await renderEditorIde(t, { "data-editor-parser": "python" });
+  await openTab(rendered.window, {
+    editorName: "Look",
+    uploadCommand: "@program #12:look",
+    buffer: "initial"
+  });
+  assert.equal(globalThis.__editorIdeAceEditors[0].session.mode, "ace/mode/text");
 });
 
 test("EditorIDE reuses duplicate tabs without replacing contents", async (t) => {
@@ -487,7 +602,7 @@ test("EditorIDE keeps an empty VMS note field visible until blur", async (t) => 
 });
 
 test("EditorIDE keyboard shortcuts preserve current editor behavior", async (t) => {
-  const { window, emit } = await renderEditorIde(t);
+  const { window, emit } = await renderEditorIde(t, { "data-editor-parser": "moo" });
 
   await openTab(window, {
     editorName: "Look",

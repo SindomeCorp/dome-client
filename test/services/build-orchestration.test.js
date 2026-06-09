@@ -7,7 +7,8 @@ const fns = {
   compileReactCss() {},
   compileJs() {},
   compileEjsScripts() {},
-  copyAce() {}
+  copyAce() {},
+  copyMooParserWasm() {}
 };
 
 test("build compiles assets", async t => {
@@ -16,6 +17,7 @@ test("build compiles assets", async t => {
   t.mock.method(fns, "compileJs");
   t.mock.method(fns, "compileEjsScripts");
   t.mock.method(fns, "copyAce");
+  t.mock.method(fns, "copyMooParserWasm");
 
   t.mock.module("../../src/services/build.js", {
     namedExports: fns,
@@ -25,7 +27,8 @@ test("build compiles assets", async t => {
         fns.compileReactCss(),
         fns.compileJs(options.jsOutDir),
         fns.compileEjsScripts(options.jsOutDir),
-        fns.copyAce(options.aceOutDir)
+        fns.copyAce(options.aceOutDir),
+        fns.copyMooParserWasm(options.parserOutDir)
       ]);
     }
   });
@@ -36,7 +39,8 @@ test("build compiles assets", async t => {
     compileReactCss,
     compileJs,
     compileEjsScripts,
-    copyAce
+    copyAce,
+    copyMooParserWasm
   } = await import("../../src/services/build.js");
 
   await build();
@@ -46,4 +50,5 @@ test("build compiles assets", async t => {
   assert.strictEqual(compileJs.mock.calls.length, 1);
   assert.strictEqual(compileEjsScripts.mock.calls.length, 1);
   assert.strictEqual(copyAce.mock.calls.length, 1);
+  assert.strictEqual(copyMooParserWasm.mock.calls.length, 1);
 });
