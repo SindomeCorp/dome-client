@@ -221,6 +221,7 @@ If you want the IDE to function properly you'll need to make a few verb changes/
 - [MOO Verbs Setup](docs/MOO-SETUP.md)
 
 ### Advanced Setup
+- [Production Deployment](docs/PRODUCTION.md)
 - [Autocomplete](docs/AUTOCOMPLETE.md)
 - [URL Shortener](docs/URL-SHORTENER.md)
 - [Website Auth](docs/WEBSITE-AUTH.md)

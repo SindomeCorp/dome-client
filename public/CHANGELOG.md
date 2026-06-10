@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-06-10
+
+### Added
+- Added a production deployment guide covering required environment variables, Let's Encrypt TLS setup, process management, and production-only configuration differences.
+
 ## 2026-06-08
 
 ### Added
