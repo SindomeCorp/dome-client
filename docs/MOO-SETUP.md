@@ -277,7 +277,7 @@ Then program it with:
 Verb body:
 
 ```moo
-":display_verbs_json(OBJ object) => STR";
+":get_verbs_json(OBJ object) => STR";
 "get info about verbs and return it in json";
 {object} = args;
 set_task_perms(caller_perms());
