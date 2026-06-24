@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Clarified `MUD_TLS_ENABLED` documentation for direct TLS links, fallback behavior, and split TCP/TLS multi-MUD stats.
+- Bumped the application version to 4.4.0 for the MUD TLS release.
 
 ## 2026-06-10
 
