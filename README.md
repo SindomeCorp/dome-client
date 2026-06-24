@@ -44,6 +44,8 @@ Set the following in `.env`:
 MULTI_MUD=true
 MUD_HOST=default-game-if-user-does-not-enter-one.com
 MUD_PORT=default-port
+# Optional: expose the per-connection TLS checkbox and honor transport_mode=tls links.
+MUD_TLS_ENABLED=false
 ```
 
 Then start:
@@ -113,8 +115,17 @@ Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice f
 - Splash switches to generic **Play Now** with a host/port connect form.
 - Client passes selected host/port to the backend per connection.
 - `MUD_HOST`/`MUD_PORT` still serve as fallback defaults for empty/invalid user input.
+- Missing or invalid selected ports, including values below `23`, fall back to `MUD_HOST`/`MUD_PORT`.
 - When `MUD_TLS_ENABLED=true`, the splash form shows a per-host **Use TLS** checkbox and direct URLs may include `transport_mode=tls`.
+- Direct `transport_mode=tls` URLs are honored only when both `MULTI_MUD=true` and `MUD_TLS_ENABLED=true`; otherwise they connect with plain TCP.
 - Successful connections are counted and persisted across restarts in `data/multi-mud-metrics.json`.
+- The connection stats list tracks TCP and TLS separately for the same host and port, and TLS rows link back with `transport_mode=tls`.
+
+Example direct multi-MUD TLS URL:
+
+```text
+/player-client/?gh=secure.example.org&gp=6697&transport_mode=tls
+```
 
 ## IDE Features
 

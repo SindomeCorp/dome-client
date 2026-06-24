@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Split multi-MUD connection stats by TCP and TLS so the splash list can reconnect to either transport for the same host and port.
 
+### Changed
+- Clarified `MUD_TLS_ENABLED` documentation for direct TLS links, fallback behavior, and split TCP/TLS multi-MUD stats.
+
 ## 2026-06-10
 
 ### Added
