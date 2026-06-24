@@ -441,8 +441,8 @@ test("integration: multi-mud handshake uses query host/port, falls back on inval
   const recorded = [];
   moduleMock("../../src/services/multi-mud-metrics.js", {
     namedExports: {
-      recordConnection(host, port) {
-        recorded.push(`${host}:${port}`);
+      recordConnection(host, port, useTls) {
+        recorded.push(`${host}:${port}:${useTls ? "tls" : "tcp"}`);
       }
     }
   });
@@ -459,7 +459,7 @@ test("integration: multi-mud handshake uses query host/port, falls back on inval
   await socketController.connection(bad);
 
   assert.deepEqual(calls.map((c) => `${c.host}:${c.port}`), ["Chosen.Game.Example:6000", "fallback.test:7777"]);
-  assert.deepEqual(recorded, ["Chosen.Game.Example:6000", "fallback.test:7777"]);
+  assert.deepEqual(recorded, ["Chosen.Game.Example:6000:tcp", "fallback.test:7777:tcp"]);
   assert.ok(writes.some((line) => line === "@dome-client-user resolved.example.test\r\n"));
   t.mock.restoreAll();
 });

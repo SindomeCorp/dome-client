@@ -1,4 +1,5 @@
 import net from "node:net";
+import tls from "node:tls";
 import dns from "node:dns";
 import path from "node:path";
 import { parse } from "../services/ua.js";
@@ -25,6 +26,7 @@ export function error(err) {
 const SOCKET_PROXIED = config.node?.socketProxied ?? false;
 const SHORTEN_ENABLED = config.shorten?.enabled ?? true;
 const MULTI_MUD_ENABLED = config.node?.multiMud === true;
+const MUD_TLS_ENABLED = config.moo?.tlsEnabled === true;
 
 export function userIp(socket) {
   let handshakeAddress = socket.handshake.address;
@@ -62,7 +64,8 @@ export async function connection(socket) {
   const gameAddress = resolveGameAddress(socket, {
     fallbackHost: config.moo.host,
     fallbackPort: config.moo.port,
-    multiMudEnabled: MULTI_MUD_ENABLED
+    multiMudEnabled: MULTI_MUD_ENABLED,
+    mudTlsEnabled: MUD_TLS_ENABLED
   });
   socket.gameAddress = gameAddress;
   let moo;
@@ -70,8 +73,10 @@ export async function connection(socket) {
     moo = await connectToMud({
       host: gameAddress.host,
       port: gameAddress.port,
+      useTls: gameAddress.useTls,
       timeoutMs: DEFAULT_SOCKET_CONNECT_TIMEOUT_MS,
-      netConnect: net.connect
+      netConnect: net.connect,
+      tlsConnect: tls.connect
     });
   } catch (err) {
     logger.error("error while connecting to moo");
@@ -81,7 +86,7 @@ export async function connection(socket) {
   }
 
   const onConnect = async () => {
-    recordConnection(gameAddress.host, gameAddress.port);
+    recordConnection(gameAddress.host, gameAddress.port, gameAddress.useTls);
     const address = userIp(socket);
     const userAgent = parse(socket.handshake.headers["user-agent"]);
     logUser(socket, "HI ", [

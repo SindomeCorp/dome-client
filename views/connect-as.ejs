@@ -30,6 +30,12 @@
       <input id="moo-hostname" type="text" name="hostname" value="<%= mooHostname %>" /><br>
       <label for="moo-port">PORT</label><br>
       <input id="moo-port" type="number" name="port" value="<%= mooPort %>" min="23" max="65535" step="1"/><br>
+      <% if (mudTlsEnabled) { %>
+      <div class="mud-tls-choice">
+        <input id="mud-use-tls" type="checkbox" name="mud_tls">
+        <label for="mud-use-tls" title="If the MUD supports TLS, you can check this option to use Transport Layer Security">Use TLS</label>
+      </div>
+      <% } %>
       <div class="relative-group">
         <input class="btn btn-success pull-right" id="connect_now" type="submit" name="connect_now" value="Connect Now">
       </div>
@@ -55,9 +61,10 @@
         <% var addressParts = gameinfo.address.split(':'); %>
         <% var gameHost = addressParts[0]; %>
         <% var gamePort = addressParts[1]; %>
+        <% var transportQuery = gameinfo.transportMode === 'tls' ? '&transport_mode=tls' : ''; %>
         <tr>
           <td class="count-column"><%=gameinfo.count%></td>
-          <td><a href="/player-client/?gh=<%=gameHost%>&gp=<%=gamePort%>" class="game-address"><%=gameinfo.address%></a></td>
+          <td><a href="/player-client/?gh=<%=gameHost%>&gp=<%=gamePort%><%=transportQuery%>" class="game-address"><%=gameinfo.label || gameinfo.address%></a></td>
         </tr>
       <% } %>
     </table>

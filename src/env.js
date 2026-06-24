@@ -35,6 +35,7 @@ const env = cleanEnv(process.env, {
   MUD_NAME: str({ default: "Sindome" }),
   MUD_HOST: str({ default: "moo.sindome.org" }),
   MUD_PORT: num({ default: 5555 }),
+  MUD_TLS_ENABLED: bool({ default: false }),
   WEBSITE_SIGNUP_URL: str({ default: "" }),
   GUEST_CONNECT_COMMAND: str({ default: "connect guest" }),
   AUTOCOMPLETE_ENABLED: bool({ default: false }),

@@ -12,6 +12,7 @@ import {
   createConnectAction,
   getParameterByName,
   initializeAddressFields,
+  initializeTransportModeField,
   setupConnectPageChrome
 } from "../features/connection/client-connect-workflows.js";
 
@@ -19,6 +20,12 @@ document.addEventListener("DOMContentLoaded", () => {
   setupConnectPageChrome({ doc: document, win: window });
   initializeAddressFields({
     doc: document,
+    host: DEFAULT_MUD_HOST,
+    port: DEFAULT_MUD_PORT
+  });
+  initializeTransportModeField({
+    doc: document,
+    store,
     host: DEFAULT_MUD_HOST,
     port: DEFAULT_MUD_PORT
   });

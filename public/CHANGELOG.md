@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-06-24
+
+### Added
+- Added explicit backend MUD TLS support with `MUD_TLS_ENABLED`, including forced TLS for single-MUD deployments and opt-in TLS per multi-MUD connection.
+
+### Fixed
+- Split multi-MUD connection stats by TCP and TLS so the splash list can reconnect to either transport for the same host and port.
+
 ## 2026-06-10
 
 ### Added

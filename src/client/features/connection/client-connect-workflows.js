@@ -1,6 +1,7 @@
 import {
   buildMooConnectCommand,
   buildPlayerClientUrl,
+  normalizeTransportMode,
   resolvePlayerClientAddress
 } from "./client-connect-intent.js";
 
@@ -26,13 +27,22 @@ export function createConnectAction({
     }
     const hostField = doc.getElementById("moo-hostname");
     const portField = doc.getElementById("moo-port");
+    const tlsField = doc.getElementById("mud-use-tls");
     const { host, port } = resolvePlayerClientAddress({
       host: hostField?.value,
       port: portField?.value
     });
+    const useTls = tlsField?.checked === true;
     store.put("game-hostname", host);
     store.put("game-port", port);
-    win.location = buildPlayerClientUrl({ host, port });
+    if (tlsField) {
+      store.put(`game-transport-tls:${host}:${port}`, useTls);
+    }
+    win.location = buildPlayerClientUrl({
+      host,
+      port,
+      transportMode: useTls ? "tls" : "tcp"
+    });
   };
 }
 
@@ -63,6 +73,49 @@ export function initializeAddressFields({ doc = globalThis.document, host, port 
   if (portField && !portField.value) {
     portField.value = port;
   }
+}
+
+export function initializeTransportModeField({
+  doc = globalThis.document,
+  storage = globalThis.localStorage,
+  store,
+  host,
+  port
+}) {
+  const tlsField = doc.getElementById("mud-use-tls");
+  if (!tlsField) return;
+  const resolveStoredValue = (addressHost, addressPort) => {
+    const key = `game-transport-tls:${addressHost}:${addressPort}`;
+    if (store && typeof store.get === "function") {
+      return store.get(key);
+    }
+    const raw = storage?.getItem?.(key);
+    if (raw == null) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return raw === "true";
+    }
+  };
+  const syncFromAddress = () => {
+    const { host: addressHost, port: addressPort } = resolvePlayerClientAddress({
+      host: doc.getElementById("moo-hostname")?.value || host,
+      port: doc.getElementById("moo-port")?.value || port
+    });
+    tlsField.checked = resolveStoredValue(addressHost, addressPort) === true;
+  };
+  syncFromAddress();
+  const hostnameField = doc.getElementById("moo-hostname");
+  const portField = doc.getElementById("moo-port");
+  hostnameField?.addEventListener("input", syncFromAddress);
+  hostnameField?.addEventListener("change", syncFromAddress);
+  portField?.addEventListener("input", syncFromAddress);
+  portField?.addEventListener("change", syncFromAddress);
+}
+
+export function parsePlayerClientTransportMode(locationSearch = globalThis.window?.location?.search || "") {
+  const params = new URLSearchParams(locationSearch || "");
+  return normalizeTransportMode(params.get("transport_mode"));
 }
 
 export function bindSavedUserPicker({

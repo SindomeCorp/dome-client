@@ -8,6 +8,8 @@ import {
   createConnectAction,
   getParameterByName,
   initializeAddressFields,
+  initializeTransportModeField,
+  parsePlayerClientTransportMode,
   setupConnectPageChrome
 } from "../../src/client/features/connection/client-connect-workflows.js";
 
@@ -113,6 +115,7 @@ test("connect_now stores selected host and port before navigation", async (t) =>
     + "<input id=\"moo-password\" value=\"pass\" />"
     + "<input id=\"moo-hostname\" value=\"example.org\" />"
     + "<input id=\"moo-port\" value=\"7777\" />"
+    + "<input id=\"mud-use-tls\" type=\"checkbox\" checked />"
     + "<button id=\"connect_now\"></button>"
     + "</body></html>";
   const { window } = setupDom(t, html, { suppressNavigationErrors: true });
@@ -161,6 +164,31 @@ test("connect workflow helpers parse query strings and initialize address fields
   assert.equal(window.document.getElementById("moo-port").value, "7777");
 });
 
+test("connect workflow initializes and parses TLS transport mode", () => {
+  const { window } = setupDom(null, `<!doctype html><html><body>
+    <input id="moo-hostname" value="secure.example">
+    <input id="moo-port" value="4444">
+    <input id="mud-use-tls" type="checkbox">
+  </body></html>`);
+  const store = {
+    get: (key) => key === "game-transport-tls:secure.example:4444"
+  };
+
+  initializeTransportModeField({
+    doc: window.document,
+    store,
+    host: "secure.example",
+    port: "4444"
+  });
+
+  assert.equal(window.document.getElementById("mud-use-tls").checked, true);
+  window.document.getElementById("moo-hostname").value = "new.example";
+  window.document.getElementById("moo-hostname").dispatchEvent(new window.Event("input"));
+  assert.equal(window.document.getElementById("mud-use-tls").checked, false);
+  assert.equal(parsePlayerClientTransportMode("?transport_mode=tls"), "tls");
+  assert.equal(parsePlayerClientTransportMode("?transport_mode=ssl"), "tcp");
+});
+
 test("connect page chrome temporarily clears existing background images", (t) => {
   t.mock.timers.enable();
   const { window } = setupDom(t, "<!doctype html><html><head></head><body></body></html>");
@@ -183,6 +211,7 @@ test("connect action stores login only when credentials are present", (t) => {
     <input id="moo-password" value="">
     <input id="moo-hostname" value="">
     <input id="moo-port" value="">
+    <input id="mud-use-tls" type="checkbox" checked>
   </body></html>`, { suppressNavigationErrors: true });
   const store = createStore(t);
   const savedUsersStore = { addUser: t.mock.fn() };
@@ -204,6 +233,7 @@ test("connect action stores login only when credentials are present", (t) => {
   assert.ok(!writes.some(([key]) => key === "dc-user-login"));
   assert.ok(writes.some(([key, value]) => key === "game-hostname" && value === "moo.sindome.org"));
   assert.ok(writes.some(([key, value]) => key === "game-port" && value === "5555"));
+  assert.ok(writes.some(([key, value]) => key === "game-transport-tls:moo.sindome.org:5555" && value === true));
 });
 
 test("saved user picker handles preset characters, commands, and menu dismissal", (t) => {

@@ -36,6 +36,39 @@ function normalizeAddress(host, port) {
   return `${normalizedHost}:${normalizedPort}`;
 }
 
+function normalizeTransportMode(useTls) {
+  return useTls === true ? "tls" : "tcp";
+}
+
+function normalizeMetricKey(host, port, useTls = false) {
+  const address = normalizeAddress(host, port);
+  if (!address) {
+    return null;
+  }
+  return normalizeTransportMode(useTls) === "tls" ? `${address}|tls` : address;
+}
+
+function parseMetricKey(key) {
+  const rawKey = String(key || "");
+  const [addressPart, transportPart] = rawKey.split("|");
+  const separator = addressPart.lastIndexOf(":");
+  if (separator < 0) {
+    return null;
+  }
+  const host = addressPart.slice(0, separator);
+  const port = addressPart.slice(separator + 1);
+  const address = normalizeAddress(host, port);
+  if (!address) {
+    return null;
+  }
+  const transportMode = transportPart === "tls" ? "tls" : "tcp";
+  return {
+    address,
+    key: transportMode === "tls" ? `${address}|tls` : address,
+    transportMode
+  };
+}
+
 function loadMetrics() {
   if (loaded) {
     return;
@@ -55,16 +88,15 @@ function loadMetrics() {
     const parsedGames = parsed?.games && typeof parsed.games === "object" ? parsed.games : {};
     const normalizedGames = {};
     for (const [key, value] of Object.entries(parsedGames)) {
-      const [host, port] = String(key).split(":");
-      const normalizedKey = normalizeAddress(host, port);
-      if (!normalizedKey) {
+      const parsedKey = parseMetricKey(key);
+      if (!parsedKey) {
         continue;
       }
       const numValue = Number.parseInt(String(value || 0), 10);
       if (!Number.isFinite(numValue) || numValue < 1) {
         continue;
       }
-      normalizedGames[normalizedKey] = numValue;
+      normalizedGames[parsedKey.key] = (normalizedGames[parsedKey.key] || 0) + numValue;
     }
     metrics.games = normalizedGames;
   } catch (err) {
@@ -96,9 +128,9 @@ function saveMetrics() {
   }
 }
 
-export function recordConnection(host, port) {
+export function recordConnection(host, port, useTls = false) {
   loadMetrics();
-  const key = normalizeAddress(host, port);
+  const key = normalizeMetricKey(host, port, useTls);
   if (!key) {
     return;
   }
@@ -110,8 +142,20 @@ export function recordConnection(host, port) {
 export function connectedStats() {
   loadMetrics();
   const games = Object.entries(metrics.games)
-    .map(([address, count]) => ({ address, count }))
-    .sort((a, b) => b.count - a.count || a.address.localeCompare(b.address));
+    .map(([key, count]) => {
+      const parsedKey = parseMetricKey(key);
+      if (!parsedKey) return null;
+      return {
+        address: parsedKey.address,
+        count,
+        transportMode: parsedKey.transportMode,
+        label: parsedKey.transportMode === "tls" ? `${parsedKey.address} (TLS)` : parsedKey.address
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.count - a.count
+      || a.address.localeCompare(b.address)
+      || a.transportMode.localeCompare(b.transportMode));
   return {
     count: metrics.count,
     games
