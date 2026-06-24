@@ -25,6 +25,7 @@ const defaults = {
   MUD_NAME: "Sindome",
   MUD_HOST: "moo.sindome.org",
   MUD_PORT: 5555,
+  MUD_TLS_ENABLED: false,
   WEBSITE_SIGNUP_URL: "",
   GUEST_CONNECT_COMMAND: "connect guest",
   AUTOCOMPLETE_ENABLED: false,

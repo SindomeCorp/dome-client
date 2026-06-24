@@ -4,10 +4,12 @@ import { connectedStats } from "../services/multi-mud-metrics.js";
 export function connect(req, res) {
   const gameName = config.moo.name;
   const isMultiMud = config.node.multiMud === true;
+  const mudTlsEnabled = config.moo.tlsEnabled === true;
   const stats = isMultiMud ? connectedStats() : { count: 0, games: [] };
   res.render("connect-as", {
     mooName: config.moo.name,
     isMultiMud,
+    mudTlsEnabled,
     mooHostname: config.moo.host,
     mooPort: config.moo.port,
     connected: () => stats,

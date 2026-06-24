@@ -6,19 +6,25 @@ export function parseSocketPort(rawPort) {
   return parsed;
 }
 
+export function parseTransportMode(rawMode) {
+  return String(rawMode || "").trim().toLowerCase() === "tls" ? "tls" : "tcp";
+}
+
 export function resolveGameAddress(socket, {
   fallbackHost,
   fallbackPort,
-  multiMudEnabled
+  multiMudEnabled,
+  mudTlsEnabled = false
 }) {
   if (!multiMudEnabled) {
-    return { host: fallbackHost, port: fallbackPort };
+    return { host: fallbackHost, port: fallbackPort, useTls: mudTlsEnabled === true };
   }
   const query = socket.handshake?.query || {};
   const host = String(query.host || "").trim();
   const port = parseSocketPort(query.port);
   if (!host || port == null) {
-    return { host: fallbackHost, port: fallbackPort };
+    return { host: fallbackHost, port: fallbackPort, useTls: false };
   }
-  return { host, port };
+  const useTls = mudTlsEnabled === true && parseTransportMode(query.transport_mode) === "tls";
+  return { host, port, useTls };
 }

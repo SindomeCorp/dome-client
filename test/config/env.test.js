@@ -150,6 +150,46 @@ test("config/env uses overrides for node configuration", async (t) => {
   });
 });
 
+test("config/env applies MUD connection defaults and TLS override", async (t) => {
+  const configMock = t.mock.method(dotenv, "config", () => ({}));
+  const keys = ["MUD_NAME", "MUD_HOST", "MUD_PORT", "MUD_TLS_ENABLED"];
+  const backup = {};
+  for (const key of keys) {
+    backup[key] = process.env[key];
+    delete process.env[key];
+  }
+  t.after(() => {
+    configMock.mock.restore();
+    for (const key of keys) {
+      if (backup[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = backup[key];
+      }
+    }
+  });
+
+  let { default: cfg } = await importConfig();
+  assert.deepEqual(cfg.moo, {
+    name: "Sindome",
+    host: "moo.sindome.org",
+    port: 5555,
+    tlsEnabled: false
+  });
+
+  process.env.MUD_NAME = "SecureMUD";
+  process.env.MUD_HOST = "secure.example";
+  process.env.MUD_PORT = "6697";
+  process.env.MUD_TLS_ENABLED = "true";
+  ({ default: cfg } = await importConfig());
+  assert.deepEqual(cfg.moo, {
+    name: "SecureMUD",
+    host: "secure.example",
+    port: 6697,
+    tlsEnabled: true
+  });
+});
+
 test("config/env normalizes editor parser values", async (t) => {
   const configMock = t.mock.method(dotenv, "config", () => ({}));
   const previousParser = process.env.EDITOR_IDE_PARSER;

@@ -28,6 +28,7 @@ npm start
 Open in Browser: http://localhost:8080
 
 This mode uses your configured `MUD_HOST`/`MUD_PORT` as the fixed game to connect to.
+Set `MUD_TLS_ENABLED=true` only when that configured MUD endpoint supports TLS; the backend connection will use Node's normal certificate verification.
 
 ## Multi-MUD Quick Start
 ```bash
@@ -54,6 +55,7 @@ npm start
 Open in Browser: http://localhost:8080
 
 In this mode, the splash page is host/port-first and users can connect to different games; successful connections are tracked in persisted multi-MUD metrics.
+Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice for users. Plain TCP remains the default for each new host/port.
 
 **Quick links:** [Installation](#installation) · [Setup Guides](#setup-guides) · [Contributing](#contributing)
 
@@ -69,6 +71,7 @@ In this mode, the splash page is host/port-first and users can connect to differ
 ## Features
 
 - Browser-based MUD play over WebSocket with no installation.
+- Optional explicit TLS for backend MUD connections via `MUD_TLS_ENABLED`.
 - Two connection modes:
   - Single-MUD mode (`MULTI_MUD=false`): fixed game from `MUD_HOST`/`MUD_PORT`.
   - Multi-MUD mode (`MULTI_MUD=true`): user enters host/port to enter connect flow with persisted per-game metrics.
@@ -102,6 +105,7 @@ In this mode, the splash page is host/port-first and users can connect to differ
 - Intended for game-specific deployments where the client should always connect to one configured game.
 - Splash and metadata are game-name centric (`MUD_NAME` is shown in heading/copy).
 - Backend socket connections use `MUD_HOST` and `MUD_PORT` directly.
+- `MUD_TLS_ENABLED=true` makes every backend MUD connection use TLS; URL query parameters do not override this mode.
 
 ### Multi-MUD Mode (`MULTI_MUD=true`)
 
@@ -109,6 +113,7 @@ In this mode, the splash page is host/port-first and users can connect to differ
 - Splash switches to generic **Play Now** with a host/port connect form.
 - Client passes selected host/port to the backend per connection.
 - `MUD_HOST`/`MUD_PORT` still serve as fallback defaults for empty/invalid user input.
+- When `MUD_TLS_ENABLED=true`, the splash form shows a per-host **Use TLS** checkbox and direct URLs may include `transport_mode=tls`.
 - Successful connections are counted and persisted across restarts in `data/multi-mud-metrics.json`.
 
 ## IDE Features

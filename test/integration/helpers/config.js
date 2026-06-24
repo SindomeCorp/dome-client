@@ -16,7 +16,8 @@ const defaultIntegrationConfig = {
   moo: {
     name: "Integration MUD",
     host: "127.0.0.1",
-    port: 4444
+    port: 4444,
+    tlsEnabled: false
   },
   website: {
     signupUrl: ""

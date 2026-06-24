@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-06-24
+
+### Added
+- Added explicit backend MUD TLS support with `MUD_TLS_ENABLED`, including forced TLS for single-MUD deployments and opt-in TLS per multi-MUD connection.
+
 ## 2026-06-10
 
 ### Added

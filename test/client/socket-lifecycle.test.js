@@ -238,3 +238,36 @@ test("setupSocket disconnects existing socket", async (t) => {
   assert.equal(newSocket.connected, false);
   assert.strictEqual(newSocket, currentEmitter);
 });
+
+test("setupSocket forwards direct TLS transport query when present", () => {
+  const calls = [];
+  const ioClient = (url, options) => {
+    calls.push({ url, options });
+    const emitter = new EventEmitter();
+    emitter.disconnect = () => {};
+    return emitter;
+  };
+  const directWindow = new JSDOM("<!doctype html><html><body></body></html>", {
+    url: "http://example.com/player-client/?gh=secure.example&gp=4444&transport_mode=tls"
+  }).window;
+  const client = createClientState();
+  client.disconnectView = {
+    overlay: directWindow.document.createElement("div"),
+    buttonGroup: directWindow.document.createElement("div")
+  };
+
+  setupSocket({
+    client,
+    win: directWindow,
+    doc: directWindow.document,
+    ioClient,
+    socketUrlValue: "http://sock",
+    socketUrlSSLValue: "https://sock"
+  });
+
+  assert.deepEqual(calls[0].options.query, {
+    host: "secure.example",
+    port: "4444",
+    transport_mode: "tls"
+  });
+});

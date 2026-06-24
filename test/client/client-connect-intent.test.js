@@ -5,6 +5,7 @@ import {
   DEFAULT_MUD_PORT,
   buildMooConnectCommand,
   buildPlayerClientUrl,
+  normalizeTransportMode,
   resolvePlayerClientAddress
 } from "../../src/client/features/connection/client-connect-intent.js";
 
@@ -33,5 +34,18 @@ test("buildPlayerClientUrl encodes host and port query parameters", () => {
   assert.equal(
     buildPlayerClientUrl({ host: "host with spaces", port: "" }),
     `/player-client/?gh=host+with+spaces&gp=${DEFAULT_MUD_PORT}`
+  );
+});
+
+test("buildPlayerClientUrl includes tls transport mode only when selected", () => {
+  assert.equal(normalizeTransportMode(" TLS "), "tls");
+  assert.equal(normalizeTransportMode("invalid"), "tcp");
+  assert.equal(
+    buildPlayerClientUrl({ host: "moo.example.org", port: "7777", transportMode: "tls" }),
+    "/player-client/?gh=moo.example.org&gp=7777&transport_mode=tls"
+  );
+  assert.equal(
+    buildPlayerClientUrl({ host: "moo.example.org", port: "7777", transportMode: "ssl" }),
+    "/player-client/?gh=moo.example.org&gp=7777"
   );
 });

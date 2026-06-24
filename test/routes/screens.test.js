@@ -21,6 +21,12 @@ const expectedEditor = (readonly) => ({
   parserBlockSave: config.editor.parserBlockSave
 });
 
+const expectedEditorMeta = () => ({
+  title: "Untitled Local Editor ",
+  description: `Local editor window for the ${config.moo.name} Modern Gaming Client.`,
+  keywords: "gaming client editor"
+});
+
 export function createRes() {
   const result = {};
   const res = {
@@ -47,11 +53,15 @@ test("connect renders connect-as with metadata", () => {
 
 test("connect enables multi-mud locals when configured", () => {
   const original = config.node.multiMud;
+  const originalTls = config.moo.tlsEnabled;
   config.node.multiMud = true;
+  config.moo.tlsEnabled = true;
   const { res, result } = createRes();
   screens.connect({}, res);
   config.node.multiMud = original;
+  config.moo.tlsEnabled = originalTls;
   assert.equal(result.locals.isMultiMud, true);
+  assert.equal(result.locals.mudTlsEnabled, true);
   assert.equal(result.locals.mooHostname, config.moo.host);
   assert.equal(result.locals.mooPort, config.moo.port);
   assert.equal(typeof result.locals.connected, "function");
@@ -61,7 +71,7 @@ test("client renders client with metadata", () => {
   const { res, result } = createRes();
   screens.client({}, res);
   assert.equal(result.template, "client");
-  const gameName = "Anaconda";
+  const gameName = config.moo.name;
   assert.deepEqual(result.locals.meta, {
     title: `${gameName}'s Modern Gaming Client`,
     description: `Someone playing ${gameName} via ${gameName}'s Modern Gaming Client`,
@@ -132,11 +142,7 @@ test("editor resolves basic template", () => {
   screens.editor(req, res);
   assert.equal(result.template, "editors/basic");
   assert.deepEqual(result.locals.editor, expectedEditor(false));
-  assert.deepEqual(result.locals.meta, {
-    title: "Untitled Local Editor ",
-    description: "Local editor window for the Anaconda Modern Gaming Client.",
-    keywords: "gaming client editor"
-  });
+  assert.deepEqual(result.locals.meta, expectedEditorMeta());
 });
 
 test("editor resolves basic template in readonly mode", () => {
@@ -145,11 +151,7 @@ test("editor resolves basic template in readonly mode", () => {
   screens.editor(req, res);
   assert.equal(result.template, "editors/basic");
   assert.deepEqual(result.locals.editor, expectedEditor(true));
-  assert.deepEqual(result.locals.meta, {
-    title: "Untitled Local Editor ",
-    description: "Local editor window for the Anaconda Modern Gaming Client.",
-    keywords: "gaming client editor",
-  });
+  assert.deepEqual(result.locals.meta, expectedEditorMeta());
 });
 
 test("editor resolves verb template", () => {
@@ -158,11 +160,7 @@ test("editor resolves verb template", () => {
   screens.editor(req, res);
   assert.equal(result.template, "editors/verb");
   assert.deepEqual(result.locals.editor, expectedEditor(false));
-  assert.deepEqual(result.locals.meta, {
-    title: "Untitled Local Editor ",
-    description: "Local editor window for the Anaconda Modern Gaming Client.",
-    keywords: "gaming client editor",
-  });
+  assert.deepEqual(result.locals.meta, expectedEditorMeta());
 });
 
 test("editor resolves note-viewer template", () => {
@@ -171,9 +169,5 @@ test("editor resolves note-viewer template", () => {
   screens.editor(req, res);
   assert.equal(result.template, "editors/note-viewer");
   assert.deepEqual(result.locals.editor, expectedEditor(false));
-  assert.deepEqual(result.locals.meta, {
-    title: "Untitled Local Editor ",
-    description: "Local editor window for the Anaconda Modern Gaming Client.",
-    keywords: "gaming client editor",
-  });
+  assert.deepEqual(result.locals.meta, expectedEditorMeta());
 });

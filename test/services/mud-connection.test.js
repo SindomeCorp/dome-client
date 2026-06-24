@@ -22,6 +22,27 @@ test("connectToMud resolves connected tcp stream and clears timeout", async (t) 
   clearTimeoutMock.mock.restore();
 });
 
+test("connectToMud selects tls connector when requested", async (t) => {
+  const stream = new EventEmitter();
+  t.mock.method(global, "setTimeout", () => ({ unref() {} }));
+  const netConnect = t.mock.fn();
+  const tlsConnect = t.mock.fn((options) => {
+    assert.deepEqual(options, { port: 7777, host: "secure.example.org" });
+    return stream;
+  });
+  const pending = connectToMud({
+    host: "secure.example.org",
+    port: 7777,
+    useTls: true,
+    netConnect,
+    tlsConnect
+  });
+  stream.emit("connect");
+  assert.equal(await pending, stream);
+  assert.equal(netConnect.mock.callCount(), 0);
+  assert.equal(tlsConnect.mock.callCount(), 1);
+});
+
 test("connectToMud rejects on stream error", async (t) => {
   const stream = new EventEmitter();
   t.mock.method(global, "setTimeout", () => ({ unref() {} }));

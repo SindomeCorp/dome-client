@@ -95,12 +95,16 @@ export function setupSocket({
   const searchParams = win ? new URLSearchParams(win.location.search || "") : new URLSearchParams();
   const queryHost = (searchParams.get("gh") || "").trim();
   const queryPort = (searchParams.get("gp") || "").trim();
+  const transportMode = (searchParams.get("transport_mode") || "").trim().toLowerCase();
   const socketQuery = {};
   if (queryHost) {
     socketQuery.host = queryHost;
   }
   if (queryPort) {
     socketQuery.port = queryPort;
+  }
+  if (transportMode === "tls") {
+    socketQuery.transport_mode = "tls";
   }
 
   const ioSocket = ioClient("https:" == doc.location.protocol ? socketUrlSSLValue : socketUrlValue, {

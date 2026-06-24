@@ -25,7 +25,8 @@ test("createIntegrationConfig merges nested overrides without mutating defaults"
       }
     },
     moo: {
-      host: "example.test"
+      host: "example.test",
+      tlsEnabled: true
     },
     remoteAuth: {
       enabled: false
@@ -41,6 +42,7 @@ test("createIntegrationConfig merges nested overrides without mutating defaults"
   assert.equal(config.node.poweredBy, "Dome Client");
   assert.equal(config.moo.host, "example.test");
   assert.equal(config.moo.port, 4444);
+  assert.equal(config.moo.tlsEnabled, true);
   assert.equal(config.remoteAuth.enabled, false);
   assert.equal(config.remoteAuth.host, "http://remoteauth.test");
   assert.equal(config.status.serviceUrl, "");

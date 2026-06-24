@@ -5,6 +5,7 @@ import { EventEmitter } from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
 import net from "node:net";
+import tls from "node:tls";
 import dns from "node:dns";
 import config from "../../src/config/index.js";
 import logger from "../../src/logger.js";
@@ -17,11 +18,16 @@ async function loadRoute(options = {}) {
   const origProxied = config.node.socketProxied;
   const hadMultiMud = Object.prototype.hasOwnProperty.call(config.node, "multiMud");
   const origMultiMud = config.node.multiMud;
+  const hadMudTls = Object.prototype.hasOwnProperty.call(config.moo, "tlsEnabled");
+  const origMudTls = config.moo.tlsEnabled;
   if (Object.prototype.hasOwnProperty.call(options, "proxied")) {
     config.node.socketProxied = options.proxied;
   }
   if (Object.prototype.hasOwnProperty.call(options, "multiMud")) {
     config.node.multiMud = options.multiMud;
+  }
+  if (Object.prototype.hasOwnProperty.call(options, "mudTlsEnabled")) {
+    config.moo.tlsEnabled = options.mudTlsEnabled;
   }
   const route = await import(`../../src/controllers/socket.js?cachebust=${importCounter++}`);
   if (hadProxied) {
@@ -33,6 +39,11 @@ async function loadRoute(options = {}) {
     config.node.multiMud = origMultiMud;
   } else {
     delete config.node.multiMud;
+  }
+  if (hadMudTls) {
+    config.moo.tlsEnabled = origMudTls;
+  } else {
+    delete config.moo.tlsEnabled;
   }
   return route;
 }
@@ -196,6 +207,88 @@ test("connection uses query host/port only when multi-mud is enabled", async () 
 
   const metricsPath = path.join(process.cwd(), "data", "multi-mud-metrics.json");
   await fs.rm(metricsPath, { force: true });
+});
+
+test("connection selects TLS connector from single-MUD env config", async () => {
+  const moo = new EventEmitter();
+  moo.write = () => {};
+  moo.end = () => {};
+  const netCalls = [];
+  const tlsCalls = [];
+  const original = {
+    connect: net.connect,
+    tlsConnect: tls.connect,
+    reverse: dns.promises.reverse,
+  };
+  net.connect = (opts) => {
+    netCalls.push(opts);
+    return moo;
+  };
+  tls.connect = (opts) => {
+    tlsCalls.push(opts);
+    return moo;
+  };
+  dns.promises.reverse = async () => [];
+
+  const route = await loadRoute({ multiMud: false, mudTlsEnabled: true });
+  const { socket } = createSocket();
+  socket.handshake.query = { host: "example.net", port: "8888", transport_mode: "tcp" };
+  const pending = route.connection(socket);
+  moo.emit("connect");
+  await pending;
+
+  assert.equal(netCalls.length, 0);
+  assert.equal(tlsCalls[0]?.host, config.moo.host);
+  assert.equal(tlsCalls[0]?.port, config.moo.port);
+
+  net.connect = original.connect;
+  tls.connect = original.tlsConnect;
+  dns.promises.reverse = original.reverse;
+});
+
+test("connection honors multi-mud TLS query only when feature is enabled", async () => {
+  const moo = new EventEmitter();
+  moo.write = () => {};
+  moo.end = () => {};
+  const netCalls = [];
+  const tlsCalls = [];
+  const original = {
+    connect: net.connect,
+    tlsConnect: tls.connect,
+    reverse: dns.promises.reverse,
+  };
+  net.connect = (opts) => {
+    netCalls.push(opts);
+    return moo;
+  };
+  tls.connect = (opts) => {
+    tlsCalls.push(opts);
+    return moo;
+  };
+  dns.promises.reverse = async () => [];
+
+  const enabledRoute = await loadRoute({ multiMud: true, mudTlsEnabled: true });
+  const { socket: tlsSocket } = createSocket();
+  tlsSocket.handshake.query = { host: "secure.example", port: "6697", transport_mode: "tls" };
+  const pendingTls = enabledRoute.connection(tlsSocket);
+  moo.emit("connect");
+  await pendingTls;
+
+  const disabledRoute = await loadRoute({ multiMud: true, mudTlsEnabled: false });
+  const { socket: tcpSocket } = createSocket();
+  tcpSocket.handshake.query = { host: "plain.example", port: "7777", transport_mode: "tls" };
+  const pendingTcp = disabledRoute.connection(tcpSocket);
+  moo.emit("connect");
+  await pendingTcp;
+
+  assert.equal(tlsCalls[0]?.host, "secure.example");
+  assert.equal(tlsCalls[0]?.port, 6697);
+  assert.equal(netCalls[0]?.host, "plain.example");
+  assert.equal(netCalls[0]?.port, 7777);
+
+  net.connect = original.connect;
+  tls.connect = original.tlsConnect;
+  dns.promises.reverse = original.reverse;
 });
 
 test("connection falls back to configured host/port for invalid query port", async () => {

@@ -22,7 +22,8 @@ const config = {
   moo: {
     name: env.MUD_NAME,
     host: env.MUD_HOST,
-    port: env.MUD_PORT
+    port: env.MUD_PORT,
+    tlsEnabled: env.MUD_TLS_ENABLED
   },
   website: {
     signupUrl: env.WEBSITE_SIGNUP_URL
