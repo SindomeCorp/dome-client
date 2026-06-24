@@ -94,6 +94,7 @@ test("integration: multi-mud connect page renders host/port/game-owner link and 
     count: 5,
     games: {
       "alpha.example.org:5555": 3,
+      "alpha.example.org:5555|tls": 1,
       "beta.example.org:7777": 2
     }
   }, null, 2), "utf8");
@@ -110,8 +111,10 @@ test("integration: multi-mud connect page renders host/port/game-owner link and 
   assert.match(res.text, /href="\/game-owner-questions\/"/);
   assert.match(res.text, /All Time Connections/i);
   assert.match(res.text, /alpha\.example\.org:5555/);
+  assert.match(res.text, /alpha\.example\.org:5555 \(TLS\)/);
   assert.match(res.text, /beta\.example\.org:7777/);
   assert.match(res.text, /href="\/player-client\/\?gh=[^"]+"/);
+  assert.match(res.text, /href="\/player-client\/\?gh=alpha\.example\.org&gp=5555&amp;transport_mode=tls"/);
 });
 
 test("integration: game owner questions page returns 200 in multi-mud mode", async (t) => {

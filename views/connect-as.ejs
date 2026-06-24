@@ -61,9 +61,10 @@
         <% var addressParts = gameinfo.address.split(':'); %>
         <% var gameHost = addressParts[0]; %>
         <% var gamePort = addressParts[1]; %>
+        <% var transportQuery = gameinfo.transportMode === 'tls' ? '&transport_mode=tls' : ''; %>
         <tr>
           <td class="count-column"><%=gameinfo.count%></td>
-          <td><a href="/player-client/?gh=<%=gameHost%>&gp=<%=gamePort%>" class="game-address"><%=gameinfo.address%></a></td>
+          <td><a href="/player-client/?gh=<%=gameHost%>&gp=<%=gamePort%><%=transportQuery%>" class="game-address"><%=gameinfo.label || gameinfo.address%></a></td>
         </tr>
       <% } %>
     </table>

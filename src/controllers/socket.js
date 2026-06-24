@@ -86,7 +86,7 @@ export async function connection(socket) {
   }
 
   const onConnect = async () => {
-    recordConnection(gameAddress.host, gameAddress.port);
+    recordConnection(gameAddress.host, gameAddress.port, gameAddress.useTls);
     const address = userIp(socket);
     const userAgent = parse(socket.handshake.headers["user-agent"]);
     logUser(socket, "HI ", [

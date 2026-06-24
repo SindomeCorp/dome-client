@@ -28,6 +28,20 @@ async function withMetricsPath(t, suffix, fn) {
   await fn({ svc, metricsPath, tempPath });
 }
 
+const tcpEntry = (address, count) => ({
+  address,
+  count,
+  transportMode: "tcp",
+  label: address
+});
+
+const tlsEntry = (address, count) => ({
+  address,
+  count,
+  transportMode: "tls",
+  label: `${address} (TLS)`
+});
+
 test("multi-mud metrics record and persist game counts", async (t) => {
   await withMetricsPath(t, "persist", async ({ svc, metricsPath }) => {
     svc.recordConnection("moo.sindome.org", 5555);
@@ -38,13 +52,34 @@ test("multi-mud metrics record and persist game counts", async (t) => {
     assert.equal(stats.count, 3);
     assert.equal(stats.games[0].address, "moo.sindome.org:5555");
     assert.equal(stats.games[0].count, 2);
+    assert.equal(stats.games[0].transportMode, "tcp");
     assert.equal(stats.games[1].address, "example.org:7777");
     assert.equal(stats.games[1].count, 1);
+    assert.equal(stats.games[1].transportMode, "tcp");
 
     const parsed = JSON.parse(await fs.readFile(metricsPath, "utf8"));
     assert.equal(parsed.count, 3);
     assert.equal(parsed.games["moo.sindome.org:5555"], 2);
     assert.equal(parsed.games["example.org:7777"], 1);
+  });
+});
+
+test("multi-mud metrics keep TLS and TCP counts separate for the same host and port", async (t) => {
+  await withMetricsPath(t, "tls-split", async ({ svc, metricsPath }) => {
+    svc.recordConnection("secure.example.org", 6697);
+    svc.recordConnection("secure.example.org", 6697, true);
+    svc.recordConnection("secure.example.org", 6697, true);
+
+    const stats = svc.connectedStats();
+    assert.equal(stats.count, 3);
+    assert.deepEqual(stats.games, [
+      tlsEntry("secure.example.org:6697", 2),
+      tcpEntry("secure.example.org:6697", 1)
+    ]);
+
+    const parsed = JSON.parse(await fs.readFile(metricsPath, "utf8"));
+    assert.equal(parsed.games["secure.example.org:6697"], 1);
+    assert.equal(parsed.games["secure.example.org:6697|tls"], 2);
   });
 });
 
@@ -71,8 +106,8 @@ test("recordConnection accepts lower and upper valid port boundaries", async (t)
     const stats = svc.connectedStats();
     assert.equal(stats.count, 2);
     assert.deepEqual(stats.games, [
-      { address: "mixedcase.example.org:23", count: 1 },
-      { address: "mixedcase.example.org:65535", count: 1 }
+      tcpEntry("mixedcase.example.org:23", 1),
+      tcpEntry("mixedcase.example.org:65535", 1)
     ]);
   });
 });
@@ -87,8 +122,8 @@ test("connectedStats sorts by count desc then address asc", async (t) => {
     const stats = svc.connectedStats();
     assert.equal(stats.count, 4);
     assert.deepEqual(stats.games, [
-      { address: "a.example:4444", count: 2 },
-      { address: "b.example:4444", count: 2 }
+      tcpEntry("a.example:4444", 2),
+      tcpEntry("b.example:4444", 2)
     ]);
   });
 });
@@ -113,6 +148,7 @@ test("loadMetrics normalizes malformed parsed values", async (t) => {
         "bad-entry": "3",
         "host:22": "4",
         "host:70000": "5",
+        "secure.example:6697|tls": "3",
         "good.example:5555": 0,
         "good.example:6666": "-5"
       }
@@ -122,7 +158,10 @@ test("loadMetrics normalizes malformed parsed values", async (t) => {
     svc.resetMetricsForTests();
     const stats = svc.connectedStats();
     assert.equal(stats.count, 0);
-    assert.deepEqual(stats.games, [{ address: "example.org:7777", count: 2 }]);
+    assert.deepEqual(stats.games, [
+      tlsEntry("secure.example:6697", 3),
+      tcpEntry("example.org:7777", 2)
+    ]);
   });
 });
 
