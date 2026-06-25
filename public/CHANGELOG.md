@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-06-25
+- Updated the MOO-SETUP.md file and the verbs included in it
+
 ## 2026-06-24
 
 ### Added
