@@ -142,8 +142,8 @@ This should be modified (or your local equivalent adapted) to dispatch SDWC payl
 "do_out_of_band_command -- a cheap and very dirty do_out_of_band verb.  Forwards to verb on player with same name if it exists, otherwise forwards to $login.  May only be called by the server in response to an out of band command, otherwise E_PERM is returned.";
 if (((caller == #-1) && (caller_perms() == #-1)) && (callers() == {}))
   if (valid(player) && is_player(player))
-    if (player.programmer && `argstr[5..8] ! ANY => ""' == "SDWC")
-      player:parse_sdwc_command(argstr[9..$]);
+    if (`argstr[5..8] ! ANY => ""' == "SDWC")
+      $sdwc:parse_command(argstr[9..$]);
     else
       $mcp:(verb)(@args);
       set_task_perms(player);
@@ -159,26 +159,64 @@ else
 endif
 ```
 
-### 2) Add `<programmer parent>:parse_sdwc_command`
+### 2) Add `$sdwc`
 
-Create the verb:
+Create the object
 
 ```moo
-@verb <programmer parent>:parse_sdwc_command tnt rxd
+@create #78 named SDWC
 ```
 
-Then program it with:
+You will see something like this:
 
-```moo
-@program <programmer parent>:parse_sdwc_command
+```
+You now have SDWC with object number #127 and parent Generic Utilities Package (#78).
 ```
 
-Verb body:
+Take the object number (it might not be #127 for you) and run:
+
+```
+@corify #127 as $sdwc
+```
+
+And you should see:
+
+```
+;$sdwc => #127  (SDWC)
+```
+
+Now add the verbs we need:
 
 ```moo
+@verb $sdwc:notify_client_of_sdwc_support this none this rxd
+@verb $sdwc:parse_command this none this rxd
+@verb $code_utils:get_verbs_json this none this rxd
+@verb $code_utils:get_props_json this none this rxd
+@verb $code_utils:get_verb_header this none this rxd
+```
+
+Now program the verbs we need:
+
+```
+@program $sdwc:notify_client_of_sdwc_support
+":notify_client_of_sdwc_support() => NONE";
+"this verb is intended to be called when a player connects, and it notifies the client of the SDWC support this server offers";
+SDWC_FEATURES = "verbs|props|PROP-OVERLAY|VERB-OVERLAY|SUPPORT";
+notify(player, tostr("#$# SDWC%%SUPPORT%%", SDWC_FEATURES));
+.
+```
+And:
+```
+@program $sdwc:parse_command
 ":parse_sdwc_command(STR command) => NONE";
 "parse an SD web client command";
 {message} = args;
+"support only #58";
+supported_player_objects = {#58};
+if (!$object_utils:isoneof(player, supported_player_objects))
+  "unsupported object, do nothing";
+  return;
+endif
 "%%command%%";
 parts = $string_utils:explode(message, "%%");
 if (parts[1] == "verbs")
@@ -193,10 +231,13 @@ elseif (parts[1] == "props")
   object = toobj(object);
   json = $code_utils:get_props_json(object);
   notify(player, tostr("#$# SDWC%%PROPS%%", json));
+elseif (parts[1] == "SUPPORT")
+   "notify client of what we support";
+   this:notify_client_of_sdwc_support();
 elseif (parts[1] == "PROP-OVERLAY")
   {command, object, property} = parts;
   if (length(object) <= 1)
-    raise(E_ARGS, "failed to do prop-overlay due to incorrect object");
+    "failed to do verb-overlay due to incorrect object";
     return;
   endif
   object_to_use = toobj(object);
@@ -206,7 +247,7 @@ elseif (parts[1] == "PROP-OVERLAY")
       if ($object_utils:has_property(#0, object[2..$]))
         object_to_use = $sysobj.(object[2..$]);
       else
-        raise(E_ARGS, "failed to do prop-overlay due to invalid cored object");
+        "failed to do verb-overlay due to invalid cored object";
         return;
       endif
     endif
@@ -226,12 +267,13 @@ elseif (parts[1] == "PROP-OVERLAY")
     endif
     notify(player, tostr("#$# SDWC%%PROP-OVERLAY%%", generate_json(["object" -> object, "property" -> property, "value" -> prop_data])));
   except e (ANY)
+    "if you don't want exceptions, just return here";
     raise(e);
   endtry
 elseif (parts[1] == "VERB-OVERLAY")
   {command, object, verbname} = parts;
   if (length(object) <= 1)
-    raise(E_ARGS, "failed to do verb-overlay due to incorrect object");
+    "failed to do verb-overlay due to incorrect object";
     return;
   endif
   try
@@ -240,7 +282,7 @@ elseif (parts[1] == "VERB-OVERLAY")
       if ($object_utils:has_property(#0, object[2..$]))
         cored_object = $sysobj.(object[2..$]);
       else
-        raise(E_ARGS, "failed to do verb-overlay due to invalid cored object");
+       "failed to do verb-overlay due to invalid cored object";
         return;
       endif
       {resolved_object, verbname, verb_headers} = $code_utils:get_verb_header(cored_object, verbname);
@@ -255,28 +297,16 @@ elseif (parts[1] == "VERB-OVERLAY")
     endif
     notify(player, tostr("#$# SDWC%%VERB-OVERLAY%%", generate_json(["object" -> object, "resolved_object" -> resolved_object, "verb" -> verbname, "value" -> verb_headers])));
   except e (ANY)
+    "if you don't want exceptions here, just return";
     raise(e);
   endtry
 endif
+.
 ```
-
-### 3) Add `$code_utils:get_verbs_json`
-
-Create the verb:
-
-```moo
-@verb $code_utils:get_verbs_json tnt rxd
-```
-
-Then program it with:
+And program:
 
 ```moo
 @program $code_utils:get_verbs_json
-```
-
-Verb body:
-
-```moo
 ":get_verbs_json(OBJ object) => STR";
 "get info about verbs and return it in json";
 {object} = args;
@@ -294,25 +324,12 @@ while (typeof(info = `verb_info(object, verb_count) ! ANY') != ERR)
 endwhile
 data["verbs"] = verbs;
 return generate_json(data);
+.
 ```
-
-### 4) Add `$code_utils:get_props_json`
-
-Create the verb:
-
-```moo
-@verb $code_utils:get_props_json tnt rxd
-```
-
-Then program it with:
+And program:
 
 ```moo
 @program $code_utils:get_props_json
-```
-
-Verb body:
-
-```moo
 ":get_props_json(OBJ object) => STR json";
 "returns property info (NOT content) on all props of an object, in json";
 "";
@@ -337,25 +354,12 @@ else
 endif
 data["props"] = props;
 return generate_json(data);
+.
 ```
-
-### 5) Add `$code_utils:get_verb_header`
-
-Create the verb:
-
-```moo
-@verb $code_utils:get_verb_header tnt rxd
-```
-
-Then program it with:
+And program:
 
 ```moo
 @program $code_utils:get_verb_header
-```
-
-Verb body:
-
-```moo
 ":get_verb_header(OBJ object, STR verbname) => LIST";
 "get the verb headers (comments) and return them";
 {object, verbname} = args;
@@ -377,6 +381,7 @@ if (arguments = $code_utils:_grep_verb_code("} = args;", object, verbname))
   verbdocs = {$string_utils:trim(arguments[2]), @verbdocs};
 endif
 return {object, verbname, verbdocs};
+.
 ```
 
 ## EDITOR ALREADY OPEN VERB

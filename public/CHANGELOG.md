@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-06-25
 
+### Changed
+- Updated the MOO setup documentation and included verbs.
+
 ### Fixed
 - Fixed the multi-MUD connect page so missing TLS render data no longer returns a 500 error.
 
