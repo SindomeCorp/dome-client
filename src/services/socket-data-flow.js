@@ -7,10 +7,15 @@ export async function forwardMudData({
   logger,
   shortenEnabled,
   shortenUrls,
-  getUserIdentity
+  getUserIdentity,
+  telnetIacProcessor
 }) {
   try {
-    const text = data.toString();
+    const displayData = telnetIacProcessor ? telnetIacProcessor.filter(data) : data;
+    if (displayData.length === 0) {
+      return;
+    }
+    const text = displayData.toString();
     if (text.indexOf(CLIENT_USER_MARKER) !== -1) {
       const identity = Object.prototype.hasOwnProperty.call(socket, "hostname") ? socket.hostname : getUserIdentity(socket);
       moo.write("@dome-client-user " + identity + "\r\n", "utf8");
