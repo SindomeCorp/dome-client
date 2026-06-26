@@ -11,7 +11,9 @@ import { recordConnection } from "../services/multi-mud-metrics.js";
 import { connectToMud, DEFAULT_SOCKET_CONNECT_TIMEOUT_MS } from "../services/mud-connection.js";
 import { resolveGameAddress } from "../services/socket-address.js";
 import { forwardMudData } from "../services/socket-data-flow.js";
+import { createTelnetIacProcessor } from "../services/telnet-iac-processor.js";
 import { bindSocketSession } from "../services/socket-session.js";
+import { handleTelnetIacEvent } from "./telnet-iac.js";
 import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -113,6 +115,11 @@ export async function connection(socket) {
   };
   await onConnect();
 
+  const telnetIacProcessor = createTelnetIacProcessor({
+    onEvent: handleTelnetIacEvent,
+    logger
+  });
+
   moo.on("data", async function(data) {
     await forwardMudData({
       data,
@@ -121,7 +128,8 @@ export async function connection(socket) {
       logger,
       shortenEnabled: SHORTEN_ENABLED,
       shortenUrls,
-      getUserIdentity: userIp
+      getUserIdentity: userIp,
+      telnetIacProcessor
     });
   });
 
