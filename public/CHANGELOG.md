@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Bumped the application version to 4.4.1.
+- Bumped the application version to 4.4.2.
 
 ### Fixed
 - Fixed Telnet IAC negotiation bytes appearing in the web client output.
