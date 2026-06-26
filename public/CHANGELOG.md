@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-06-26
+
+### Added
+- Added an Android App link to the splash page footer.
+
+### Changed
+- Bumped the application version to 4.4.1.
+
+## 2026-06-25
+
+### Fixed
+- Fixed the multi-MUD connect page so missing TLS render data no longer returns a 500 error.
+
 ## 2026-06-24
 
 ### Added

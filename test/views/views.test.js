@@ -154,5 +154,22 @@ for (const file of files) {
       assert.match(html, /href="\/css\/client\.css"/);
       assert.doesNotMatch(html, /dome-extract\.css/);
     }
+    if (file === "views/connect-as.ejs") {
+      assert.match(html, /href="https:\/\/play\.google\.com\/store\/apps\/details\?id=org\.sindome\.domemobile"/);
+      assert.match(html, />Android App</);
+    }
   });
 }
+
+test("connect-as multi-mud render treats missing mudTlsEnabled as disabled", async () => {
+  const data = {
+    ...sampleData["views/connect-as.ejs"],
+    isMultiMud: true
+  };
+  delete data.mudTlsEnabled;
+
+  const html = await renderFile("views/connect-as.ejs", data);
+
+  assert.match(html, /Connect To \.\.\./);
+  assert.doesNotMatch(html, /id="mud-use-tls"/);
+});
