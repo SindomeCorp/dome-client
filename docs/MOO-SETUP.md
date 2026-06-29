@@ -384,6 +384,12 @@ return {object, verbname, verbdocs};
 .
 ```
 
+And edit the following into `#6:confunc` (anywhere in there should be fine) to make the server automatically tell connected clients what SDWC it supports when they connect:
+
+```moo
+$sdwc:notify_client_of_sdwc_support();
+```
+
 ## EDITOR ALREADY OPEN VERB
 
 This verb is run when a player uses `@edit` on a verb that is already open in the IDE editor window.
