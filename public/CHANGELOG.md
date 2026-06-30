@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-06-30
+
+### Changed
+- Updated vulnerable transitive dependencies to patched versions.
+
 ## 2026-06-26
 
 ### Added

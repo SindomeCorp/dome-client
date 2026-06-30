@@ -74,7 +74,8 @@
     },
     "isomorphic-fetch": {
       "node-fetch": "^2.6.7"
-    }
+    },
+    "qs": "6.15.2"
   },
   "browserslist": [
     ">0.5%",
