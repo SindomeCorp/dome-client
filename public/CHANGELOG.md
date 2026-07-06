@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-07-06
+
+### Fixed
+- Fixed SDWC nowrap blocks so preformatted output preserves repeated and leading spaces.
+
 ## 2026-06-30
 
 ### Changed

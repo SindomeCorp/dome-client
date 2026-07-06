@@ -104,6 +104,24 @@ test("socket output renderer routes nowrap output into marker block", (t) => {
   assert.equal(logger.info.mock.callCount(), 2);
 });
 
+test("socket output renderer preserves spaces inside nowrap output", (t) => {
+  setupDom(t, "<!doctype html><html><body><div id=\"buffer\"></div></body></html>");
+  const client = createClient();
+  client.preferences.sdwcNowrapBlocks = true;
+  const renderer = createSocketOutputRenderer({
+    client,
+    logger: createLogger(t),
+    ansiRenderer: { renderChunk: (segment) => segment, resetState: () => {} }
+  });
+
+  renderer.startSdwcNowrapBlock();
+  renderer.appendOutputSegment("  left    right\n");
+  renderer.endSdwcNowrapBlock();
+
+  const block = client.buffer.querySelector(".sdwc-nowrap-block");
+  assert.equal(block?.textContent, "  left    right");
+});
+
 test("socket output renderer renders image, video, and YouTube previews", (t) => {
   setupDom(t, "<!doctype html><html><body><div id=\"buffer\"></div></body></html>");
   let now = 1;
