@@ -47,6 +47,19 @@ export async function runMatrixCase(t, matrixCase) {
   });
   const home = await request(baseUrl).get("/").expect(200);
 
+  const robots = await request(baseUrl).get("/robots.txt")
+    .expect(200)
+    .expect("Content-Type", /text\/plain/);
+  assert.equal(robots.text, "User-agent: *\nDisallow: /player-client\n");
+
+  for (const playerPath of [
+    "/player-client",
+    "/player-client/?gh=alpha.example.org&gp=5555",
+    "/player-client/?gh=alpha.example.org&gp=6697&transport_mode=tls"
+  ]) {
+    await request(baseUrl).get(playerPath).expect(200);
+  }
+
   if (matrixCase.expect.homeHas) {
     assert.match(home.text, matrixCase.expect.homeHas);
   }

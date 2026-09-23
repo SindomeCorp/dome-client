@@ -6,6 +6,7 @@ coverage/
 public/*
 !public/legacy/
 !/public/CHANGELOG.md
+!/public/robots.txt
 !public/favicon.ico
 !public/notice.wav
 !public/fonts/

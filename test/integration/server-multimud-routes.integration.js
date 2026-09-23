@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import request from "supertest";
 import nock from "nock";
+import { JSDOM } from "jsdom";
 
 async function bootServer(t, { metricsPath } = {}) {
   const moduleMock = typeof t.mock.module === "function"
@@ -115,6 +116,15 @@ test("integration: multi-mud connect page renders host/port/game-owner link and 
   assert.match(res.text, /beta\.example\.org:7777/);
   assert.match(res.text, /href="\/player-client\/\?gh=[^"]+"/);
   assert.match(res.text, /href="\/player-client\/\?gh=alpha\.example\.org&gp=5555&amp;transport_mode=tls"/);
+  const dom = new JSDOM(res.text);
+  t.after(() => dom.window.close());
+  const gameLinks = dom.window.document.querySelectorAll("a.game-address[href^='/player-client/']");
+  assert.equal(gameLinks.length, 3);
+  for (const link of gameLinks) {
+    assert.ok(link.relList.contains("nofollow"));
+  }
+  const guideLink = dom.window.document.querySelector("a[href='/game-owner-questions/']");
+  assert.ok(!guideLink.relList.contains("nofollow"));
 });
 
 test("integration: game owner questions page returns 200 in multi-mud mode", async (t) => {

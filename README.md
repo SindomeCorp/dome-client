@@ -127,6 +127,14 @@ Example direct multi-MUD TLS URL:
 /player-client/?gh=secure.example.org&gp=6697&transport_mode=tls
 ```
 
+### Search engine crawling
+
+In both connection modes, `/robots.txt` asks all compliant crawlers to avoid `/player-client`, including URLs with a trailing slash or host, port, and TLS query parameters. Game links in the multi-MUD connection stats also use `rel="nofollow"`. The homepage and game-owner guide remain crawlable, and players retain one-click connections.
+
+After deployment, verify that `/robots.txt` returns HTTP 200 with plain-text crawl rules through both public HTTP and HTTPS entrypoints (following any redirects). Check that a reverse proxy or CDN does not override or serve an outdated file, then inspect representative player URLs in Google Search Console. Robots rules apply per host and protocol, and crawlers may cache them before picking up changes.
+
+Existing URLs may remain in Search Console as blocked by robots.txt; these rules do not guarantee removal from search results. They also do not prevent connections from bots that ignore the rules: loading the player page still starts a connection. See [Google's robots.txt documentation](https://developers.google.com/crawling/docs/robots-txt/robots-txt-spec).
+
 ## IDE Features
 
 - Built-in IDE editor for verb and property editing, including multi-tab editing workflows.

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-09-23
+
+### Fixed
+- Added search crawler restrictions for player pages in both connection modes and marked multi-game connection links as nofollow.
+
 ## 2026-07-06
 
 ### Fixed
