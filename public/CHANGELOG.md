@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-10-11
+
+### Fixed
+- Turning off Shorten Long Web Links now stops shortening on the active connection without a reload, including pending results that arrive while the setting is off.
+
 ## 2026-10-10
 
 ### Added

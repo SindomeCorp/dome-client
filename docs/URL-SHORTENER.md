@@ -85,6 +85,18 @@ shortener hostname must serve HTTPS, or explicitly select `false` for HTTP-only 
 Restart the client server after changing the setting; this also clears cached short
 URLs. Links already displayed in scrollback are not rewritten.
 
+## Player setting
+
+**Shorten Long Web Links** controls shortening for the current connection when the
+server enables the feature. Turning it on or off takes effect without reloading.
+When it is off, new incoming URLs are passed through unchanged, including results
+from a pending shortening request that finishes while the setting is off. Turning
+it back on resumes shortening.
+
+This setting does not expand links already in scrollback or URLs that were
+already shortened before reaching the client. Cached results do not override the
+player's choice to turn shortening off.
+
 ## Failure Handling
 
 If the shortener is unreachable, times out, or returns an unexpected payload:

@@ -143,3 +143,20 @@ test("forwardMudData does not emit inactive socket data", async () => {
   });
   assert.deepEqual(context.events, []);
 });
+
+test("turning shortening off while a request is pending emits the original text", async () => {
+  const context = createContext();
+  context.socket.shortenUrls = true;
+  let finish;
+  const pending = new Promise(resolve => { finish = resolve; });
+  const forwarded = forwardMudData({
+    ...context,
+    data: Buffer.from("original URL"),
+    shortenEnabled: true,
+    shortenUrls: () => pending
+  });
+  context.socket.shortenUrls = false;
+  finish("shortened URL");
+  await forwarded;
+  assert.deepEqual(context.events, [["data", "original URL"]]);
+});

@@ -76,9 +76,8 @@ export function createClientOptionEffects({
       setupAutoscroll({ client, doc, win });
     },
     shortenUrls(value) {
-      if (value === true) {
-        client.socket?.emit("shorten-on", "shorten-on");
-      }
+      const event = value === true ? "shorten-on" : "shorten-off";
+      client.socket?.emit(event, event);
     },
     playDing(value) {
       client.alert.active = value && !doc.hasFocus();

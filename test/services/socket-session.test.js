@@ -90,3 +90,28 @@ test("bindSocketSession forwards active moo errors", () => {
   assert.ok(session.events.some(event => event[0] === "error" && event[1] === err));
   assert.ok(session.logs.some(log => log[0] === "logError" && log[1] === "moo failed"));
 });
+
+test("player preference changes stop and resume shortening on the active connection", async () => {
+  const { createClientOptionEffects } = await import("../../src/client/features/options/client-option-effects.js");
+  const { forwardMudData } = await import("../../src/services/socket-data-flow.js");
+  for (const shortenEnabled of [true, false]) {
+    const session = createSession({ shortenEnabled });
+    const effects = createClientOptionEffects({ client: { socket: session.socket } });
+    const original = "https://example.test/long-original-url";
+    const shortened = "https://short.test/key";
+    let calls = 0;
+    for (const enabled of [true, false, false, true]) {
+      effects.apply("shortenUrls", enabled);
+      await forwardMudData({
+        socket: session.socket,
+        moo: session.moo,
+        logger: session.logger,
+        data: Buffer.from(original),
+        shortenEnabled,
+        shortenUrls: async () => { calls++; return shortened; }
+      });
+      assert.deepEqual(session.events.at(-1), ["data", shortenEnabled && enabled ? shortened : original]);
+    }
+    assert.equal(calls, shortenEnabled ? 2 : 0);
+  }
+});

@@ -38,6 +38,10 @@ export function bindSocketSession({
     socket.shortenUrls = true;
   });
 
+  socket.on("shorten-off", function() {
+    socket.shortenUrls = false;
+  });
+
   socket.on("disconnect", function(data) {
     logUser(socket, "BYE");
     if (!socket.isActive) return;

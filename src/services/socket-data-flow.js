@@ -31,7 +31,8 @@ export async function forwardMudData({
     } catch (err) {
       logger.warn("url shortening failed", err);
     }
-    emitActiveData(socket, output);
+    // A preference change can arrive while the shortener request is pending.
+    emitActiveData(socket, socket.shortenUrls ? output : text);
   } catch (err) {
     logger.error("exception caught when receiving data from the moo", err);
   }

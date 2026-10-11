@@ -159,6 +159,9 @@ test("client options controller applies side effects for changed options", async
   assert.equal(setupAutoCompleteFeatureFn.mock.callCount(), 1);
   assert.ok(inputReader.commandSuggestions.mock.calls.some((call) => call.arguments[0] === "destroy"));
   assert.equal(setupAutoscrollFn.mock.callCount(), 1);
-  assert.deepEqual(client.socket.emit.mock.calls[0].arguments, ["shorten-on", "shorten-on"]);
+  assert.deepEqual(client.socket.emit.mock.calls.map(call => call.arguments), [
+    ["shorten-off", "shorten-off"],
+    ["shorten-on", "shorten-on"]
+  ]);
   assert.equal(client.alert.active, true);
 });
