@@ -62,6 +62,7 @@ const env = cleanEnv(process.env, {
   SHORTEN_PORT: num({ default: 5549 }),
   SHORTEN_PATH: str({ default: "/interface/v1/shorten/" }),
   SHORTEN_DOMAIN: str({ default: "" }),
+  SHORTEN_USE_HTTPS: bool({ default: true }),
   SHORTEN_MINIMUM: num({ default: 50 }),
   REMOTEAUTH_ENABLED: bool({ default: false }),
   REMOTEAUTH_HOST: str({ default: "http://localhost" }),

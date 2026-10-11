@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-10-10
+
+### Fixed
+- Generated short links now default to HTTPS; set `SHORTEN_USE_HTTPS=false` for HTTP-only shortener hosts.
+
 ## 2026-09-23
 
 ### Fixed

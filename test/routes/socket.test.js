@@ -746,7 +746,7 @@ test("socket route connection lifecycle", async (t) => {
       moo.emit("data", Buffer.from(longUrl));
     });
     const lastData = events.filter(e => e[0] === "data").pop();
-    assert.equal(lastData[1], `http://${config.shorten.domain}/abc`);
+    assert.equal(lastData[1], `https://${config.shorten.domain}/abc`);
     assert.ok(scope.isDone());
 
     net.connect = original.connect;

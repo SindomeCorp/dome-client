@@ -32,6 +32,23 @@ function createLogger(t) {
   };
 }
 
+test("HTTPS short links preserve their scheme and opaque keys remain links", (t) => {
+  setupDom(t, "<!doctype html><html><body><div id=\"buffer\"></div></body></html>");
+  const client = createClient();
+  client.preferences.imagePreview = true;
+  client.urlPatterns = { images: /png|jpg|gif|jpeg$/, videos: /mp4|gifv$/ };
+  const renderer = createSocketOutputRenderer({
+    client,
+    logger: createLogger(t),
+    ansiRenderer: { renderChunk: (segment) => segment, resetState: () => {} }
+  });
+  renderer.appendOutputSegment("https://sindo.me/abc123");
+  assert.equal(client.buffer.querySelector("a").getAttribute("href"), "https://sindo.me/abc123");
+  assert.equal(client.buffer.querySelector("img"), null);
+  renderer.appendOutputSegment("https://sindo.me/abc123.png");
+  assert.equal(client.buffer.querySelector("img").getAttribute("src"), "https://sindo.me/abc123.png");
+});
+
 test("wrapLinesToDivs preserves blank output lines without trailing blank", () => {
   assert.equal(
     wrapLinesToDivs("one\n\n<span style=\"color:red\"></span>\ntwo\n"),

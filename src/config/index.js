@@ -60,6 +60,7 @@ const config = {
     port: env.SHORTEN_PORT,
     path: env.SHORTEN_PATH,
     domain: env.SHORTEN_DOMAIN,
+    useHttps: env.SHORTEN_USE_HTTPS,
     minimum: env.SHORTEN_MINIMUM
   },
   remoteAuth: {

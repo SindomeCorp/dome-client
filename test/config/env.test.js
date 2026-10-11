@@ -16,6 +16,21 @@ async function importConfig() {
   return import(moduleUrl);
 }
 
+test("shortener HTTPS defaults true and accepts explicit true/false", async (t) => {
+  const previous = process.env.SHORTEN_USE_HTTPS;
+  t.mock.method(dotenv, "config", () => ({}));
+  t.after(() => {
+    if (previous === undefined) delete process.env.SHORTEN_USE_HTTPS;
+    else process.env.SHORTEN_USE_HTTPS = previous;
+  });
+  delete process.env.SHORTEN_USE_HTTPS;
+  assert.equal((await importConfig()).default.shorten.useHttps, true);
+  process.env.SHORTEN_USE_HTTPS = "false";
+  assert.equal((await importConfig()).default.shorten.useHttps, false);
+  process.env.SHORTEN_USE_HTTPS = "true";
+  assert.equal((await importConfig()).default.shorten.useHttps, true);
+});
+
 test("config/env builds SSL configuration when keys are present", async (t) => {
   const configMock = t.mock.method(dotenv, "config", () => ({}));
   const { SSL_KEY, SSL_CERT, SSL_PORT } = process.env;

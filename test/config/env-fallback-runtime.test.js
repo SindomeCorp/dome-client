@@ -52,6 +52,7 @@ const defaults = {
   SHORTEN_PORT: 5549,
   SHORTEN_PATH: "/interface/v1/shorten/",
   SHORTEN_DOMAIN: "",
+  SHORTEN_USE_HTTPS: true,
   SHORTEN_MINIMUM: 50,
   REMOTEAUTH_ENABLED: false,
   REMOTEAUTH_HOST: "http://localhost",

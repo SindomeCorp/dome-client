@@ -94,7 +94,7 @@ Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice f
 - Session log export as HTML for preserving and sharing scrollback, with a client option to switch between default self-contained inline CSS and a lighter legacy linked stylesheet mode.
 - Better nowrap output handling via SDWC markers (`SDWC-START-NOWRAP` / `SDWC-END-NOWRAP`) and a mobile-friendly wrap option for long horizontal content.
 - Built-in keyboard shortcuts for both client and IDE workflows.
-- Optional URL-shortener integration.
+- Optional [URL-shortener integration](docs/URL-SHORTENER.md). `SHORTEN_DOMAIN` sets the public hostname; `SHORTEN_USE_HTTPS` defaults to `true`, or can be set to `false` for HTTP links. Backend shortener API requests remain HTTP.
 - Optional status-service integration.
 - Native bridge integration support (`window.DomeBridge` / `window.DomeNative`) for mobile wrappers, including queued startup event handling and native log-download routing when available.
 - Fully bundled client styling (local LESS/CSS and glyph assets), removing runtime dependency on external `dome.css` for consistent mobile/desktop rendering.

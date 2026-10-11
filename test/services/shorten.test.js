@@ -13,6 +13,26 @@ async function loadShorten() {
   return mod;
 }
 
+test("public short link scheme follows useHttps while API transport stays HTTP", async t => {
+  const original = config.shorten.useHttps;
+  t.after(() => {
+    config.shorten.useHttps = original;
+    nock.cleanAll();
+  });
+  for (const [useHttps, protocol] of [[true, "https"], [false, "http"]]) {
+    config.shorten.useHttps = useHttps;
+    const shorten = await loadShorten();
+    const longUrl = "https://example.com/" + "a".repeat(config.shorten.minimum + 10);
+    const scope = nock(`http://${config.shorten.host}:${config.shorten.port}`)
+      .post(config.shorten.path)
+      .reply(200, { url: longUrl, key: "scheme123" });
+    const expected = `${protocol}://${config.shorten.domain}/scheme123`;
+    assert.equal(await shorten.urls(longUrl), expected);
+    assert.equal(await shorten.urls(longUrl), expected);
+    assert.ok(scope.isDone());
+  }
+});
+
 test("shortens and caches URLs", async t => {
   const shorten = await loadShorten();
   const longUrl = "http://example.com/" + "a".repeat(config.shorten.minimum + 10);
@@ -21,9 +41,9 @@ test("shortens and caches URLs", async t => {
     .reply(200, { url: longUrl, key: "abc123" });
   t.after(() => nock.cleanAll());
   const first = await shorten.urls(longUrl);
-  assert.equal(first, `http://${config.shorten.domain}/abc123`);
+  assert.equal(first, `https://${config.shorten.domain}/abc123`);
   const second = await shorten.urls(longUrl);
-  assert.equal(second, `http://${config.shorten.domain}/abc123`);
+  assert.equal(second, `https://${config.shorten.domain}/abc123`);
   assert.ok(scope.isDone());
 });
 
@@ -45,11 +65,11 @@ test("caps cache at configured limit", async t => {
   for (let i = 0; i < 6; i++) {
     const url = `${base}${i}${tail}`;
     const result = await shorten.urls(url);
-    assert.ok(result.startsWith(`http://${config.shorten.domain}/`));
+    assert.ok(result.startsWith(`https://${config.shorten.domain}/`));
   }
   const firstUrl = `${base}0${tail}`;
   const again = await shorten.urls(firstUrl);
-  assert.ok(again.startsWith(`http://${config.shorten.domain}/`));
+  assert.ok(again.startsWith(`https://${config.shorten.domain}/`));
   assert.equal(callCount, 7);
   scope.done();
 });
@@ -145,7 +165,7 @@ test("does not cache failed network responses", async t => {
   assert.equal(first, longUrl);
   assert.equal(warn.mock.calls[0].arguments[0], "url shortener connection failed: ouch");
   const second = await shorten.urls(longUrl);
-  assert.equal(second, `http://${config.shorten.domain}/retry`);
+  assert.equal(second, `https://${config.shorten.domain}/retry`);
   assert.ok(scope.isDone());
 });
 
@@ -161,7 +181,7 @@ test("does not cache invalid responses", async t => {
   const first = await shorten.urls(longUrl);
   assert.equal(first, longUrl);
   const second = await shorten.urls(longUrl);
-  assert.equal(second, `http://${config.shorten.domain}/fine`);
+  assert.equal(second, `https://${config.shorten.domain}/fine`);
   assert.ok(scope.isDone());
 });
 
@@ -186,7 +206,7 @@ test("continues shortening when one URL fails", async t => {
   t.after(() => nock.cleanAll());
   const input = `${long1} ${long2}`;
   const result = await shorten.urls(input);
-  assert.equal(result, `http://${config.shorten.domain}/ok ${long2}`);
+  assert.equal(result, `https://${config.shorten.domain}/ok ${long2}`);
   assert.ok(scope.isDone());
 });
 

@@ -30,7 +30,8 @@ async function shortenOne(url) {
     );
     const response = await res.json();
     if (response.url && response.url === url) {
-      const newUrl = `http://${config.shorten.domain}/${response.key}`;
+      const protocol = config.shorten.useHttps ? "https" : "http";
+      const newUrl = `${protocol}://${config.shorten.domain}/${response.key}`;
       shortCache.set(url, newUrl);
       if (shortCache.size > cacheLimit) {
         const firstKey = shortCache.keys().next().value;
