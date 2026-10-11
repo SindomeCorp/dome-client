@@ -7,7 +7,7 @@ export function getPreviewMedia(url) {
   }
   if (!["http:", "https:"].includes(parsed.protocol)) return null;
 
-  if (/\.(png|jpe?g|gif|webp|avif)$/i.test(parsed.pathname)) {
+  if (/\.(png|jpe?g|gif|webp|avif|svg)$/i.test(parsed.pathname)) {
     return { type: "image", src: url };
   }
   if (/\.(mp4|gifv)$/i.test(parsed.pathname)) {

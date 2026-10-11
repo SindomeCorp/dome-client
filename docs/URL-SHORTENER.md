@@ -99,4 +99,4 @@ Default timeout is 2000ms per shortening request.
 - URL shortening is applied to incoming MOO output lines before they are emitted to the browser.
 - Results are cached in-memory per process to reduce duplicate lookups.
 - The backend API request remains HTTP, independently of the public link scheme.
-- Image/video previews check the displayed URL's pathname extension, case-insensitively, ignoring query strings and fragments. Supported image extensions are `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, and `.avif`. Opaque short keys are clickable links but are not automatically expanded into media previews. See [Inline media previews](IMAGE-PREVIEWS.md) for detection rules and the automatic/manual preview setting.
+- Image/video previews check the displayed URL's pathname extension, case-insensitively, ignoring query strings and fragments. Supported image extensions are `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.avif`, and `.svg`. Opaque short keys are clickable links but are not automatically expanded into media previews. See [Inline media previews](IMAGE-PREVIEWS.md) for detection rules and the automatic/manual preview setting.

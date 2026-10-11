@@ -5,7 +5,7 @@ checking its pathname. Matching is case-insensitive and requires a dot followed 
 a supported extension at the end of the path. Query strings and fragments do not
 affect detection and remain attached to the URL used to load the media.
 
-- Images: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.avif`.
+- Images: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.avif`, `.svg`.
 - Videos: `.mp4`, `.gifv`. GIFV preview requests use the same URL with the pathname
   extension changed to `.mp4`, preserving the query string and fragment.
 - Recognized YouTube links retain their existing embedded-player behavior.
@@ -21,7 +21,12 @@ affect detection and remain attached to the URL used to load the media.
 
 **Show Preview of Images** controls automatic expansion and defaults to off.
 Eligible links still have a chevron for manual expansion. Both modes use the same
-media-extension detection. SVG is not included in the image extension list.
+media-extension detection.
+
+Image previews, including SVGs, use an `<img>` element with a maximum width of
+75% of the containing output area. Height follows the browser's image sizing;
+there is no explicit maximum height, so tall images can occupy substantial vertical
+space. SVG markup is not inserted directly into the page.
 
 Detection does not fetch metadata, inspect Content-Type, or resolve redirects.
 A matching URL creates a preview control; actual display still depends on the

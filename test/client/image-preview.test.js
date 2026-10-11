@@ -83,3 +83,13 @@ test("toggleImagePreview shows and hides attached previews", () => {
   assert.ok(control.classList.contains("icon-chevron-up"));
   assert.equal(buffer.querySelector("span")?.innerHTML, "");
 });
+
+test("SVG manual previews use an image element with the existing width bound", () => {
+  const dom = new JSDOM("<!doctype html><span></span>");
+  const elem = dom.window.document.querySelector("span");
+  const url = "https://example.com/art.SVG?size=400#art";
+  attachImagePreview({ elem, imageId: "svg", url });
+  assert.equal(elem.querySelector("img").getAttribute("src"), url);
+  assert.equal(elem.querySelector("img").style.maxWidth, "75%");
+  assert.equal(elem.querySelector("svg, object, iframe"), null);
+});

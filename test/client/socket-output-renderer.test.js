@@ -59,9 +59,9 @@ test("preview controls use pathname extensions in both automatic and collapsed m
   for (const expanded of [false, true]) {
     client.preferences.imagePreview = expanded;
     client.buffer.innerHTML = "";
-    renderer.appendOutputSegment("https://example.com/photo.JPEG?size=400 https://example.com/image.webp#preview https://example.com/view?file=photo.png https://jpg.example.com/page ftp://example.com/file.png");
-    assert.equal(client.buffer.querySelectorAll("i[data-image-url]").length, 2);
-    assert.equal(client.buffer.querySelectorAll("img").length, expanded ? 2 : 0);
+    renderer.appendOutputSegment("https://example.com/photo.JPEG?size=400 https://example.com/image.webp#preview https://example.com/art.SVG?size=400#art https://example.com/view?file=photo.png https://jpg.example.com/page ftp://example.com/file.png");
+    assert.equal(client.buffer.querySelectorAll("i[data-image-url]").length, 3);
+    assert.equal(client.buffer.querySelectorAll("img").length, expanded ? 3 : 0);
     if (expanded) assert.equal(client.buffer.querySelector("img").getAttribute("src"), "https://example.com/photo.JPEG?size=400");
   }
 });
