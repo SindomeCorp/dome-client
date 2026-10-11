@@ -40,8 +40,6 @@ export function setupWindowHandlers({
   };
 
   client.urlPatterns = {
-    images: /png|jpg|gif|jpeg$/,
-    videos: /mp4|gifv$/,
     youtube: /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/
   };
 

@@ -80,7 +80,7 @@ Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice f
 - Terminal-accurate ANSI rendering with a stateful parser (including reset/inverse handling), full Xterm256 support, and TrueColor (`38;2`/`48;2`) foreground/background rendering in both live output and exported logs.
 - HTTPS support.
 - Automatic URL linkification in output buffer.
-- Inline media previews for image/video/YouTube links with expand/collapse toggles.
+- [Inline media previews](docs/IMAGE-PREVIEWS.md) for image/video/YouTube links with expand/collapse toggles. Image detection checks HTTP(S) URL path extensions, including WebP and AVIF, while preserving query strings and fragments.
 - Host/IP enrichment for `[host=...]` tokens, with clickable IP/hostname lookup links.
 - Copy-friendly wrapping for `#obj` and `$ref`-style tokens in buffer output.
 - Regex-based client alerts with optional sound/window attention on match.

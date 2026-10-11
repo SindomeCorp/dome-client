@@ -1,5 +1,6 @@
 import * as replacements from "./replacements.js";
 import { createAnsiRenderer } from "./ansi-renderer.js";
+import { getPreviewMedia } from "./media-url.js";
 
 function defaultNowMs() {
   return (typeof window !== "undefined" && window.performance && window.performance.now)
@@ -33,17 +34,14 @@ export function createSocketOutputRenderer({
 
   const linkifyUrlsWithPreview = (segment) => {
     return segment.replace(replacements.urlRegex, function (raw) {
-      let url = raw;
-      if (url.indexOf("http") !== 0) url = "http://" + url;
-
-      const lower = url.toLowerCase();
-      const isImage = lower.match(client.urlPatterns.images);
-      const isVideo = lower.match(client.urlPatterns.videos);
-      const ytId = client.parseYouTubeID(url);
+      const url = raw;
+      const media = getPreviewMedia(url);
+      const isVideo = media?.type === "video";
+      const ytId = /^https?:\/\//i.test(url) ? client.parseYouTubeID(url) : false;
 
       let out = `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
 
-      if (isImage || isVideo || ytId) {
+      if (media || ytId) {
         const id = createUniqueId(nowMs);
         const chevron = client.preferences.imagePreview ? "down" : "up";
         out += `<i id="b${id}" class="icon-white icon-chevron-${chevron}" aria-hidden="true" style="cursor:pointer" data-image-id="${id}" data-image-url="${url}"></i>`;
@@ -51,7 +49,7 @@ export function createSocketOutputRenderer({
         if (client.preferences.imagePreview) {
           out += `<br><a href="${url}" target="_blank" rel="noopener noreferrer">`;
           if (isVideo) {
-            out += `<video class="shown-image" loop muted autoplay id="${id}" style="max-width:75%"><source type="video/mp4" src="${url.replace(/gifv$/, "mp4")}"></video>`;
+            out += `<video class="shown-image" loop muted autoplay id="${id}" style="max-width:75%"><source type="video/mp4" src="${media.src}"></video>`;
           } else if (ytId) {
             const width = Math.min(client.buffer.clientWidth - 20, 560);
             const height = Math.floor(width * 0.5652);

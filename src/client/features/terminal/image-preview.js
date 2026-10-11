@@ -1,10 +1,14 @@
+import { getPreviewMedia } from "./media-url.js";
+
 export function buildImagePreviewHtml({ imageId, url, parseYouTubeID, bufferWidth = 580 }) {
-  const isVideo = url.toLowerCase().match(/mp4|gifv$/);
-  const youTubeId = parseYouTubeID?.(url);
+  const media = getPreviewMedia(url);
+  const isVideo = media?.type === "video";
+  const youTubeId = /^https?:\/\//i.test(url) ? parseYouTubeID?.(url) : false;
+  if (!media && !youTubeId) return "";
   let segment = `<br><a href="${url}" target="_blank">`;
 
   if (isVideo) {
-    segment += `<video id="${imageId}" loop muted autoplay class="shown-image" style="max-width: 75%"><source type="video/mp4" src="${url.replace(/gifv$/, "mp4")}"></video>`;
+    segment += `<video id="${imageId}" loop muted autoplay class="shown-image" style="max-width: 75%"><source type="video/mp4" src="${media.src}"></video>`;
   } else if (youTubeId) {
     const width = Math.min(bufferWidth - 20, 560);
     const height = Math.floor(width * 0.5652);

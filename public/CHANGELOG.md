@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Generated short links now default to HTTPS; set `SHORTEN_USE_HTTPS=false` for HTTP-only shortener hosts.
+- Image previews now recognize actual URL path extensions, including WebP and AVIF, regardless of case or query strings. Media names in hostnames or query parameters no longer create false preview controls; manual and automatic previews use the same detection.
 
 ## 2026-09-23
 

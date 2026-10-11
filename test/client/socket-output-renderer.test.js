@@ -49,6 +49,23 @@ test("HTTPS short links preserve their scheme and opaque keys remain links", (t)
   assert.equal(client.buffer.querySelector("img").getAttribute("src"), "https://sindo.me/abc123.png");
 });
 
+test("preview controls use pathname extensions in both automatic and collapsed modes", (t) => {
+  setupDom(t, "<!doctype html><html><body><div id=\"buffer\"></div></body></html>");
+  const client = createClient();
+  const renderer = createSocketOutputRenderer({
+    client, logger: createLogger(t),
+    ansiRenderer: { renderChunk: (segment) => segment, resetState: () => {} }
+  });
+  for (const expanded of [false, true]) {
+    client.preferences.imagePreview = expanded;
+    client.buffer.innerHTML = "";
+    renderer.appendOutputSegment("https://example.com/photo.JPEG?size=400 https://example.com/image.webp#preview https://example.com/view?file=photo.png https://jpg.example.com/page ftp://example.com/file.png");
+    assert.equal(client.buffer.querySelectorAll("i[data-image-url]").length, 2);
+    assert.equal(client.buffer.querySelectorAll("img").length, expanded ? 2 : 0);
+    if (expanded) assert.equal(client.buffer.querySelector("img").getAttribute("src"), "https://example.com/photo.JPEG?size=400");
+  }
+});
+
 test("wrapLinesToDivs preserves blank output lines without trailing blank", () => {
   assert.equal(
     wrapLinesToDivs("one\n\n<span style=\"color:red\"></span>\ntwo\n"),

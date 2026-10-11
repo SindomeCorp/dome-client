@@ -41,6 +41,16 @@ test("attachImagePreview writes preview markup into target element", () => {
   assert.equal(elem.querySelector("img")?.id, "img1");
 });
 
+test("manual expansion agrees with path detection and preserves URL parameters", () => {
+  const dom = new JSDOM("<!doctype html><span></span>");
+  const elem = dom.window.document.querySelector("span");
+  attachImagePreview({ elem, imageId: "query", url: "https://example.com/photo.JPEG?format=mp4&width=400#photo" });
+  assert.equal(elem.querySelector("img").getAttribute("src"), "https://example.com/photo.JPEG?format=mp4&width=400#photo");
+  attachImagePreview({ elem, imageId: "video", url: "https://example.com/clip.GIFV?token=abc#frame" });
+  assert.equal(elem.querySelector("source").getAttribute("src"), "https://example.com/clip.mp4?token=abc#frame");
+  assert.equal(buildImagePreviewHtml({ imageId: "none", url: "https://example.com/view?file=photo.png" }), "");
+});
+
 test("toggleImagePreview shows and hides attached previews", () => {
   const dom = new JSDOM("<!doctype html><div><span id=\"simg1\"></span></div>");
   const buffer = dom.window.document.querySelector("div");
