@@ -282,3 +282,14 @@ See the dedicated testing guide: [docs/TESTING.md](docs/TESTING.md).
 ## Contributing
 
 Run `npm run lint` and `npm test` before committing. Coverage must remain at or above 80%.
+
+## Node.js 26 validation
+
+Validated on Linux with **Node.js 26.12.1** on **2026-10-26**. The template lint, automated test suite, and asset build passed.
+
+With Node.js 26.12.1 selected, reproduce the checks with:
+
+```sh
+npm test
+npm run build
+```
