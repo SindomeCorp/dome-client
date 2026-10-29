@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-10-29
+
+### Fixed
+- Updated the MOO parser so valid nested `try`/`finally` blocks no longer report missing semicolons or block IDE saves.
+
 ## 2026-10-11
 
 ### Fixed
