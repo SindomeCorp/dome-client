@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-10-30
+
+### Fixed
+- Prevented IDE editor line clipping that could make underscores appear as spaces.
+
 ## 2026-10-29
 
 ### Fixed
