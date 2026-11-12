@@ -3,17 +3,19 @@ import { forEachChunked, yieldToBrowser } from "./work-queue.js";
 import { renderRecordHtml } from "./record-renderer.js";
 import { buildLogHtml } from "../../../shared/log-template.js";
 import { buildLogDownloadFilename } from "../terminal/log-download.js";
+import { SearchResults } from "./search-results.js";
 
-export async function searchSnapshot(snapshot, query, { scope = () => true, matchCase = false, signal } = {}) {
-  const matches = [];
+export async function searchSnapshot(snapshot, query, { scope = () => true, matchCase = false, signal, getRecord = (id) => snapshot.get(id) } = {}) {
+  const matches = new SearchResults(query, matchCase, getRecord);
   if (!query) return matches;
-  const literal = new RegExp(query.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&"), matchCase ? "gu" : "giu");
+  const literal = matches.expression();
   await forEachChunked(snapshot, (record) => {
     if (!scope(record)) return;
     const text = recordText(record);
-    for (const match of text.matchAll(literal)) {
-      matches.push({ id: record.id, start: match.index, length: match[0].length });
-    }
+    let count = 0;
+    literal.lastIndex = 0;
+    while (literal.exec(text)) count++;
+    matches.add(record.id, count);
   }, { signal });
   return matches;
 }
@@ -65,12 +67,15 @@ export function setupHistoryTools(manager) {
   const operationMessage = doc.querySelector("#output-operation-message");
   let searchController;
   let operationController;
-  let matches = [];
+  const emptyMatches = () => new SearchResults("", false, (id) => manager.history.get(id));
+  let matches = emptyMatches();
   let selected = -1;
   let searchedThrough = 0;
   let searching = false;
   let searchPending = false;
   let debounce;
+  let refreshTimer;
+  let searchSignature;
   let previousFocus;
   const range = { main: null, secondary: null };
 
@@ -84,7 +89,8 @@ export function setupHistoryTools(manager) {
   async function go(delta = 0) {
     if (!matches.length) return;
     selected = ((selected + delta) % matches.length + matches.length) % matches.length;
-    const match = matches[selected];
+    const match = matches.at(selected);
+    if (!match) return;
     await manager.whenIndexed();
     const record = manager.history.get(match.id);
     if (record) {
@@ -99,30 +105,35 @@ export function setupHistoryTools(manager) {
   }
   async function search({ incremental = false, jump = false } = {}) {
     if (form.classList.contains("hide")) return;
+    const signature = JSON.stringify([query.value, scope.value, matchCase.checked]);
+    if (signature !== searchSignature) incremental = false;
     if (incremental && searching) { searchPending = true; return; }
     searchController?.abort();
     const controller = searchController = new AbortController();
-    const current = matches[selected];
     const needle = query.value;
     if (!incremental) {
+      searchSignature = signature;
+      searchPending = false;
+      matches = emptyMatches();
+      selected = -1;
       for (const view of Object.values(manager.views)) { view.highlight = null; view.schedule(); }
     }
     searching = true;
     updateCount();
     try {
-      const snapshot = await manager.snapshot(controller.signal);
+      const snapshot = await manager.snapshot(controller.signal, incremental ? searchedThrough + 1 : undefined);
       if (controller.signal.aborted) return;
-      const iterator = incremental ? {
-        *[Symbol.iterator]() { for (const record of snapshot) if (record.id > searchedThrough) yield record; }
-      } : snapshot;
-      const found = await searchSnapshot(iterator, needle, {
-        scope: scopePredicate(), matchCase: matchCase.checked, signal: controller.signal
+      const found = await searchSnapshot(snapshot, needle, {
+        scope: scopePredicate(), matchCase: matchCase.checked, signal: controller.signal,
+        getRecord: (id) => manager.history.get(id)
       });
-      if (incremental) matches = matches.filter((match) => match.id >= manager.history.first).concat(found);
+      if (incremental) await matches.append(found, { signal: controller.signal });
       else matches = found;
+      const before = matches.length;
+      matches.prune(manager.history.first);
+      selected -= before - matches.length;
       searchedThrough = snapshot.last;
-      const oldIndex = current ? matches.findIndex((match) => match.id === current.id && match.start === current.start) : -1;
-      selected = oldIndex >= 0 ? oldIndex : matches.length ? 0 : -1;
+      selected = selected >= 0 && selected < matches.length ? selected : matches.length ? 0 : -1;
       if (jump && matches.length) await go();
     } catch (error) {
       if (error.name !== "AbortError") report("Output search failed: " + error.message);
@@ -143,11 +154,13 @@ export function setupHistoryTools(manager) {
   }
   function close() {
     searchController?.abort();
-    matches = [];
+    matches = emptyMatches();
     selected = -1;
     searchedThrough = 0;
     searching = false;
     searchPending = false;
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
     form.classList.add("hide");
     for (const view of Object.values(manager.views)) {
       view.highlight = null;
@@ -161,6 +174,8 @@ export function setupHistoryTools(manager) {
   form.addEventListener("submit", (event) => { event.preventDefault(); go(1); });
   for (const input of [query, scope, matchCase]) {
     input.addEventListener("input", () => {
+      clearTimeout(refreshTimer);
+      refreshTimer = null;
       clearTimeout(debounce);
       debounce = setTimeout(() => search({ jump: true }), 120);
     });
@@ -262,7 +277,7 @@ export function setupHistoryTools(manager) {
     if (reset) {
       operationController?.abort();
       searchController?.abort();
-      matches = [];
+      matches = emptyMatches();
       selected = -1;
       searchedThrough = 0;
     }
@@ -283,11 +298,22 @@ export function setupHistoryTools(manager) {
       }
     }
     if (!form.classList.contains("hide")) {
-      clearTimeout(debounce);
-      debounce = setTimeout(() => search({ incremental: !reset && !routing }), 120);
+      // Throttle arrivals rather than debouncing them indefinitely during
+      // continuous output. A changed query/scope still restarts the full search.
+      if (reset || routing) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+        clearTimeout(debounce);
+        debounce = setTimeout(() => search(), 120);
+      } else if (!refreshTimer) {
+        refreshTimer = setTimeout(() => {
+          refreshTimer = null;
+          search({ incremental: true });
+        }, 120);
+      }
     }
     updateCount();
   }
   changed();
-  return { open, saveLog, changed, cancel() { operationController?.abort(); searchController?.abort(); clearTimeout(debounce); } };
+  return { open, saveLog, changed, cancel() { operationController?.abort(); searchController?.abort(); clearTimeout(debounce); clearTimeout(refreshTimer); } };
 }

@@ -13,6 +13,12 @@ All notable changes to this project will be documented in this file.
 - Render only nearby scrollback to keep large sessions responsive while retaining ordered history for unified log exports.
 - Prepare large logs in cancellable chunks and release offscreen media previews.
 
+### Fixed
+- Keep manual scrollback in place with the default pause preferences until new output arrives.
+- Discard pruned routing work and bound pending routing memory so slow filters cannot accumulate an obsolete backlog.
+- Search only newly received lines when updating Find results and use compact per-line counts for common search terms.
+- Keep empty-split setup help below the window controls on narrow screens.
+
 ## 2026-10-30
 
 ### Fixed

@@ -190,3 +190,74 @@ test("media mounts once and remounting historical rows does not retrigger alerts
   assert.equal(doc.querySelectorAll("img").length, 0);
   assert.equal(alerts, 1);
 });
+
+test("slow routing cannot retain a pruned backlog or delay current output behind discarded batches", async (t) => {
+  const sent = [];
+  let worker;
+  const { manager, client } = await createOutputApp(t, { workerFactory: () => worker = {
+    addEventListener(name, listener) { this[name] = listener; },
+    postMessage(message) { sent.push(message); },
+    terminate() {}
+  } });
+  client.preferences.performanceBuffer = 10;
+  manager.updateSettings({ open: true, selected: ["team-chat"] });
+  client.parseSocketData(Array.from({ length: 50_000 }, (_, i) => "[-][Team-Chat] queued " + i).join("\n") + "\n");
+  await manager.inputQueue.idle();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(manager.history.length, 10);
+  assert.ok(manager.routing.size <= 2);
+  assert.ok(manager.pending.size <= 2);
+  assert.ok(manager.runner.pendingLines < 300);
+  assert.equal(sent.length, 1, "obsolete queued work was never sent to the worker");
+  worker.message({ data: { id: sent[0].id, matches: sent[0].lines.map(() => true) } });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(sent.length, 2, "the next batch is current output, not an old backlog");
+  worker.message({ data: { id: sent[1].id, matches: sent[1].lines.map(() => true) } });
+  await manager.idle();
+  assert.equal(manager.views.secondary.index.length, 10);
+  assert.equal(manager.views.main.index.length, 0);
+  assert.equal(manager.pending.size, 0);
+  manager.updateSettings({ open: false });
+  await manager.idle();
+  const html = (await exportSnapshot(await manager.snapshot(), { client })).join("");
+  assert.equal(manager.views.main.index.length, 10);
+  assert.equal((html.match(/queued 49999/g) || []).length, 1);
+  assert.ok(html.indexOf("queued 49990") < html.indexOf("queued 49999"));
+});
+
+test("manual scrollback survives repaints and measurements until new output with auto-pause disabled", async (t) => {
+  const { manager, client, feed } = await createOutputApp(t);
+  await feed(Array.from({ length: 2000 }, (_, i) => "row " + i).join("\n") + "\n");
+  manager.updateSettings({ open: true });
+  await manager.idle();
+  const view = manager.views.main;
+  Object.defineProperties(view.element, {
+    clientHeight: { value: 400 },
+    scrollHeight: { get: () => view.index.total }
+  });
+  assert.equal(client.preferences.scrollUpToPause, false);
+  view.programmatic = false;
+  view.element.scrollTop = 1000;
+  view.onScroll();
+  view.render();
+  assert.equal(view.element.scrollTop, 1000);
+  assert.equal(view.paused, false);
+  const anchor = view.anchor.id;
+  view.index.measure(0, 80);
+  view.render();
+  assert.equal(view.anchor.id, anchor);
+  assert.ok(view.element.scrollTop < 2000);
+  manager.updateSettings({ open: false });
+  await manager.idle();
+  view.render();
+  assert.equal(view.following, false);
+  assert.equal(view.anchor.id, anchor);
+  assert.ok(view.element.scrollTop < 2000);
+  await feed("new output\n");
+  assert.equal(view.following, true);
+  assert.ok(view.element.scrollTop > 2000);
+  view.setPaused(true);
+  const paused = view.element.scrollTop;
+  await feed("paused output\n");
+  assert.equal(view.element.scrollTop, paused);
+});

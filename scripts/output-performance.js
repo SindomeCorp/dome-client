@@ -119,6 +119,16 @@ async function runReplay(size, fixture) {
       return view.mounted.size;
     });
     const find = await measure("find", async () => (await searchSnapshot(await manager.snapshot(), "SCROLLBACK_PERF_NEEDLE")).length);
+    const commonFind = await measure("commonFind", async () => {
+      const results = await searchSnapshot(await manager.snapshot(), "e", { getRecord: (id) => manager.history.get(id) });
+      return { matches: results.length, indexBytes: results.byteLength, last: results.at(results.length - 1)?.id };
+    });
+    const tailFind = await measure("tailFind", async () => {
+      let visited = 0;
+      const snapshot = await manager.snapshot(undefined, manager.history.next - 1);
+      await searchSnapshot(snapshot, "e", { scope: () => { visited++; return true; } });
+      return visited;
+    });
     const resize = await measure("resize", async () => {
       manager.updateSettings({ secondarySize: 45 });
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -139,7 +149,7 @@ async function runReplay(size, fixture) {
       await new Promise((resolve) => requestAnimationFrame(resolve));
       return client.inputReader.value;
     });
-    return { jump, find, resize, close, exportLog, input };
+    return { jump, find, commonFind, tailFind, resize, close, exportLog, input };
   });
   const closed = await metrics(page, cdp);
   const observations = await page.evaluate(() => {

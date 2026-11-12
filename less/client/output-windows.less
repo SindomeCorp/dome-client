@@ -76,12 +76,18 @@
   }
   [data-position="top"], [data-position="bottom"] { .output-divider { cursor: row-resize; } }
   .output-secondary-help {
-    position: absolute;
-    inset: 35px 12px auto;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: auto;
+    padding: 12px;
     color: #bbb;
     white-space: normal;
+    overflow-wrap: anywhere;
+    button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
     &.hide { display: none; }
   }
+  // Empty-panel help shares the content area, below a header that can wrap.
+  #secondaryBuffer:has(+ .output-secondary-help:not(.hide)) { display: none; }
   .output-copy-menu {
     white-space: normal;
     summary { cursor: pointer; white-space: nowrap; }

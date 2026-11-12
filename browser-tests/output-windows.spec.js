@@ -133,3 +133,26 @@ test("native selection stays mounted while new output arrives", async ({ page })
   await page.evaluate(() => document.getSelection().removeAllRanges());
   await expect(page.locator("#lineBuffer")).toContainText("later 999");
 });
+
+test("manual scrolling works with default preferences and resumes on arriving output", async ({ page }) => {
+  await page.evaluate(() => {
+    window.outputTest.manager.updateSettings({ open: true });
+    return window.outputTest.feed(Array.from({ length: 2000 }, (_, i) => "scrollback row " + i).join("\n") + "\n");
+  });
+  const output = page.locator("#lineBuffer");
+  const before = await output.evaluate((element) => element.scrollTop);
+  await output.hover();
+  await page.mouse.wheel(0, -600);
+  await expect.poll(() => output.evaluate((element) => element.scrollTop)).toBeLessThan(before - 200);
+  // Allow row measurements and resize observers to trigger subsequent renders.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  expect(await output.evaluate((element) => element.scrollTop)).toBeLessThan(before - 200);
+  expect(await page.evaluate(() => window.outputTest.manager.views.main.paused)).toBe(false);
+  const anchor = await page.evaluate(() => window.outputTest.manager.views.main.anchor.id);
+  await page.getByRole("button", { name: "Close secondary output window" }).click();
+  await expect.poll(() => page.evaluate(() => window.outputTest.manager.views.main.anchor?.id)).toBe(anchor);
+  expect(await page.evaluate(() => window.outputTest.manager.views.main.following)).toBe(false);
+  await page.evaluate(() => window.outputTest.feed("new arriving row\n"));
+  await expect(output).toContainText("new arriving row");
+  expect(await output.evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(25);
+});

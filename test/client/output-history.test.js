@@ -162,3 +162,50 @@ test("input chunk boundaries preserve CRLF and complete Unicode characters", asy
   assert.equal(windows.join(""), crlf);
   assert.ok(windows[0].endsWith("\r\n"));
 });
+
+test("ranged snapshots start at the requested chunk and keep stable boundaries across pruning and clear", () => {
+  const history = new OutputHistory();
+  for (let id = 1; id <= 100_000; id++) history.append(runs("row " + id));
+  let chunkReads = 0;
+  const get = history.chunks.get.bind(history.chunks);
+  history.chunks.get = (key) => { chunkReads++; return get(key); };
+  const tail = history.snapshot(undefined, 99_999);
+  assert.equal(chunkReads, 1);
+  assert.deepEqual([...tail].map((record) => record.id), [99_999, 100_000]);
+  history.append(runs("later"));
+  history.prune(1);
+  history.clear();
+  assert.equal(tail.get(100_000).id, 100_000);
+  assert.equal(tail.get(100_001), undefined);
+  assert.deepEqual([...tail].map((record) => record.id), [99_999, 100_000]);
+  assert.deepEqual([...history.snapshot(undefined, 200_000)], []);
+});
+
+test("common-term Find stores counts per row and resolves navigation offsets on demand", async () => {
+  const history = new OutputHistory();
+  const text = "The street is busy. Several people see the vehicle disappear around the corner.";
+  for (let id = 1; id <= 20_000; id++) history.append(runs(text));
+  const matches = await searchSnapshot(history.snapshot(), "e", { getRecord: (id) => history.get(id) });
+  const positions = [...text.matchAll(/e/giu)].map((match) => match.index);
+  assert.equal(matches.length, positions.length * 20_000);
+  assert.ok(matches.byteLength < 350_000, "location index uses 16 bytes per matching row, not per occurrence");
+  assert.deepEqual(matches.at(0), { id: 1, start: positions[0], length: 1 });
+  assert.deepEqual(matches.at(positions.length - 1), { id: 1, start: positions.at(-1), length: 1 });
+  assert.equal(matches.at(matches.length - 1).id, 20_000);
+  assert.equal(matches.at(matches.length), undefined);
+  assert.deepEqual(matches.at(positions.length + 1), { id: 2, start: positions[1], length: 1 });
+  const next = history.append(runs("e e"));
+  await matches.append(await searchSnapshot(history.snapshot(undefined, next.id), "e"));
+  assert.deepEqual(matches.at(matches.length - 1), { id: next.id, start: 2, length: 1 });
+  history.prune(10);
+  matches.prune(history.first);
+  assert.equal(matches.length, positions.length * 9 + 2);
+  assert.equal(matches.at(0).id, history.first);
+  assert.ok(matches.byteLength <= 32_768);
+  matches.prune(history.next);
+  assert.equal(matches.length, 0);
+  assert.equal(matches.byteLength, 0);
+  const newest = history.append(runs("e"));
+  await matches.append(await searchSnapshot(history.snapshot(undefined, newest.id), "e"));
+  assert.deepEqual(matches.at(0), { id: newest.id, start: 0, length: 1 });
+});

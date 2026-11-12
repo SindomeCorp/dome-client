@@ -19,6 +19,7 @@ export class OutputWindows {
     this.committed = this.indexed = 0;
     this.reindexBoundary = 0;
     this.pending = new Set();
+    this.routing = new Map();
     this.activePanel = "main";
     this.activeRows = {};
     this.indexWaiters = [];
@@ -126,11 +127,21 @@ export class OutputWindows {
     this.announcement = ((this.announcement || "") + records.slice(-20).map(recordText).join("\n")).slice(-1500);
     if (shouldRoute) {
       const epoch = this.history.epoch;
-      const job = this.runner.match(records.map(recordText), context.rules).then((matches) => {
+      const first = records[0].id;
+      const last = records.at(-1).id;
+      const controller = new AbortController();
+      this.routing.set(controller, last);
+      // Retain IDs rather than record arrays: pruning must release old output
+      // even while a worker is busy with an earlier batch.
+      const job = this.runner.match(records.map(recordText), context.rules, { signal: controller.signal }).then((matches) => {
         if (epoch !== this.history.epoch) return;
-        records.forEach((record, index) => { record.secondary = matches[index] === true; record.ready = true; });
+        for (let id = Math.max(first, this.history.first); id <= last; id++) {
+          const record = this.history.get(id);
+          record.secondary = matches[id - first] === true;
+          record.ready = true;
+        }
         this.commitReady();
-      }).finally(() => this.pending.delete(job));
+      }).finally(() => { this.pending.delete(job); this.routing.delete(controller); });
       this.pending.add(job);
     }
     this.prune();
@@ -183,8 +194,8 @@ export class OutputWindows {
     return this.indexed >= this.committed ? Promise.resolve() : new Promise((resolve) => this.indexWaiters.push(resolve));
   }
 
-  async snapshot(signal) {
-    const boundary = await abortable(new Promise((resolve) => this.inputQueue.task(() => resolve(this.history.snapshot()))), signal);
+  async snapshot(signal, first) {
+    const boundary = await abortable(new Promise((resolve) => this.inputQueue.task(() => resolve(this.history.snapshot(undefined, first)))), signal);
     await abortable(Promise.all([...this.pending]), signal);
     signal?.throwIfAborted();
     return boundary;
@@ -200,6 +211,11 @@ export class OutputWindows {
   prune() {
     const removed = this.history.prune(this.client.preferences.performanceBuffer);
     if (!removed) return;
+    for (const [controller, last] of this.routing) {
+      if (last >= this.history.first) break;
+      controller.abort();
+      this.routing.delete(controller);
+    }
     for (const view of Object.values(this.views)) view.prune(this.history.first);
     this.tools.changed();
   }
@@ -209,9 +225,11 @@ export class OutputWindows {
     this.indexed = this.history.first - 1;
     for (const view of Object.values(this.views)) {
       const anchor = view.anchor;
+      const following = view.following;
       view.reset();
       const record = anchor && this.history.get(anchor.id);
       view.anchor = record && this.panelFor(record) === view.name ? anchor : null;
+      if (view.anchor) view.following = following;
       view.pendingJump = Boolean(view.anchor);
     }
     this.scheduleIndex();
@@ -221,6 +239,7 @@ export class OutputWindows {
     this.inputQueue.clear();
     this.runner.cancel();
     this.pending.clear();
+    this.routing.clear();
     this.history.clear();
     this.committed = this.indexed = this.history.first - 1;
     this.group = null;

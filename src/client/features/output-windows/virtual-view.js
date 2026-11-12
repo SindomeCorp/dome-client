@@ -9,6 +9,7 @@ export class VirtualOutputView {
     this.index = new HeightIndex();
     this.mounted = new Map();
     this.paused = false;
+    this.following = true;
     this.unread = 0;
     this.frame = null;
     this.anchor = null;
@@ -110,13 +111,15 @@ export class VirtualOutputView {
       || (this.expectedScrollTop != null && Math.abs(this.element.scrollTop - this.expectedScrollTop) < 1)) return;
     this.onActive(this.name);
     const bottom = this.element.scrollHeight - this.element.scrollTop - this.element.clientHeight <= 24;
+    this.following = bottom;
     if (this.client.preferences.scrollUpToPause && this.paused === bottom) this.setPaused(!bottom);
-    if (this.paused) this.captureAnchor();
+    this.captureAnchor();
     this.schedule();
   }
 
   setPaused(value) {
     this.paused = value;
+    this.following = !value;
     if (value) this.captureAnchor();
     else { this.unread = 0; this.anchor = null; }
     this.element.classList.toggle("scroll-disabled", value);
@@ -126,6 +129,9 @@ export class VirtualOutputView {
 
   append(record, countUnread = true) {
     this.index.append(record);
+    // With automatic pausing disabled, manual scrollback lasts until new
+    // output arrives. Measurement and repaint work must not pull it to the tail.
+    if (!this.paused && countUnread) { this.following = true; this.anchor = null; }
     if (this.paused && countUnread) this.unread++;
     this.schedule();
   }
@@ -149,6 +155,7 @@ export class VirtualOutputView {
     this.releaseAll();
     this.index = new HeightIndex(this.index.defaultHeight);
     this.anchor = null;
+    this.following = !this.paused;
     this.unread = 0;
     this.highlight = null;
     this.onState(this);
@@ -159,6 +166,7 @@ export class VirtualOutputView {
     const index = this.index.indexOfId(id);
     if (index < 0) return false;
     this.paused = true;
+    this.following = false;
     this.pendingJump = true;
     this.anchor = { id, offset: 0 };
     this.highlight = highlight ? { id, ...highlight } : null;
@@ -261,7 +269,7 @@ export class VirtualOutputView {
     const viewport = this.element.clientHeight || 400;
     const scale = this.scale();
     let logicalTop = this.logicalTop();
-    if (!this.paused) logicalTop = Math.max(0, this.index.total - viewport);
+    if (!this.paused && this.following) logicalTop = Math.max(0, this.index.total - viewport);
     else if (this.anchor) {
       const index = this.index.indexOfId(this.anchor.id);
       if (index < 0) return;

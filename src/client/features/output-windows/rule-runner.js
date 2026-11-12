@@ -1,12 +1,13 @@
 export function createRuleRunner({
   workerFactory = () => new Worker("/js/output-rules-worker.js", { type: "module" }),
   timeoutMs = 1000,
+  maxPendingLines = 8192,
   onError = () => {}
 } = {}) {
   let worker;
   let nextId = 0;
-  let queue = [];
-  let cursor = 0;
+  const queue = new Map();
+  let pendingLines = 0;
   let active;
   let unavailable = false;
   let pumpTimer;
@@ -17,12 +18,19 @@ export function createRuleRunner({
     worker?.terminate();
     worker = null;
   }
+  function resolve(job, matches) {
+    if (!job.resolve) return;
+    job.detach?.();
+    pendingLines -= job.length;
+    job.resolve(matches || new Array(job.length).fill(false));
+    job.resolve = job.lines = job.rules = job.detach = null;
+  }
   function finish(matches) {
     if (!active) return;
     clearTimeout(active.timer);
     const job = active;
     active = null;
-    job.resolve(matches || new Array(job.lines.length).fill(false));
+    resolve(job, matches);
     // Failed/suspended batches can complete synchronously. Yield while draining
     // them rather than recursing through a large backlog or starving input.
     if (performance.now() - lastYield >= 8) {
@@ -31,6 +39,7 @@ export function createRuleRunner({
   }
   function fail(message) {
     if (!active) return;
+    if (!active.resolve) { stop(); finish(); return; }
     if (active.ruleId && active.configuration === configuration) suspended.add(active.ruleId);
     if (!active.ruleId) unavailable = true;
     stop();
@@ -38,10 +47,9 @@ export function createRuleRunner({
     finish();
   }
   function pump() {
-    if (active || cursor >= queue.length) return;
-    active = queue[cursor];
-    queue[cursor++] = null;
-    if (cursor === queue.length) { queue = []; cursor = 0; }
+    if (active || !queue.size) return;
+    active = queue.values().next().value;
+    queue.delete(active.id);
     const rules = unavailable ? [] : active.rules.filter((rule) => !suspended.has(rule.id));
     if (!rules.length) return finish();
     try {
@@ -50,6 +58,7 @@ export function createRuleRunner({
         worker.addEventListener("message", ({ data }) => {
           if (!active || data.id !== active.id) return;
           if (data.activeRule) {
+            if (!active.resolve) return;
             active.ruleId = data.activeRule;
             // The watchdog measures execution per rule, not queueing time.
             clearTimeout(active.timer);
@@ -72,10 +81,30 @@ export function createRuleRunner({
     }
   }
   return {
-    match(lines, rules) {
-      if (unavailable || !rules.length || !lines.length) return Promise.resolve(new Array(lines.length).fill(false));
-      return new Promise((resolve) => {
-        queue.push({ id: ++nextId, lines, rules, resolve, configuration });
+    match(lines, rules, { signal } = {}) {
+      if (signal?.aborted || unavailable || !rules.length || !lines.length || lines.length > maxPendingLines) {
+        return Promise.resolve(new Array(lines.length).fill(false));
+      }
+      return new Promise((done) => {
+        const job = { id: ++nextId, lines, length: lines.length, rules, resolve: done, configuration };
+        pendingLines += lines.length;
+        const cancel = () => {
+          queue.delete(job.id);
+          resolve(job);
+          // Let an already running worker finish under its existing watchdog.
+          // Its input is already cloned; this avoids repeatedly restarting a
+          // worker during bursts that prune each preceding batch.
+        };
+        signal?.addEventListener("abort", cancel, { once: true });
+        job.detach = () => signal?.removeEventListener("abort", cancel);
+        queue.set(job.id, job);
+        // Bound routing memory even with unlimited scrollback. Overflow stays
+        // in main in chronology order, rather than blocking all later output.
+        while (pendingLines > maxPendingLines && queue.size) {
+          const oldest = queue.values().next().value;
+          queue.delete(oldest.id);
+          resolve(oldest);
+        }
         pump();
       });
     },
@@ -85,13 +114,13 @@ export function createRuleRunner({
       clearTimeout(pumpTimer);
       if (active) {
         clearTimeout(active.timer);
-        active.resolve(new Array(active.lines.length).fill(false));
+        resolve(active);
         active = null;
       }
-      queue.slice(cursor).forEach((job) => job.resolve(new Array(job.lines.length).fill(false)));
-      queue = [];
-      cursor = 0;
+      for (const job of queue.values()) resolve(job);
+      queue.clear();
     },
+    get pendingLines() { return pendingLines; },
     get suspended() { return suspended; }
   };
 }

@@ -73,6 +73,12 @@ one second is suspended for that session, with an explanation. Unresolved output
 stays in main. Edit the rule or toggle its checkbox to retry. If background workers
 are unavailable, output stays in main.
 
+Pruning history also discards queued routing work for removed lines. Pending
+routing is capped at 8,192 logical lines, even with unlimited history. If a slow
+worker falls behind that budget, queued overflow stays in main in receipt order.
+An obsolete batch already running can finish under its existing one-second
+watchdog; it does not keep discarded records alive or suspend an obsolete rule.
+
 ## Offscreen rendering and long sessions
 
 Retained history and displayed content are different:
@@ -100,6 +106,11 @@ History stays in memory for this page session. Reconnects preserve retained
 history; refreshing or closing the page does not restore it. No history is written
 to local storage or uploaded as part of this feature.
 
+With **Scroll Up to Pause** disabled (the default), scrolling back keeps your
+position through repaints and size measurements. New output resumes scrolling
+to the bottom unless you explicitly pause that window. Enable **Scroll Up to
+Pause** to remain paused automatically while reading old output.
+
 Performance measurements and replay instructions are in
 [Output performance](OUTPUT-PERFORMANCE.md).
 
@@ -116,6 +127,12 @@ Use the arrow buttons, Enter, or F3/Shift+F3 to move between matches. The matchi
 window pauses and displays the result, even if that message was previously
 offscreen. Incoming output updates the result set without automatically moving
 you to a new match. Escape closes Find and returns focus.
+
+Live updates scan only lines received since the previous search. Result locations
+use compact counts per matching line; individual character offsets are resolved
+as you navigate. Common terms can produce millions of matches without keeping
+millions of separate location objects. This index still grows with the number
+of matching retained lines and is released when Find closes or history clears.
 
 The browser's own Find cannot reliably search messages that are not mounted.
 Use client Find for complete retained-history searches. Editor Find shortcuts

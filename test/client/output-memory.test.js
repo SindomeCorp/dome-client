@@ -30,3 +30,26 @@ test("bounded history releases the backing string of a huge received burst", () 
     cwd: fileURLToPath(new URL("../../", import.meta.url)), stdio: "pipe"
   }));
 });
+
+test("unresolved routing promises release records removed by the history limit", () => {
+  const source = [
+    "import { createOutputApp } from \"./test-support/output-app.js\";",
+    "const { manager, client, win } = await createOutputApp(undefined, { workerFactory: () => ({",
+    "  addEventListener() {}, postMessage() {}, terminate() {}",
+    "}) });",
+    "client.preferences.performanceBuffer = 10;",
+    "manager.updateSettings({ open: true, selected: [\"team-chat\"] });",
+    "let first;",
+    "const append = manager.history.append.bind(manager.history);",
+    "manager.history.append = (...args) => { const record = append(...args); first ||= new WeakRef(record); return record; };",
+    "client.parseSocketData(Array.from({length:50000}, (_,i) => \"[-][Team-Chat] queued \"+i+\"\\n\").join(\"\"));",
+    "await manager.inputQueue.idle();",
+    "await new Promise(resolve => setTimeout(resolve, 0));",
+    "global.gc();",
+    "if (manager.history.length !== 10 || manager.pending.size > 2 || first.deref()) process.exitCode = 1;",
+    "manager.destroy(); win.close();"
+  ].join("\n");
+  assert.doesNotThrow(() => execFileSync(process.execPath, [
+    "--expose-gc", "--experimental-test-module-mocks", "--import=./test/mock-module.js", "--input-type=module", "-e", source
+  ], { cwd: fileURLToPath(new URL("../../", import.meta.url)), stdio: "pipe" }));
+});

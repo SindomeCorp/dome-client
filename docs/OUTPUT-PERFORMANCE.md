@@ -62,12 +62,38 @@ preformatted-record fixture to preserve its richer span formatting. Its loading
 time includes fixture transfer and batching and should not be compared directly
 with synthetic socket parsing.
 
+### Routing and Find regression replay
+
+After the scrollback/routing/Find fixes, a replay on the same reference machine
+also measured a common-term search (`e`) and a search starting at the final row:
+
+| Retained lines | Mounted rows | Matches for `e` | Search index | Common-term Find | Tail rows visited |
+| --- | --- | --- | --- | --- | --- |
+| 20,000 | 132 | 124,908 | 0.31 MiB | 10 ms | 1 |
+| 100,000 | 133 | 624,468 | 1.53 MiB | 31 ms | 1 |
+| 1,000,000 | 132 | 6,244,580 | 15.27 MiB | 422 ms | 1 |
+
+At one million lines, the tail search took about 4 ms, split closing took 114 ms
+in yielded chunks, and export preparation took 1,513 ms. No long tasks were
+reported. The heartbeat reached 273 ms including forced collection for memory
+measurements. After clearing and collection, the heap returned to about 2.9 MiB.
+The index figures are typed-array storage, not total browser heap usage.
+
 ## Acceptance checks and limitations
 
 - Mounted rows should depend on viewport and overscan rather than retained line
   count. An individual unusually large line can still contain many elements.
 - Newly received output must not scan old messages. Regex tests run in a worker,
   and history processing yields between short chunks.
+- Live Find snapshots start directly at the first unsearched row. A common-term
+  search stores 16 bytes per matching line in typed pages, with at most two
+  partially used pages, rather than an object per occurrence. Navigation resolves
+  offsets on demand; replacing a query releases the previous index first.
+- Routing promises reference sequence IDs rather than retaining message arrays.
+  Pruning drops obsolete queued jobs, and the runner caps pending input at 8,192
+  lines even with unlimited history. Overflow resolves safely to main. Regression
+  checks include a stalled worker, 50,000 incoming lines, and a 10-line limit,
+  including collection of pruned records while the worker remains unresolved.
 - Keep input, scrolling, and divider controls responsive during receipt, search,
   merging, and export preparation. Target processing chunks below 50 ms.
 - Verify variable-height anchoring, offscreen matches, cross-history copy ranges,
@@ -78,6 +104,9 @@ with synthetic socket parsing.
 - Observe final clipboard-string and download allocations separately. Export
   preparation timings do not include writing a downloaded file or the native
   application's final full-string allocation.
+  A separate million-line browser download produced an approximately 81 MB HTML
+  file: the final Blob allocation took about 200 ms and produced a 204 ms main
+  thread task. This accepted allocation pause remains outside chunked preparation.
 - Unlimited history still consumes memory as retained text grows. Browser storage
   and reload recovery are outside this version.
 

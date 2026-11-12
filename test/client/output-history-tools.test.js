@@ -3,6 +3,13 @@ import assert from "node:assert/strict";
 import { createOutputApp } from "../../test-support/output-app.js";
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 180));
+async function expectText(element, expected) {
+  for (let attempt = 0; attempt < 150; attempt++) {
+    if (element.textContent === expected) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.equal(element.textContent, expected);
+}
 
 test("Find searches unmounted output, scopes results, and clears old highlights", async (t) => {
   const { manager, feed, doc, win } = await createOutputApp(t);
@@ -115,4 +122,73 @@ test("closing a split clears a range whose panel assignment would change", async
   manager.updateSettings({ open: false });
   assert.equal(manager.views.secondary.range, null);
   assert.ok(messages.some((message) => message.includes("window assignments changed")));
+});
+
+test("live Find visits only new rows, updates during continuous traffic, and preserves the chosen match", async (t) => {
+  const { manager, doc, win, feed } = await createOutputApp(t);
+  await feed(Array.from({ length: 20_000 }, (_, i) => "needle row " + i).join("\n") + "\n");
+  manager.tools.open();
+  const query = doc.querySelector("#output-find-query");
+  query.value = "needle";
+  query.dispatchEvent(new win.Event("input"));
+  const count = doc.querySelector("#output-find-count");
+  await expectText(count, "1 of 20000");
+  doc.querySelector("#output-find").dispatchEvent(new win.Event("submit", { cancelable: true }));
+  await expectText(count, "2 of 20000");
+  let visited = 0;
+  const snapshot = manager.history.snapshot.bind(manager.history);
+  manager.history.snapshot = (...args) => {
+    const result = snapshot(...args);
+    return { ...result, *[Symbol.iterator]() { for (const record of result) { visited++; yield record; } } };
+  };
+  await feed("needle fresh\n");
+  await expectText(count, "2 of 20001");
+  assert.equal(visited, 1);
+  assert.equal(manager.views.main.highlight.id, 2);
+  let updatedDuringTraffic = false;
+  for (let i = 0; i < 8; i++) {
+    await feed("needle traffic " + i + "\n");
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    if (/of 2000[2-9]$/.test(count.textContent)) updatedDuringTraffic = true;
+  }
+  assert.equal(updatedDuringTraffic, true);
+  await expectText(count, "2 of 20009");
+  assert.equal(visited, 9);
+  manager.client.preferences.performanceBuffer = 2;
+  manager.prune();
+  await expectText(count, "1 of 2");
+});
+
+test("clearing during Find cancels the old snapshot and subsequent results contain only new history", async (t) => {
+  const { manager, doc, win, feed } = await createOutputApp(t);
+  await feed(Array.from({ length: 2000 }, () => "needle old").join("\n") + "\n");
+  manager.tools.open();
+  const snapshot = manager.history.snapshot.bind(manager.history);
+  let cleared = false;
+  manager.history.snapshot = (...args) => {
+    const result = snapshot(...args);
+    return {
+      ...result,
+      *[Symbol.iterator]() {
+        for (const record of result) {
+          yield record;
+          if (!cleared) { cleared = true; manager.clear(); }
+        }
+      }
+    };
+  };
+  const query = doc.querySelector("#output-find-query");
+  query.value = "needle";
+  query.dispatchEvent(new win.Event("input"));
+  await settle();
+  assert.equal(cleared, true);
+  assert.equal(manager.history.length, 0);
+  await feed("needle new\n");
+  await settle();
+  assert.equal(doc.querySelector("#output-find-count").textContent, "1 of 1");
+  doc.querySelector("#output-find").dispatchEvent(new win.Event("submit", { cancelable: true }));
+  await settle();
+  manager.views.main.render();
+  assert.equal(manager.views.main.highlight.id, manager.history.first);
+  assert.equal(doc.querySelector("mark").textContent, "needle");
 });

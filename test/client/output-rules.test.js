@@ -90,3 +90,56 @@ test("suspension drains a long routing backlog without recursive failures or los
   assert.equal(errors, 1);
   runner.cancel();
 });
+
+test("pruning cancels queued routing and releases active input without suspending rules", async () => {
+  let worker;
+  const errors = [];
+  const runner = createRuleRunner({
+    workerFactory: () => worker = {
+      addEventListener(name, fn) { this[name] = fn; },
+      postMessage(message) { this.sent = message; },
+      terminate() {}
+    },
+    onError: (message) => errors.push(message)
+  });
+  const first = new AbortController();
+  const second = new AbortController();
+  const active = runner.match(["old"], rules, { signal: first.signal });
+  const queued = runner.match(["also old"], rules, { signal: second.signal });
+  const activeId = worker.sent.id;
+  second.abort();
+  first.abort();
+  assert.deepEqual(await active, [false]);
+  assert.deepEqual(await queued, [false]);
+  assert.equal(runner.pendingLines, 0);
+  const newest = runner.match(["latest"], rules);
+  worker.message({ data: { id: activeId, error: "Obsolete rule failure" } });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  worker.message({ data: { id: worker.sent.id, matches: [true] } });
+  assert.deepEqual(await newest, [true]);
+  assert.deepEqual(errors, []);
+  assert.equal(runner.suspended.size, 0);
+  runner.cancel();
+});
+
+test("routing queue has a fixed line budget and overflow safely stays in main", async () => {
+  let worker;
+  const runner = createRuleRunner({ maxPendingLines: 3, workerFactory: () => worker = {
+    addEventListener(name, fn) { this[name] = fn; },
+    postMessage(message) { this.sent = message; },
+    terminate() {}
+  } });
+  const first = runner.match(["first"], rules);
+  const oldest = runner.match(["old queued"], rules);
+  const latest = runner.match(["latest one", "latest two"], rules);
+  assert.deepEqual(await oldest, [false]);
+  assert.equal(runner.pendingLines, 3);
+  assert.deepEqual(await runner.match(["a", "b", "c", "d"], rules), [false, false, false, false]);
+  worker.message({ data: { id: worker.sent.id, matches: [true] } });
+  assert.deepEqual(await first, [true]);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  worker.message({ data: { id: worker.sent.id, matches: [true, false] } });
+  assert.deepEqual(await latest, [true, false]);
+  assert.equal(runner.pendingLines, 0);
+  runner.cancel();
+});

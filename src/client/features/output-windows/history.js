@@ -46,16 +46,28 @@ export class OutputHistory {
     return this.chunks.get(Math.floor((id - 1) / CHUNK_SIZE))?.[(id - 1) % CHUNK_SIZE];
   }
 
-  snapshot(last = this.next - 1) {
-    const first = this.first;
+  snapshot(last = this.next - 1, from = this.first) {
+    const first = Math.max(this.first, from);
     const end = Math.min(last, this.next - 1);
-    const chunks = [...this.chunks.values()];
+    const firstKey = Math.floor((first - 1) / CHUNK_SIZE);
+    const chunks = [];
+    if (first <= end) {
+      for (let key = firstKey; key <= Math.floor((end - 1) / CHUNK_SIZE); key++) chunks.push(this.chunks.get(key));
+    }
     return {
       first, last: end, epoch: this.epoch,
+      get(id) {
+        if (id < first || id > end) return undefined;
+        return chunks[Math.floor((id - 1) / CHUNK_SIZE) - firstKey]?.[(id - 1) % CHUNK_SIZE];
+      },
       *[Symbol.iterator]() {
-        for (const chunk of chunks) {
-          for (const record of chunk) {
-            if (record && record.id >= first && record.id <= end) yield record;
+        for (let offset = 0; offset < chunks.length; offset++) {
+          const chunk = chunks[offset];
+          const base = (firstKey + offset) * CHUNK_SIZE + 1;
+          const start = Math.max(0, first - base);
+          const stop = Math.min(chunk.length, end - base + 1);
+          for (let index = start; index < stop; index++) {
+            yield chunk[index];
           }
         }
       }
