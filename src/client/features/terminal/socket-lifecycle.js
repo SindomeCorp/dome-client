@@ -37,7 +37,8 @@ export function setupSocket({
     if (client.activeEditor) {
       client.activeEditor.readingContent = false;
     }
-    client.resetSdwcNowrapState?.();
+    if (client.resetOutputStream) client.resetOutputStream();
+    else client.resetSdwcNowrapState?.();
     client.health?.showStatus("DISCONNECTED", { persist: true });
     client.disconnectView.overlay.classList.remove("hide");
     client.disconnectView.buttonGroup.classList.remove("hide");
@@ -59,7 +60,8 @@ export function setupSocket({
       onReconnectHandler();
     }
     client.socketState = SOCKET_STATE_ENUM.CONNECTED;
-    client.resetSdwcNowrapState?.();
+    if (client.resetOutputStream) client.resetOutputStream();
+    else client.resetSdwcNowrapState?.();
     if (client.inputReader) client.inputReader.focus(); // focus the cursor in the input field
     client.health?.showStatus("CONNECTED");
 

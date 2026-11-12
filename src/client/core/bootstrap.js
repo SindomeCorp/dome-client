@@ -12,6 +12,7 @@ import { setupButtons } from "../features/terminal/buttons.js";
 import { setupIdeLauncher } from "../features/editor/ide.js";
 import { setupAutoCompleteFeature } from "../features/terminal/autocomplete.js";
 import { setupHealthCheck } from "../features/health/health-check.js";
+import { setupOutputWindows } from "../features/output-windows/output-windows.js";
 import {
   installDomeBridge,
   notifyNativeBridgeReady,
@@ -25,6 +26,7 @@ export {
 } from "./native-bridge.js";
 
 export const createClientFeatureSet = () => ({
+  setupOutputWindows,
   setupAutoCompleteFeature,
   setupAutoscroll,
   setupButtons,
@@ -129,6 +131,7 @@ export const setupClientFeatures = ({
   features = createClientFeatureSet(),
   capabilities = createClientCapabilities({ client, doc, win })
 } = {}) => {
+  features.setupOutputWindows?.({ client, doc, win });
   features.setupWindowHandlers({ client, doc, win, capabilities: capabilities.uiControls });
   features.setupIdeLauncher?.({ client, win, getSocket: capabilities.editor.getSocket, capabilities: capabilities.editor });
   features.setupEditorSupport({ client, doc, win, capabilities: capabilities.editor });

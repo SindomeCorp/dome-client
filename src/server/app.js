@@ -10,6 +10,7 @@ import { getLogExportCss as defaultGetLogExportCss } from "../services/log-expor
 import defaultRouter from "../routes/index.js";
 import { CLIENT_OPTION_GROUPS, CLIENT_OPTION_LABELS, CLIENT_OPTION_VIEW } from "../shared/client-options.js";
 import { createIpBlocklistMiddleware } from "../middleware/ip-blocklist.js";
+import { loadOutputWindowPresets } from "../services/output-window-presets.js";
 
 const __dirname = fileURLToPath(new URL("..", import.meta.url));
 
@@ -30,6 +31,11 @@ export function createApp({
   ipBlocklist
 }) {
   const app = express();
+  const outputWindows = {
+    enabled: config.outputWindows?.enabled !== false,
+    customRegexEnabled: config.outputWindows?.customRegexEnabled !== false,
+    presets: loadOutputWindowPresets({ filePath: config.outputWindows?.presetsPath, logger })
+  };
   app.disable("x-powered-by");
   app.set("appStartTime", appStartTime);
 
@@ -82,6 +88,7 @@ export function createApp({
     res.locals.guestConnectCommand = config.guest.connectCommand;
     res.locals.isMultiMud = config.node.multiMud === true;
     res.locals.shortenEnabled = config.shorten.enabled;
+    res.locals.outputWindows = outputWindows;
     res.locals.clientOptionLabels = CLIENT_OPTION_LABELS;
     res.locals.clientOptionView = CLIENT_OPTION_VIEW;
     res.locals.clientOptionGroups = CLIENT_OPTION_GROUPS;

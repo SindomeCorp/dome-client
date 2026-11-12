@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-11-12
+
+### Added
+- Added resizable output splits with channel presets, optional custom regex filters and testing, and saved layouts included in preference imports and exports.
+- Added full-history output Find, independent window pause controls, and copying ranges across scrollback.
+- Added output-window and rendering documentation, browser checks, and long-session performance replays.
+
+### Changed
+- Render only nearby scrollback to keep large sessions responsive while retaining ordered history for unified log exports.
+- Prepare large logs in cancellable chunks and release offscreen media previews.
+
 ## 2026-10-30
 
 ### Fixed

@@ -1,0 +1,18 @@
+<form id="output-find" class="output-find hide" role="search" aria-label="Find in output">
+  <label>Find <input id="output-find-query" type="search" autocomplete="off" placeholder="Search retained output" /></label>
+  <label>In <select id="output-find-scope">
+    <option value="all">All output</option>
+    <option value="main">Main</option>
+    <option value="secondary">Secondary</option>
+  </select></label>
+  <label><input id="output-find-case" type="checkbox" /> Match case</label>
+  <span id="output-find-count" role="status"></span>
+  <button type="button" id="output-find-previous" class="btn btn-xs" aria-label="Previous match">↑</button>
+  <button type="submit" class="btn btn-xs" aria-label="Next match">↓</button>
+  <button type="button" id="output-find-close" class="btn btn-xs" aria-label="Close output Find">&times;</button>
+</form>
+<div id="output-operation" class="output-operation hide" role="status">
+  <span id="output-operation-message"></span>
+  <button type="button" id="output-operation-cancel" class="btn btn-xs">Cancel</button>
+</div>
+<div id="output-announcements" class="output-screen-reader" aria-live="polite" aria-atomic="true"></div>

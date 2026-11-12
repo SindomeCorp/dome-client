@@ -1,0 +1,135 @@
+#browser-client {
+  // The desktop toolbar is fixed at the top; reserve its row so it cannot cover
+  // panel pause/copy controls or the output Find bar.
+  &:has(> .mini-controls) {
+    box-sizing: border-box;
+    padding-top: 28px;
+  }
+  .output-workspace {
+    display: flex;
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    &[data-position="left"] { flex-direction: row-reverse; }
+    &[data-position="top"] { flex-direction: column-reverse; }
+    &[data-position="bottom"] { flex-direction: column; }
+    &.split-open .output-panel { flex: 1 1 0; }
+    &.split-open #output-secondary-panel { flex: 0 0 var(--secondary-size, 30%); }
+  }
+  .output-panel {
+    position: relative;
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    &.hide { display: none; }
+  }
+  .output-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    padding: 3px 6px;
+    background: #222;
+    color: #ddd;
+    font-size: 12px;
+    min-height: 26px;
+    white-space: nowrap;
+  }
+  .output-unread { margin-left: auto; font-size: 11px; }
+  .output-close { margin-left: auto; }
+  #lineBuffer, #secondaryBuffer {
+    height: auto;
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
+    overflow-anchor: none;
+    scroll-behavior: auto;
+    padding: 4px 8px;
+    &:focus { outline: 1px solid #888; outline-offset: -2px; }
+  }
+  .output-rows, .output-spacer { padding: 0; margin: 0; }
+  .output-spacer { pointer-events: none; }
+  .output-row {
+    min-height: 1em;
+    overflow-wrap: anywhere;
+    &:focus { outline: 1px dashed #888; outline-offset: -1px; }
+    &.output-range-selected { background-color: rgba(60, 120, 180, .3); }
+  }
+  .output-nowrap-row {
+    white-space: pre;
+    overflow-x: auto;
+    overflow-wrap: normal;
+    scrollbar-width: thin;
+  }
+  .output-preview-toggle { padding: 0 4px; border: 0; background: transparent; color: inherit; cursor: pointer; }
+  .output-divider {
+    flex: 0 0 8px;
+    background: #444;
+    cursor: col-resize;
+    touch-action: none;
+    &:hover, &:focus { background: #777; }
+    &.hide { display: none; }
+  }
+  [data-position="top"], [data-position="bottom"] { .output-divider { cursor: row-resize; } }
+  .output-secondary-help {
+    position: absolute;
+    inset: 35px 12px auto;
+    color: #bbb;
+    white-space: normal;
+    &.hide { display: none; }
+  }
+  .output-copy-menu {
+    white-space: normal;
+    summary { cursor: pointer; white-space: nowrap; }
+    > div {
+      position: absolute;
+      right: 4px;
+      top: 28px;
+      z-index: 15;
+      width: min(290px, 90%);
+      background: #222;
+      border: 1px solid #666;
+      padding: 8px;
+      max-height: calc(100% - 40px);
+      overflow-y: auto;
+      box-sizing: border-box;
+      button { display: block; margin: 5px 0; }
+    }
+  }
+  .output-find, .output-operation {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    flex: 0 0 auto;
+    padding: 5px;
+    color: #ddd;
+    background: #222;
+    label { margin: 0; }
+    input, select { max-width: 220px; margin: 0; }
+    &.hide { display: none; }
+  }
+}
+.output-screen-reader { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.output-rule-list {
+  label { display: inline-flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .output-rule { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+}
+.output-window-options {
+  white-space: normal;
+  > label, form > label { display: block; margin-top: 8px; }
+  input[type="text"], textarea { width: 100%; box-sizing: border-box; }
+  input[type="checkbox"] { margin: 0 4px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow: auto; }
+  #output-rule-error { color: #ffaaaa; }
+}
+@media (max-width: 767px) {
+  #browser-client:has(> .mini-controls) { padding-top: 0; }
+  #browser-client .output-panel-header { gap: 3px; padding: 3px; font-size: 11px; flex-wrap: wrap; }
+  #browser-client .output-divider { flex-basis: 12px; }
+  #browser-client .output-find input { max-width: 150px; }
+}

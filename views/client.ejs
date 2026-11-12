@@ -3,7 +3,12 @@ var useMinified = !debugMode;
 %>
 <% req.bodyClass = 'client'; %>
 <div id="browser-client">
-  <div id="lineBuffer" class="standardText" aria-live="polite"></div>
+  <%- include("partials/output-find") %>
+  <div id="output-workspace" class="output-workspace" data-position="right">
+    <%- include("partials/output-window-panel", { panelName: "main" }) %>
+    <div id="output-divider" class="output-divider hide" role="separator" tabindex="0" aria-label="Resize output windows" aria-orientation="vertical" aria-valuemin="15" aria-valuemax="85" aria-valuenow="30"></div>
+    <%- include("partials/output-window-panel", { panelName: "secondary" }) %>
+  </div>
   <%- include('partials/mini-controls') %>
   <div class="input-buffer-row">
     <textarea

@@ -24,6 +24,8 @@ stryker.log
 nohup.out
 .stryker-tmp/
 reports/mutation/
+test-results/
+playwright-report/
 reports/stryker-incremental.json
 REFACTOR.md
 .brooks-lint-history.json

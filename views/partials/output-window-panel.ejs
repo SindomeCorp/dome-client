@@ -1,0 +1,27 @@
+<section id="output-<%= panelName %>-panel" class="output-panel <%= panelName === 'secondary' ? 'hide' : '' %>" aria-label="<%= panelName === 'main' ? 'Main output window' : 'Secondary output window' %>">
+  <header class="output-panel-header">
+    <span><%= panelName === "main" ? "Main" : "Secondary" %></span>
+    <span data-output-unread="<%= panelName %>" class="output-unread" aria-live="polite"></span>
+    <button type="button" class="btn btn-xs" data-output-pause="<%= panelName %>" aria-label="Pause <%= panelName %> scrolling">Pause</button>
+    <details class="output-copy-menu">
+      <summary>Copy…</summary>
+      <div>
+        <p>Choose a line in output, then set a range boundary.</p>
+        <button type="button" class="btn btn-xs" data-output-action="start" data-panel="<%= panelName %>">Select from here</button>
+        <button type="button" class="btn btn-xs" data-output-action="end" data-panel="<%= panelName %>">Select to here</button>
+        <button type="button" class="btn btn-xs" data-output-action="copy" data-panel="<%= panelName %>">Copy selection</button>
+        <button type="button" class="btn btn-xs" data-output-action="all" data-panel="<%= panelName %>">Copy all</button>
+      </div>
+    </details>
+    <% if (panelName === "secondary") { %>
+    <button type="button" class="btn btn-xs output-close" id="button-output-close" aria-label="Close secondary output window">&times;</button>
+    <% } %>
+  </header>
+  <div id="<%= panelName === 'main' ? 'lineBuffer' : 'secondaryBuffer' %>" class="standardText output-scroll"></div>
+  <% if (panelName === "secondary") { %>
+  <div id="output-secondary-help" class="output-secondary-help">
+    <p>Send output to this window by opening Options → Output Windows and selecting output filters.</p>
+    <button type="button" id="button-output-configure" class="btn">Configure output window</button>
+  </div>
+  <% } %>
+</section>

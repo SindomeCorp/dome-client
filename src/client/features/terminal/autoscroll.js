@@ -59,6 +59,11 @@ export function setupAutoscroll(context, winArg = window) {
   const client = context?.buffer ? context : context.client;
   const win = context?.buffer ? winArg : context.win ?? window;
   const doc = context?.buffer ? win.document ?? globalThis.document : context.doc ?? win.document ?? globalThis.document;
+  if (client.outputWindows) {
+    client.scrollBuffer = () => {};
+    client.onToggleAutoScroll = () => client.outputWindows.togglePause();
+    return;
+  }
   const preferences = client.preferences ?? {};
   const canBindBuffer = client.buffer
     && typeof client.buffer.addEventListener === "function"

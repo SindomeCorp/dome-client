@@ -92,6 +92,7 @@ Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice f
 - Rich client options: command hints, local echo, image preview, overlay transparency, buffer size, alert sound, font/theme choices, editor mode selection, separate input/output font sizing, configurable input text/background colors, and `Scroll Up to Pause` autoscroll behavior.
 - Client options Import/Export workflow: download all preferences as JSON, import recognized keys locally, validate ranges, normalize legacy values, and reset to defaults with explicit confirmation.
 - Session log export as HTML for preserving and sharing scrollback, with a client option to switch between default self-contained inline CSS and a lighter legacy linked stylesheet mode.
+- [Split output windows and efficient scrollback](docs/OUTPUT-WINDOWS.md): a resizable secondary window, channel presets and optional custom regex, full-history Find, long-range copying, and unified logs. Only nearby output is rendered, including in single-window sessions.
 - Better nowrap output handling via SDWC markers (`SDWC-START-NOWRAP` / `SDWC-END-NOWRAP`) and a mobile-friendly wrap option for long horizontal content.
 - Built-in keyboard shortcuts for both client and IDE workflows.
 - Optional [URL-shortener integration](docs/URL-SHORTENER.md). `SHORTEN_DOMAIN` sets the public hostname; `SHORTEN_USE_HTTPS` defaults to `true`, or can be set to `false` for HTTP links. Backend shortener API requests remain HTTP.
@@ -99,6 +100,16 @@ Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice f
 - Native bridge integration support (`window.DomeBridge` / `window.DomeNative`) for mobile wrappers, including queued startup event handling and native log-download routing when available.
 - Fully bundled client styling (local LESS/CSS and glyph assets), removing runtime dependency on external `dome.css` for consistent mobile/desktop rendering.
 - Optional multi-game landing mode (`MULTI_MUD`) with host/port-first connect flow and persisted per-game connection metrics.
+
+## Output window configuration
+
+`OUTPUT_WINDOWS_ENABLED` and `OUTPUT_WINDOWS_CUSTOM_REGEX_ENABLED` default to
+`true`. `OUTPUT_WINDOWS_PRESETS_PATH` defaults to
+`data/output-window-presets.json`; operators can supply a different preset file
+and restart the server. Disabling splits retains efficient scrollback rendering,
+Find, and copying. See [Output Windows](docs/OUTPUT-WINDOWS.md) for setup, JSON
+examples, saved preferences, logging, and limitations, and
+[Output Performance](docs/OUTPUT-PERFORMANCE.md) for replay results and commands.
 
 ## Connection Modes
 

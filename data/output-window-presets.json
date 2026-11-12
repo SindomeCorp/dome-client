@@ -1,0 +1,11 @@
+[
+  { "id": "team-chat", "name": "Team Chat", "pattern": "^\\[-\\]\\[Team-Chat\\]", "ignoreCase": false },
+  { "id": "game-help", "name": "Game Help", "pattern": "^\\[-\\]\\[Game-Help\\]", "ignoreCase": false },
+  { "id": "ooc-chat", "name": "OOC Chat", "pattern": "^\\[-\\]\\[OOC-Chat\\]", "ignoreCase": false },
+  { "id": "bit-chat", "name": "Bit Chat", "pattern": "^\\[-\\]\\[Bit-Chat\\]", "ignoreCase": false },
+  { "id": "rp-info", "name": "RP Info", "pattern": "^\\[-\\]\\[RP-Info\\]", "ignoreCase": false },
+  { "id": "sic-comm", "name": "SIC Comm", "pattern": "^\\[-\\]\\[SIC-COMM\\]", "ignoreCase": false },
+  { "id": "debug-info", "name": "Debug Info", "pattern": "^\\[-\\]\\[Debug-Info\\]", "ignoreCase": false },
+  { "id": "guided-discussion", "name": "Guided Discussion", "pattern": "^\\[-\\]\\[Guided-Discussion\\]", "ignoreCase": false },
+  { "id": "ooc-messages", "name": "OOC Messages", "pattern": "^\\[OOC:", "ignoreCase": false }
+]
