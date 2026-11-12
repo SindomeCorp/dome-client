@@ -48,5 +48,6 @@
   {"id": "puppet-all", "name": "Puppet [All]", "pattern": "^\\[p[0-9]", "ignoreCase": false, "group": "gm"},
   {"id": "all-channels", "name": "All Channels", "pattern": "^\\[-\\]\\[", "ignoreCase": false, "group": "gm"},
   {"id": "grid-output", "name": "Grid Output", "pattern": "^\\[g\\]", "ignoreCase": false, "group": "player"},
-  {"id": "sic", "name": "SIC", "pattern": "^\\|C\\|", "ignoreCase": false, "group": "player"}
+  {"id": "sic", "name": "SIC", "pattern": "^\\|C\\|", "ignoreCase": false, "group": "player"},
+  {"id": "xhelp", "name": "XHELP", "pattern": "^XHELP ", "ignoreCase": false, "group": "player"}
 ]

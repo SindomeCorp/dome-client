@@ -12,7 +12,7 @@ const channels = {
 test("bundled channel catalog preserves exact case, anchored prefixes, and supplied groups", () => {
   const source = readFileSync(new URL("../../data/output-window-presets.json", import.meta.url), "utf8");
   const presets = loadOutputWindowPresets({ readFile: () => source });
-  assert.equal(presets.length, 50);
+  assert.equal(presets.length, 51);
   for (const [group, names] of Object.entries(channels)) {
     for (const name of names) {
       const preset = presets.find((rule) => rule.id === name.toLowerCase());
@@ -26,7 +26,7 @@ test("bundled channel catalog preserves exact case, anchored prefixes, and suppl
       assert.equal(regex.test(prefix.toLowerCase()), false, name);
     }
   }
-  for (const [id, prefix] of [["sic", "|C|"], ["grid-output", "[g]"], ["ooc-messages", "[OOC:"], ["puppet-1", "[p1"], ["puppet-all", "[p9"], ["all-channels", "[-]["]]) {
+  for (const [id, prefix] of [["xhelp", "XHELP "], ["sic", "|C|"], ["grid-output", "[g]"], ["ooc-messages", "[OOC:"], ["puppet-1", "[p1"], ["puppet-all", "[p9"], ["all-channels", "[-]["]]) {
     const preset = presets.find((rule) => rule.id === id);
     assert.equal(new RegExp(preset.pattern).test(prefix + " sample"), true, id);
     assert.equal(new RegExp(preset.pattern).test("before " + prefix), false, id);
@@ -94,4 +94,16 @@ test("player SIC matches literal pipes and never treats them as regex alternativ
   const regex = new RegExp(preset.pattern);
   assert.equal(regex.test("|C| SIC message"), true);
   for (const line of ["ordinary output", "before |C|", "|c| message", "C", ""]) assert.equal(regex.test(line), false);
+});
+
+test("player XHELP requires the exact uppercase prefix and following space", () => {
+  const preset = loadOutputWindowPresets().find((rule) => rule.id === "xhelp");
+  assert.equal(preset.name, "XHELP");
+  assert.equal(preset.group, "player");
+  assert.equal(preset.ignoreCase, false);
+  const regex = new RegExp(preset.pattern);
+  assert.equal(regex.test("XHELP a request for assistance"), true);
+  for (const line of ["XHELP", "XHELPER request", "before XHELP request", "xhelp request", "XHELP: request", "XHELP\trequest"]) {
+    assert.equal(regex.test(line), false, line);
+  }
 });

@@ -310,15 +310,16 @@ test("Player, GM, Coder, and Custom filter views retain selections across groups
   const admin = page.getByRole("tab", { name: /^GM Filters/ });
   const custom = page.getByRole("tab", { name: /^Custom Filters/ });
   await expect(player).toHaveAttribute("aria-selected", "true");
-  await expect(player).toHaveText("Player Filters [0/11]");
+  await expect(player).toHaveText("Player Filters [0/12]");
   await expect(page.getByLabel("Grid Output", { exact: true })).toBeVisible();
   await expect(page.getByLabel("SIC", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("XHELP", { exact: true })).toBeVisible();
   const coder = page.getByRole("tab", { name: /^Coder Filters/ });
   await expect(coder).toHaveText("Coder Filters [0/6]");
   await page.getByLabel("OOC Chat", { exact: true }).check();
   await admin.click();
   await page.getByLabel("Puppet [All]", { exact: true }).check();
-  await expect(player).toHaveText("Player Filters [1/11]");
+  await expect(player).toHaveText("Player Filters [1/12]");
   await expect(admin).toHaveText("GM Filters [1/33]");
   await custom.click();
   await page.getByLabel("Name", { exact: true }).fill("My output");

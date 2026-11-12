@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-12
 
 ### Added
+- Add XHELP under Player Filters for lines starting with `XHELP `.
 - Add the player SIC preset for the literal `|C|` prefix.
 - Add Grid Output for lines starting with `[g]` under Player Filters.
 - Complete the channel preset catalog with the supplied Player, GM, and Coder assignments, including exact channel capitalization.

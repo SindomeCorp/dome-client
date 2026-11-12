@@ -354,7 +354,7 @@ test("filter groups keep hidden selections active and display selected/total cou
   const admin = doc.querySelector("[data-filter-group=gm]");
   const custom = doc.querySelector("[data-filter-group=custom]");
   assert.equal(player.getAttribute("aria-selected"), "true");
-  assert.equal(player.textContent, "Player Filters [0/11]");
+  assert.equal(player.textContent, "Player Filters [0/12]");
   assert.equal(admin.textContent, "GM Filters [0/33]");
   assert.equal(custom.textContent, "Custom Filters [0/0]");
   const checkbox = (id) => [...doc.querySelectorAll("[data-output-rule-id]")].find((element) => element.dataset.outputRuleId === id);
@@ -362,7 +362,7 @@ test("filter groups keep hidden selections active and display selected/total cou
   checkbox("ooc-chat").click();
   admin.click();
   checkbox("team-chat").click();
-  assert.equal(player.textContent, "Player Filters [1/11]");
+  assert.equal(player.textContent, "Player Filters [1/12]");
   assert.equal(admin.textContent, "GM Filters [1/33]");
   custom.click();
   doc.querySelector("#output-rule-name").value = "Custom message";
@@ -470,7 +470,7 @@ test("filter groups sort by name without changing saved selections or custom rul
   const stored = { ...outputWindowDefaults(), open: true, selected: ["bit-chat", "custom-zulu"], custom };
   const { manager, doc, win, feed } = await createOutputApp(t, { stored });
   const labels = (selector) => [...doc.querySelectorAll(selector + " .output-rule label")].map((label) => label.textContent);
-  assert.deepEqual(labels("#output-presets"), ["Fix It", "Free Chat", "Game Help", "Grid Output", "Guided Discussion", "OOC Chat", "OOC Messages", "Politics Wow", "SIC", "Tip Line", "War Stories"]);
+  assert.deepEqual(labels("#output-presets"), ["Fix It", "Free Chat", "Game Help", "Grid Output", "Guided Discussion", "OOC Chat", "OOC Messages", "Politics Wow", "SIC", "Tip Line", "War Stories", "XHELP"]);
   doc.querySelector("[data-filter-group=gm]").click();
   assert.deepEqual(labels("#output-presets").slice(0, 5), ["All Channels", "Anti Gravity", "Babble Net", "Bit Chat", "Build Yard"]);
   assert.equal(doc.querySelector("[data-output-rule-id=bit-chat]").checked, true);
@@ -487,4 +487,13 @@ test("filter groups sort by name without changing saved selections or custom rul
   await feed("[-][Bit-Chat] restored\nbefore [-][Bit-Chat] stays main\n[-][bit-chat] stays main\n");
   assert.equal(manager.views.secondary.index.length, 1);
   assert.equal(manager.views.main.index.length, 2);
+});
+
+test("XHELP routes complete matching lines after ANSI decoding", async (t) => {
+  const { manager, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["xhelp"] });
+  await feed("\u001b[33mXHELP assistance requested\u001b[0m\nXHELPER stays main\nxhelp stays main\nbefore XHELP stays main\n");
+  assert.equal(manager.views.secondary.index.length, 1);
+  assert.equal(recordText(manager.views.secondary.index.at(0)), "XHELP assistance requested");
+  assert.equal(manager.views.main.index.length, 3);
 });
