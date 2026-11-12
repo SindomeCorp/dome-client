@@ -55,14 +55,17 @@ capitalization of names such as `NPC-net`.
 
 Player Filters opens by default and contains the eight player channels plus OOC
 Messages (`^\[OOC:`), Grid Output (`^\[g\]`), SIC (`^\|C\|`), and XHELP
-(`^XHELP `, including the space). Coder Filters contains Debug Info, Trace-Backs, Eval Log,
+(`^XHELP `, including the space), and Television. Television matches `On the `,
+optional descriptive words, then `wall screen`, `flatscreen monitor`, `television`,
+`security monitor`, or `touch screen` immediately followed by `:`. It cannot match
+a screen name mentioned after an earlier colon. Coder Filters contains Debug Info, Trace-Backs, Eval Log,
 Security Theater, Action Listener, and Code Talk. GM Filters contains the GM
 channels plus Puppet 1 (`^\[p1`), Puppet [All] (`^\[p[0-9]`), and All Channels
 (`^\[-\]\[`). The all-puppets preset matches `[p` followed by any digit, including
 prefixes of multi-digit puppet IDs. All Channels matches any line starting `[-][`.
 
 Custom Filters contains rules you create yourself. Each button shows selected/total
-counts, such as **Player Filters [1/12]**. Changing the visible group does not disable
+counts, such as **Player Filters [1/13]**. Changing the visible group does not disable
 checked rules in other groups. New custom rules start unchecked.
 Filters are listed alphabetically by name within each group, including Custom.
 Filter checkboxes use three columns on wide screens, two on medium screens, and

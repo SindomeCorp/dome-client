@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-12
 
 ### Added
+- Add Television under Player Filters for screen broadcasts beginning with `On the ` and a supported screen name followed by a colon.
 - Add XHELP under Player Filters for lines starting with `XHELP `.
 - Add the player SIC preset for the literal `|C|` prefix.
 - Add Grid Output for lines starting with `[g]` under Player Filters.

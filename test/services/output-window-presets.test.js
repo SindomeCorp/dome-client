@@ -12,7 +12,7 @@ const channels = {
 test("bundled channel catalog preserves exact case, anchored prefixes, and supplied groups", () => {
   const source = readFileSync(new URL("../../data/output-window-presets.json", import.meta.url), "utf8");
   const presets = loadOutputWindowPresets({ readFile: () => source });
-  assert.equal(presets.length, 51);
+  assert.equal(presets.length, 52);
   for (const [group, names] of Object.entries(channels)) {
     for (const name of names) {
       const preset = presets.find((rule) => rule.id === name.toLowerCase());
@@ -106,4 +106,21 @@ test("player XHELP requires the exact uppercase prefix and following space", () 
   for (const line of ["XHELP", "XHELPER request", "before XHELP request", "xhelp request", "XHELP: request", "XHELP\trequest"]) {
     assert.equal(regex.test(line), false, line);
   }
+});
+
+test("Television matches supported screen broadcasts before the first colon", () => {
+  const preset = loadOutputWindowPresets().find((rule) => rule.id === "television");
+  assert.equal(preset.name, "Television");
+  assert.equal(preset.group, "player");
+  assert.equal(preset.ignoreCase, false);
+  const regex = new RegExp(preset.pattern);
+  for (const screen of ["wall screen", "flatscreen monitor", "television", "security monitor", "touch screen"]) {
+    assert.equal(regex.test("On the " + screen + ": broadcast"), true, screen);
+    assert.equal(regex.test("On the large " + screen + ": broadcast"), true, screen);
+  }
+  for (const line of [
+    "Before On the television: broadcast", "On the radio: the television: mentioned in dialogue",
+    "On the television without a colon", "On the Television: broadcast", "On the supertelevision: broadcast",
+    "On the wall screens: broadcast", "On the television stand: description", "On the nearby\ntelevision: broadcast"
+  ]) assert.equal(regex.test(line), false, line);
 });
