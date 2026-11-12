@@ -24,7 +24,9 @@ export class VirtualOutputView {
     this.bottom.setAttribute("aria-hidden", "true");
     this.rows.className = "output-rows";
     this.rows.setAttribute("role", "list");
+    this.help = element.querySelector("#output-secondary-help");
     element.replaceChildren(this.top, this.rows, this.bottom);
+    if (this.help) element.append(this.help);
     element.setAttribute("role", "region");
     element.setAttribute("aria-label", name === "main" ? "Main output" : "Secondary output");
     element.setAttribute("tabindex", "0");
@@ -80,6 +82,7 @@ export class VirtualOutputView {
   }
 
   onKey(event) {
+    if (!this.index.length) return;
     if (event.target.closest("button,a")) return;
     const movement = { ArrowUp: -1, ArrowDown: 1, PageUp: -20, PageDown: 20 }[event.key];
     if (!movement) return;
@@ -115,6 +118,7 @@ export class VirtualOutputView {
     if (this.pendingJump
       || (this.expectedScrollTop != null && Math.abs(this.element.scrollTop - this.expectedScrollTop) < 1)) return;
     this.onActive(this.name);
+    if (!this.index.length && this.help) return;
     const bottom = this.element.scrollHeight - this.element.scrollTop - this.element.clientHeight <= 24;
     this.following = bottom;
     if (this.client.preferences.scrollUpToPause && this.paused === bottom) this.setPaused(!bottom);
@@ -278,6 +282,11 @@ export class VirtualOutputView {
     };
     if (selection && !this.anchor) this.captureAnchor();
     this.onState(this);
+    if (!this.index.length && this.help) {
+      this.top.style.height = this.bottom.style.height = "0px";
+      this.pendingJump = false;
+      return;
+    }
     const viewport = this.viewportHeight();
     const scale = this.scale(viewport);
     let logicalTop = this.element.scrollTop * scale;

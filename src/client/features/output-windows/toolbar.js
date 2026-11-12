@@ -3,8 +3,9 @@
 export function setupOutputToolbar(manager) {
   const { doc, win } = manager;
   const toolbar = doc.querySelector(".mini-controls");
-  if (!toolbar) return { refresh() {}, destroy() {} };
+  if (!toolbar) return { refresh() {}, resize() {}, destroy() {} };
   const main = doc.querySelector("#output-main-panel");
+  const secondaryHeader = doc.querySelector("#output-secondary-panel header");
   const input = doc.querySelector(".input-buffer-row");
   let expandedWidth = 0;
   let frame;
@@ -30,6 +31,9 @@ export function setupOutputToolbar(manager) {
     if (compact) {
       if (toolbar.parentElement !== manager.workspace.parentElement) input.before(toolbar);
     } else if (toolbar.parentElement !== main) main.prepend(toolbar);
+    if (secondaryHeader) {
+      manager.workspace.style.setProperty("--secondary-header-height", Math.max(32, secondaryHeader.getBoundingClientRect().height) + "px");
+    }
   }
   function schedule() {
     if (frame == null) frame = win.requestAnimationFrame(refresh);
@@ -38,11 +42,13 @@ export function setupOutputToolbar(manager) {
   refresh();
   const observer = win.ResizeObserver ? new win.ResizeObserver(schedule) : null;
   observer?.observe(main);
+  if (secondaryHeader) observer?.observe(secondaryHeader);
   win.addEventListener("resize", schedule);
   let destroyed = false;
   doc.fonts?.ready.then(() => { if (!destroyed) { measure(); schedule(); } });
   return {
     refresh: schedule,
+    resize() { measure(); schedule(); },
     destroy() {
       destroyed = true;
       observer?.disconnect();

@@ -13,7 +13,7 @@ test("routing, split positions, keyboard resize and close preserve output", asyn
   await page.evaluate(() => window.outputTest.feed("before\n"));
   await page.getByRole("button", { name: "SPLIT", exact: true }).click();
   await page.getByRole("button", { name: "Configure output window" }).click();
-  await page.getByRole("tab", { name: /^Admin Filters/ }).click();
+  await page.getByRole("tab", { name: /^GM Filters/ }).click();
   await page.getByLabel("Team Chat", { exact: true }).check();
   await page.locator("#output-layout").selectOption("bottom");
   await page.locator("#button-client-options-close").click();
@@ -303,19 +303,23 @@ test("mouse drag and wheel selection crosses unmounted history without losing co
   await expect.poll(() => page.evaluate(() => window.copiedOutput)).toBe(expected.text);
 });
 
-test("Player, Admin, and Custom filter views retain selections across groups", async ({ page }) => {
+test("Player, GM, Coder, and Custom filter views retain selections across groups", async ({ page }) => {
   await page.locator("#button-client-options").click();
   await page.getByRole("tab", { name: "Output Windows", exact: true }).click();
   const player = page.getByRole("tab", { name: /^Player Filters/ });
-  const admin = page.getByRole("tab", { name: /^Admin Filters/ });
+  const admin = page.getByRole("tab", { name: /^GM Filters/ });
   const custom = page.getByRole("tab", { name: /^Custom Filters/ });
   await expect(player).toHaveAttribute("aria-selected", "true");
-  await expect(player).toHaveText("Player Filters [0/4]");
+  await expect(player).toHaveText("Player Filters [0/11]");
+  await expect(page.getByLabel("Grid Output", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("SIC", { exact: true })).toBeVisible();
+  const coder = page.getByRole("tab", { name: /^Coder Filters/ });
+  await expect(coder).toHaveText("Coder Filters [0/6]");
   await page.getByLabel("OOC Chat", { exact: true }).check();
   await admin.click();
   await page.getByLabel("Puppet [All]", { exact: true }).check();
-  await expect(player).toHaveText("Player Filters [1/4]");
-  await expect(admin).toHaveText("Admin Filters [1/7]");
+  await expect(player).toHaveText("Player Filters [1/11]");
+  await expect(admin).toHaveText("GM Filters [1/32]");
   await custom.click();
   await page.getByLabel("Name", { exact: true }).fill("My output");
   await page.getByLabel("Pattern (without / delimiters)", { exact: true }).fill("^my output");
@@ -348,5 +352,84 @@ test("double-clicking either output pane toggles pause and restores the input cu
       await expect(page.locator("#inputBuffer")).toBeFocused();
       await expect(page.locator("#inputBuffer")).toHaveValue("unfinished command");
     }
+  }
+});
+
+test("empty secondary matches output themes on load and shows pause state before its first match", async ({ page }) => {
+  await page.evaluate(() => window.outputTest.manager.updateSettings({ open: true, selected: ["ooc-chat"] }));
+  const secondary = page.locator("#secondaryBuffer");
+  const help = page.locator("#output-secondary-help");
+  await expect(secondary).toBeVisible();
+  await expect(help).toContainText("Waiting for matching output.");
+  await expect(secondary).toHaveCSS("background-color", "rgb(0, 0, 0)");
+  await expect(page.locator("#output-secondary-panel header")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  for (const theme of ["snow", "slither", "corpie", "normal"]) {
+    await page.evaluate((theme) => window.outputTest.client.setClientOption("colorSet", theme), theme);
+    const colors = await page.locator("#lineBuffer").evaluate((element) => {
+      const style = window.getComputedStyle(element);
+      return { background: style.backgroundColor, foreground: style.color };
+    });
+    await expect(secondary).toHaveCSS("background-color", colors.background);
+    await expect(help).toHaveCSS("color", colors.foreground);
+    await expect(page.locator("#output-secondary-panel")).toHaveCSS("background-color", colors.background);
+    await page.reload();
+    await page.waitForFunction(() => window.outputTest);
+    await expect(secondary).toBeVisible();
+    await expect(secondary).toHaveCSS("background-color", colors.background);
+    await expect(help).toHaveCSS("color", colors.foreground);
+  }
+  await page.getByRole("button", { name: "Pause secondary scrolling", exact: true }).click();
+  await expect(secondary).toHaveCSS("border-top-style", "dashed");
+  await expect(secondary).toHaveCSS("border-top-color", "rgb(255, 0, 0)");
+  await page.evaluate(() => window.outputTest.feed("[-][OOC-Chat] first matching message\n"));
+  await expect(help).not.toBeVisible();
+  await expect(secondary).toHaveCSS("border-top-style", "dashed");
+  await expect(secondary).toContainText("first matching message");
+  const first = await secondary.locator("[data-output-id]").first().boundingBox();
+  const header = await page.locator("#output-secondary-panel header").boundingBox();
+  expect(first.y).toBeGreaterThanOrEqual(header.y + header.height);
+});
+
+test("compact toolbar keeps Log and Pause visible without horizontal scrolling and unread count precedes Split", async ({ page }, testInfo) => {
+  if (testInfo.project.name !== "narrow-touch") await page.setViewportSize({ width: 600, height: 700 });
+  await page.evaluate(() => window.outputTest.manager.updateSettings({ open: true, secondarySize: 70 }));
+  const bar = page.locator(".compact-controls");
+  await expect(bar).toBeVisible();
+  await expect(page.locator("#button-save-mini .hidden-xs")).toBeVisible();
+  await expect(page.locator("#button-auto-scroll .hidden-xs")).toBeVisible();
+  const buttons = await bar.locator(":scope > button").evaluateAll((elements) => elements.map((element) => {
+    const box = element.getBoundingClientRect();
+    const parent = element.parentElement.getBoundingClientRect();
+    return { id: element.id, inside: box.left >= parent.left && box.right <= parent.right + 1 && box.top >= parent.top && box.bottom <= parent.bottom + 1 };
+  }));
+  expect(buttons.every((button) => button.inside)).toBe(true);
+  expect(await bar.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  await page.getByRole("button", { name: "Pause main scrolling", exact: true }).click();
+  await page.evaluate(() => window.outputTest.feed("unread one\nunread two\n"));
+  const unread = page.locator(".mini-controls [data-output-unread=main]");
+  await expect(unread).toHaveText("2 unread");
+  const location = await unread.evaluate((element) => {
+    const split = document.querySelector("#button-output-split");
+    return { next: element.nextElementSibling.id, left: element.getBoundingClientRect().right <= split.getBoundingClientRect().left };
+  });
+  expect(location).toEqual({ next: "button-output-split", left: true });
+});
+
+test("filter checkboxes use three responsive columns without overflowing their pane", async ({ page }) => {
+  await page.locator("#button-client-options").click();
+  await page.getByRole("tab", { name: "Output Windows", exact: true }).click();
+  await page.getByRole("tab", { name: /^GM Filters/ }).click();
+  for (const [width, expectedColumns] of [[1200, 3], [650, 2], [360, 1]]) {
+    await page.setViewportSize({ width, height: 800 });
+    await expect.poll(() => page.locator("#output-presets").evaluate((element) => window.getComputedStyle(element).gridTemplateColumns.split(" ").length)).toBe(expectedColumns);
+    const layout = await page.locator("#output-presets").evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const boxes = [...element.children].map((row) => row.getBoundingClientRect());
+      return {
+        topRow: boxes.filter((box) => Math.abs(box.y - boxes[0].y) < 1).length,
+        inside: boxes.every((box) => box.left >= bounds.left && box.right <= bounds.right + 1)
+      };
+    });
+    expect(layout).toEqual({ topRow: expectedColumns, inside: true });
   }
 });

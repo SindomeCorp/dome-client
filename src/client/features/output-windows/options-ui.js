@@ -6,8 +6,8 @@ export function setupOutputOptions(manager) {
   if (!layout) return { refresh() {} };
   let editing = null;
   let activeGroup = "player";
-  const groups = ["player", "admin", "custom"];
-  const groupLabels = { player: "Player Filters", admin: "Admin Filters", custom: "Custom Filters" };
+  const groups = ["player", "gm", "coder", "custom"];
+  const groupLabels = { player: "Player Filters", gm: "GM Filters", coder: "Coder Filters", custom: "Custom Filters" };
   const groupButtons = [...doc.querySelectorAll("[data-filter-group]")];
   const form = doc.querySelector("#output-rule-form");
   const name = doc.querySelector("#output-rule-name");
@@ -87,7 +87,8 @@ export function setupOutputOptions(manager) {
     const selected = new Set(manager.settings.selected);
     const rulesByGroup = {
       player: config.presets.filter((rule) => (rule.group || "player") === "player"),
-      admin: config.presets.filter((rule) => rule.group === "admin"),
+      gm: config.presets.filter((rule) => rule.group === "gm" || rule.group === "admin"),
+      coder: config.presets.filter((rule) => rule.group === "coder"),
       custom: manager.settings.custom
     };
     for (const button of groupButtons) {

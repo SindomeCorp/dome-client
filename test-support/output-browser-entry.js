@@ -26,6 +26,10 @@ const client = {
 };
 setupClientPreferences({ client, doc: document, win: window });
 client.preferences = client.readPreferences();
+if (client.preferences.colorSet !== "normal") {
+  client.buffer.classList.add("colorset-" + client.preferences.colorSet);
+  client.inputReader.classList.add("colorset-" + client.preferences.colorSet);
+}
 const manager = setupOutputWindows({ client, doc: document, win: window });
 setupWindowHandlers({ client, doc: document, win: window });
 setupAutoscroll({ client, doc: document, win: window });

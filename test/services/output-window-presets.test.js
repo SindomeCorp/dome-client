@@ -3,20 +3,33 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { loadOutputWindowPresets } from "../../src/services/output-window-presets.js";
 
-test("bundled presets match literal prefixes only at the beginning of a line", () => {
+const channels = {
+  player: ["Game-Help", "Tip-Line", "Guided-Discussion", "OOC-Chat", "Fix-It", "War-Stories", "Free-Chat", "Politics-Wow"],
+  gm: ["Staff-Alerts", "Kill-Net", "Vote-Booth", "Team-Chat", "Login-Watcher", "Help-Net", "RP-Info", "Guest-Broadcaster", "Grid-Info", "Web-Watcher", "Build-Yard", "Local-OOC", "SIC-COMM", "Thought-Police", "SIC-ENC", "SIC-PM", "Commerce-Watch", "Crazy-Taxi", "Road-Rage", "Zoom-Room", "Money-Gram", "Babble-Net", "Radio-Net", "Comm-Net", "Anti-Gravity", "VR-Combat", "Stat-Watcher", "Water-Works", "NPC-net"],
+  coder: ["Debug-Info", "Trace-Backs", "Eval-Log", "Security-Theater", "Action-Listener", "Code-Talk"]
+};
+
+test("bundled channel catalog preserves exact case, anchored prefixes, and supplied groups", () => {
   const source = readFileSync(new URL("../../data/output-window-presets.json", import.meta.url), "utf8");
   const presets = loadOutputWindowPresets({ readFile: () => source });
-  assert.equal(presets.length, 11);
-  for (const preset of presets) {
-    const regex = new RegExp(preset.pattern);
-    const prefix = preset.id.startsWith("puppet-") ? "[p1" : preset.id === "ooc-messages" ? "[OOC:" : "[-][" + {
-      "team-chat": "Team-Chat", "game-help": "Game-Help", "ooc-chat": "OOC-Chat",
-      "bit-chat": "Bit-Chat", "rp-info": "RP-Info", "sic-comm": "SIC-COMM",
-      "debug-info": "Debug-Info", "guided-discussion": "Guided-Discussion"
-    }[preset.id] + "]";
-    assert.ok(regex.test(prefix + " sample"));
-    assert.ok(!regex.test("before " + prefix));
-    assert.ok(!regex.test(preset.id.startsWith("puppet-") ? prefix.toUpperCase() : prefix.toLowerCase()));
+  assert.equal(presets.length, 49);
+  for (const [group, names] of Object.entries(channels)) {
+    for (const name of names) {
+      const preset = presets.find((rule) => rule.id === name.toLowerCase());
+      assert.ok(preset, name);
+      assert.equal(preset.group, group, name);
+      assert.equal(preset.ignoreCase, false, name);
+      const regex = new RegExp(preset.pattern);
+      const prefix = "[-][" + name + "]";
+      assert.equal(regex.test(prefix + " sample"), true, name);
+      assert.equal(regex.test("before " + prefix), false, name);
+      assert.equal(regex.test(prefix.toLowerCase()), false, name);
+    }
+  }
+  for (const [id, prefix] of [["sic", "|C|"], ["grid-output", "[g]"], ["ooc-messages", "[OOC:"], ["puppet-1", "[p1"], ["puppet-all", "[p9"], ["all-channels", "[-]["]]) {
+    const preset = presets.find((rule) => rule.id === id);
+    assert.equal(new RegExp(preset.pattern).test(prefix + " sample"), true, id);
+    assert.equal(new RegExp(preset.pattern).test("before " + prefix), false, id);
   }
 });
 
@@ -53,6 +66,32 @@ test("preset groups default to player for older JSON and reject unknown groups",
     readFile: () => JSON.stringify([rule, { ...rule, id: "admin", group: "admin" }, { ...rule, id: "bad", group: "custom" }]),
     logger: { warn: (message) => warnings.push(message) }
   });
-  assert.deepEqual(presets.map((preset) => preset.group), ["player", "admin"]);
+  assert.deepEqual(presets.map((preset) => preset.group), ["player", "gm"]);
   assert.equal(warnings.length, 1);
+});
+
+test("All Channels matches channel prefixes and excludes non-channel output", () => {
+  const presets = loadOutputWindowPresets();
+  const all = new RegExp(presets.find((rule) => rule.id === "all-channels").pattern);
+  for (const line of ["[-][Login-Watcher] joined", "[-][Grid-Info] grid", "[-][SIC-PM] private", "[-][SIC-ENC] encrypted", "[-][Local-OOC] ooc", "[-][Future-Channel] new"]) {
+    assert.equal(all.test(line), true);
+  }
+  assert.equal(all.test("before [-][Grid-Info]"), false);
+  assert.equal(all.test("[p1 puppet"), false);
+});
+
+test("Grid Output matches the literal player prefix only at the start of a line", () => {
+  const preset = loadOutputWindowPresets().find((rule) => rule.id === "grid-output");
+  assert.equal(preset.group, "player");
+  const regex = new RegExp(preset.pattern);
+  assert.equal(regex.test("[g] grid output"), true);
+  for (const line of ["before [g] output", "[G] output", "[grid] output"]) assert.equal(regex.test(line), false);
+});
+
+test("player SIC matches literal pipes and never treats them as regex alternatives", () => {
+  const preset = loadOutputWindowPresets().find((rule) => rule.id === "sic");
+  assert.equal(preset.group, "player");
+  const regex = new RegExp(preset.pattern);
+  assert.equal(regex.test("|C| SIC message"), true);
+  for (const line of ["ordinary output", "before |C|", "|c| message", "C", ""]) assert.equal(regex.test(line), false);
 });

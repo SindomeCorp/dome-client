@@ -31,6 +31,10 @@ labels fit. On smaller screens, or when resizing leaves main too narrow, the
 controls move to the bottom and use the existing compact layout. A single output
 window has no extra Main header or duplicate Pause button. Output Windows is the
 fourth tab in Client Options.
+Bottom controls wrap to keep Log and Pause Scroll visible. Main unread counts
+appear immediately before Split/Close Split. Secondary controls have a transparent
+background, and the empty pane shares the output theme and pause indicator before
+the first matching line arrives.
 
 Selecting a filter does not open a split. Existing messages remain in their
 assigned windows when you change filters. Closing secondary makes all retained
@@ -44,17 +48,24 @@ would otherwise be exported in a log. Your filters and layout remain saved.
 
 ## Channel presets and custom filters
 
-The supplied presets cover Team Chat, Game Help, OOC Chat, Bit Chat, RP Info,
-SIC Comm, Debug Info, Guided Discussion, and OOC Messages beginning with `[OOC:`,
-plus Puppet 1 (`^\[p1`) and Puppet [All] (`^\[p[0-9]`). The all-puppets preset
-matches `[p` followed by any digit, including prefixes of multi-digit puppet IDs.
-They are case-sensitive and anchored at the start of a line.
+The bundled [preset catalog](../data/output-window-presets.json) includes the
+complete channel list, grouped as Player, GM, and Coder. Patterns are
+case-sensitive and anchored at the start of the line, including the exact
+capitalization of names such as `NPC-net`.
 
-Player Filters opens by default and contains OOC Chat, Game Help, Guided
-Discussion, and OOC Messages. Admin Filters contains the remaining bundled
-presets. Custom Filters contains rules you create yourself. Each button shows
-selected/total counts, such as **Player Filters [1/4]**. Changing the visible group
-does not disable checked rules in other groups. New custom rules start unchecked.
+Player Filters opens by default and contains the eight player channels plus OOC
+Messages (`^\[OOC:`), Grid Output (`^\[g\]`), and SIC (`^\|C\|`). Coder Filters contains Debug Info, Trace-Backs, Eval Log,
+Security Theater, Action Listener, and Code Talk. GM Filters contains the GM
+channels plus Puppet 1 (`^\[p1`), Puppet [All] (`^\[p[0-9]`), and All Channels
+(`^\[-\]\[`). The all-puppets preset matches `[p` followed by any digit, including
+prefixes of multi-digit puppet IDs. All Channels matches any line starting `[-][`.
+
+Custom Filters contains rules you create yourself. Each button shows selected/total
+counts, such as **Player Filters [1/11]**. Changing the visible group does not disable
+checked rules in other groups. New custom rules start unchecked.
+Filter checkboxes use three columns on wide screens, two on medium screens, and
+one on narrow screens. Custom-filter names and edit/delete controls wrap within
+their column.
 
 For example, the Team Chat pattern is:
 
@@ -231,15 +242,16 @@ are an array of entries:
     "name": "Team Chat",
     "pattern": "^\\[-\\]\\[Team-Chat\\]",
     "ignoreCase": false,
-    "group": "admin"
+    "group": "gm"
   }
 ]
 ```
 
 JSON requires doubled backslashes. Keep IDs stable when renaming presets so
-saved checkbox selections survive. The optional `group` is `player` or `admin`;
+saved checkbox selections survive. The optional `group` is `player`, `gm`, or `coder`;
 files without it default entries to Player Filters. Unknown groups are skipped
-with a warning. User-created rules always appear under Custom Filters.
+with a warning. The older `admin` group name is accepted as `gm`. User-created
+rules always appear under Custom Filters.
 IDs must be unique; `custom-` IDs are
 reserved for player rules. Invalid entries are logged and skipped. An unreadable
 or invalid file logs a warning and supplies no presets without preventing startup.

@@ -7,11 +7,12 @@
     <button type="button" class="btn btn-primary btn-xs output-close" id="button-output-close" aria-label="Close secondary output window">&times;</button>
   </header>
   <% } %>
-  <div id="<%= panelName === 'main' ? 'lineBuffer' : 'secondaryBuffer' %>" class="standardText output-scroll"></div>
-  <% if (panelName === "secondary") { %>
-  <div id="output-secondary-help" class="output-secondary-help">
-    <p>Send output to this window by opening Options → Output Windows and selecting output filters.</p>
-    <button type="button" id="button-output-configure" class="btn">Configure output window</button>
+  <div id="<%= panelName === 'main' ? 'lineBuffer' : 'secondaryBuffer' %>" class="standardText output-scroll">
+    <% if (panelName === "secondary") { %>
+    <div id="output-secondary-help" class="output-secondary-help">
+      <p>Send output to this window by opening Options → Output Windows and selecting output filters.</p>
+      <button type="button" id="button-output-configure" class="btn btn-primary">Configure output window</button>
+    </div>
+    <% } %>
   </div>
-  <% } %>
 </section>

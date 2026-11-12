@@ -23,27 +23,33 @@
     min-height: 0;
     min-width: 0;
     overflow: hidden;
+    background-color: var(--output-background, var(--black, @black));
+    color: var(--output-foreground, #AAA);
     &.hide { display: none; }
     > .mini-controls { position: absolute; }
   }
   .output-panel-header {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 2;
+    pointer-events: none;
     display: flex;
     align-items: center;
     gap: 6px;
     flex: 0 0 auto;
     padding: 3px 6px;
-    background: #222;
-    color: #ddd;
+    background: transparent;
+    color: inherit;
     font-size: 12px;
     min-height: 26px;
     white-space: nowrap;
     flex-wrap: wrap;
-    button { font-family: "Source Code Pro"; font-weight: bold; }
+    button { font-family: "Source Code Pro"; font-weight: bold; pointer-events: auto; }
     .mini-glyph { display: inline-flex; width: 12px; height: 12px; vertical-align: middle; }
     .mini-glyph-svg { width: 12px; height: 12px; fill: currentColor; }
   }
   .output-unread { margin-left: auto; font-size: 11px; }
-  .output-close { margin-left: auto; }
+  .output-close { margin-left: 0; }
   #lineBuffer, #secondaryBuffer {
     height: auto;
     flex: 1 1 0;
@@ -53,7 +59,9 @@
     scroll-behavior: auto;
     &:focus { outline: none; }
     &:focus-visible { outline: 1px solid #888; outline-offset: -2px; }
+    &.scroll-disabled { border-color: red; }
   }
+  #secondaryBuffer { padding-top: calc(var(--secondary-header-height, 32px) + 10px); }
   .output-rows, .output-spacer { padding: 0; margin: 0; }
   .output-spacer { pointer-events: none; }
   .output-row {
@@ -79,18 +87,14 @@
   }
   [data-position="top"], [data-position="bottom"] { .output-divider { cursor: row-resize; } }
   .output-secondary-help {
-    flex: 1 1 0;
-    min-height: 0;
-    overflow: auto;
-    padding: 12px;
-    color: #bbb;
+    padding: 12px 0;
+    color: inherit;
+    background: transparent;
     white-space: normal;
     overflow-wrap: anywhere;
     button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
     &.hide { display: none; }
   }
-  // Empty-panel help shares the content area, below a header that can wrap.
-  #secondaryBuffer:has(+ .output-secondary-help:not(.hide)) { display: none; }
   .output-find, .output-operation {
     display: flex;
     align-items: center;
@@ -107,8 +111,14 @@
 }
 .output-screen-reader { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .output-rule-list {
-  label { display: inline-flex; align-items: center; gap: 8px; margin: 4px 0; }
-  .output-rule { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  label { display: inline-flex; align-items: center; gap: 8px; margin: 4px 0; min-width: 0; overflow-wrap: anywhere; }
+  input[type="checkbox"], button { flex: 0 0 auto; }
+  .output-rule { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+  @media (max-width: 767px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 479px) { grid-template-columns: minmax(0, 1fr); }
 }
 .output-window-options {
   white-space: normal;

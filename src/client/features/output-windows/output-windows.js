@@ -257,7 +257,12 @@ export class OutputWindows {
       button.setAttribute("aria-label", (view.paused ? "Resume " : "Pause ") + view.name + " scrolling");
     }
     const unread = this.doc.querySelector("[data-output-unread=" + view.name + "]");
-    if (unread) unread.textContent = view.unread ? view.unread + " unread" : "";
+    const text = view.unread ? view.unread + " unread" : "";
+    if (unread && unread.textContent !== text) {
+      const previousLength = unread.textContent.length;
+      unread.textContent = text;
+      if (view.name === "main" && previousLength !== text.length) this.toolbar?.resize();
+    }
     this.updatePauseButton();
   }
 
@@ -285,10 +290,14 @@ export class OutputWindows {
 
   refreshPresentation() {
     const primary = this.client.buffer;
+    const colors = this.win.getComputedStyle(primary);
+    this.workspace.style.setProperty("--output-background", colors.backgroundColor);
+    this.workspace.style.setProperty("--output-foreground", colors.color);
     for (const [name, view] of Object.entries(this.views)) {
       if (name !== "main") view.element.className = primary.className;
       view.element.classList.toggle("scroll-disabled", view.paused);
       view.element.style.fontSize = primary.style.fontSize;
+      this.updateViewState(view);
       view.refreshPresentation();
     }
     this.prune();

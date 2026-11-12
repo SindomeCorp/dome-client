@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-12
 
 ### Added
+- Add the player SIC preset for the literal `|C|` prefix.
+- Add Grid Output for lines starting with `[g]` under Player Filters.
+- Complete the channel preset catalog with the supplied Player, GM, and Coder assignments, including exact channel capitalization.
+- Add Login Watcher, Grid Info, and All Channels presets under GM Filters.
+- Add SIC-PM, SIC-ENC, and Local OOC under GM Filters.
+- Add Coder Filters for Debug Info, Trace-Backs, and Code Talk while preserving selections.
 - Add Puppet 1 and Puppet [All] output filters for puppet message prefixes.
 - Group output filters into Player, Admin, and Custom views with selected/total counts and selections that remain active across groups.
 - Added resizable output splits with channel presets, optional custom regex filters and testing, and saved layouts included in preference imports and exports.
@@ -12,11 +18,15 @@ All notable changes to this project will be documented in this file.
 - Added output-window and rendering documentation, browser checks, and long-session performance replays.
 
 ### Changed
+- Display output-filter checkboxes in three responsive columns on wider screens.
+- Rename Admin Filters to GM Filters and make the secondary controls a transparent overlay.
 - Use normal mouse selection and Ctrl/Cmd+C for copying output; remove the separate range-copy menus.
 - Render only nearby scrollback to keep large sessions responsive while retaining ordered history for unified log exports.
 - Prepare large logs in cancellable chunks and release offscreen media previews.
 
 ### Fixed
+- Match empty secondary windows to the output theme and show their pause state before output arrives.
+- Keep Log and Pause Scroll visible in wrapped bottom toolbars and put main unread counts before Split.
 - Restore the original single-window toolbar layout and move controls to the bottom when the main pane is too narrow.
 - Keep final lines fully visible in all split directions and render scrollback while text is selected; copy selections across offscreen history.
 - Scope toolbar Pause Scroll to main, match secondary pause styling, remove mouse-click outlines, confirm split closure, and place Output Windows fourth in options.

@@ -351,19 +351,19 @@ test("puppet presets route ANSI-stripped line prefixes once even when both match
 test("filter groups keep hidden selections active and display selected/total counts", async (t) => {
   const { manager, doc, win, feed } = await createOutputApp(t);
   const player = doc.querySelector("[data-filter-group=player]");
-  const admin = doc.querySelector("[data-filter-group=admin]");
+  const admin = doc.querySelector("[data-filter-group=gm]");
   const custom = doc.querySelector("[data-filter-group=custom]");
   assert.equal(player.getAttribute("aria-selected"), "true");
-  assert.equal(player.textContent, "Player Filters [0/4]");
-  assert.equal(admin.textContent, "Admin Filters [0/7]");
+  assert.equal(player.textContent, "Player Filters [0/11]");
+  assert.equal(admin.textContent, "GM Filters [0/32]");
   assert.equal(custom.textContent, "Custom Filters [0/0]");
   const checkbox = (id) => [...doc.querySelectorAll("[data-output-rule-id]")].find((element) => element.dataset.outputRuleId === id);
   assert.equal(checkbox("team-chat"), undefined);
   checkbox("ooc-chat").click();
   admin.click();
   checkbox("team-chat").click();
-  assert.equal(player.textContent, "Player Filters [1/4]");
-  assert.equal(admin.textContent, "Admin Filters [1/7]");
+  assert.equal(player.textContent, "Player Filters [1/11]");
+  assert.equal(admin.textContent, "GM Filters [1/32]");
   custom.click();
   doc.querySelector("#output-rule-name").value = "Custom message";
   doc.querySelector("#output-rule-pattern").value = "^custom";
@@ -380,7 +380,7 @@ test("filter groups keep hidden selections active and display selected/total cou
   assert.equal(manager.views.secondary.index.length, 3);
   assert.equal(manager.views.main.index.length, 1);
   admin.click();
-  admin.dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+  admin.dispatchEvent(new win.KeyboardEvent("keydown", { key: "End", bubbles: true, cancelable: true }));
   assert.equal(custom.getAttribute("aria-selected"), "true");
   doc.querySelector("#client-options-tab-output").click();
   assert.equal(player.getAttribute("aria-selected"), "true");
@@ -403,5 +403,59 @@ test("double-click pause and resume in either pane return focus to the existing 
       assert.equal(doc.activeElement, client.inputReader);
       assert.equal(client.inputReader.value, "look at painting");
     }
+  }
+});
+
+test("empty secondary uses its scroll surface for help and pause state before output arrives", async (t) => {
+  const { manager, doc, win, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["ooc-chat"] });
+  const secondary = manager.views.secondary;
+  const help = doc.querySelector("#output-secondary-help");
+  assert.equal(help.parentElement, secondary.element);
+  assert.equal(help.querySelector("p").textContent, "Waiting for matching output.");
+  const pause = doc.querySelector("[data-output-pause=secondary]");
+  assert.ok(pause.querySelector("svg"));
+  pause.click();
+  assert.equal(secondary.element.classList.contains("scroll-disabled"), true);
+  assert.equal(pause.getAttribute("aria-label"), "Resume secondary scrolling");
+  const pageDown = new win.KeyboardEvent("keydown", { key: "PageDown", cancelable: true });
+  secondary.onKey(pageDown);
+  assert.equal(pageDown.defaultPrevented, false);
+  await feed("[-][OOC-Chat] first matching line\n");
+  assert.equal(secondary.paused, true);
+  assert.equal(help.classList.contains("hide"), true);
+  assert.equal(secondary.element.classList.contains("scroll-disabled"), true);
+  assert.equal(secondary.unread, 1);
+  manager.clear();
+  secondary.render();
+  assert.equal(help.parentElement, secondary.element);
+  assert.equal(help.classList.contains("hide"), false);
+});
+
+test("Coder Filters owns Debug Info and saved selections survive the GM rename", async (t) => {
+  const { manager, doc } = await createOutputApp(t);
+  manager.updateSettings({ selected: ["debug-info", "team-chat"] });
+  const gm = doc.querySelector("[data-filter-group=gm]");
+  const coder = doc.querySelector("[data-filter-group=coder]");
+  assert.equal(gm.textContent, "GM Filters [1/32]");
+  assert.equal(coder.textContent, "Coder Filters [1/6]");
+  gm.click();
+  assert.equal(doc.querySelector("[data-output-rule-id=debug-info]"), null);
+  coder.click();
+  assert.equal(doc.querySelector("[data-output-rule-id=debug-info]").checked, true);
+  assert.deepEqual(manager.settings.selected, ["debug-info", "team-chat"]);
+});
+
+test("new GM channels and coder tracebacks route once with All Channels selected", async (t) => {
+  const { manager, feed } = await createOutputApp(t);
+  const names = { "login-watcher": "Login-Watcher", "grid-info": "Grid-Info", "sic-pm": "SIC-PM", "sic-enc": "SIC-ENC", "local-ooc": "Local-OOC", "trace-backs": "Trace-Backs" };
+  manager.updateSettings({ open: true, selected: ["all-channels", "sic", "grid-output", ...Object.keys(names)] });
+  await feed(Object.values(names).map((name) => "[-][" + name + "] sample").join("\n") + "\n|C| SIC message\n[g] grid output\nnormal main output\n");
+  assert.equal(manager.views.secondary.index.length, 8);
+  assert.equal(manager.views.main.index.length, 1);
+  assert.equal(manager.history.length, 9);
+  for (const id of Object.keys(names)) {
+    const preset = manager.config.presets.find((rule) => rule.id === id);
+    assert.equal(preset.group, id === "trace-backs" ? "coder" : "gm");
   }
 });

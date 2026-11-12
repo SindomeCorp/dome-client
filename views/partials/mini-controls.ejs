@@ -1,5 +1,6 @@
 <div class="mini-controls">
   <% if (showReporter(req)) { %>
+    <span data-output-unread="main" class="output-unread" aria-live="polite"></span>
     <button id="button-output-split" class="btn btn-primary btn-xs" type="button" title="open or close a secondary output window"><span>SPLIT</span></button>
     <button id="button-output-find" class="btn btn-primary btn-xs" type="button" title="find in retained output (Ctrl/Cmd+F)"><span>FIND</span></button>
     <button id="button-client-options" class="btn btn-primary btn-xs" type="button" title="open client options">
@@ -11,7 +12,6 @@
     <button id="button-clear-buffer" class="btn btn-primary btn-xs pull-right" href="clearbuffer" title="clear the output buffer.">
       <i class="icon-remove icon-white" aria-hidden="true"></i><span class="hidden-xs">CLEAR BUFFER</span>
     </button>
-    <span data-output-unread="main" class="output-unread" aria-live="polite"></span>
     <button id="button-auto-scroll" class="btn btn-primary btn-xs pull-right" href="#autoscroll" title="pause/unpause automatic scrolling">
       <span class="mini-glyph" aria-hidden="true">
         <svg class="mini-glyph-svg" viewBox="0 0 14 14" focusable="false" aria-hidden="true">
@@ -20,7 +20,7 @@
         </svg>
       </span><span class="hidden-xs">PAUSE SCROLL</span>
     </button>
-    <button id="button-save-mini" class="btn btn-primary btn-xs pull-right" href="#savelog" title="save session as an HTML log file">
+    <button id="button-save-mini" class="btn btn-primary btn-xs pull-right" href="#savelog" title="save session as an HTML log file" aria-label="Save session log">
       <i class="icon-download-alt icon-white" aria-hidden="true"></i><span class="hidden-xs">LOG</span>
     </button>
   <% } %>
