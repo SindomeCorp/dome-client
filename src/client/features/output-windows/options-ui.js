@@ -5,6 +5,10 @@ export function setupOutputOptions(manager) {
   const layout = doc.querySelector("#output-layout");
   if (!layout) return { refresh() {} };
   let editing = null;
+  let activeGroup = "player";
+  const groups = ["player", "admin", "custom"];
+  const groupLabels = { player: "Player Filters", admin: "Admin Filters", custom: "Custom Filters" };
+  const groupButtons = [...doc.querySelectorAll("[data-filter-group]")];
   const form = doc.querySelector("#output-rule-form");
   const name = doc.querySelector("#output-rule-name");
   const pattern = doc.querySelector("#output-rule-pattern");
@@ -32,6 +36,7 @@ export function setupOutputOptions(manager) {
     const label = doc.createElement("label");
     const checkbox = doc.createElement("input");
     checkbox.type = "checkbox";
+    checkbox.dataset.outputRuleId = rule.id;
     checkbox.checked = manager.settings.selected.includes(rule.id);
     checkbox.disabled = custom && !config.customRegexEnabled;
     checkbox.addEventListener("change", () => {
@@ -77,12 +82,60 @@ export function setupOutputOptions(manager) {
     return row;
   }
   function refresh() {
+    const focusedRule = doc.activeElement?.dataset.outputRuleId;
     layout.value = manager.isSplitOpen() ? manager.settings.position : "single";
-    doc.querySelector("#output-presets").replaceChildren(...config.presets.map((rule) => renderRule(rule, false)));
+    const selected = new Set(manager.settings.selected);
+    const rulesByGroup = {
+      player: config.presets.filter((rule) => (rule.group || "player") === "player"),
+      admin: config.presets.filter((rule) => rule.group === "admin"),
+      custom: manager.settings.custom
+    };
+    for (const button of groupButtons) {
+      const group = button.dataset.filterGroup;
+      const rules = rulesByGroup[group];
+      const count = rules.filter((rule) => selected.has(rule.id)).length;
+      button.textContent = groupLabels[group] + " [" + count + "/" + rules.length + "]";
+      button.setAttribute("aria-selected", String(group === activeGroup));
+      button.classList.toggle("btn-primary", group === activeGroup);
+      button.tabIndex = group === activeGroup ? 0 : -1;
+      if (!button.id) button.id = "output-filter-tab-" + group;
+    }
+    const presets = doc.querySelector("#output-presets");
+    presets.classList.toggle("hide", activeGroup === "custom");
+    presets.setAttribute("aria-labelledby", "output-filter-tab-" + activeGroup);
+    const visibleRules = activeGroup === "custom" ? [] : rulesByGroup[activeGroup];
+    presets.replaceChildren(...visibleRules.map((rule) => renderRule(rule, false)));
+    const customPanel = doc.querySelector("#output-custom-panel");
+    customPanel.classList.toggle("hide", activeGroup !== "custom");
+    customPanel.setAttribute("aria-labelledby", "output-filter-tab-custom");
     doc.querySelector("#output-custom-rules").replaceChildren(...manager.settings.custom.map((rule) => renderRule(rule, true)));
     form.classList.toggle("hide", !config.customRegexEnabled);
+    if (focusedRule) {
+      [...doc.querySelectorAll("[data-output-rule-id]")].find((element) => element.dataset.outputRuleId === focusedRule)?.focus({ preventScroll: true });
+    }
   }
+  for (const button of groupButtons) {
+    button.addEventListener("click", () => { activeGroup = button.dataset.filterGroup; refresh(); });
+    button.addEventListener("keydown", (event) => {
+      const index = groups.indexOf(activeGroup);
+      const next = event.key === "ArrowRight" ? (index + 1) % groups.length : event.key === "ArrowLeft" ? (index + groups.length - 1) % groups.length
+        : event.key === "Home" ? 0 : event.key === "End" ? groups.length - 1 : -1;
+      if (next < 0) return;
+      event.preventDefault();
+      groupButtons[next].click();
+      groupButtons[next].focus();
+    });
+  }
+  doc.querySelector("#client-options-tab-output")?.addEventListener("click", () => { activeGroup = "player"; refresh(); });
+  doc.querySelector("#button-client-options")?.addEventListener("click", () => {
+    if (doc.querySelector("#client-options-overlay")?.classList.contains("hide")) { activeGroup = "player"; refresh(); }
+  });
   layout.addEventListener("change", () => {
+    if (layout.value === "single" && manager.isSplitOpen() && manager.closeSplit) {
+      manager.closeSplit();
+      refresh();
+      return;
+    }
     manager.updateSettings(layout.value === "single" ? { open: false } : { open: true, position: layout.value });
   });
   cancel.addEventListener("click", reset);

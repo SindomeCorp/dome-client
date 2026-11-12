@@ -4,10 +4,11 @@ import { renderRecordHtml, toggleRecordPreview } from "./record-renderer.js";
 const MAX_SCROLL_HEIGHT = 8_000_000;
 
 export class VirtualOutputView {
-  constructor({ element, client, win, name, onActive = () => {}, onRow = () => {}, onState = () => {}, onMessage = () => {} }) {
-    Object.assign(this, { element, client, win, name, onActive, onRow, onState, onMessage });
+  constructor({ element, client, win, name, onActive = () => {}, onState = () => {}, onMessage = () => {} }) {
+    Object.assign(this, { element, client, win, name, onActive, onState, onMessage });
     this.index = new HeightIndex();
     this.mounted = new Map();
+    this.gaps = new Map();
     this.paused = false;
     this.following = true;
     this.unread = 0;
@@ -30,14 +31,17 @@ export class VirtualOutputView {
     element.removeAttribute("aria-live");
     this.listen = [];
     this.bind(element, "scroll", () => this.onScroll());
-    this.bind(element, "pointerdown", (event) => this.activate(event));
-    this.bind(element, "focusin", (event) => this.activate(event));
+    this.bind(element, "pointerdown", () => this.activate());
+    this.bind(element, "focusin", () => this.activate());
     this.bind(element, "click", (event) => this.onClick(event));
     this.bind(element, "keydown", (event) => this.onKey(event));
     this.bind(element, "dblclick", (event) => {
       if (client.preferences.autoScroll !== "dbl" || event.target.closest("button,a")) return;
       event.preventDefault();
+      const selection = doc.getSelection();
+      if (selection && element.contains(selection.anchorNode)) selection.removeAllRanges();
       this.setPaused(!this.paused);
+      this.client.inputReader?.focus({ preventScroll: true });
     });
     this.bind(element, "pointerdown", (event) => {
       if (client.preferences.autoScroll !== "long" || event.target.closest("button,a")) return;
@@ -66,10 +70,8 @@ export class VirtualOutputView {
     this.listen.push(() => target.removeEventListener(type, listener));
   }
 
-  activate(event) {
+  activate() {
     this.onActive(this.name);
-    const row = event.target.closest("[data-output-id]");
-    if (row) this.onRow(Number(row.dataset.outputId), this.name);
   }
 
   onClick(event) {
@@ -90,11 +92,14 @@ export class VirtualOutputView {
     this.jump(record.id);
     this.render();
     this.mounted.get(record.id)?.focus({ preventScroll: true });
-    this.onRow(record.id, this.name);
   }
 
-  scale() {
-    const viewport = this.element.clientHeight || 400;
+  viewportHeight() {
+    const style = this.win.getComputedStyle(this.element);
+    return Math.max(1, (this.element.clientHeight || 400) - (parseFloat(style.paddingTop) || 0) - (parseFloat(style.paddingBottom) || 0));
+  }
+
+  scale(viewport = this.viewportHeight()) {
     return Math.max(1, (this.index.total - viewport) / (MAX_SCROLL_HEIGHT - viewport));
   }
 
@@ -107,7 +112,7 @@ export class VirtualOutputView {
   }
 
   onScroll() {
-    if (this.programmatic || this.pendingJump
+    if (this.pendingJump
       || (this.expectedScrollTop != null && Math.abs(this.element.scrollTop - this.expectedScrollTop) < 1)) return;
     this.onActive(this.name);
     const bottom = this.element.scrollHeight - this.element.scrollTop - this.element.clientHeight <= 24;
@@ -198,6 +203,7 @@ export class VirtualOutputView {
   releaseAll() {
     for (const [id, node] of this.mounted) this.release(id, node);
     this.rows.replaceChildren();
+    this.gaps.clear();
   }
 
   createRow(record, position) {
@@ -264,12 +270,18 @@ export class VirtualOutputView {
   }
 
   render() {
-    if (this.hasSelection() || this.element.hidden) return;
+    if (this.element.hidden) return;
+    const selection = this.hasSelection() ? this.element.ownerDocument.getSelection() : null;
+    const endpoints = selection && {
+      anchorNode: selection.anchorNode, anchorOffset: selection.anchorOffset,
+      focusNode: selection.focusNode, focusOffset: selection.focusOffset
+    };
+    if (selection && !this.anchor) this.captureAnchor();
     this.onState(this);
-    const viewport = this.element.clientHeight || 400;
-    const scale = this.scale();
-    let logicalTop = this.logicalTop();
-    if (!this.paused && this.following) logicalTop = Math.max(0, this.index.total - viewport);
+    const viewport = this.viewportHeight();
+    const scale = this.scale(viewport);
+    let logicalTop = this.element.scrollTop * scale;
+    if (!this.paused && this.following && !selection) logicalTop = Math.max(0, this.index.total - viewport);
     else if (this.anchor) {
       const index = this.index.indexOfId(this.anchor.id);
       if (index < 0) return;
@@ -280,40 +292,97 @@ export class VirtualOutputView {
     const end = this.index.length ? Math.min(this.index.length, this.index.offsetIndex(logicalTop + viewport * 2) + 1) : 0;
     const wanted = new Set();
     for (let i = start; i < end; i++) wanted.add(this.index.at(i).id);
+    if (endpoints) {
+      for (const node of [endpoints.anchorNode, endpoints.focusNode]) {
+        const row = (node.nodeType === 1 ? node : node.parentElement)?.closest("[data-output-id]");
+        const id = Number(row?.dataset.outputId);
+        if (this.index.indexOfId(id) >= 0) wanted.add(id);
+      }
+    }
     for (const [id, node] of this.mounted) if (!wanted.has(id)) this.release(id, node);
+    const positions = [...wanted].map((id) => this.index.indexOfId(id)).sort((a, b) => a - b);
+    const gapHeight = this.gapHeights(positions, start, end, logicalTop, scale);
+    const usedGaps = new Set();
     let previous = null;
-    for (let i = start; i < end; i++) {
+    const insert = (node) => {
+      if (previous ? previous.nextSibling !== node : this.rows.firstChild !== node) {
+        this.rows.insertBefore(node, previous ? previous.nextSibling : this.rows.firstChild);
+      }
+      previous = node;
+    };
+    for (let offset = 0; offset < positions.length; offset++) {
+      const i = positions[offset];
+      const before = positions[offset - 1];
+      if (offset && i > before + 1) {
+        let gap = this.gaps.get(i);
+        if (!gap) {
+          gap = this.element.ownerDocument.createElement("div");
+          gap.className = "output-spacer";
+          gap.setAttribute("aria-hidden", "true");
+          this.gaps.set(i, gap);
+        }
+        gap.style.height = gapHeight(before + 1, i) + "px";
+        usedGaps.add(i);
+        insert(gap);
+      }
       const record = this.index.at(i);
       const row = this.mounted.get(record.id) || this.createRow(record, i);
-      if (previous ? previous.nextSibling !== row : this.rows.firstChild !== row) {
-        this.rows.insertBefore(row, previous ? previous.nextSibling : this.rows.firstChild);
+      if (i < start || i >= end) {
+        for (const control of row.querySelectorAll("[data-output-media][aria-expanded=true]")) {
+          toggleRecordPreview(control, row, this.client, this.element.clientWidth);
+          record.collapsed = true;
+        }
       }
-      previous = row;
+      insert(row);
       row.setAttribute("aria-posinset", i + 1);
       row.setAttribute("aria-setsize", this.index.length);
       if (record.group && this.client.preferences.sdwcNowrapBlocks && row.scrollLeft !== record.group.scrollLeft) {
         row.dataset.syncedScroll = String(Math.min(record.group.scrollLeft, row.scrollWidth - row.clientWidth));
         row.scrollLeft = record.group.scrollLeft;
       }
-      row.classList.toggle("output-range-selected", Boolean(this.range && record.id >= this.range.start && record.id <= this.range.end));
       this.applyHighlight(row, record);
     }
-    // Compress distant spacers to stay below browser scroll-height limits.
-    // Rows in the mounted window still occupy their actual measured pixels.
-    const rowHeight = this.index.prefix(end) - this.index.prefix(start);
+    for (const [id, gap] of this.gaps) {
+      if (!usedGaps.has(id)) { gap.remove(); this.gaps.delete(id); }
+    }
     const physicalTop = logicalTop / scale;
-    const top = Math.max(0, physicalTop + this.index.prefix(start) - logicalTop);
-    this.top.style.height = top + "px";
-    this.bottom.style.height = Math.max(0, Math.min(MAX_SCROLL_HEIGHT, this.index.total) - top - rowHeight) + "px";
+    this.top.style.height = gapHeight(0, positions[0] ?? 0) + "px";
+    this.bottom.style.height = gapHeight((positions.at(-1) ?? -1) + 1, this.index.length) + "px";
     this.programmatic = true;
     this.element.scrollTop = physicalTop;
     this.expectedScrollTop = this.element.scrollTop;
     this.pendingJump = false;
+    if (endpoints && endpoints.anchorNode.isConnected && endpoints.focusNode.isConnected
+      && (selection.anchorNode !== endpoints.anchorNode || selection.anchorOffset !== endpoints.anchorOffset
+        || selection.focusNode !== endpoints.focusNode || selection.focusOffset !== endpoints.focusOffset)) {
+      selection.setBaseAndExtent(endpoints.anchorNode, endpoints.anchorOffset, endpoints.focusNode, endpoints.focusOffset);
+    }
     this.win.setTimeout(() => { this.programmatic = false; }, 0);
   }
 
+  gapHeights(positions, start, end, logicalTop, scale) {
+    // Pin only selection endpoints, not every row crossed while selecting.
+    // Divide each distant spacer around those endpoints without expanding the
+    // browser's physical scroll range or compressing mounted text itself.
+    const before = this.index.prefix(start);
+    const after = this.index.total - this.index.prefix(end);
+    const physicalBefore = Math.max(0, logicalTop / scale + before - logicalTop);
+    const visible = this.index.prefix(end) - before;
+    const physicalAfter = Math.max(0, Math.min(MAX_SCROLL_HEIGHT, this.index.total) - physicalBefore - visible);
+    let pinnedBefore = 0;
+    let pinnedAfter = 0;
+    for (const index of positions) {
+      const height = this.index.prefix(index + 1) - this.index.prefix(index);
+      if (index < start) pinnedBefore += height;
+      if (index >= end) pinnedAfter += height;
+    }
+    const beforeScale = Math.max(0, (physicalBefore - pinnedBefore) / Math.max(1, before - pinnedBefore));
+    const afterScale = Math.max(0, (physicalAfter - pinnedAfter) / Math.max(1, after - pinnedAfter));
+    return (from, to) => Math.max(0, this.index.prefix(to) - this.index.prefix(from)) * (to <= start ? beforeScale : from >= end ? afterScale : 1);
+  }
+
   refreshPresentation() {
-    if (this.hasSelection()) return;
+    if (this.hasSelection()) { this.schedule(); return; }
     this.releaseAll();
     this.schedule();
   }

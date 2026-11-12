@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { OutputHistory, recordText, splitRunsIntoLines } from "../../src/client/features/output-windows/history.js";
+import { copyOutputSelection } from "../../src/client/features/output-windows/selection.js";
 import { HeightIndex } from "../../src/client/features/output-windows/height-index.js";
 import { createAnsiRenderer } from "../../src/client/features/terminal/ansi-renderer.js";
-import { copySnapshot, exportSnapshot, searchSnapshot } from "../../src/client/features/output-windows/history-tools.js";
+import { exportSnapshot, searchSnapshot } from "../../src/client/features/output-windows/history-tools.js";
 import { normalizeOutputWindows, outputWindowDefaults, validateOutputRule } from "../../src/shared/output-windows.js";
 import { createInputQueue, forEachChunked } from "../../src/client/features/output-windows/work-queue.js";
 
@@ -88,8 +89,8 @@ test("search, copy and HTML exports include unmounted history in arrival order",
   assert.equal(matches.length, 3);
   assert.equal((await searchSnapshot(snapshot, "Alpha", { matchCase: true })).length, 1);
   assert.equal((await searchSnapshot(snapshot, "", {})).length, 0);
-  assert.equal(await copySnapshot(snapshot, { scope: (record) => record.secondary }), "alpha alpha");
-  assert.equal(await copySnapshot(snapshot, { start: 2, end: 3 }), "map  one\nmap  two");
+  assert.equal(await copyOutputSelection(snapshot, { start: { id: 1, offset: 0 }, end: { id: 4, offset: 11 } }, { scope: (record) => record.secondary }), "alpha alpha");
+  assert.equal(await copyOutputSelection(history.snapshot(3, 2), { start: { id: 2, offset: 0 }, end: { id: 3, offset: 8 } }), "map  one\nmap  two");
   const client = { preferences: { sdwcNowrapBlocks: true }, parseYouTubeID: () => false };
   const parts = await exportSnapshot(snapshot, { client, css: "body{}", inlineCss: true });
   const html = parts.join("");
@@ -102,7 +103,7 @@ test("search, copy and HTML exports include unmounted history in arrival order",
   assert.match((await exportSnapshot(snapshot, { client, inlineCss: false })).join(""), /stylesheet/);
   const controller = new AbortController();
   controller.abort();
-  await assert.rejects(copySnapshot(snapshot, { signal: controller.signal }), { name: "AbortError" });
+  await assert.rejects(copyOutputSelection(snapshot, { start: { id: 1, offset: 0 }, end: { id: 4, offset: 11 } }, { signal: controller.signal }), { name: "AbortError" });
 });
 
 test("option normalization rejects malformed rules and preserves disabled feature preferences", () => {

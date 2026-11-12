@@ -2,6 +2,7 @@
 import { test, expect } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
+  page.on("dialog", (dialog) => dialog.accept());
   await page.goto("/");
   await page.waitForFunction(() => window.outputTest);
 });
@@ -12,6 +13,7 @@ test("routing, split positions, keyboard resize and close preserve output", asyn
   await page.evaluate(() => window.outputTest.feed("before\n"));
   await page.getByRole("button", { name: "SPLIT", exact: true }).click();
   await page.getByRole("button", { name: "Configure output window" }).click();
+  await page.getByRole("tab", { name: /^Admin Filters/ }).click();
   await page.getByLabel("Team Chat", { exact: true }).check();
   await page.locator("#output-layout").selectOption("bottom");
   await page.locator("#button-client-options-close").click();
@@ -155,4 +157,196 @@ test("manual scrolling works with default preferences and resumes on arriving ou
   await page.evaluate(() => window.outputTest.feed("new arriving row\n"));
   await expect(output).toContainText("new arriving row");
   expect(await output.evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(25);
+});
+
+test("single-window chrome stays at its original position and compact controls follow pane width", async ({ page }, testInfo) => {
+  await expect(page.locator("#output-main-panel header")).toHaveCount(0);
+  const main = await page.locator("#lineBuffer").boundingBox();
+  expect(main.y).toBe(0);
+  if (testInfo.project.name !== "narrow-touch") {
+    await expect(page.locator("#output-main-panel > .mini-controls")).toBeVisible();
+    const toolbar = await page.locator(".mini-controls").boundingBox();
+    expect(toolbar.y).toBe(0);
+  }
+  await page.evaluate(() => window.outputTest.manager.updateSettings({ open: true, secondarySize: 75 }));
+  await expect(page.locator("#browser-client > .compact-controls")).toBeVisible();
+  const toolbar = await page.locator(".mini-controls").boundingBox();
+  const output = await page.locator("#output-workspace").boundingBox();
+  expect(toolbar.y).toBeGreaterThanOrEqual(output.y + output.height - 1);
+  if (testInfo.project.name !== "narrow-touch") {
+    await page.evaluate(() => window.outputTest.manager.updateSettings({ secondarySize: 15 }));
+    await expect(page.locator("#output-main-panel > .mini-controls")).toBeVisible();
+    const buttons = await page.locator(".mini-controls > button").evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().right));
+    const bounds = await page.locator("#output-main-panel").boundingBox();
+    expect(Math.max(...buttons)).toBeLessThanOrEqual(bounds.x + bounds.width);
+  }
+});
+
+test("newest wrapped lines remain fully visible in every split direction", async ({ page }) => {
+  for (const position of ["single", "right", "left", "top", "bottom"]) {
+    await page.evaluate(async (position) => {
+      const { manager, client, feed } = window.outputTest;
+      manager.clear();
+      manager.updateSettings({ open: position !== "single", position: position === "single" ? "right" : position, secondarySize: 35, selected: ["team-chat"] });
+      client.buffer.style.fontSize = "18px";
+      manager.refreshPresentation();
+      await feed(Array.from({ length: 300 }, (_, i) => (i % 2 ? "[-][Team-Chat] " : "") + "\u001b[33mwrapped " + i + " text ".repeat(i % 12 + 1) + "\u001b[0m").join("\n") + "\nTAIL MAIN\n[-][Team-Chat] TAIL SECONDARY\n");
+    }, position);
+    await expect.poll(() => page.evaluate(() => {
+      const { manager } = window.outputTest;
+      return Object.entries(manager.views).every(([name, view]) => {
+        if (name === "secondary" && !manager.isSplitOpen()) return true;
+        const row = view.mounted.get(view.index.at(view.index.length - 1)?.id);
+        const panel = view.element.getBoundingClientRect();
+        return row && row.getBoundingClientRect().bottom <= panel.bottom - 2 && panel.bottom <= window.innerHeight;
+      });
+    }), { message: "last row clipped for " + position }).toBe(true);
+    const input = await page.locator("#inputBuffer").boundingBox();
+    expect(input.y + input.height).toBeLessThanOrEqual(await page.evaluate(() => window.innerHeight));
+  }
+});
+
+test("clicking output does not add focus outlines and each pause button controls its own pane", async ({ page }) => {
+  await page.evaluate(() => { window.outputTest.manager.updateSettings({ open: true }); return window.outputTest.feed("click this text\n"); });
+  const row = page.locator("#lineBuffer [data-output-id]").first();
+  await row.click({ position: { x: 5, y: 8 } });
+  expect(await row.evaluate((element) => window.getComputedStyle(element).outlineStyle)).toBe("none");
+  expect(await page.locator("#lineBuffer").evaluate((element) => window.getComputedStyle(element).outlineStyle)).toBe("none");
+  await page.getByRole("button", { name: "Pause secondary scrolling", exact: true }).click();
+  await page.getByRole("button", { name: "Pause main scrolling", exact: true }).click();
+  expect(await page.evaluate(() => [window.outputTest.manager.views.main.paused, window.outputTest.manager.views.secondary.paused])).toEqual([true, true]);
+  await page.getByRole("button", { name: "Resume main scrolling", exact: true }).click();
+  expect(await page.evaluate(() => [window.outputTest.manager.views.main.paused, window.outputTest.manager.views.secondary.paused])).toEqual([false, true]);
+});
+
+test("closing a split confirms before merging history", async ({ page }) => {
+  page.removeAllListeners("dialog");
+  await page.evaluate(() => { window.outputTest.manager.updateSettings({ open: true, selected: ["team-chat"] }); return window.outputTest.feed("[-][Team-Chat] preserve me\n"); });
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page.getByRole("button", { name: "Close secondary output window" }).click();
+  await expect(page.locator("#secondaryBuffer")).toContainText("preserve me");
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.locator("#button-output-split").click();
+  await expect(page.locator("#secondaryBuffer")).not.toBeVisible();
+  await expect(page.locator("#lineBuffer")).toContainText("preserve me");
+});
+
+test("scrolling while text is selected renders old rows and copies the entire logical selection", async ({ page }) => {
+  await page.evaluate(() => {
+    Object.defineProperty(window.navigator, "clipboard", { configurable: true, value: { writeText: async (text) => { window.copiedOutput = text; } } });
+    return window.outputTest.feed(Array.from({ length: 2000 }, (_, i) => "selected history line " + i).join("\n") + "\n");
+  });
+  await page.evaluate(() => {
+    const { manager } = window.outputTest;
+    manager.views.main.setPaused(true);
+    manager.views.main.element.focus({ preventScroll: true });
+    const row = manager.views.main.mounted.get(2000);
+    window.selectionAnchor = row.firstChild;
+    document.getSelection().setBaseAndExtent(row.firstChild, 2, row.firstChild, 8);
+  });
+  await page.locator("#lineBuffer").hover();
+  await page.mouse.wheel(0, -5000);
+  await expect.poll(() => page.evaluate(() => Math.min(...window.outputTest.manager.views.main.mounted.keys()))).toBeLessThan(1800);
+  expect(await page.evaluate(() => window.selectionAnchor.isConnected)).toBe(true);
+  expect(await page.locator("[data-output-id]").count()).toBeLessThan(400);
+  const expected = await page.evaluate(() => {
+    const view = window.outputTest.manager.views.main;
+    const top = view.index.offsetIndex(view.logicalTop());
+    const row = view.mounted.get(view.index.at(top).id);
+    document.getSelection().setBaseAndExtent(window.selectionAnchor, 8, row.firstChild, 2);
+    const id = Number(row.dataset.outputId);
+    const parts = [];
+    for (let n = id; n <= 2000; n++) parts.push("selected history line " + (n - 1));
+    parts[0] = parts[0].slice(2);
+    parts[parts.length - 1] = parts[parts.length - 1].slice(0, 8);
+    return parts.join("\n");
+  });
+  await page.keyboard.press("Control+c");
+  await expect.poll(() => page.evaluate(() => window.copiedOutput)).toBe(expected);
+});
+
+test("mouse drag and wheel selection crosses unmounted history without losing copied text", async ({ page }) => {
+  await page.evaluate(() => {
+    Object.defineProperty(window.navigator, "clipboard", { configurable: true, value: { writeText: async (text) => { window.copiedOutput = text; } } });
+    return window.outputTest.feed(Array.from({ length: 2000 }, (_, i) => "drag selected line " + i).join("\n") + "\n");
+  });
+  const tail = await page.locator("#lineBuffer [data-output-id='2000']").boundingBox();
+  const pane = await page.locator("#lineBuffer").boundingBox();
+  await page.mouse.move(tail.x + 16, tail.y + tail.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(tail.x + 75, pane.y + pane.height / 2, { steps: 8 });
+  await expect.poll(() => page.evaluate(() => document.getSelection().toString().length)).toBeGreaterThan(0);
+  await page.mouse.wheel(0, -5000);
+  await expect.poll(() => page.evaluate(() => Math.min(...window.outputTest.manager.views.main.mounted.keys()))).toBeLessThan(1800);
+  await page.mouse.move(tail.x + 65, pane.y + pane.height / 2 - 10, { steps: 3 });
+  await page.mouse.up();
+  const expected = await page.evaluate(() => {
+    const selection = document.getSelection();
+    const endpoint = (node, offset) => {
+      const row = (node.nodeType === 1 ? node : node.parentElement).closest("[data-output-id]");
+      const prefix = document.createRange();
+      prefix.selectNodeContents(row);
+      prefix.setEnd(node, offset);
+      return { id: Number(row.dataset.outputId), offset: prefix.toString().length };
+    };
+    const endpoints = [endpoint(selection.anchorNode, selection.anchorOffset), endpoint(selection.focusNode, selection.focusOffset)]
+      .sort((a, b) => a.id - b.id || a.offset - b.offset);
+    const parts = [];
+    for (let id = endpoints[0].id; id <= endpoints[1].id; id++) parts.push("drag selected line " + (id - 1));
+    parts[parts.length - 1] = parts[parts.length - 1].slice(0, endpoints[1].offset);
+    parts[0] = parts[0].slice(endpoints[0].offset);
+    return { text: parts.join("\n"), lines: parts.length };
+  });
+  expect(expected.lines).toBeGreaterThan(150);
+  expect(await page.locator("[data-output-id]").count()).toBeLessThan(400);
+  await page.keyboard.press("Control+c");
+  await expect.poll(() => page.evaluate(() => window.copiedOutput)).toBe(expected.text);
+});
+
+test("Player, Admin, and Custom filter views retain selections across groups", async ({ page }) => {
+  await page.locator("#button-client-options").click();
+  await page.getByRole("tab", { name: "Output Windows", exact: true }).click();
+  const player = page.getByRole("tab", { name: /^Player Filters/ });
+  const admin = page.getByRole("tab", { name: /^Admin Filters/ });
+  const custom = page.getByRole("tab", { name: /^Custom Filters/ });
+  await expect(player).toHaveAttribute("aria-selected", "true");
+  await expect(player).toHaveText("Player Filters [0/4]");
+  await page.getByLabel("OOC Chat", { exact: true }).check();
+  await admin.click();
+  await page.getByLabel("Puppet [All]", { exact: true }).check();
+  await expect(player).toHaveText("Player Filters [1/4]");
+  await expect(admin).toHaveText("Admin Filters [1/7]");
+  await custom.click();
+  await page.getByLabel("Name", { exact: true }).fill("My output");
+  await page.getByLabel("Pattern (without / delimiters)", { exact: true }).fill("^my output");
+  await page.getByRole("button", { name: "Add filter", exact: true }).click();
+  await expect(custom).toHaveText("Custom Filters [0/1]");
+  await page.getByLabel("My output", { exact: true }).check();
+  await expect(custom).toHaveText("Custom Filters [1/1]");
+  await player.click();
+  await expect(page.getByLabel("OOC Chat", { exact: true })).toBeChecked();
+  await page.locator("#output-layout").selectOption("right");
+  await page.locator("#button-client-options-close").click();
+  await page.evaluate(() => window.outputTest.feed("[-][OOC-Chat] player line\n[p2 puppet line\nmy output line\n"));
+  await expect(page.locator("#secondaryBuffer")).toContainText("player line");
+  await expect(page.locator("#secondaryBuffer")).toContainText("puppet line");
+  await expect(page.locator("#secondaryBuffer")).toContainText("my output line");
+});
+
+test("double-clicking either output pane toggles pause and restores the input cursor", async ({ page }) => {
+  await page.evaluate(() => {
+    window.outputTest.manager.updateSettings({ open: true, position: "bottom", selected: ["ooc-chat"] });
+    window.outputTest.client.preferences.autoScroll = "dbl";
+    return window.outputTest.feed("main double click\n[-][OOC-Chat] secondary double click\n");
+  });
+  await page.locator("#inputBuffer").fill("unfinished command");
+  for (const name of ["main", "secondary"]) {
+    const output = page.locator(name === "main" ? "#lineBuffer" : "#secondaryBuffer");
+    for (const paused of [true, false]) {
+      await output.dblclick({ position: { x: 20, y: 40 } });
+      expect(await page.evaluate((name) => window.outputTest.manager.views[name].paused, name)).toBe(paused);
+      await expect(page.locator("#inputBuffer")).toBeFocused();
+      await expect(page.locator("#inputBuffer")).toHaveValue("unfinished command");
+    }
+  }
 });

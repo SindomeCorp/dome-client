@@ -118,6 +118,21 @@ async function runReplay(size, fixture) {
       await new Promise((resolve) => requestAnimationFrame(resolve));
       return view.mounted.size;
     });
+    const selectedScroll = await measure("selectedScroll", async () => {
+      const view = Object.values(manager.views).reduce((largest, next) => next.index.total > largest.index.total ? next : largest);
+      const id = view.index.at(Math.floor(view.index.length / 2)).id;
+      view.jump(id);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const row = view.mounted.get(id);
+      const selection = window.document.getSelection();
+      selection.selectAllChildren(row);
+      view.element.scrollTop = 0;
+      view.element.dispatchEvent(new Event("scroll"));
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const result = { mountedRows: view.mounted.size, pinnedAlive: row.isConnected, oldestMounted: view.mounted.has(view.index.at(0).id) };
+      selection.removeAllRanges();
+      return result;
+    });
     const find = await measure("find", async () => (await searchSnapshot(await manager.snapshot(), "SCROLLBACK_PERF_NEEDLE")).length);
     const commonFind = await measure("commonFind", async () => {
       const results = await searchSnapshot(await manager.snapshot(), "e", { getRecord: (id) => manager.history.get(id) });
@@ -149,7 +164,7 @@ async function runReplay(size, fixture) {
       await new Promise((resolve) => requestAnimationFrame(resolve));
       return client.inputReader.value;
     });
-    return { jump, find, commonFind, tailFind, resize, close, exportLog, input };
+    return { jump, selectedScroll, find, commonFind, tailFind, resize, close, exportLog, input };
   });
   const closed = await metrics(page, cdp);
   const observations = await page.evaluate(() => {
@@ -161,6 +176,9 @@ async function runReplay(size, fixture) {
   const cleared = await metrics(page, cdp);
   if (observations.retainedLines !== size) throw new Error("Replay lost output: expected " + size + ", got " + observations.retainedLines);
   if (open.mountedRows > 1000 || closed.mountedRows > 1000) throw new Error("Mounted rows grew beyond the viewport budget.");
+  if (!operations.selectedScroll.value.pinnedAlive || !operations.selectedScroll.value.oldestMounted || operations.selectedScroll.value.mountedRows > 1000) {
+    throw new Error("Selected scrollback did not preserve endpoints and render the new viewport within its row budget.");
+  }
   const result = { size, fixture: Boolean(fixture), receiveMs, baseline, open, closed, cleared, operations, ...observations };
   logger.info("Output replay complete", { size, receiveMs: Math.round(receiveMs), mountedRows: open.mountedRows, heapMiB: Math.round(open.heapBytes / 1024 / 1024), longTasks: observations.longTasks.length });
   await context.close();

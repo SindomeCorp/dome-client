@@ -17,11 +17,12 @@ export function loadOutputWindowPresets({ filePath = "data/output-window-presets
   const ids = new Set();
   return parsed.flatMap((item) => {
     const checked = validateOutputRule(item);
-    if (!checked.rule || ids.has(checked.rule.id) || checked.rule.id.startsWith("custom-")) {
-      logger?.warn?.("Skipping invalid output window preset: " + (checked.error || "duplicate or reserved ID"));
+    if (!checked.rule || ids.has(checked.rule.id) || checked.rule.id.startsWith("custom-")
+      || (item.group != null && !["player", "admin"].includes(item.group))) {
+      logger?.warn?.("Skipping invalid output window preset: " + (checked.error || "duplicate/reserved ID or invalid group"));
       return [];
     }
     ids.add(checked.rule.id);
-    return [checked.rule];
+    return [{ ...checked.rule, group: item.group || "player" }];
   });
 }

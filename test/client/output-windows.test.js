@@ -2,9 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createOutputApp } from "../../test-support/output-app.js";
 import { recordText } from "../../src/client/features/output-windows/history.js";
-import { copySnapshot, exportSnapshot } from "../../src/client/features/output-windows/history-tools.js";
+import { exportSnapshot } from "../../src/client/features/output-windows/history-tools.js";
 import { clearClientBuffer } from "../../src/client/features/terminal/button-workflows.js";
 import { buildExportPayload, importClientOptionsJson } from "../../src/client/features/options/client-options-import-export-ui.js";
+import { copyOutputSelection } from "../../src/client/features/output-windows/selection.js";
 import { outputWindowDefaults } from "../../src/shared/output-windows.js";
 
 test("splits route future output and closing restores chronology; reopening starts empty", async (t) => {
@@ -86,7 +87,7 @@ test("mounted rows stay bounded; offscreen history remains copyable", async (t) 
   manager.views.main.render();
   assert.ok(manager.views.main.mounted.has(100));
   assert.ok(doc.querySelectorAll("[data-output-id]").length < 150);
-  const copied = await copySnapshot(await manager.snapshot(), { start: 100, end: 102 });
+  const copied = await copyOutputSelection(await manager.snapshot(undefined, 100, 102), { start: { id: 100, offset: 0 }, end: { id: 102, offset: 8 } });
   assert.equal(copied, "line 99\nline 100\nline 101");
 });
 
@@ -111,13 +112,14 @@ test("pause, unread, row navigation and keyboard resizing are independent", asyn
   assert.equal(manager.settings.secondarySize, 17);
   manager.views.main.element.dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
   assert.equal(manager.views.main.paused, true);
-  assert.ok(manager.activeRows.main);
+  assert.ok(manager.views.main.mounted.has(Number(doc.activeElement.dataset.outputId)));
   doc.querySelector("#button-output-configure").click();
   assert.equal(manager.client.clientOptionsOverlay.classList.contains("hide"), false);
 });
 
 test("custom rule UI validates, tests, edits and confirms removal", async (t) => {
   const { manager, doc, win } = await createOutputApp(t);
+  doc.querySelector("[data-filter-group=custom]").click();
   const name = doc.querySelector("#output-rule-name");
   const pattern = doc.querySelector("#output-rule-pattern");
   name.value = "Messages";
@@ -260,4 +262,146 @@ test("manual scrollback survives repaints and measurements until new output with
   const paused = view.element.scrollTop;
   await feed("paused output\n");
   assert.equal(view.element.scrollTop, paused);
+});
+
+test("closing through either split button or layout options requires confirmation", async (t) => {
+  const { manager, win, doc, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["team-chat"] });
+  await feed("main\n[-][Team-Chat] retained\n");
+  let prompts = 0;
+  win.confirm = () => { prompts++; return false; };
+  for (const selector of ["#button-output-close", "#button-output-split"]) {
+    doc.querySelector(selector).click();
+    assert.equal(manager.isSplitOpen(), true);
+    assert.equal(manager.views.secondary.index.length, 1);
+  }
+  const layout = doc.querySelector("#output-layout");
+  layout.value = "single";
+  layout.dispatchEvent(new win.Event("change"));
+  assert.equal(layout.value, "right");
+  assert.equal(prompts, 3);
+  win.confirm = () => true;
+  doc.querySelector("#button-output-close").click();
+  await manager.idle();
+  assert.equal(manager.isSplitOpen(), false);
+  assert.equal(manager.views.main.index.length, 2);
+  assert.deepEqual([...doc.querySelectorAll(".client-options-tab")].map((tab) => tab.textContent), ["General", "Presentation", "Local Editor", "Output Windows", "Import/Export"]);
+  assert.equal(doc.querySelector("#output-main-panel header"), null);
+});
+
+test("toolbar pause always controls main and secondary uses the same styled pause control", async (t) => {
+  const { manager, doc, client } = await createOutputApp(t);
+  manager.updateSettings({ open: true });
+  const secondary = doc.querySelector("[data-output-pause=secondary]");
+  secondary.click();
+  assert.equal(manager.views.secondary.paused, true);
+  assert.equal(client.scrollButton.classList.contains("btn-primary"), true);
+  client.onToggleAutoScroll({ type: "click" });
+  assert.equal(manager.views.main.paused, true);
+  assert.equal(manager.views.secondary.paused, true);
+  assert.equal(client.scrollButton.classList.contains("btn-danger"), true);
+  assert.equal(secondary.classList.contains("btn-danger"), true);
+  assert.equal(secondary.textContent, client.scrollButton.textContent);
+  assert.ok(secondary.querySelector("svg"));
+  manager.activePanel = "secondary";
+  client.onToggleAutoScroll();
+  assert.equal(manager.views.secondary.paused, false, "keyboard shortcut still follows the active pane");
+  assert.equal(manager.views.main.paused, true);
+});
+
+test("rendered text height excludes pane padding when following the newest output", async (t) => {
+  const { manager, feed } = await createOutputApp(t);
+  await feed(Array.from({ length: 100 }, (_, i) => "row " + i).join("\n") + "\n");
+  const view = manager.views.main;
+  Object.defineProperty(view.element, "clientHeight", { value: 400 });
+  view.element.style.padding = "10px 0 15px";
+  view.render();
+  assert.equal(view.viewportHeight(), 375);
+  assert.equal(view.element.scrollTop, view.index.total - 375);
+});
+
+test("selected media endpoints remain selectable but release previews outside the viewport", async (t) => {
+  const { manager, client, doc, feed } = await createOutputApp(t);
+  client.preferences.imagePreview = true;
+  await feed("https://example.com/selected.mp4\n");
+  const view = manager.views.main;
+  const row = view.mounted.get(1);
+  assert.ok(row.querySelector("video"));
+  doc.getSelection().selectAllChildren(row.querySelector("a"));
+  await feed(Array.from({ length: 2000 }, (_, i) => "later " + i).join("\n") + "\n");
+  view.setPaused(true);
+  view.element.scrollTop = view.index.total - 400;
+  view.onScroll();
+  view.render();
+  assert.ok(row.isConnected);
+  assert.equal(row.querySelector("video"), null);
+  assert.equal(manager.history.get(1).collapsed, true);
+  assert.ok(view.mounted.size < 150);
+});
+
+test("puppet presets route ANSI-stripped line prefixes once even when both match", async (t) => {
+  const { manager, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["puppet-1", "puppet-all"] });
+  await feed("\u001b[32m[p1 first\u001b[0m\n[p2 second\n[p0 zero\nbefore [p1 stays main\n[P1 upper stays main\n[px stays main\n");
+  assert.equal(manager.views.secondary.index.length, 3);
+  assert.equal(manager.views.main.index.length, 3);
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => recordText(manager.views.secondary.index.at(i))), ["[p1 first", "[p2 second", "[p0 zero"]);
+});
+
+test("filter groups keep hidden selections active and display selected/total counts", async (t) => {
+  const { manager, doc, win, feed } = await createOutputApp(t);
+  const player = doc.querySelector("[data-filter-group=player]");
+  const admin = doc.querySelector("[data-filter-group=admin]");
+  const custom = doc.querySelector("[data-filter-group=custom]");
+  assert.equal(player.getAttribute("aria-selected"), "true");
+  assert.equal(player.textContent, "Player Filters [0/4]");
+  assert.equal(admin.textContent, "Admin Filters [0/7]");
+  assert.equal(custom.textContent, "Custom Filters [0/0]");
+  const checkbox = (id) => [...doc.querySelectorAll("[data-output-rule-id]")].find((element) => element.dataset.outputRuleId === id);
+  assert.equal(checkbox("team-chat"), undefined);
+  checkbox("ooc-chat").click();
+  admin.click();
+  checkbox("team-chat").click();
+  assert.equal(player.textContent, "Player Filters [1/4]");
+  assert.equal(admin.textContent, "Admin Filters [1/7]");
+  custom.click();
+  doc.querySelector("#output-rule-name").value = "Custom message";
+  doc.querySelector("#output-rule-pattern").value = "^custom";
+  doc.querySelector("#output-rule-form").dispatchEvent(new win.Event("submit", { cancelable: true }));
+  assert.equal(custom.textContent, "Custom Filters [0/1]");
+  const id = manager.settings.custom[0].id;
+  assert.equal(checkbox(id).checked, false);
+  checkbox(id).click();
+  assert.equal(custom.textContent, "Custom Filters [1/1]");
+  player.click();
+  assert.equal(checkbox("ooc-chat").checked, true);
+  manager.updateSettings({ open: true });
+  await feed("[-][OOC-Chat] player message\n[-][Team-Chat] admin message\ncustom message\nordinary\n");
+  assert.equal(manager.views.secondary.index.length, 3);
+  assert.equal(manager.views.main.index.length, 1);
+  admin.click();
+  admin.dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+  assert.equal(custom.getAttribute("aria-selected"), "true");
+  doc.querySelector("#client-options-tab-output").click();
+  assert.equal(player.getAttribute("aria-selected"), "true");
+  assert.equal(manager.settings.selected.length, 3);
+  assert.equal(custom.textContent, "Custom Filters [1/1]");
+});
+
+test("double-click pause and resume in either pane return focus to the existing input command", async (t) => {
+  const { manager, doc, win, client } = await createOutputApp(t);
+  manager.updateSettings({ open: true });
+  client.preferences.autoScroll = "dbl";
+  client.inputReader.value = "look at painting";
+  for (const view of Object.values(manager.views)) {
+    for (const paused of [true, false]) {
+      view.element.focus();
+      const event = new win.MouseEvent("dblclick", { bubbles: true, cancelable: true });
+      view.element.dispatchEvent(event);
+      assert.equal(event.defaultPrevented, true);
+      assert.equal(view.paused, paused);
+      assert.equal(doc.activeElement, client.inputReader);
+      assert.equal(client.inputReader.value, "look at painting");
+    }
+  }
 });

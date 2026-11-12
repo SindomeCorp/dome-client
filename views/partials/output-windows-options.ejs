@@ -8,23 +8,30 @@
     <option value="top">Secondary above</option>
   </select>
   <p>Selected filters move future matching lines to the secondary window while a split is open. Existing output stays where it is.</p>
-  <div id="output-presets" class="output-rule-list"></div>
-  <div id="output-custom-rules" class="output-rule-list"></div>
+  <div class="output-filter-tabs" role="tablist" aria-label="Output filter groups">
+    <button type="button" class="btn btn-primary" role="tab" aria-selected="true" aria-controls="output-presets" data-filter-group="player">Player Filters</button>
+    <button type="button" class="btn" role="tab" aria-selected="false" aria-controls="output-presets" data-filter-group="admin" tabindex="-1">Admin Filters</button>
+    <button type="button" class="btn" role="tab" aria-selected="false" aria-controls="output-custom-panel" data-filter-group="custom" tabindex="-1">Custom Filters</button>
+  </div>
+  <div id="output-presets" class="output-rule-list" role="tabpanel"></div>
   <div id="output-rule-error" role="alert"></div>
-  <form id="output-rule-form">
-    <h3>Custom output filter</h3>
-    <label for="output-rule-name">Name</label>
-    <input id="output-rule-name" type="text" required />
-    <label for="output-rule-pattern">Pattern (without / delimiters)</label>
-    <input id="output-rule-pattern" type="text" required placeholder="^\[-\]\[Team-Chat\]" spellcheck="false" />
-    <label><input id="output-rule-case" type="checkbox" /> Ignore case</label>
-    <label for="output-rule-sample">Sample text</label>
-    <textarea id="output-rule-sample" rows="4" placeholder="Paste example output here"></textarea>
-    <div>
-      <button type="button" id="output-rule-test" class="btn">Test</button>
-      <button type="submit" id="output-rule-save" class="btn btn-primary">Add filter</button>
-      <button type="button" id="output-rule-cancel" class="btn hide">Cancel edit</button>
-    </div>
-    <pre id="output-rule-test-result" role="status"></pre>
-  </form>
+  <div id="output-custom-panel" class="hide" role="tabpanel">
+    <div id="output-custom-rules" class="output-rule-list"></div>
+    <form id="output-rule-form">
+      <h3>Custom output filter</h3>
+      <label for="output-rule-name">Name</label>
+      <input id="output-rule-name" type="text" required />
+      <label for="output-rule-pattern">Pattern (without / delimiters)</label>
+      <input id="output-rule-pattern" type="text" required placeholder="^\[-\]\[Team-Chat\]" spellcheck="false" />
+      <label><input id="output-rule-case" type="checkbox" /> Ignore case</label>
+      <label for="output-rule-sample">Sample text</label>
+      <textarea id="output-rule-sample" rows="4" placeholder="Paste example output here"></textarea>
+      <div>
+        <button type="button" id="output-rule-test" class="btn">Test</button>
+        <button type="submit" id="output-rule-save" class="btn btn-primary">Add filter</button>
+        <button type="button" id="output-rule-cancel" class="btn hide">Cancel edit</button>
+      </div>
+      <pre id="output-rule-test-result" role="status"></pre>
+    </form>
+  </div>
 </div>

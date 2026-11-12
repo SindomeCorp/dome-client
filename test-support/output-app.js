@@ -28,6 +28,7 @@ export async function createOutputApp(t, { config = {}, stored, workerFactory = 
   const html = await renderFile(new URL("../views/client.ejs", import.meta.url).pathname, data);
   const dom = new JSDOM(html, { url: "https://example.com", pretendToBeVisual: true });
   const win = dom.window;
+  win.confirm = () => true;
   const doc = win.document;
   const messages = [];
   const memory = new Map(stored ? [["dc-output-windows", stored]] : []);

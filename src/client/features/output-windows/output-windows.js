@@ -8,6 +8,8 @@ import { abortable, createInputQueue } from "./work-queue.js";
 import { setupOutputOptions } from "./options-ui.js";
 import { setupHistoryTools } from "./history-tools.js";
 import { showClientOptionsSaved } from "../options/client-options-toast.js";
+import { setScrollButtonUi } from "../terminal/autoscroll.js";
+import { setupOutputToolbar } from "./toolbar.js";
 
 export class OutputWindows {
   constructor({ client, doc, win, storage = store, logger = defaultLogger, config = win.__OUTPUT_WINDOWS__ || {}, workerFactory }) {
@@ -21,7 +23,6 @@ export class OutputWindows {
     this.pending = new Set();
     this.routing = new Map();
     this.activePanel = "main";
-    this.activeRows = {};
     this.indexWaiters = [];
     this.workspace = doc.querySelector("#output-workspace");
     client.outputWindows = this;
@@ -38,7 +39,6 @@ export class OutputWindows {
       this.views[name] = new VirtualOutputView({
         element: doc.querySelector(name === "main" ? "#lineBuffer" : "#secondaryBuffer"), client, win, name,
         onActive: (panel) => { this.activePanel = panel; this.updatePauseButton(); },
-        onRow: (id, panel) => { this.activeRows[panel] = id; },
         onState: (view) => this.updateViewState(view),
         onMessage: (message) => this.report(message)
       });
@@ -47,6 +47,7 @@ export class OutputWindows {
     this.tools = setupHistoryTools(this);
     this.refreshRules();
     this.bindControls();
+    this.toolbar = setupOutputToolbar(this);
     this.applyLayout();
     this.refreshPresentation();
   }
@@ -194,8 +195,8 @@ export class OutputWindows {
     return this.indexed >= this.committed ? Promise.resolve() : new Promise((resolve) => this.indexWaiters.push(resolve));
   }
 
-  async snapshot(signal, first) {
-    const boundary = await abortable(new Promise((resolve) => this.inputQueue.task(() => resolve(this.history.snapshot(undefined, first)))), signal);
+  async snapshot(signal, first, last) {
+    const boundary = await abortable(new Promise((resolve) => this.inputQueue.task(() => resolve(this.history.snapshot(last, first)))), signal);
     await abortable(Promise.all([...this.pending]), signal);
     signal?.throwIfAborted();
     return boundary;
@@ -244,7 +245,6 @@ export class OutputWindows {
     this.committed = this.indexed = this.history.first - 1;
     this.group = null;
     this.announcement = "";
-    this.activeRows = {};
     for (const view of Object.values(this.views)) view.reset();
     this.tools.changed({ reset: true });
     this.updateHelp();
@@ -253,7 +253,7 @@ export class OutputWindows {
   updateViewState(view) {
     const button = this.doc.querySelector("[data-output-pause=" + view.name + "]");
     if (button) {
-      button.textContent = view.paused ? "Resume" : "Pause";
+      setScrollButtonUi(button, view.paused, "pause-label");
       button.setAttribute("aria-label", (view.paused ? "Resume " : "Pause ") + view.name + " scrolling");
     }
     const unread = this.doc.querySelector("[data-output-unread=" + view.name + "]");
@@ -263,17 +263,24 @@ export class OutputWindows {
 
   updatePauseButton() {
     const button = this.client.scrollButton;
-    const view = this.views?.[this.activePanel];
+    const view = this.views?.main;
     if (!button || !view) return;
-    button.textContent = view.paused ? "RESUME SCROLL" : "PAUSE SCROLL";
-    button.classList.toggle("btn-danger", view.paused);
-    button.setAttribute("title", (view.paused ? "Resume " : "Pause ") + this.activePanel + " output scrolling");
-    this.client.pauseBuffer = view.paused;
+    setScrollButtonUi(button, view.paused);
+    button.setAttribute("aria-label", (view.paused ? "Resume " : "Pause ") + "main scrolling");
+    button.setAttribute("title", (view.paused ? "Resume " : "Pause ") + "main output scrolling");
+    this.client.pauseBuffer = this.views[this.activePanel]?.paused || false;
   }
 
-  togglePause() {
-    const view = this.views[this.isSplitOpen() ? this.activePanel : "main"];
+  togglePause(panel = this.activePanel) {
+    const view = this.views[this.isSplitOpen() ? panel : "main"];
     view.setPaused(!view.paused);
+  }
+
+  closeSplit() {
+    if (!this.isSplitOpen()) return true;
+    if (!this.win.confirm("Close the secondary output window? Its retained output will return to the main window.")) return false;
+    this.updateSettings({ open: false });
+    return true;
   }
 
   refreshPresentation() {
@@ -311,6 +318,7 @@ export class OutputWindows {
     button?.setAttribute("aria-expanded", String(open));
     if (button) button.textContent = open ? "CLOSE SPLIT" : "SPLIT";
     if (!open) this.activePanel = "main";
+    this.toolbar?.refresh();
     for (const view of Object.values(this.views)) view.schedule();
     this.updateHelp();
   }
@@ -319,11 +327,14 @@ export class OutputWindows {
     for (const name of ["main", "secondary"]) {
       const header = this.doc.querySelector("#output-" + name + "-panel header");
       const activate = () => { this.activePanel = name; this.updatePauseButton(); };
-      header.addEventListener("focusin", activate);
-      header.addEventListener("pointerdown", activate);
+      header?.addEventListener("focusin", activate);
+      header?.addEventListener("pointerdown", activate);
     }
-    this.doc.querySelector("#button-output-split")?.addEventListener("click", () => this.updateSettings({ open: !this.isSplitOpen() }));
-    this.doc.querySelector("#button-output-close").addEventListener("click", () => this.updateSettings({ open: false }));
+    this.doc.querySelector("#button-output-split")?.addEventListener("click", () => {
+      if (this.isSplitOpen()) this.closeSplit();
+      else this.updateSettings({ open: true });
+    });
+    this.doc.querySelector("#button-output-close").addEventListener("click", () => this.closeSplit());
     this.doc.querySelector("#button-output-configure").addEventListener("click", () => {
       this.client.clientOptionsOverlay.classList.remove("hide");
       this.doc.querySelector("#client-options-tab-output")?.click();
@@ -379,6 +390,7 @@ export class OutputWindows {
   }
 
   destroy() {
+    this.toolbar.destroy();
     this.clear();
     this.tools.cancel();
     this.win.clearTimeout(this.indexTimer);

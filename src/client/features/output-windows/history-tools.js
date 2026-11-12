@@ -4,6 +4,7 @@ import { renderRecordHtml } from "./record-renderer.js";
 import { buildLogHtml } from "../../../shared/log-template.js";
 import { buildLogDownloadFilename } from "../terminal/log-download.js";
 import { SearchResults } from "./search-results.js";
+import { copyOutputSelection, readOutputSelection } from "./selection.js";
 
 export async function searchSnapshot(snapshot, query, { scope = () => true, matchCase = false, signal, getRecord = (id) => snapshot.get(id) } = {}) {
   const matches = new SearchResults(query, matchCase, getRecord);
@@ -18,14 +19,6 @@ export async function searchSnapshot(snapshot, query, { scope = () => true, matc
     matches.add(record.id, count);
   }, { signal });
   return matches;
-}
-
-export async function copySnapshot(snapshot, { scope = () => true, start = snapshot.first, end = snapshot.last, signal } = {}) {
-  const parts = [];
-  await forEachChunked(snapshot, (record) => {
-    if (record.id >= start && record.id <= end && scope(record)) parts.push(recordText(record));
-  }, { signal });
-  return parts.join("\n");
 }
 
 export async function exportSnapshot(snapshot, { client, css = "", inlineCss = true, signal, progress = () => {} } = {}) {
@@ -77,7 +70,6 @@ export function setupHistoryTools(manager) {
   let refreshTimer;
   let searchSignature;
   let previousFocus;
-  const range = { main: null, secondary: null };
 
   function report(message) { manager.report(message); }
   function updateCount() {
@@ -195,14 +187,14 @@ export function setupHistoryTools(manager) {
     }
   });
 
-  async function perform(label, action) {
+  async function perform(label, action, boundary) {
     operationController?.abort();
     const controller = operationController = new AbortController();
     operation.classList.remove("hide");
     operationMessage.textContent = label;
     try {
       await yieldToBrowser();
-      const snapshot = await manager.snapshot(controller.signal);
+      const snapshot = await manager.snapshot(controller.signal, boundary?.first, boundary?.last);
       controller.signal.throwIfAborted();
       await action(snapshot, controller.signal, (done, total) => {
         if (operationController === controller) operationMessage.textContent = label + " " + done + " / " + total;
@@ -216,35 +208,29 @@ export function setupHistoryTools(manager) {
       }
     }
   }
+  const onCopy = (event) => {
+    if (event.defaultPrevented || event.target.closest?.("input, textarea, .ace_editor")) return;
+    const selection = readOutputSelection(doc);
+    if (!selection) return;
+    const view = manager.views[selection.panel];
+    const first = view.index.indexOfId(selection.start.id);
+    const last = view.index.indexOfId(selection.end.id);
+    let mounted = 0;
+    for (const id of view.mounted.keys()) if (id >= selection.start.id && id <= selection.end.id) mounted++;
+    if (mounted === last - first + 1) return; // Ordinary selections keep native copying.
+    event.preventDefault();
+    const scope = scopePredicate(selection.panel);
+    perform("Preparing selected output…", async (snapshot, signal) => {
+      if (snapshot.first > selection.start.id) throw new Error("Some selected history was removed. Please select the text again.");
+      const text = await copyOutputSelection(snapshot, selection, { scope, signal });
+      signal.throwIfAborted();
+      if (!win.navigator.clipboard?.writeText) throw new Error("Clipboard access is unavailable. Export a log instead.");
+      await win.navigator.clipboard.writeText(text);
+      report("Selected output copied.");
+    }, { first: selection.start.id, last: selection.end.id });
+  };
+  doc.addEventListener("copy", onCopy);
   doc.querySelector("#output-operation-cancel").addEventListener("click", () => operationController?.abort());
-  doc.querySelectorAll("[data-output-action]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const panel = button.dataset.panel;
-      const action = button.dataset.outputAction;
-      if (action === "start" || action === "end") {
-        const id = manager.activeRows[panel];
-        if (!id || !manager.history.get(id)) return report("Choose a line in " + panel + " output first.");
-        if (action === "start") range[panel] = { start: id, end: id };
-        else if (!range[panel]) return report("Choose Select from here first.");
-        else range[panel].end = id;
-        const { start, end } = range[panel];
-        manager.views[panel].range = { start: Math.min(start, end), end: Math.max(start, end) };
-        manager.views[panel].schedule();
-        report(action === "start" ? "Selection starts at the chosen line." : "Range selected. Choose Copy selection.");
-        return;
-      }
-      const selectedRange = action === "all" ? null : manager.views[panel].range;
-      if (action === "copy" && !selectedRange) return report("Select a range first.");
-      const predicate = scopePredicate(panel);
-      perform("Preparing copied output…", async (snapshot, signal) => {
-        const text = await copySnapshot(snapshot, { scope: predicate, ...selectedRange, signal });
-        signal.throwIfAborted();
-        if (!win.navigator.clipboard?.writeText) throw new Error("Clipboard access is unavailable. Use normal text selection or export a log.");
-        await win.navigator.clipboard.writeText(text);
-        report("Output copied.");
-      });
-    });
-  });
 
   function saveLog() {
     perform("Preparing log…", async (snapshot, signal, progress) => {
@@ -281,22 +267,6 @@ export function setupHistoryTools(manager) {
       selected = -1;
       searchedThrough = 0;
     }
-    if (reset || routing) {
-      const hadRange = Object.values(range).some(Boolean);
-      for (const name of ["main", "secondary"]) {
-        range[name] = null;
-        manager.views[name].range = null;
-      }
-      if (routing && hadRange) report("The selected range was cleared because output window assignments changed.");
-    }
-    for (const name of ["main", "secondary"]) {
-      const selection = manager.views[name].range;
-      if (selection && selection.start < manager.history.first) {
-        range[name] = null;
-        manager.views[name].range = null;
-        report("The selected range was cleared because some of its history was removed.");
-      }
-    }
     if (!form.classList.contains("hide")) {
       // Throttle arrivals rather than debouncing them indefinitely during
       // continuous output. A changed query/scope still restarts the full search.
@@ -315,5 +285,5 @@ export function setupHistoryTools(manager) {
     updateCount();
   }
   changed();
-  return { open, saveLog, changed, cancel() { operationController?.abort(); searchController?.abort(); clearTimeout(debounce); clearTimeout(refreshTimer); } };
+  return { open, saveLog, changed, cancel() { operationController?.abort(); searchController?.abort(); clearTimeout(debounce); clearTimeout(refreshTimer); doc.removeEventListener("copy", onCopy); } };
 }

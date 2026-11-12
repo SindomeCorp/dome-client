@@ -1,9 +1,7 @@
 #browser-client {
-  // The desktop toolbar is fixed at the top; reserve its row so it cannot cover
-  // panel pause/copy controls or the output Find bar.
-  &:has(> .mini-controls) {
+  &:has(.output-workspace) {
     box-sizing: border-box;
-    padding-top: 28px;
+    min-height: 0;
   }
   .output-workspace {
     display: flex;
@@ -26,6 +24,7 @@
     min-width: 0;
     overflow: hidden;
     &.hide { display: none; }
+    > .mini-controls { position: absolute; }
   }
   .output-panel-header {
     display: flex;
@@ -38,6 +37,10 @@
     font-size: 12px;
     min-height: 26px;
     white-space: nowrap;
+    flex-wrap: wrap;
+    button { font-family: "Source Code Pro"; font-weight: bold; }
+    .mini-glyph { display: inline-flex; width: 12px; height: 12px; vertical-align: middle; }
+    .mini-glyph-svg { width: 12px; height: 12px; fill: currentColor; }
   }
   .output-unread { margin-left: auto; font-size: 11px; }
   .output-close { margin-left: auto; }
@@ -48,16 +51,16 @@
     min-width: 0;
     overflow-anchor: none;
     scroll-behavior: auto;
-    padding: 4px 8px;
-    &:focus { outline: 1px solid #888; outline-offset: -2px; }
+    &:focus { outline: none; }
+    &:focus-visible { outline: 1px solid #888; outline-offset: -2px; }
   }
   .output-rows, .output-spacer { padding: 0; margin: 0; }
   .output-spacer { pointer-events: none; }
   .output-row {
     min-height: 1em;
     overflow-wrap: anywhere;
-    &:focus { outline: 1px dashed #888; outline-offset: -1px; }
-    &.output-range-selected { background-color: rgba(60, 120, 180, .3); }
+    &:focus { outline: none; }
+    &:focus-visible { outline: 1px dashed #888; outline-offset: -1px; }
   }
   .output-nowrap-row {
     white-space: pre;
@@ -88,24 +91,6 @@
   }
   // Empty-panel help shares the content area, below a header that can wrap.
   #secondaryBuffer:has(+ .output-secondary-help:not(.hide)) { display: none; }
-  .output-copy-menu {
-    white-space: normal;
-    summary { cursor: pointer; white-space: nowrap; }
-    > div {
-      position: absolute;
-      right: 4px;
-      top: 28px;
-      z-index: 15;
-      width: min(290px, 90%);
-      background: #222;
-      border: 1px solid #666;
-      padding: 8px;
-      max-height: calc(100% - 40px);
-      overflow-y: auto;
-      box-sizing: border-box;
-      button { display: block; margin: 5px 0; }
-    }
-  }
   .output-find, .output-operation {
     display: flex;
     align-items: center;
@@ -127,6 +112,7 @@
 }
 .output-window-options {
   white-space: normal;
+  .output-filter-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
   > label, form > label { display: block; margin-top: 8px; }
   input[type="text"], textarea { width: 100%; box-sizing: border-box; }
   input[type="checkbox"] { margin: 0 4px; }
@@ -134,8 +120,12 @@
   #output-rule-error { color: #ffaaaa; }
 }
 @media (max-width: 767px) {
-  #browser-client:has(> .mini-controls) { padding-top: 0; }
   #browser-client .output-panel-header { gap: 3px; padding: 3px; font-size: 11px; flex-wrap: wrap; }
   #browser-client .output-divider { flex-basis: 12px; }
   #browser-client .output-find input { max-width: 150px; }
+}
+body.client { box-sizing: border-box; }
+#output-secondary-panel { container-type: inline-size; }
+@container (max-width: 260px) {
+  .output-pause .pause-label { display: none; }
 }

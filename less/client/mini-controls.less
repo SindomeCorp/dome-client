@@ -119,6 +119,36 @@
   }
 }
 
+#browser-client .compact-controls {
+  position: relative;
+  top: auto;
+  right: auto;
+  flex: 0 0 auto;
+  z-index: 2;
+  height: auto;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  padding: 4px 6px;
+  background-color: RGBA(0, 0, 0, 0.7);
+  border-top: 1px solid var(--frameColor, @frameColor);
+  border-bottom: 1px solid var(--frameColor, @frameColor);
+  overflow-x: auto;
+  overflow-y: hidden;
+  button { margin-top: 0; margin-right: 0; flex: 0 0 auto; }
+  .hidden-xs { display: none !important; }
+}
+.output-toolbar-measure {
+  position: fixed;
+  top: -10000px;
+  left: 0;
+  right: auto;
+  display: flex;
+  width: max-content;
+  visibility: hidden;
+  .hidden-xs { display: inline !important; }
+}
+
 @media (max-width: @screen-xs-max) {
   #browser-client .mini-controls {
     position: relative;

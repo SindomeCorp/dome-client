@@ -81,7 +81,7 @@ export function setupWindowHandlers({
 
   const onResizeHandler = function() {
     if (client.outputWindows) {
-      client.client.style.height = win.innerHeight + "px";
+      client.client.style.height = "100%";
       return;
     }
     client.client.style.height = `${win.innerHeight}px`;

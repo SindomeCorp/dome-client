@@ -79,6 +79,14 @@ reported. The heartbeat reached 273 ms including forced collection for memory
 measurements. After clearing and collection, the heap returned to about 2.9 MiB.
 The index figures are typed-array storage, not total browser heap usage.
 
+The selection-rendering replay also scrolls from the middle of the larger pane
+to its oldest row while text remains selected. At 20,000, 100,000, and 1,000,000
+retained lines, that pane kept 77 rows mounted, including the selected endpoint;
+the new viewport rendered in about 24–35 ms including two animation frames.
+At one million lines, the ordinary split view mounted 138 rows, closing took
+142 ms in yielded chunks, and export preparation took 1,499 ms. No long tasks
+were reported, and clearing returned collected heap usage to about 2.9 MiB.
+
 ## Acceptance checks and limitations
 
 - Mounted rows should depend on viewport and overscan rather than retained line
@@ -96,8 +104,12 @@ The index figures are typed-array storage, not total browser heap usage.
   including collection of pruned records while the worker remains unresolved.
 - Keep input, scrolling, and divider controls responsive during receipt, search,
   merging, and export preparation. Target processing chunks below 50 ms.
-- Verify variable-height anchoring, offscreen matches, cross-history copy ranges,
+- Verify variable-height anchoring, offscreen matches, copying native selections across history,
   global pruning, and releasing media and indexes after clearing.
+- Scrolling with native text selected must continue mounting viewport rows. Only
+  the selected endpoints remain pinned outside that range; copying resolves
+  intervening text from history in chunks. Pane padding is excluded from the
+  text viewport so final lines remain visible in every split orientation.
 - A bounded-history regression checks that short retained lines cannot pin the
   backing string of a large received burst. Input is copied in small chunks while
   preserving complete Unicode characters and CRLF boundaries.

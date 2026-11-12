@@ -45,29 +45,14 @@ test("Find searches unmounted output, scopes results, and clears old highlights"
   assert.equal(doc.querySelector("#output-find").classList.contains("hide"), true);
 });
 
-test("logical ranges copy across unmounted rows and pruning invalidates them", async (t) => {
-  const { manager, client, doc, win, feed, messages } = await createOutputApp(t);
-  let copied;
-  Object.defineProperty(win.navigator, "clipboard", { value: { writeText: async (text) => { copied = text; } }, configurable: true });
+test("pruning selected native text clears the selection with an explanation", async (t) => {
+  const { manager, client, doc, feed, messages } = await createOutputApp(t);
   await feed("one\ntwo\nthree\nfour\nfive\n");
-  manager.activeRows.main = 2;
-  doc.querySelector("[data-output-action=start][data-panel=main]").click();
-  manager.activeRows.main = 4;
-  doc.querySelector("[data-output-action=end][data-panel=main]").click();
-  doc.querySelector("[data-output-action=copy][data-panel=main]").click();
-  await settle();
-  assert.equal(copied, "two\nthree\nfour");
+  doc.getSelection().selectAllChildren(manager.views.main.mounted.get(2));
   client.preferences.performanceBuffer = 2;
   manager.prune();
-  assert.equal(manager.views.main.range, null);
-  assert.ok(messages.some((message) => message.includes("selected range was cleared")));
-  doc.querySelector("[data-output-action=all][data-panel=main]").click();
-  await settle();
-  assert.equal(copied, "four\nfive");
-  Object.defineProperty(win.navigator, "clipboard", { value: undefined });
-  doc.querySelector("[data-output-action=all][data-panel=main]").click();
-  await settle();
-  assert.ok(messages.some((message) => message.includes("Clipboard access is unavailable")));
+  assert.equal(doc.getSelection().isCollapsed, true);
+  assert.ok(messages.some((message) => message.includes("text selection was cleared")));
 });
 
 test("native log export uses history and clear cancels a pending export", async (t) => {
@@ -112,16 +97,16 @@ test("reconnecting resets stream fragments and ANSI state without losing retaine
   assert.deepEqual(manager.history.get(2).runs[0].classes, []);
 });
 
-test("closing a split clears a range whose panel assignment would change", async (t) => {
-  const { manager, feed, doc, messages } = await createOutputApp(t);
+test("closing a split releases its native selection and preserves all history", async (t) => {
+  const { manager, feed, doc } = await createOutputApp(t);
   manager.updateSettings({ open: true, selected: ["team-chat"] });
   await feed("main\n[-][Team-Chat] chat\n");
-  manager.activeRows.secondary = 2;
-  doc.querySelector("[data-output-action=start][data-panel=secondary]").click();
-  assert.ok(manager.views.secondary.range);
+  doc.getSelection().selectAllChildren(manager.views.secondary.mounted.get(2));
   manager.updateSettings({ open: false });
-  assert.equal(manager.views.secondary.range, null);
-  assert.ok(messages.some((message) => message.includes("window assignments changed")));
+  await manager.idle();
+  assert.equal(doc.getSelection().isCollapsed, true);
+  assert.equal(manager.views.main.index.length, 2);
+  assert.equal(doc.querySelector("[data-output-action]"), null);
 });
 
 test("live Find visits only new rows, updates during continuous traffic, and preserves the chosen match", async (t) => {
@@ -191,4 +176,33 @@ test("clearing during Find cancels the old snapshot and subsequent results conta
   manager.views.main.render();
   assert.equal(manager.views.main.highlight.id, manager.history.first);
   assert.equal(doc.querySelector("mark").textContent, "needle");
+});
+
+test("selected endpoints stay mounted while older rows render and Ctrl+C includes unmounted lines", async (t) => {
+  const { manager, doc, win, feed } = await createOutputApp(t);
+  let copied;
+  Object.defineProperty(win.navigator, "clipboard", { value: { writeText: async (text) => copied = text } });
+  await feed(Array.from({ length: 2000 }, (_, i) => "line " + i).join("\n") + "\n");
+  const view = manager.views.main;
+  view.setPaused(true);
+  const source = view.mounted.get(2000).firstChild;
+  const selection = doc.getSelection();
+  selection.setBaseAndExtent(source, 2, source, 5);
+  view.element.scrollTop = 0;
+  view.onScroll();
+  view.render();
+  assert.ok(view.mounted.has(1), "scrolling still mounts old output during a selection");
+  assert.ok(source.isConnected, "the selected endpoint is retained");
+  assert.ok(view.mounted.size < 150);
+  const first = view.mounted.get(1).firstChild;
+  selection.setBaseAndExtent(source, 5, first, 2);
+  const event = new win.Event("copy", { bubbles: true, cancelable: true });
+  doc.body.dispatchEvent(event);
+  assert.equal(event.defaultPrevented, true);
+  await expectText(doc.querySelector("#output-operation-message"), "Preparing selected output…");
+  for (let i = 0; i < 150 && copied == null; i++) await new Promise((resolve) => setTimeout(resolve, 20));
+  const expected = Array.from({ length: 2000 }, (_, i) => "line " + i);
+  expected[0] = expected[0].slice(2);
+  expected[1999] = expected[1999].slice(0, 5);
+  assert.equal(copied, expected.join("\n"));
 });

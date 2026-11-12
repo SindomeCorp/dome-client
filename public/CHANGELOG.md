@@ -5,15 +5,23 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-12
 
 ### Added
+- Add Puppet 1 and Puppet [All] output filters for puppet message prefixes.
+- Group output filters into Player, Admin, and Custom views with selected/total counts and selections that remain active across groups.
 - Added resizable output splits with channel presets, optional custom regex filters and testing, and saved layouts included in preference imports and exports.
 - Added full-history output Find, independent window pause controls, and copying ranges across scrollback.
 - Added output-window and rendering documentation, browser checks, and long-session performance replays.
 
 ### Changed
+- Use normal mouse selection and Ctrl/Cmd+C for copying output; remove the separate range-copy menus.
 - Render only nearby scrollback to keep large sessions responsive while retaining ordered history for unified log exports.
 - Prepare large logs in cancellable chunks and release offscreen media previews.
 
 ### Fixed
+- Restore the original single-window toolbar layout and move controls to the bottom when the main pane is too narrow.
+- Keep final lines fully visible in all split directions and render scrollback while text is selected; copy selections across offscreen history.
+- Scope toolbar Pause Scroll to main, match secondary pause styling, remove mouse-click outlines, confirm split closure, and place Output Windows fourth in options.
+- Treat typed autocomplete text literally so brackets and other punctuation cannot throw regex errors.
+- Return focus to the shared command input after double-clicking either output pane to pause or resume scrolling.
 - Keep manual scrollback in place with the default pause preferences until new output arrives.
 - Discard pruned routing work and bound pending routing memory so slow filters cannot accumulate an obsolete backlog.
 - Search only newly received lines when updating Find results and use compact per-line counts for common search terms.

@@ -19,13 +19,24 @@ Splits remain available on narrow screens. Both windows share your output font,
 font size, and color scheme.
 
 Each window has independent Pause/Resume and unread counts. The toolbar's Pause
-Scroll control and Pause/Break shortcut affect the last active output window,
-defaulting to main. Existing scroll-up, double-click, and long-click preferences
-apply to each window independently.
+Scroll button always controls main; secondary has a matching button in its own
+header. The Pause/Break shortcut affects the last active output window, defaulting
+to main. Existing scroll-up, double-click, and long-click preferences apply to
+each window independently.
+When double-click is configured to toggle scrolling, pausing or resuming either
+pane returns the cursor to the shared command input without changing its text.
+
+The toolbar stays in the main window at its original top position when its full
+labels fit. On smaller screens, or when resizing leaves main too narrow, the
+controls move to the bottom and use the existing compact layout. A single output
+window has no extra Main header or duplicate Pause button. Output Windows is the
+fourth tab in Client Options.
 
 Selecting a filter does not open a split. Existing messages remain in their
 assigned windows when you change filters. Closing secondary makes all retained
-messages available in main in their original order. Opening it again starts with
+messages available in main in their original order, after a confirmation. This
+applies to both Close Split buttons and choosing Single window in options.
+Opening it again starts with
 an empty secondary window and routes future matching messages.
 
 **Clear Buffer** clears both windows and their retained history, including what
@@ -34,8 +45,16 @@ would otherwise be exported in a log. Your filters and layout remain saved.
 ## Channel presets and custom filters
 
 The supplied presets cover Team Chat, Game Help, OOC Chat, Bit Chat, RP Info,
-SIC Comm, Debug Info, Guided Discussion, and OOC Messages beginning with `[OOC:`.
+SIC Comm, Debug Info, Guided Discussion, and OOC Messages beginning with `[OOC:`,
+plus Puppet 1 (`^\[p1`) and Puppet [All] (`^\[p[0-9]`). The all-puppets preset
+matches `[p` followed by any digit, including prefixes of multi-digit puppet IDs.
 They are case-sensitive and anchored at the start of a line.
+
+Player Filters opens by default and contains OOC Chat, Game Help, Guided
+Discussion, and OOC Messages. Admin Filters contains the remaining bundled
+presets. Custom Filters contains rules you create yourself. Each button shows
+selected/total counts, such as **Player Filters [1/4]**. Changing the visible group
+does not disable checked rules in other groups. New custom rules start unchecked.
 
 For example, the Team Chat pattern is:
 
@@ -144,29 +163,17 @@ Find, and copying actions are keyboard accessible.
 
 ## Select and copy text
 
-Normal mouse selection works within displayed content. Selected mounted rows
-are temporarily held in place so incoming output cannot remove the selection.
-Use the range tools for selections extending beyond the mounted area:
+Use normal mouse selection and Ctrl/Cmd+C. Scrolling while selecting continues
+to render older output; only the selection endpoints stay mounted outside the
+viewport. When a selection spans unmounted lines, the client copies the retained
+text between its endpoints, including those lines and partial boundary lines.
+Ordinary selections within mounted content use the browser's normal copy action.
+Clipboard access must be available for selections spanning unmounted history.
 
-1. Click an output line, or focus the output region and use arrow/Page Up/Page Down
-   keys to choose a line.
-2. Open that window's **Copy…** menu and choose **Select from here**.
-3. Scroll or Find the other boundary, choose its line, and select
-   **Select to here**.
-4. Choose **Copy selection**.
-
-Boundaries include their entire logical lines. Reverse selections are supported.
-Only messages belonging to that window are included. **Copy all** copies all
-retained messages assigned to that window. These actions copy plain text with
-line breaks and do not mount the selected history.
-
-Browser Select All only sees mounted content; use **Copy all** for the entire
-retained window.
-
-If pruning removes part of your selected range, the range is cleared with an
-explanation. Opening or closing a split also clears logical ranges because window
-assignments change. Clipboard access requires browser permission/support; normal
-selection and HTML log downloads remain alternatives.
+Browser Select All only sees mounted content. To save the complete retained
+session, use **Log**. A selection is cleared with an explanation if its endpoints
+are pruned by the history limit. Closing a split releases selections in that pane
+when its content returns to main.
 
 ## Unified log exports
 
@@ -223,13 +230,17 @@ are an array of entries:
     "id": "team-chat",
     "name": "Team Chat",
     "pattern": "^\\[-\\]\\[Team-Chat\\]",
-    "ignoreCase": false
+    "ignoreCase": false,
+    "group": "admin"
   }
 ]
 ```
 
 JSON requires doubled backslashes. Keep IDs stable when renaming presets so
-players retain checkbox selections. IDs must be unique; `custom-` IDs are
+saved checkbox selections survive. The optional `group` is `player` or `admin`;
+files without it default entries to Player Filters. Unknown groups are skipped
+with a warning. User-created rules always appear under Custom Filters.
+IDs must be unique; `custom-` IDs are
 reserved for player rules. Invalid entries are logged and skipped. An unreadable
 or invalid file logs a warning and supplies no presets without preventing startup.
 An empty array is valid. Restart the server after changing this file.

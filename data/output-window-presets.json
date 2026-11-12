@@ -1,11 +1,13 @@
 [
-  { "id": "team-chat", "name": "Team Chat", "pattern": "^\\[-\\]\\[Team-Chat\\]", "ignoreCase": false },
-  { "id": "game-help", "name": "Game Help", "pattern": "^\\[-\\]\\[Game-Help\\]", "ignoreCase": false },
-  { "id": "ooc-chat", "name": "OOC Chat", "pattern": "^\\[-\\]\\[OOC-Chat\\]", "ignoreCase": false },
-  { "id": "bit-chat", "name": "Bit Chat", "pattern": "^\\[-\\]\\[Bit-Chat\\]", "ignoreCase": false },
-  { "id": "rp-info", "name": "RP Info", "pattern": "^\\[-\\]\\[RP-Info\\]", "ignoreCase": false },
-  { "id": "sic-comm", "name": "SIC Comm", "pattern": "^\\[-\\]\\[SIC-COMM\\]", "ignoreCase": false },
-  { "id": "debug-info", "name": "Debug Info", "pattern": "^\\[-\\]\\[Debug-Info\\]", "ignoreCase": false },
-  { "id": "guided-discussion", "name": "Guided Discussion", "pattern": "^\\[-\\]\\[Guided-Discussion\\]", "ignoreCase": false },
-  { "id": "ooc-messages", "name": "OOC Messages", "pattern": "^\\[OOC:", "ignoreCase": false }
+  {"id": "team-chat", "name": "Team Chat", "pattern": "^\\[-\\]\\[Team-Chat\\]", "ignoreCase": false, "group": "admin"},
+  {"id": "game-help", "name": "Game Help", "pattern": "^\\[-\\]\\[Game-Help\\]", "ignoreCase": false, "group": "player"},
+  {"id": "ooc-chat", "name": "OOC Chat", "pattern": "^\\[-\\]\\[OOC-Chat\\]", "ignoreCase": false, "group": "player"},
+  {"id": "bit-chat", "name": "Bit Chat", "pattern": "^\\[-\\]\\[Bit-Chat\\]", "ignoreCase": false, "group": "admin"},
+  {"id": "rp-info", "name": "RP Info", "pattern": "^\\[-\\]\\[RP-Info\\]", "ignoreCase": false, "group": "admin"},
+  {"id": "sic-comm", "name": "SIC Comm", "pattern": "^\\[-\\]\\[SIC-COMM\\]", "ignoreCase": false, "group": "admin"},
+  {"id": "debug-info", "name": "Debug Info", "pattern": "^\\[-\\]\\[Debug-Info\\]", "ignoreCase": false, "group": "admin"},
+  {"id": "guided-discussion", "name": "Guided Discussion", "pattern": "^\\[-\\]\\[Guided-Discussion\\]", "ignoreCase": false, "group": "player"},
+  {"id": "ooc-messages", "name": "OOC Messages", "pattern": "^\\[OOC:", "ignoreCase": false, "group": "player"},
+  {"id": "puppet-1", "name": "Puppet 1", "pattern": "^\\[p1", "ignoreCase": false, "group": "admin"},
+  {"id": "puppet-all", "name": "Puppet [All]", "pattern": "^\\[p[0-9]", "ignoreCase": false, "group": "admin"}
 ]

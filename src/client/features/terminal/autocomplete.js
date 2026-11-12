@@ -125,7 +125,7 @@ export function setupAutoCompleteFeature({
         minLength: 2,
         source(req, next) {
           const term = new RegExp(
-            (req.term.length === 2 ? "^" : "") + req.term
+            (req.term.length === 2 ? "^" : "") + req.term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
           );
           const matches = client.autoCommands.filter((item) =>
             term.test(item.label)
