@@ -87,6 +87,26 @@ At one million lines, the ordinary split view mounted 138 rows, closing took
 142 ms in yielded chunks, and export preparation took 1,499 ms. No long tasks
 were reported, and clearing returned collected heap usage to about 2.9 MiB.
 
+### Pruning, clipboard, and saved-media regression replay
+
+After fixing block pruning, standalone media controls, and clipboard permission
+handling, the million-line replay mounted 138 rows and retained about 271.4 MiB
+of JavaScript heap. Closing the split took 139 ms in yielded chunks; preparing
+the log took 1,523 ms, with no reported long tasks. Clearing returned collected
+heap usage to about 3.0 MiB.
+
+A 100,000-line run overlapping coverage work recorded two receipt tasks of
+57–62 ms. Repeating that size alone recorded no long tasks: closing took 13 ms
+and export preparation took 163 ms. An actual 100,000-line download while
+closing a split and receiving more output kept every original line once, in
+order, and excluded output arriving after its snapshot boundary.
+
+Browser regression tests now exercise real Copy and Paste across unmounted
+history, including Chromium with asynchronous clipboard-write permission denied.
+Selection preparation is cancellable and discards its cached text on clear or
+split closure. Saved-log preview tests open the exported document independently,
+verify that media starts unloaded, and expand and collapse the controls.
+
 ## Acceptance checks and limitations
 
 - Mounted rows should depend on viewport and overscan rather than retained line

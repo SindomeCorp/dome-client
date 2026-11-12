@@ -28,6 +28,9 @@ All notable changes to this project will be documented in this file.
 - Prepare large logs in cancellable chunks and release offscreen media previews.
 
 ### Fixed
+- Prune complete nowrap blocks even when commands are echoed between their lines, and discard later lines of a block whose beginning was removed.
+- Make media preview controls work in downloaded logs without loading previews until opened.
+- Copy selections across offscreen history through the normal browser Copy action without requiring additional clipboard permission.
 - Restore Bit Chat under GM Filters with its original saved-selection ID.
 - Match empty secondary windows to the output theme and show their pause state before output arrives.
 - Keep Log and Pause Scroll visible in wrapped bottom toolbars and put main unread counts before Split.

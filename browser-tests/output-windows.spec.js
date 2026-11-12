@@ -7,6 +7,21 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => window.outputTest);
 });
 
+async function copyThroughNativeEvent(page, expected) {
+  await expect.poll(async () => {
+    await page.keyboard.press("Control+c");
+    return page.evaluate(() => window.copiedOutput);
+  }).toBe(expected);
+  await page.evaluate(() => {
+    const textarea = document.createElement("textarea");
+    textarea.id = "clipboard-verification";
+    document.body.append(textarea);
+    textarea.focus();
+  });
+  await page.keyboard.press("Control+v");
+  await expect(page.locator("#clipboard-verification")).toHaveValue(expected);
+}
+
 test("routing, split positions, keyboard resize and close preserve output", async ({ page }) => {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -231,9 +246,15 @@ test("closing a split confirms before merging history", async ({ page }) => {
   await expect(page.locator("#lineBuffer")).toContainText("preserve me");
 });
 
-test("scrolling while text is selected renders old rows and copies the entire logical selection", async ({ page }) => {
+test("scrolling while text is selected renders old rows and copies the entire logical selection", async ({ page, browserName }) => {
+  if (browserName === "chromium") {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Browser.setPermission", { permission: { name: "clipboard-write" }, setting: "denied", origin: "http://127.0.0.1:4318" });
+    await cdp.detach();
+  }
   await page.evaluate(() => {
-    Object.defineProperty(window.navigator, "clipboard", { configurable: true, value: { writeText: async (text) => { window.copiedOutput = text; } } });
+    Object.defineProperty(window.navigator, "clipboard", { configurable: true, get() { throw new Error("Async clipboard is unavailable"); } });
+    document.addEventListener("copy", (event) => { window.copiedOutput = event.clipboardData.getData("text/plain"); });
     return window.outputTest.feed(Array.from({ length: 2000 }, (_, i) => "selected history line " + i).join("\n") + "\n");
   });
   await page.evaluate(() => {
@@ -261,13 +282,13 @@ test("scrolling while text is selected renders old rows and copies the entire lo
     parts[parts.length - 1] = parts[parts.length - 1].slice(0, 8);
     return parts.join("\n");
   });
-  await page.keyboard.press("Control+c");
-  await expect.poll(() => page.evaluate(() => window.copiedOutput)).toBe(expected);
+  await copyThroughNativeEvent(page, expected);
 });
 
 test("mouse drag and wheel selection crosses unmounted history without losing copied text", async ({ page }) => {
   await page.evaluate(() => {
-    Object.defineProperty(window.navigator, "clipboard", { configurable: true, value: { writeText: async (text) => { window.copiedOutput = text; } } });
+    Object.defineProperty(window.navigator, "clipboard", { configurable: true, get() { throw new Error("Async clipboard is unavailable"); } });
+    document.addEventListener("copy", (event) => { window.copiedOutput = event.clipboardData.getData("text/plain"); });
     return window.outputTest.feed(Array.from({ length: 2000 }, (_, i) => "drag selected line " + i).join("\n") + "\n");
   });
   const tail = await page.locator("#lineBuffer [data-output-id='2000']").boundingBox();
@@ -299,8 +320,30 @@ test("mouse drag and wheel selection crosses unmounted history without losing co
   });
   expect(expected.lines).toBeGreaterThan(150);
   expect(await page.locator("[data-output-id]").count()).toBeLessThan(400);
-  await page.keyboard.press("Control+c");
-  await expect.poll(() => page.evaluate(() => window.copiedOutput)).toBe(expected.text);
+  await copyThroughNativeEvent(page, expected.text);
+});
+
+test("downloaded media previews work independently and load only when opened", async ({ page }) => {
+  await page.evaluate(() => window.outputTest.feed("https://media.example/picture.png\nhttps://media.example/movie.mp4\n"));
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#button-save-mini").click();
+  const stream = await (await downloadPromise).createReadStream();
+  let html = "";
+  for await (const chunk of stream) html += chunk;
+  await page.route("https://media.example/**", (route) => route.abort());
+  // Loading just the saved document must not depend on the running webclient.
+  await page.goto("about:blank");
+  await page.setContent(html);
+  await expect(page.locator("img, video")).toHaveCount(0);
+  const controls = page.locator("[data-output-media]");
+  await controls.nth(0).click();
+  await expect(page.locator("img")).toHaveCount(1);
+  await controls.nth(0).click();
+  await expect(page.locator("img")).toHaveCount(0);
+  await controls.nth(1).click();
+  await expect(page.locator("video source")).toHaveAttribute("src", "https://media.example/movie.mp4");
+  await controls.nth(1).click();
+  await expect(page.locator("video")).toHaveCount(0);
 });
 
 test("Player, GM, Coder, and Custom filter views retain selections across groups", async ({ page }) => {

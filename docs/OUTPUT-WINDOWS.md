@@ -88,7 +88,10 @@ absent from main until the split closes.
 
 Game-marked SDWC nowrap blocks stay together in main, even when their contents
 match a filter. Their lines share a horizontal scroll position when nowrap
-display is enabled. See [SDWC protocol markers](SDWC-OOB.md).
+display is enabled. History limits remove a complete chronological prefix through
+the end of a block when the limit cuts into it, including any command echo
+between its lines. Further lines of an unfinished, removed block are discarded
+until its end marker. See [SDWC protocol markers](SDWC-OOB.md).
 
 When custom filters are allowed:
 
@@ -184,7 +187,12 @@ to render older output; only the selection endpoints stay mounted outside the
 viewport. When a selection spans unmounted lines, the client copies the retained
 text between its endpoints, including those lines and partial boundary lines.
 Ordinary selections within mounted content use the browser's normal copy action.
-Clipboard access must be available for selections spanning unmounted history.
+The client prepares offscreen text in the background as the selection changes,
+then supplies it through the browser's normal Copy action without requesting
+additional clipboard permission. If a large selection is still preparing when
+you copy, a status message asks you to copy again when it is ready. No partial
+selection is placed on the clipboard. Changing or clearing the selection cancels
+preparation and releases the prepared text.
 
 Browser Select All only sees mounted content. To save the complete retained
 session, use **Log**. A selection is cleared with an explanation if its endpoints
@@ -199,7 +207,10 @@ are included. Setup help, Find controls, spacing elements, and live media player
 are excluded.
 
 Logs retain ANSI styling, links, and nowrap formatting. Media URLs and preview
-controls remain; active player state is not captured. **Embed CSS In Saved Logs**
+controls remain; previews start collapsed and can be opened in the saved log
+without the running client. Media loads only when opened and is released when
+collapsed. The log includes a small script for these controls; active player
+state is not captured. **Embed CSS In Saved Logs**
 continues to choose between self-contained CSS and legacy linked stylesheets.
 The native application's download integration remains supported.
 

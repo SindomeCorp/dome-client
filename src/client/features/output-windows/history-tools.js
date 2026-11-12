@@ -4,7 +4,8 @@ import { renderRecordHtml } from "./record-renderer.js";
 import { buildLogHtml } from "../../../shared/log-template.js";
 import { buildLogDownloadFilename } from "../terminal/log-download.js";
 import { SearchResults } from "./search-results.js";
-import { copyOutputSelection, readOutputSelection } from "./selection.js";
+import { setupOutputClipboard } from "./selection-clipboard.js";
+import { logPreviewScript } from "./log-preview.js";
 
 export async function searchSnapshot(snapshot, query, { scope = () => true, matchCase = false, signal, getRecord = (id) => snapshot.get(id) } = {}) {
   const matches = new SearchResults(query, matchCase, getRecord);
@@ -44,7 +45,7 @@ export async function exportSnapshot(snapshot, { client, css = "", inlineCss = t
     }
   }, { signal });
   if (group) batch += "</div>";
-  parts.push(batch, suffix);
+  parts.push(batch, logPreviewScript, suffix);
   progress(completed, Math.max(0, snapshot.last - snapshot.first + 1));
   return parts;
 }
@@ -208,28 +209,7 @@ export function setupHistoryTools(manager) {
       }
     }
   }
-  const onCopy = (event) => {
-    if (event.defaultPrevented || event.target.closest?.("input, textarea, .ace_editor")) return;
-    const selection = readOutputSelection(doc);
-    if (!selection) return;
-    const view = manager.views[selection.panel];
-    const first = view.index.indexOfId(selection.start.id);
-    const last = view.index.indexOfId(selection.end.id);
-    let mounted = 0;
-    for (const id of view.mounted.keys()) if (id >= selection.start.id && id <= selection.end.id) mounted++;
-    if (mounted === last - first + 1) return; // Ordinary selections keep native copying.
-    event.preventDefault();
-    const scope = scopePredicate(selection.panel);
-    perform("Preparing selected output…", async (snapshot, signal) => {
-      if (snapshot.first > selection.start.id) throw new Error("Some selected history was removed. Please select the text again.");
-      const text = await copyOutputSelection(snapshot, selection, { scope, signal });
-      signal.throwIfAborted();
-      if (!win.navigator.clipboard?.writeText) throw new Error("Clipboard access is unavailable. Export a log instead.");
-      await win.navigator.clipboard.writeText(text);
-      report("Selected output copied.");
-    }, { first: selection.start.id, last: selection.end.id });
-  };
-  doc.addEventListener("copy", onCopy);
+  const clipboard = setupOutputClipboard(manager);
   doc.querySelector("#output-operation-cancel").addEventListener("click", () => operationController?.abort());
 
   function saveLog() {
@@ -257,6 +237,7 @@ export function setupHistoryTools(manager) {
   }
 
   function changed({ reset = false, routing = false } = {}) {
+    clipboard.changed({ reset, routing });
     const secondary = scope.querySelector("[value=secondary]");
     secondary.disabled = !manager.isSplitOpen();
     if (secondary.disabled && scope.value === "secondary") scope.value = "all";
@@ -285,5 +266,5 @@ export function setupHistoryTools(manager) {
     updateCount();
   }
   changed();
-  return { open, saveLog, changed, cancel() { operationController?.abort(); searchController?.abort(); clearTimeout(debounce); clearTimeout(refreshTimer); doc.removeEventListener("copy", onCopy); } };
+  return { open, saveLog, changed, cancel() { operationController?.abort(); searchController?.abort(); clearTimeout(debounce); clearTimeout(refreshTimer); clipboard.cancel(); } };
 }

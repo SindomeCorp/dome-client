@@ -33,6 +33,9 @@ function enrichText(text, { record, state, client, width, exportMode }, counter)
       result += "<span data-preview-for=\"" + id + "\">";
       if (expanded) result += buildImagePreviewHtml({ imageId: id, url: safeUrl, parseYouTubeID: client.parseYouTubeID, bufferWidth: width });
       result += "</span>";
+      if (exportMode) {
+        result += "<template>" + buildImagePreviewHtml({ imageId: id, url: safeUrl, parseYouTubeID: client.parseYouTubeID, bufferWidth: width }) + "</template>";
+      }
     }
     offset = match.index + encodedUrl.length;
   }

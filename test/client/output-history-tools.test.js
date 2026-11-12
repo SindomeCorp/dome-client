@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createOutputApp } from "../../test-support/output-app.js";
+import { JSDOM } from "jsdom";
+import { exportSnapshot } from "../../src/client/features/output-windows/history-tools.js";
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 180));
 async function expectText(element, expected) {
@@ -179,9 +181,8 @@ test("clearing during Find cancels the old snapshot and subsequent results conta
 });
 
 test("selected endpoints stay mounted while older rows render and Ctrl+C includes unmounted lines", async (t) => {
-  const { manager, doc, win, feed } = await createOutputApp(t);
-  let copied;
-  Object.defineProperty(win.navigator, "clipboard", { value: { writeText: async (text) => copied = text } });
+  const { manager, doc, win, feed, messages } = await createOutputApp(t);
+  Object.defineProperty(win.navigator, "clipboard", { get() { throw new Error("Async clipboard must not be used"); } });
   await feed(Array.from({ length: 2000 }, (_, i) => "line " + i).join("\n") + "\n");
   const view = manager.views.main;
   view.setPaused(true);
@@ -199,10 +200,152 @@ test("selected endpoints stay mounted while older rows render and Ctrl+C include
   const event = new win.Event("copy", { bubbles: true, cancelable: true });
   doc.body.dispatchEvent(event);
   assert.equal(event.defaultPrevented, true);
-  await expectText(doc.querySelector("#output-operation-message"), "Preparing selected output…");
-  for (let i = 0; i < 150 && copied == null; i++) await new Promise((resolve) => setTimeout(resolve, 20));
+  for (let i = 0; i < 150 && !messages.some((message) => message.includes("Selected output is ready")); i++) await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.ok(messages.some((message) => message.includes("Selected output is ready")));
+  let copied;
+  const retry = new win.Event("copy", { bubbles: true, cancelable: true });
+  retry.clipboardData = { setData(type, text) { assert.equal(type, "text/plain"); copied = text; } };
+  doc.body.dispatchEvent(retry);
+  assert.equal(retry.defaultPrevented, true);
   const expected = Array.from({ length: 2000 }, (_, i) => "line " + i);
   expected[0] = expected[0].slice(2);
   expected[1999] = expected[1999].slice(0, 5);
   assert.equal(copied, expected.join("\n"));
+});
+
+test("saved logs expand and release inert image, video, and YouTube previews without client code", async (t) => {
+  const { manager, client, feed } = await createOutputApp(t);
+  client.preferences.imagePreview = true;
+  await feed("https://example.com/picture.png\nhttps://example.com/movie.gifv\nhttps://youtu.be/abcdefghijk\n");
+  const html = (await exportSnapshot(await manager.snapshot(), { client })).join("");
+  const exported = new JSDOM(html, { runScripts: "dangerously" });
+  t.after(() => exported.window.close());
+  const doc = exported.window.document;
+  assert.equal(doc.querySelectorAll("img, video, iframe").length, 0, "saved previews do not load eagerly");
+  const controls = [...doc.querySelectorAll("[data-output-media]")];
+  assert.equal(controls.length, 3);
+  for (const [index, tag] of ["img", "video", "iframe"].entries()) {
+    const control = controls[index];
+    control.click();
+    assert.equal(control.getAttribute("aria-expanded"), "true");
+    assert.ok(control.nextElementSibling.querySelector(tag));
+    if (tag === "video") assert.match(doc.querySelector("source").src, /movie\.mp4$/);
+    if (tag === "iframe") assert.match(doc.querySelector("iframe").src, /youtube\.com\/embed\/abcdefghijk$/);
+    control.click();
+    assert.equal(control.getAttribute("aria-expanded"), "false");
+    assert.equal(doc.querySelectorAll("img, video, iframe").length, 0);
+  }
+});
+
+test("an offscreen export keeps its chronology while a split closes, history is pruned, and output arrives", async (t) => {
+  const { manager, client, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["team-chat"] });
+  await feed(Array.from({ length: 20_000 }, (_, i) => (i % 2 ? "[-][Team-Chat] " : "") + "export row " + i).join("\n") + "\n");
+  const snapshot = await manager.snapshot();
+  let closed = false;
+  const parts = await exportSnapshot(snapshot, { client, progress() {
+    if (closed) return;
+    closed = true;
+    manager.updateSettings({ open: false });
+    client.preferences.performanceBuffer = 4;
+    manager.prune();
+    manager.appendLocal("new output after boundary\n");
+  } });
+  await manager.idle();
+  const html = parts.join("");
+  const ids = [...html.matchAll(/export row (\d+)/g)].map((match) => Number(match[1]));
+  assert.deepEqual(ids, Array.from({ length: 20_000 }, (_, i) => i));
+  assert.equal(html.includes("new output after boundary"), false);
+  assert.equal(manager.isSplitOpen(), false);
+  assert.equal(manager.views.main.index.length, 4);
+  assert.equal(manager.views.secondary.index.length, 0);
+  assert.ok(manager.views.main.mounted.size <= 4);
+});
+
+test("a prepared selection uses the native clipboard event and is invalidated by clear", async (t) => {
+  const { manager, doc, win, feed } = await createOutputApp(t);
+  await feed(Array.from({ length: 1000 }, (_, i) => "line " + i).join("\n") + "\n");
+  const view = manager.views.main;
+  view.setPaused(true);
+  const tail = view.mounted.get(1000).firstChild;
+  doc.getSelection().selectAllChildren(tail.parentElement);
+  view.element.scrollTop = 0;
+  view.onScroll();
+  view.render();
+  doc.getSelection().setBaseAndExtent(view.mounted.get(1).firstChild, 0, tail, 8);
+  doc.dispatchEvent(new win.Event("selectionchange"));
+  await settle();
+  let copied;
+  const event = new win.Event("copy", { bubbles: true, cancelable: true });
+  event.clipboardData = { setData(_type, text) { copied = text; } };
+  doc.body.dispatchEvent(event);
+  assert.equal(copied, Array.from({ length: 1000 }, (_, i) => "line " + i).join("\n"));
+  manager.clear();
+  const after = new win.Event("copy", { bubbles: true, cancelable: true });
+  after.clipboardData = { setData() { assert.fail("cleared selection must not be copied"); } };
+  doc.body.dispatchEvent(after);
+  assert.equal(after.defaultPrevented, false);
+});
+
+test("clearing during selection preparation aborts it without offering obsolete text", async (t) => {
+  const { manager, doc, win, feed, messages } = await createOutputApp(t);
+  await feed(Array.from({ length: 1000 }, (_, i) => "line " + i).join("\n") + "\n");
+  const view = manager.views.main;
+  view.setPaused(true);
+  const tail = view.mounted.get(1000).firstChild;
+  doc.getSelection().selectAllChildren(tail.parentElement);
+  view.element.scrollTop = 0;
+  view.onScroll();
+  view.render();
+  doc.getSelection().setBaseAndExtent(view.mounted.get(1).firstChild, 0, tail, 8);
+  const snapshot = manager.snapshot.bind(manager);
+  let signal;
+  let resume;
+  const gate = new Promise((resolve) => resume = resolve);
+  manager.snapshot = async (operationSignal, ...bounds) => {
+    signal = operationSignal;
+    await gate;
+    operationSignal.throwIfAborted();
+    return snapshot(operationSignal, ...bounds);
+  };
+  doc.body.dispatchEvent(new win.Event("copy", { bubbles: true, cancelable: true }));
+  assert.equal(signal.aborted, false);
+  manager.clear();
+  assert.equal(signal.aborted, true);
+  resume();
+  await settle();
+  assert.equal(messages.some((message) => message.includes("Selected output is ready")), false);
+  await feed("new session output\n");
+  const copy = new win.Event("copy", { bubbles: true, cancelable: true });
+  doc.getSelection().selectAllChildren(manager.views.main.mounted.get(manager.history.first));
+  doc.body.dispatchEvent(copy);
+  assert.equal(copy.defaultPrevented, false, "ordinary new selections still use native copying");
+});
+
+test("prepared selections include only their pane and split closure releases the cached copy", async (t) => {
+  const { manager, doc, win, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["team-chat"] });
+  await feed(Array.from({ length: 1000 }, (_, i) => "main " + i + "\n[-][Team-Chat] secondary " + i).join("\n") + "\n");
+  const view = manager.views.main;
+  view.setPaused(true);
+  const tail = view.mounted.get(1999).firstChild;
+  doc.getSelection().selectAllChildren(tail.parentElement);
+  view.element.scrollTop = 0;
+  view.onScroll();
+  view.render();
+  doc.getSelection().setBaseAndExtent(view.mounted.get(1).firstChild, 0, tail, 8);
+  doc.dispatchEvent(new win.Event("selectionchange"));
+  await settle();
+  let copied;
+  const copy = new win.Event("copy", { bubbles: true, cancelable: true });
+  copy.clipboardData = { setData(_type, text) { copied = text; } };
+  doc.body.dispatchEvent(copy);
+  assert.equal(copied, Array.from({ length: 1000 }, (_, i) => "main " + i).join("\n"));
+  manager.updateSettings({ open: false });
+  await manager.idle();
+  const after = new win.Event("copy", { bubbles: true, cancelable: true });
+  after.clipboardData = { setData() { assert.fail("a selection invalidated by closing the split must not be reused"); } };
+  doc.body.dispatchEvent(after);
+  assert.equal(after.defaultPrevented, false);
+  assert.equal(manager.views.main.index.length, 2000);
 });

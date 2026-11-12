@@ -43,6 +43,42 @@ test("history prunes marked blocks together and leaves unlimited history intact"
   assert.equal(history.prune(5), 0);
 });
 
+test("pruning treats blocks with interleaved local output as complete chronological spans", () => {
+  for (const limit of [3, 4, 5]) {
+    const history = new OutputHistory();
+    const group = {};
+    for (let i = 0; i < 3; i++) history.append(runs("map " + i), { group });
+    history.append(runs(">look"), { echo: true });
+    for (let i = 3; i < 6; i++) history.append(runs("map " + i), { group });
+    history.append(runs("after"));
+    const snapshot = history.snapshot();
+    assert.equal(history.prune(limit), 7);
+    assert.deepEqual([...history.snapshot()].map(recordText), ["after"]);
+    assert.equal(group.discarded, true);
+    assert.equal([...snapshot].length, 8, "an export already in progress keeps its complete boundary");
+    assert.equal(history.groups.filter(Boolean).length, 0);
+  }
+});
+
+test("removing an entire arriving block prefix marks its future lines discarded and releases its index", () => {
+  const history = new OutputHistory();
+  const group = {};
+  history.append(runs("map"), { group });
+  history.append(runs(">one"), { echo: true });
+  history.append(runs(">two"), { echo: true });
+  history.prune(1);
+  assert.equal(group.discarded, true);
+  assert.deepEqual([...history.snapshot()].map(recordText), [">two"]);
+  for (let i = 0; i < 10_000; i++) {
+    history.append(runs("block " + i), { group: {} });
+    history.prune(1);
+  }
+  assert.ok(history.groups.length <= 4097, "pruning releases block metadata and bounds empty index slots");
+  history.clear();
+  assert.equal(history.groups.length, 0);
+  assert.equal(history.groupHead, 0);
+});
+
 test("ANSI runs split into logical lines with state and blank lines preserved", () => {
   const ansi = createAnsiRenderer();
   const lines = splitRunsIntoLines(ansi.renderRuns("\u001b[31mred\n\nnext\u001b[0m plain\n"));

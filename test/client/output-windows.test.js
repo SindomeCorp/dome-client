@@ -78,6 +78,17 @@ test("nowrap blocks stay in main, share pruning, and local echo joins the unifie
   assert.equal(recordText(manager.views.main.index.at(0)), "after clear");
 });
 
+test("pruning an arriving nowrap block across local echo never retains its suffix", async (t) => {
+  const { manager, client, feed } = await createOutputApp(t);
+  client.preferences.performanceBuffer = 4;
+  await feed("#$# SDWC-START-NOWRAP\nmap one\nmap two\nmap three\n");
+  manager.appendLocal(">look\n", { echo: true });
+  await manager.idle();
+  await feed("map four\nmap five\nmap six\n#$# SDWC-END-NOWRAP\nafter\n");
+  assert.deepEqual([...manager.history.snapshot()].map(recordText), ["after"]);
+  assert.equal(manager.views.main.index.length, 1);
+});
+
 test("mounted rows stay bounded; offscreen history remains copyable", async (t) => {
   const { manager, doc, feed } = await createOutputApp(t);
   await feed(Array.from({ length: 20_000 }, (_, i) => "line " + i).join("\n") + "\n");
