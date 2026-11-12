@@ -5,14 +5,14 @@ import { loadOutputWindowPresets } from "../../src/services/output-window-preset
 
 const channels = {
   player: ["Game-Help", "Tip-Line", "Guided-Discussion", "OOC-Chat", "Fix-It", "War-Stories", "Free-Chat", "Politics-Wow"],
-  gm: ["Staff-Alerts", "Kill-Net", "Vote-Booth", "Team-Chat", "Login-Watcher", "Help-Net", "RP-Info", "Guest-Broadcaster", "Grid-Info", "Web-Watcher", "Build-Yard", "Local-OOC", "SIC-COMM", "Thought-Police", "SIC-ENC", "SIC-PM", "Commerce-Watch", "Crazy-Taxi", "Road-Rage", "Zoom-Room", "Money-Gram", "Babble-Net", "Radio-Net", "Comm-Net", "Anti-Gravity", "VR-Combat", "Stat-Watcher", "Water-Works", "NPC-net"],
+  gm: ["Bit-Chat", "Staff-Alerts", "Kill-Net", "Vote-Booth", "Team-Chat", "Login-Watcher", "Help-Net", "RP-Info", "Guest-Broadcaster", "Grid-Info", "Web-Watcher", "Build-Yard", "Local-OOC", "SIC-COMM", "Thought-Police", "SIC-ENC", "SIC-PM", "Commerce-Watch", "Crazy-Taxi", "Road-Rage", "Zoom-Room", "Money-Gram", "Babble-Net", "Radio-Net", "Comm-Net", "Anti-Gravity", "VR-Combat", "Stat-Watcher", "Water-Works", "NPC-net"],
   coder: ["Debug-Info", "Trace-Backs", "Eval-Log", "Security-Theater", "Action-Listener", "Code-Talk"]
 };
 
 test("bundled channel catalog preserves exact case, anchored prefixes, and supplied groups", () => {
   const source = readFileSync(new URL("../../data/output-window-presets.json", import.meta.url), "utf8");
   const presets = loadOutputWindowPresets({ readFile: () => source });
-  assert.equal(presets.length, 49);
+  assert.equal(presets.length, 50);
   for (const [group, names] of Object.entries(channels)) {
     for (const name of names) {
       const preset = presets.find((rule) => rule.id === name.toLowerCase());

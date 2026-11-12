@@ -7,6 +7,7 @@
   {"id": "war-stories", "name": "War Stories", "pattern": "^\\[-\\]\\[War-Stories\\]", "ignoreCase": false, "group": "player"},
   {"id": "free-chat", "name": "Free Chat", "pattern": "^\\[-\\]\\[Free-Chat\\]", "ignoreCase": false, "group": "player"},
   {"id": "politics-wow", "name": "Politics Wow", "pattern": "^\\[-\\]\\[Politics-Wow\\]", "ignoreCase": false, "group": "player"},
+  {"id": "bit-chat", "name": "Bit Chat", "pattern": "^\\[-\\]\\[Bit-Chat\\]", "ignoreCase": false, "group": "gm"},
   {"id": "staff-alerts", "name": "Staff Alerts", "pattern": "^\\[-\\]\\[Staff-Alerts\\]", "ignoreCase": false, "group": "gm"},
   {"id": "kill-net", "name": "Kill Net", "pattern": "^\\[-\\]\\[Kill-Net\\]", "ignoreCase": false, "group": "gm"},
   {"id": "vote-booth", "name": "Vote Booth", "pattern": "^\\[-\\]\\[Vote-Booth\\]", "ignoreCase": false, "group": "gm"},

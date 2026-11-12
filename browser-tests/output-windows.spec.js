@@ -319,7 +319,7 @@ test("Player, GM, Coder, and Custom filter views retain selections across groups
   await admin.click();
   await page.getByLabel("Puppet [All]", { exact: true }).check();
   await expect(player).toHaveText("Player Filters [1/11]");
-  await expect(admin).toHaveText("GM Filters [1/32]");
+  await expect(admin).toHaveText("GM Filters [1/33]");
   await custom.click();
   await page.getByLabel("Name", { exact: true }).fill("My output");
   await page.getByLabel("Pattern (without / delimiters)", { exact: true }).fill("^my output");

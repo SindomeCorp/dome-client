@@ -355,7 +355,7 @@ test("filter groups keep hidden selections active and display selected/total cou
   const custom = doc.querySelector("[data-filter-group=custom]");
   assert.equal(player.getAttribute("aria-selected"), "true");
   assert.equal(player.textContent, "Player Filters [0/11]");
-  assert.equal(admin.textContent, "GM Filters [0/32]");
+  assert.equal(admin.textContent, "GM Filters [0/33]");
   assert.equal(custom.textContent, "Custom Filters [0/0]");
   const checkbox = (id) => [...doc.querySelectorAll("[data-output-rule-id]")].find((element) => element.dataset.outputRuleId === id);
   assert.equal(checkbox("team-chat"), undefined);
@@ -363,7 +363,7 @@ test("filter groups keep hidden selections active and display selected/total cou
   admin.click();
   checkbox("team-chat").click();
   assert.equal(player.textContent, "Player Filters [1/11]");
-  assert.equal(admin.textContent, "GM Filters [1/32]");
+  assert.equal(admin.textContent, "GM Filters [1/33]");
   custom.click();
   doc.querySelector("#output-rule-name").value = "Custom message";
   doc.querySelector("#output-rule-pattern").value = "^custom";
@@ -437,7 +437,7 @@ test("Coder Filters owns Debug Info and saved selections survive the GM rename",
   manager.updateSettings({ selected: ["debug-info", "team-chat"] });
   const gm = doc.querySelector("[data-filter-group=gm]");
   const coder = doc.querySelector("[data-filter-group=coder]");
-  assert.equal(gm.textContent, "GM Filters [1/32]");
+  assert.equal(gm.textContent, "GM Filters [1/33]");
   assert.equal(coder.textContent, "Coder Filters [1/6]");
   gm.click();
   assert.equal(doc.querySelector("[data-output-rule-id=debug-info]"), null);
@@ -458,4 +458,33 @@ test("new GM channels and coder tracebacks route once with All Channels selected
     const preset = manager.config.presets.find((rule) => rule.id === id);
     assert.equal(preset.group, id === "trace-backs" ? "coder" : "gm");
   }
+});
+
+test("filter groups sort by name without changing saved selections or custom rule order", async (t) => {
+  const custom = [
+    { id: "custom-zulu", name: "Zulu", pattern: "^zulu" },
+    { id: "custom-alpha", name: "alpha", pattern: "^alpha" },
+    { id: "custom-ten", name: "Bravo 10", pattern: "^ten" },
+    { id: "custom-two", name: "bravo 2", pattern: "^two" }
+  ];
+  const stored = { ...outputWindowDefaults(), open: true, selected: ["bit-chat", "custom-zulu"], custom };
+  const { manager, doc, win, feed } = await createOutputApp(t, { stored });
+  const labels = (selector) => [...doc.querySelectorAll(selector + " .output-rule label")].map((label) => label.textContent);
+  assert.deepEqual(labels("#output-presets"), ["Fix It", "Free Chat", "Game Help", "Grid Output", "Guided Discussion", "OOC Chat", "OOC Messages", "Politics Wow", "SIC", "Tip Line", "War Stories"]);
+  doc.querySelector("[data-filter-group=gm]").click();
+  assert.deepEqual(labels("#output-presets").slice(0, 5), ["All Channels", "Anti Gravity", "Babble Net", "Bit Chat", "Build Yard"]);
+  assert.equal(doc.querySelector("[data-output-rule-id=bit-chat]").checked, true);
+  doc.querySelector("[data-filter-group=coder]").click();
+  assert.deepEqual(labels("#output-presets"), ["Action Listener", "Code Talk", "Debug Info", "Eval Log", "Security Theater", "Trace-Backs"]);
+  doc.querySelector("[data-filter-group=custom]").click();
+  assert.deepEqual(labels("#output-custom-rules"), ["alpha", "bravo 2", "Bravo 10", "Zulu"]);
+  assert.deepEqual(manager.settings.custom.map((rule) => rule.id), custom.map((rule) => rule.id));
+  doc.querySelector("[aria-label='Edit Zulu']").click();
+  doc.querySelector("#output-rule-name").value = "Aardvark";
+  doc.querySelector("#output-rule-form").dispatchEvent(new win.Event("submit", { cancelable: true }));
+  assert.deepEqual(labels("#output-custom-rules"), ["Aardvark", "alpha", "bravo 2", "Bravo 10"]);
+  assert.equal(doc.querySelector("[data-output-rule-id=custom-zulu]").checked, true);
+  await feed("[-][Bit-Chat] restored\nbefore [-][Bit-Chat] stays main\n[-][bit-chat] stays main\n");
+  assert.equal(manager.views.secondary.index.length, 1);
+  assert.equal(manager.views.main.index.length, 2);
 });

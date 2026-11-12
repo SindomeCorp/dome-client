@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 - Added output-window and rendering documentation, browser checks, and long-session performance replays.
 
 ### Changed
+- Sort output filters alphabetically within each group, including custom filters.
 - Display output-filter checkboxes in three responsive columns on wider screens.
 - Rename Admin Filters to GM Filters and make the secondary controls a transparent overlay.
 - Use normal mouse selection and Ctrl/Cmd+C for copying output; remove the separate range-copy menus.
@@ -25,6 +26,7 @@ All notable changes to this project will be documented in this file.
 - Prepare large logs in cancellable chunks and release offscreen media previews.
 
 ### Fixed
+- Restore Bit Chat under GM Filters with its original saved-selection ID.
 - Match empty secondary windows to the output theme and show their pause state before output arrives.
 - Keep Log and Pause Scroll visible in wrapped bottom toolbars and put main unread counts before Split.
 - Restore the original single-window toolbar layout and move controls to the bottom when the main pane is too narrow.

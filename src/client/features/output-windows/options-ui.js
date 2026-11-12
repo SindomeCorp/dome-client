@@ -9,6 +9,8 @@ export function setupOutputOptions(manager) {
   const groups = ["player", "gm", "coder", "custom"];
   const groupLabels = { player: "Player Filters", gm: "GM Filters", coder: "Coder Filters", custom: "Custom Filters" };
   const groupButtons = [...doc.querySelectorAll("[data-filter-group]")];
+  const collator = new Intl.Collator(undefined, { sensitivity: "base", numeric: true });
+  const sortRules = (rules) => [...rules].sort((a, b) => collator.compare(a.name, b.name));
   const form = doc.querySelector("#output-rule-form");
   const name = doc.querySelector("#output-rule-name");
   const pattern = doc.querySelector("#output-rule-pattern");
@@ -105,11 +107,11 @@ export function setupOutputOptions(manager) {
     presets.classList.toggle("hide", activeGroup === "custom");
     presets.setAttribute("aria-labelledby", "output-filter-tab-" + activeGroup);
     const visibleRules = activeGroup === "custom" ? [] : rulesByGroup[activeGroup];
-    presets.replaceChildren(...visibleRules.map((rule) => renderRule(rule, false)));
+    presets.replaceChildren(...sortRules(visibleRules).map((rule) => renderRule(rule, false)));
     const customPanel = doc.querySelector("#output-custom-panel");
     customPanel.classList.toggle("hide", activeGroup !== "custom");
     customPanel.setAttribute("aria-labelledby", "output-filter-tab-custom");
-    doc.querySelector("#output-custom-rules").replaceChildren(...manager.settings.custom.map((rule) => renderRule(rule, true)));
+    doc.querySelector("#output-custom-rules").replaceChildren(...sortRules(manager.settings.custom).map((rule) => renderRule(rule, true)));
     form.classList.toggle("hide", !config.customRegexEnabled);
     if (focusedRule) {
       [...doc.querySelectorAll("[data-output-rule-id]")].find((element) => element.dataset.outputRuleId === focusedRule)?.focus({ preventScroll: true });

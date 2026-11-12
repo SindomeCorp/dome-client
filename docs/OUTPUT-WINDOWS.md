@@ -63,6 +63,7 @@ prefixes of multi-digit puppet IDs. All Channels matches any line starting `[-][
 Custom Filters contains rules you create yourself. Each button shows selected/total
 counts, such as **Player Filters [1/11]**. Changing the visible group does not disable
 checked rules in other groups. New custom rules start unchecked.
+Filters are listed alphabetically by name within each group, including Custom.
 Filter checkboxes use three columns on wide screens, two on medium screens, and
 one on narrow screens. Custom-filter names and edit/delete controls wrap within
 their column.
