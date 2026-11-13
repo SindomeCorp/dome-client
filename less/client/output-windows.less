@@ -30,7 +30,8 @@
   }
   .output-panel-header {
     position: absolute;
-    inset: 0 0 auto;
+    // Match the main overlay's gutter so controls cannot cover scrollbar arrows.
+    inset: 0 20px auto 0;
     z-index: 2;
     pointer-events: none;
     display: flex;

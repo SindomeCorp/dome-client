@@ -2,6 +2,7 @@ import { HeightIndex } from "./height-index.js";
 import { renderRecordHtml, toggleRecordPreview } from "./record-renderer.js";
 
 const MAX_SCROLL_HEIGHT = 8_000_000;
+const SCROLL_EPSILON = 0.01; // Ignore rounding noise without swallowing subpixel gestures.
 
 export class VirtualOutputView {
   constructor({ element, client, win, name, onActive = () => {}, onState = () => {}, onMessage = () => {} }) {
@@ -115,11 +116,25 @@ export class VirtualOutputView {
   }
 
   onScroll() {
+    const top = this.element.scrollTop;
     if (this.pendingJump
-      || (this.expectedScrollTop != null && Math.abs(this.element.scrollTop - this.expectedScrollTop) < 1)) return;
+      || (this.expectedScrollTop != null && Math.abs(top - this.expectedScrollTop) < SCROLL_EPSILON)) return;
+    const maximum = Math.max(0, this.element.scrollHeight - this.element.clientHeight);
+    // Media collapse or resizing can clamp the viewport to a smaller bottom.
+    // That layout adjustment is not an upward user gesture or a pause request.
+    if (this.element.clientHeight > 0 && this.expectedScrollTop > maximum + SCROLL_EPSILON
+      && Math.abs(top - maximum) < SCROLL_EPSILON) {
+      this.expectedScrollTop = top;
+      this.schedule();
+      return;
+    }
+    // Moving away from the tail must win over the return-to-bottom tolerance.
+    // Remember accepted scrolls too, since several can arrive before a render.
+    const movingUp = this.expectedScrollTop != null && top < this.expectedScrollTop;
+    this.expectedScrollTop = top;
     this.onActive(this.name);
     if (!this.index.length && this.help) return;
-    const bottom = this.element.scrollHeight - this.element.scrollTop - this.element.clientHeight <= 24;
+    const bottom = !movingUp && maximum - top <= 24;
     this.following = bottom;
     if (this.client.preferences.scrollUpToPause && this.paused === bottom) this.setPaused(!bottom);
     this.captureAnchor();
@@ -162,6 +177,11 @@ export class VirtualOutputView {
 
   reset() {
     this.releaseAll();
+    // Clearing/reindexing shrinks the scroll surface. Establish its new native
+    // position so the resulting clamp is not mistaken for an upward gesture.
+    this.top.style.height = this.bottom.style.height = "0px";
+    this.element.scrollTop = 0;
+    this.expectedScrollTop = this.element.scrollTop;
     this.index = new HeightIndex(this.index.defaultHeight);
     this.anchor = null;
     this.following = !this.paused;
@@ -358,7 +378,8 @@ export class VirtualOutputView {
     this.top.style.height = gapHeight(0, positions[0] ?? 0) + "px";
     this.bottom.style.height = gapHeight((positions.at(-1) ?? -1) + 1, this.index.length) + "px";
     this.programmatic = true;
-    this.element.scrollTop = physicalTop;
+    // A redundant write can interrupt the browser's smooth wheel/touch scroll.
+    if (Math.abs(this.element.scrollTop - physicalTop) >= SCROLL_EPSILON) this.element.scrollTop = physicalTop;
     this.expectedScrollTop = this.element.scrollTop;
     this.pendingJump = false;
     if (endpoints && endpoints.anchorNode.isConnected && endpoints.focusNode.isConnected

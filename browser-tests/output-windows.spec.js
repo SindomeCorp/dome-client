@@ -196,6 +196,152 @@ test("manual scrolling works with default preferences and resumes on arriving ou
   expect(await output.evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(25);
 });
 
+for (const mode of ["single", "split", "disabled"]) {
+  for (const autoPause of [false, true]) {
+    test("small wheel movements and slow touch leave the tail: " + mode + ", auto-pause " + autoPause, async ({ page }, testInfo) => {
+      if (mode === "disabled") {
+        await page.goto("/?splits=off");
+        await page.waitForFunction(() => window.outputTest);
+      }
+      await page.evaluate(async ({ mode, autoPause }) => {
+        const { manager, client, feed } = window.outputTest;
+        client.preferences.scrollUpToPause = autoPause;
+        manager.updateSettings({ open: mode === "split", position: "bottom", secondarySize: 35, selected: ["team-chat"] });
+        await feed(Array.from({ length: 600 }, (_, i) => "scroll row " + i + "\n[-][Team-Chat] chat " + i).join("\n") + "\n");
+      }, { mode, autoPause });
+      for (const panel of mode === "split" ? ["main", "secondary"] : ["main"]) {
+        const output = page.locator(panel === "main" ? "#lineBuffer" : "#secondaryBuffer");
+        const state = () => page.evaluate((panel) => {
+          const view = window.outputTest.manager.views[panel];
+          return { paused: view.paused, following: view.following, distance: view.element.scrollHeight - view.element.clientHeight - view.element.scrollTop };
+        }, panel);
+        await output.hover();
+        for (let i = 1; i <= 3; i++) {
+          await page.mouse.wheel(0, -5);
+          await expect.poll(state).toMatchObject({ paused: autoPause, following: false });
+          await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+          await expect.poll(async () => (await state()).distance).toBeGreaterThanOrEqual(i * 4);
+        }
+        await page.mouse.wheel(0, 5);
+        await expect.poll(state).toMatchObject({ paused: false, following: true });
+        await expect.poll(async () => (await state()).distance).toBeLessThan(2);
+        if (testInfo.project.name === "narrow-touch") {
+          const touch = await page.context().newCDPSession(page);
+          const box = await output.boundingBox();
+          const point = { x: box.x + box.width / 2, y: box.y + box.height / 4 };
+          await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+          for (let step = 1; step <= 12; step++) {
+            await touch.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ ...point, y: point.y + step * 10 }] });
+            await page.waitForTimeout(20);
+          }
+          await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+          await touch.detach();
+          await expect.poll(state).toMatchObject({ paused: autoPause, following: false });
+          expect((await state()).distance).toBeGreaterThan(60);
+          expect(await page.locator("[data-output-id]").count()).toBeLessThan(400);
+          // Let native touch inertia finish before testing a later arrival or
+          // wheel gesture. Its remaining upward movement is still user input.
+          let previous;
+          let stable = 0;
+          await expect.poll(async () => {
+            const top = await output.evaluate((element) => element.scrollTop);
+            stable = top === previous ? stable + 1 : 0;
+            previous = top;
+            return stable;
+          }, { intervals: [50] }).toBeGreaterThanOrEqual(3);
+        } else {
+          await page.mouse.wheel(0, -10);
+          await expect.poll(state).toMatchObject({ paused: autoPause, following: false });
+        }
+        // Arrivals retain the existing preference: follow when automatic
+        // pausing is off, or hold the scrollback anchor when it is on.
+        await page.evaluate(() => window.outputTest.feed("new scroll main\n[-][Team-Chat] new scroll chat\n"));
+        await expect.poll(state).toMatchObject({ paused: autoPause, following: !autoPause });
+        if (autoPause) {
+          expect((await state()).distance).toBeGreaterThan(5);
+          await output.hover();
+          await page.mouse.wheel(0, 100_000);
+          await expect.poll(state).toMatchObject({ paused: false, following: true });
+        }
+        await expect.poll(async () => (await state()).distance).toBeLessThan(2);
+      }
+    });
+  }
+}
+
+test("native scrollbar up-arrow enters scrollback without bouncing", async ({ page, browserName, headless }, testInfo) => {
+  test.skip(browserName !== "chromium" || headless || testInfo.project.name === "narrow-touch" || process.platform !== "linux",
+    "Requires headed Linux Chromium's native scrollbar arrows; run under xvfb-run with --headed.");
+  for (const mode of ["single", "split", "disabled"]) {
+    for (const autoPause of [false, true]) {
+      await page.goto(mode === "disabled" ? "/?splits=off" : "/");
+      await page.waitForFunction(() => window.outputTest);
+      await page.evaluate(async ({ mode, autoPause }) => {
+        const { manager, client, feed } = window.outputTest;
+        manager.clear();
+        client.preferences.scrollUpToPause = autoPause;
+        manager.updateSettings({ open: mode === "split", position: "bottom", secondarySize: 35, selected: ["team-chat"] });
+        for (const view of Object.values(manager.views)) view.setPaused(false);
+        await feed(Array.from({ length: 1000 }, (_, i) => "arrow row " + i + "\n[-][Team-Chat] arrow chat " + i).join("\n") + "\n");
+      }, { mode, autoPause });
+      for (const panel of mode === "split" ? ["main", "secondary"] : ["main"]) {
+        const output = page.locator(panel === "main" ? "#lineBuffer" : "#secondaryBuffer");
+        // Coordinate-based native controls must be painted after layout settles.
+        await page.screenshot();
+        await expect.poll(() => output.evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(2);
+        const arrow = await output.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          const right = parseFloat(style.borderRightWidth);
+          const width = element.offsetWidth - element.clientWidth - parseFloat(style.borderLeftWidth) - right;
+          const x = rect.right - right - width / 2;
+          const y = rect.top + parseFloat(style.borderTopWidth) + width / 2;
+          return { width, x, y, top: element.scrollTop, hit: document.elementFromPoint(x, y)?.tagName };
+        });
+        expect(arrow.width, "classic scrollbar must be visible for a native arrow click").toBeGreaterThan(0);
+        for (let click = 1; click <= 3; click++) {
+          await output.hover();
+          await page.mouse.click(arrow.x, arrow.y, { delay: 50 });
+          expect(await page.evaluate(() => window.outputTest.manager.isSplitOpen()), "the arrow must not hit the split's Close button").toBe(mode === "split");
+          await expect.poll(() => page.evaluate((panel) => {
+            const view = window.outputTest.manager.views[panel];
+            return { following: view.following, paused: view.paused };
+          }, panel), { message: "native arrow: " + mode + "/" + panel + ", auto-pause " + autoPause + ", click " + click + ", " + JSON.stringify(arrow) })
+            .toEqual({ following: false, paused: autoPause });
+          await expect.poll(() => output.evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight))
+            .toBeGreaterThan(click * 20);
+        }
+        await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        expect(await output.evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeGreaterThan(60);
+      }
+    }
+  }
+});
+
+test("collapsing media at the bottom does not look like an upward scrolling gesture", async ({ page }) => {
+  await page.route("https://media.example/scroll-height.png", (route) => route.fulfill({
+    contentType: "image/svg+xml", body: "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='500'></svg>"
+  }));
+  for (const autoPause of [false, true]) {
+    await page.evaluate(async (autoPause) => {
+      const { manager, client, feed } = window.outputTest;
+      manager.clear();
+      client.preferences.scrollUpToPause = autoPause;
+      client.preferences.imagePreview = true;
+      await feed(Array.from({ length: 200 }, (_, i) => "media row " + i).join("\n") + "\nhttps://media.example/scroll-height.png\n");
+    }, autoPause);
+    await expect(page.locator("#lineBuffer img")).toBeVisible();
+    await expect.poll(() => page.locator("#lineBuffer img").evaluate((image) => image.naturalHeight)).toBe(500);
+    await page.locator("#lineBuffer [data-output-media]").click();
+    await expect(page.locator("#lineBuffer img")).toHaveCount(0);
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    expect(await page.evaluate(() => {
+      const view = window.outputTest.manager.views.main;
+      return { following: view.following, paused: view.paused };
+    })).toEqual({ following: true, paused: false });
+  }
+});
+
 test("single-window chrome stays at its original position and compact controls follow pane width", async ({ page }, testInfo) => {
   await expect(page.locator("#output-main-panel header")).toHaveCount(0);
   const main = await page.locator("#lineBuffer").boundingBox();
