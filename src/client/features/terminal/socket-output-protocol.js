@@ -127,6 +127,10 @@ export function createSocketOutputProtocolParser() {
     },
 
     resetEditor,
+    reset() {
+      carry = "";
+      resetEditor();
+    },
 
     parse(incomingSegmentRaw) {
       const events = [];

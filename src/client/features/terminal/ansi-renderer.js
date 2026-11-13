@@ -18,6 +18,13 @@ function escapeHtml(text) {
     .replace(/>/g, "&gt;");
 }
 
+export function renderAnsiRunHtml(run) {
+  const escaped = escapeHtml(run.text);
+  const classAttr = run.classes.length ? " class=\"" + run.classes.join(" ") + "\"" : "";
+  const styleAttr = run.inlineStyles.length ? " style=\"" + run.inlineStyles.join("; ") + "\"" : "";
+  return classAttr || styleAttr ? "<span" + classAttr + styleAttr + ">" + escaped + "</span>" : escaped;
+}
+
 function colorFromAnsiCode(code, isBackground) {
   if (code >= 30 && code <= 37) {
     return { kind: "xterm256", index: code - 30, isBackground };
@@ -236,27 +243,15 @@ export function createAnsiRenderer() {
   };
 
   const flushRun = (parts, style, run) => {
-    if (!run) {
-      return "";
-    }
-    const escaped = escapeHtml(run);
-    if (style.classes.length === 0 && style.inlineStyles.length === 0) {
-      parts.push(escaped);
-      return "";
-    }
-
-    const classAttr = style.classes.length > 0
-      ? ` class="${style.classes.join(" ")}"`
-      : "";
-    const styleAttr = style.inlineStyles.length > 0
-      ? ` style="${style.inlineStyles.join("; ")}"`
-      : "";
-    parts.push(`<span${classAttr}${styleAttr}>${escaped}</span>`);
+    if (run) parts.push({ text: run, classes: style.classes, inlineStyles: style.inlineStyles });
     return "";
   };
 
   return {
     renderChunk(input) {
+      return this.renderRuns(input).map(renderAnsiRunHtml).join("");
+    },
+    renderRuns(input) {
       const source = carry + (input ?? "");
       carry = "";
       const parts = [];
@@ -324,7 +319,7 @@ export function createAnsiRenderer() {
       flushTextTo(idx);
       run = flushRun(parts, currentStyle, run);
       void currentKey;
-      return parts.join("");
+      return parts;
     },
     resetState() {
       state.fg = null;

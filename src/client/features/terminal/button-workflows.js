@@ -17,8 +17,11 @@ export function bindReconnectButton({ button, client, setupSocket }) {
 
   button.addEventListener("click", () => {
     client.socket?.disconnect?.();
-    client.resetSdwcNowrapState?.();
-    client.resetAnsiRendererState?.();
+    if (client.resetOutputStream) client.resetOutputStream();
+    else {
+      client.resetSdwcNowrapState?.();
+      client.resetAnsiRendererState?.();
+    }
     client.socket?.off?.("data", client.parseSocketData);
     client.socket = setupSocket({ client });
     client.socket.on("data", client.parseSocketData);
@@ -34,6 +37,10 @@ export function bindSaveLogButtons({ buttons, client, logger }) {
   const warnUnsupported = () => logger?.warn?.("Log download is not supported in this environment.");
   const handler = event => {
     event?.preventDefault?.();
+    if (client.outputWindows) {
+      client.outputWindows.tools.saveLog();
+      return;
+    }
     if (typeof document === "undefined" || typeof Blob === "undefined") {
       warnUnsupported();
       return;
@@ -106,7 +113,9 @@ export function bindSaveLogButtons({ buttons, client, logger }) {
 }
 
 export function clearClientBuffer(client) {
-  client.buffer.innerHTML = "";
+  if (client.outputWindows) client.outputWindows.clear();
+  else client.buffer.innerHTML = "";
+  client.resetOutputProtocol?.();
   client.resetSdwcNowrapState?.();
   client.resetAnsiRendererState?.();
 }

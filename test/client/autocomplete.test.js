@@ -221,3 +221,18 @@ test("setupAutoComplete respects existing commandSuggestions function", async ()
   assert.equal(called, true);
   assert.equal(input.commandSuggestions, original);
 });
+
+test("autocomplete treats typed brackets and other regex punctuation as literal text", async () => {
+  const { window, input } = await setup(["say | say something", "[z-a] | literal bracket command", "look.* | literal punctuation"]);
+  const source = input.commandSuggestionsOptions.source;
+  for (const term of ["[z-a]", "[", "\\", "(", "look.*", "say?", "a{2,1}"]) {
+    assert.doesNotThrow(() => source({ term }, () => {}));
+    input.value = term;
+    assert.doesNotThrow(() => input.dispatchEvent(new window.Event("input")));
+  }
+  let matches;
+  source({ term: "look.*" }, (found) => matches = found);
+  assert.deepEqual(matches.map((item) => item.value), ["look.*"]);
+  source({ term: "s.y" }, (found) => matches = found);
+  assert.equal(matches.length, 0);
+});

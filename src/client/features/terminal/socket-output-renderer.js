@@ -119,11 +119,16 @@ export function createSocketOutputRenderer({
   };
 
   const resetSdwcNowrapState = () => {
+    client.outputWindows?.endBlock();
     sdwcNowrapActive = false;
     activeSdwcNowrapBlock = null;
   };
 
   const startSdwcNowrapBlock = () => {
+    if (client.outputWindows) {
+      client.outputWindows.startBlock();
+      return;
+    }
     const nowrapEnabled = client.preferences?.sdwcNowrapBlocks === true;
     logger.info(nowrapEnabled
       ? "Received SDWC-START-NOWRAP"
@@ -139,6 +144,10 @@ export function createSocketOutputRenderer({
   };
 
   const endSdwcNowrapBlock = () => {
+    if (client.outputWindows) {
+      client.outputWindows.endBlock();
+      return;
+    }
     const nowrapEnabled = client.preferences?.sdwcNowrapBlocks === true;
     logger.info(nowrapEnabled
       ? "Received SDWC-END-NOWRAP"
@@ -163,6 +172,12 @@ export function createSocketOutputRenderer({
   };
 
   const appendOutputSegment = (rawSegment) => {
+    if (client.outputWindows) {
+      const runs = ansiRenderer.renderRuns(rawSegment);
+      triggerAlertIfMatched(runs.map((run) => run.text).join(""));
+      client.outputWindows.appendRuns(runs);
+      return client.outputWindows.history.length;
+    }
     if (!rawSegment) return client.buffer.childNodes.length;
 
     const outputSegment = renderOutputSegment(rawSegment);
@@ -173,6 +188,10 @@ export function createSocketOutputRenderer({
   };
 
   const pruneBuffer = () => {
+    if (client.outputWindows) {
+      client.outputWindows.prune();
+      return client.outputWindows.history.length;
+    }
     let kidCount = client.buffer.childNodes.length;
     if (client.preferences.performanceBuffer > 0) {
       while (kidCount > client.preferences.performanceBuffer) {

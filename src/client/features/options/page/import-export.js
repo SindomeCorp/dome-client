@@ -12,7 +12,7 @@ function createClientOptionsImportExportBinder({
   showToast
 }) {
   function buildExportPayload() {
-    return buildExportPayloadForOptions({ options });
+    return buildExportPayloadForOptions({ options, actions: getActions() });
   }
 
   async function importClientOptionsJson(file) {

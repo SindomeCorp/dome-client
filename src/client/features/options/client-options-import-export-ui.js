@@ -4,11 +4,14 @@ import {
   buildClientOptionsImportPlan
 } from "./client-options-import-export.js";
 
-export function buildExportPayload({ options }) {
-  return buildClientOptionsExportPayload({
+export function buildExportPayload({ options, actions = {} }) {
+  const payload = buildClientOptionsExportPayload({
     optionNames: Object.keys(options.options),
     getOptionState: (name) => options.get(name).state
   });
+  const outputWindows = actions.getOutputWindows?.();
+  if (outputWindows) payload.outputWindows = outputWindows;
+  return payload;
 }
 
 function downloadClientOptionsJson({
@@ -25,7 +28,7 @@ function downloadClientOptionsJson({
     actions.scrollBuffer();
     return;
   }
-  const payload = buildExportPayload({ options });
+  const payload = buildExportPayload({ options, actions });
   const filename = buildClientOptionsExportFilename();
   const blob = new blobCtor([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
 
@@ -80,10 +83,15 @@ export async function importClientOptionsJson({
   plan.applied.forEach(({ name, value }) => {
     applyOptionValue(name, value);
   });
+  let outputSkipped = 0;
+  if (Object.prototype.hasOwnProperty.call(parsed, "outputWindows")) {
+    const result = actions.importOutputWindows?.(parsed.outputWindows);
+    outputSkipped = result?.skipped || 0;
+  }
   refreshClientOptions();
   actions.scrollBuffer();
   const applied = plan.applied.length;
-  const skipped = plan.skipped;
+  const skipped = plan.skipped + outputSkipped;
   actions.appendOutput(`Imported ${applied} client option${applied === 1 ? "" : "s"}.\n`);
   if (skipped > 0) {
     actions.appendOutput(`Skipped ${skipped} invalid imported option value${skipped === 1 ? "" : "s"}.\n`);
@@ -136,6 +144,7 @@ export function bindImportExportControls({
     Object.entries(options.options).forEach(([name, optionDef]) => {
       applyOptionValue(name, optionDef.def);
     });
+    actions.resetOutputWindows?.();
     refreshClientOptions();
     actions.appendOutput("Reset all client options to defaults.\n");
     actions.scrollBuffer();

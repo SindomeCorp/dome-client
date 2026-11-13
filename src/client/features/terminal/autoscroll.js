@@ -22,6 +22,17 @@ const setScrollBuffer = client => {
 const pauseIconMarkup = "<span class=\"mini-glyph\" aria-hidden=\"true\"><svg class=\"mini-glyph-svg\" viewBox=\"0 0 14 14\" focusable=\"false\" aria-hidden=\"true\"><rect x=\"2\" y=\"2\" width=\"3.5\" height=\"10\" rx=\"0.9\"></rect><rect x=\"8.5\" y=\"2\" width=\"3.5\" height=\"10\" rx=\"0.9\"></rect></svg></span>";
 const playIconMarkup = "<span class=\"mini-glyph\" aria-hidden=\"true\"><svg class=\"mini-glyph-svg\" viewBox=\"0 0 14 14\" focusable=\"false\" aria-hidden=\"true\"><path d=\"M3 2.2L11.5 7L3 11.8Z\"></path></svg></span>";
 
+export function setScrollButtonUi(button, paused, labelClass = "hidden-xs") {
+  if (!button) return;
+  if (button.dataset.paused !== String(paused)) {
+    button.innerHTML = (paused ? playIconMarkup : pauseIconMarkup)
+      + `<span class="${labelClass}">${paused ? "RESUME SCROLL" : "PAUSE SCROLL"}</span>`;
+    button.dataset.paused = String(paused);
+  }
+  button.classList.toggle("btn-danger", paused);
+  button.classList.toggle("btn-primary", !paused);
+}
+
 const setPauseUi = (client, paused) => {
   const button = client.scrollButton;
   if (paused) {
@@ -59,6 +70,11 @@ export function setupAutoscroll(context, winArg = window) {
   const client = context?.buffer ? context : context.client;
   const win = context?.buffer ? winArg : context.win ?? window;
   const doc = context?.buffer ? win.document ?? globalThis.document : context.doc ?? win.document ?? globalThis.document;
+  if (client.outputWindows) {
+    client.scrollBuffer = () => {};
+    client.onToggleAutoScroll = (event) => client.outputWindows.togglePause(event?.type === "click" ? "main" : undefined);
+    return;
+  }
   const preferences = client.preferences ?? {};
   const canBindBuffer = client.buffer
     && typeof client.buffer.addEventListener === "function"
@@ -130,7 +146,10 @@ export function setupAutoscroll(context, winArg = window) {
       // Only suppress browser text-selection behavior for the specific
       // double-click gesture that toggles autoscroll.
       e?.preventDefault?.();
+      const selection = doc.getSelection?.();
+      if (selection && client.buffer.contains(selection.anchorNode)) selection.removeAllRanges();
       client.onToggleAutoScroll();
+      doc.querySelector("#inputBuffer")?.focus({ preventScroll: true });
     };
     client.buffer.addEventListener("dblclick", client._autoScrollDbl);
   } else if (preferences.autoScroll === "long") {

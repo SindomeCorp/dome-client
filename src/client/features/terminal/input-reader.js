@@ -21,6 +21,7 @@ export function setupInputReader({
 
   // prevent the backspace key from navigating away from the page
   doc.addEventListener("keydown", (e) => {
+    if (e.defaultPrevented) return;
     if (e.key === "Pause" && !e.shiftKey && !e.altKey && !e.ctrlKey) {
       // 'pause/break' key
       // enable / disable scroll

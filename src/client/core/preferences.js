@@ -8,11 +8,19 @@ import { createClientOptionsController } from "../features/options/client-option
 import { setupAutoscroll } from "../features/terminal/autoscroll.js";
 import { setupAutoCompleteFeature } from "../features/terminal/autocomplete.js";
 
+function appendClientOutput(client, text) {
+  if (client.outputWindows) client.outputWindows.appendLocal(text);
+  else client.buffer?.append(text);
+}
+
 export function createClientOptionsActions({ client, doc, win, setupAutoscrollFn = setupAutoscroll }) {
   return {
     setClientOption: (name, value, meta) => client.setClientOption?.(name, value, meta),
     parseClientOptionCommand: (command) => client.parseClientOptionCommand?.(command),
-    appendOutput: (text) => client.buffer?.append(text),
+    appendOutput: (text) => appendClientOutput(client, text),
+    getOutputWindows: () => client.outputWindows?.settings,
+    importOutputWindows: (value) => client.outputWindows?.importSettings(value),
+    resetOutputWindows: () => client.outputWindows?.resetSettings(),
     scrollBuffer: () => client.scrollBuffer?.(),
     refreshAutoscroll: () => setupAutoscrollFn({ client, doc, win }),
     getPreference: (name) => client.preferences?.[name],
@@ -56,9 +64,9 @@ export function setupClientPreferences({
   const setClientOption = function(optionName, optionValue, meta = {}) {
     const result = controller.setOption(optionName, optionValue, meta);
     if (!result.ok) {
-      client.buffer?.append(result.error);
+      appendClientOutput(client, result.error);
     } else if (result.status === "changed") {
-      client.buffer?.append("changing @client-option " + result.preferenceName + " to " + result.value + "\n");
+      appendClientOutput(client, "changing @client-option " + result.preferenceName + " to " + result.value + "\n");
     }
     return result;
   };
@@ -69,11 +77,11 @@ export function setupClientPreferences({
     logger.debug( command );
     const result = controller.parseCommand(command);
     if (result.output) {
-      client.buffer?.append(result.output);
+      appendClientOutput(client, result.output);
     } else if (!result.ok) {
-      client.buffer?.append(result.error);
+      appendClientOutput(client, result.error);
     } else if (result.status === "changed") {
-      client.buffer?.append("changing @client-option " + result.preferenceName + " to " + result.value + "\n");
+      appendClientOutput(client, "changing @client-option " + result.preferenceName + " to " + result.value + "\n");
     }
     if (client.scrollBuffer) client.scrollBuffer();
     return result;

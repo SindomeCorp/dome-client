@@ -1,4 +1,8 @@
 const echoCommand = (client, command) => {
+  if (client.outputWindows) {
+    if (client.preferences.localEcho) client.outputWindows.appendLocal(">" + command + "\n", { echo: true });
+    return;
+  }
   if (client.preferences.localEcho) {
     client.buffer.insertAdjacentHTML("beforeend", "<span class=\"input-echo\">&gt;" + command + "</span>\n");
   }

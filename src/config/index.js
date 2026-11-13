@@ -6,6 +6,11 @@ function normalizeEditorParser(value) {
 }
 
 const config = {
+  outputWindows: {
+    enabled: env.OUTPUT_WINDOWS_ENABLED,
+    customRegexEnabled: env.OUTPUT_WINDOWS_CUSTOM_REGEX_ENABLED,
+    presetsPath: env.OUTPUT_WINDOWS_PRESETS_PATH
+  },
   node: {
     mode: env.NODE_MODE,
     port: env.NODE_PORT,

@@ -80,6 +80,10 @@ export function setupWindowHandlers({
   };
 
   const onResizeHandler = function() {
+    if (client.outputWindows) {
+      client.client.style.height = "100%";
+      return;
+    }
     client.client.style.height = `${win.innerHeight}px`;
     client.buffer.style.height = `${win.innerHeight - defaultHeightOffset}px`;
   };
@@ -139,7 +143,7 @@ export function setupWindowHandlers({
   win.addEventListener("orientationchange", onResizeHandler);
   win.addEventListener("beforeunload", onBeforeUnloadHandler);
   win.addEventListener("unload", onUnloadHandler);
-  client.buffer.addEventListener("scroll", onScrollHandler);
+  if (!client.outputWindows) client.buffer.addEventListener("scroll", onScrollHandler);
 
   win.addEventListener("pointerdown", primeAlertTone, { once: true });
   win.addEventListener("keydown", primeAlertTone, { once: true });

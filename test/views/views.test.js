@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import { CLIENT_OPTION_GROUPS, CLIENT_OPTION_LABELS, CLIENT_OPTION_VIEW } from "../../src/shared/client-options.js";
 
 const sampleData = {
+  "views/partials/output-window-panel.ejs": { panelName: "main" },
   "views/layouts/main.ejs": {
     meta: { title: "", description: "", keywords: "" },
     req: { query: {}, ip: "", device: "", bodyClass: "" },

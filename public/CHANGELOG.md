@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-11-12
+
+### Added
+- Add Television under Player Filters for screen broadcasts beginning with `On the ` and a supported screen name followed by a colon.
+- Add XHELP under Player Filters for lines starting with `XHELP `.
+- Add the player SIC preset for the literal `|C|` prefix.
+- Add Grid Output for lines starting with `[g]` under Player Filters.
+- Complete the channel preset catalog with the supplied Player, GM, and Coder assignments, including exact channel capitalization.
+- Add Login Watcher, Grid Info, and All Channels presets under GM Filters.
+- Add SIC-PM, SIC-ENC, and Local OOC under GM Filters.
+- Add Coder Filters for Debug Info, Trace-Backs, and Code Talk while preserving selections.
+- Add Puppet 1 and Puppet [All] output filters for puppet message prefixes.
+- Group output filters into Player, Admin, and Custom views with selected/total counts and selections that remain active across groups.
+- Added resizable output splits with channel presets, optional custom regex filters and testing, and saved layouts included in preference imports and exports.
+- Added full-history output Find, independent window pause controls, and copying ranges across scrollback.
+- Added output-window and rendering documentation, browser checks, and long-session performance replays.
+
+### Changed
+- Sort output filters alphabetically within each group, including custom filters.
+- Display output-filter checkboxes in three responsive columns on wider screens.
+- Rename Admin Filters to GM Filters and make the secondary controls a transparent overlay.
+- Use normal mouse selection and Ctrl/Cmd+C for copying output; remove the separate range-copy menus.
+- Render only nearby scrollback to keep large sessions responsive while retaining ordered history for unified log exports.
+- Prepare large logs in cancellable chunks and release offscreen media previews.
+
+### Fixed
+- Prune complete nowrap blocks even when commands are echoed between their lines, and discard later lines of a block whose beginning was removed.
+- Make media preview controls work in downloaded logs without loading previews until opened.
+- Copy selections across offscreen history through the normal browser Copy action without requiring additional clipboard permission.
+- Restore Bit Chat under GM Filters with its original saved-selection ID.
+- Match empty secondary windows to the output theme and show their pause state before output arrives.
+- Keep Log and Pause Scroll visible in wrapped bottom toolbars and put main unread counts before Split.
+- Restore the original single-window toolbar layout and move controls to the bottom when the main pane is too narrow.
+- Keep final lines fully visible in all split directions and render scrollback while text is selected; copy selections across offscreen history.
+- Scope toolbar Pause Scroll to main, match secondary pause styling, remove mouse-click outlines, confirm split closure, and place Output Windows fourth in options.
+- Treat typed autocomplete text literally so brackets and other punctuation cannot throw regex errors.
+- Return focus to the shared command input after double-clicking either output pane to pause or resume scrolling.
+- Keep manual scrollback in place with the default pause preferences until new output arrives.
+- Discard pruned routing work and bound pending routing memory so slow filters cannot accumulate an obsolete backlog.
+- Search only newly received lines when updating Find results and use compact per-line counts for common search terms.
+- Keep empty-split setup help below the window controls on narrow screens.
+
 ## 2026-10-30
 
 ### Fixed

@@ -16,6 +16,26 @@ async function importConfig() {
   return import(moduleUrl);
 }
 
+test("output window flags default on and accept explicit operator configuration", async (t) => {
+  const keys = ["OUTPUT_WINDOWS_ENABLED", "OUTPUT_WINDOWS_CUSTOM_REGEX_ENABLED", "OUTPUT_WINDOWS_PRESETS_PATH"];
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  t.mock.method(dotenv, "config", () => ({}));
+  t.after(() => {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  });
+  keys.forEach((key) => delete process.env[key]);
+  const defaults = (await importConfig()).default.outputWindows;
+  assert.deepEqual(defaults, { enabled: true, customRegexEnabled: true, presetsPath: "data/output-window-presets.json" });
+  process.env.OUTPUT_WINDOWS_ENABLED = "false";
+  process.env.OUTPUT_WINDOWS_CUSTOM_REGEX_ENABLED = "false";
+  process.env.OUTPUT_WINDOWS_PRESETS_PATH = "/tmp/game-presets.json";
+  const disabled = (await importConfig()).default.outputWindows;
+  assert.deepEqual(disabled, { enabled: false, customRegexEnabled: false, presetsPath: "/tmp/game-presets.json" });
+});
+
 test("shortener HTTPS defaults true and accepts explicit true/false", async (t) => {
   const previous = process.env.SHORTEN_USE_HTTPS;
   t.mock.method(dotenv, "config", () => ({}));

@@ -1,5 +1,10 @@
 # Inline media previews
 
+Previews now exist only in mounted output rows. Scrolling a preview out of the
+rendered range releases its player/image element; returning to that message shows
+a collapsed preview control. See [Output windows and scrollback](OUTPUT-WINDOWS.md)
+for rendering, Find, copying, and log-export behavior.
+
 The output buffer recognizes HTTP and HTTPS media links by parsing the URL and
 checking its pathname. Matching is case-insensitive and requires a dot followed by
 a supported extension at the end of the path. Query strings and fragments do not

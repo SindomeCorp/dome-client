@@ -4,6 +4,19 @@ This project uses a layered test strategy:
 
 - Fast unit and component tests with Node's built-in test runner.
 - Server and socket integration tests with mocked externals where needed.
+- Real-browser output-window checks and large-history replays.
+
+## Output windows and long sessions
+
+After `npm run build` and `npx playwright install chromium firefox`, run
+`npm run test:browser` for Chromium, Firefox, and a narrow touch layout.
+`npm run test:output-performance` replays 20,000, 100,000, and 1,000,000 lines
+and records mounted content, memory, and operation timings.
+
+See [Output performance](OUTPUT-PERFORMANCE.md) for optional local-log fixtures,
+reference measurements, acceptance checks, and the distinction between retained
+history and rendered rows. The player/operator guide is
+[Output windows](OUTPUT-WINDOWS.md).
 
 ## Requirements
 

@@ -118,6 +118,11 @@ export function createClientOptionsController({
     if (client.preferences && previousValue != nextValue) {
       client.preferences[optionDef.preferenceName] = nextValue;
       optionEffects.apply(optionDef.preferenceName, nextValue, previousValue);
+      if (["lineBufferFont", "lineBufferFontSizePt", "colorSet", "imagePreview", "sdwcNowrapBlocks"].includes(optionDef.preferenceName)) {
+        client.outputWindows?.refreshPresentation();
+      } else if (optionDef.preferenceName === "performanceBuffer") {
+        client.outputWindows?.prune();
+      }
       return {
         ok: true,
         status: "changed",
