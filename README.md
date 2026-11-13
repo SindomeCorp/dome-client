@@ -106,7 +106,12 @@ Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice f
 `OUTPUT_WINDOWS_ENABLED` and `OUTPUT_WINDOWS_CUSTOM_REGEX_ENABLED` default to
 `true`. `OUTPUT_WINDOWS_PRESETS_PATH` defaults to
 `data/output-window-presets.json`; operators can supply a different preset file
-and restart the server. Disabling splits retains efficient scrollback rendering,
+and restart the server. The default file contains a single Player filter named
+**Channels**, matching lines beginning with `[-]`. Examine
+[data/sindome-output-window-presets.json](data/sindome-output-window-presets.json)
+for an example of how a real game configures filters; set
+`OUTPUT_WINDOWS_PRESETS_PATH=data/sindome-output-window-presets.json` to use it.
+Disabling splits retains efficient scrollback rendering,
 Find, and copying. See [Output Windows](docs/OUTPUT-WINDOWS.md) for setup, JSON
 examples, saved preferences, logging, and limitations, and
 [Output Performance](docs/OUTPUT-PERFORMANCE.md) for replay results and commands.

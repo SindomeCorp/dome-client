@@ -19,7 +19,7 @@ export class FakeRuleWorker {
 }
 
 export async function createOutputApp(t, { config = {}, stored, workerFactory = () => new FakeRuleWorker() } = {}) {
-  const presets = JSON.parse(readFileSync(new URL("../data/output-window-presets.json", import.meta.url), "utf8"));
+  const presets = JSON.parse(readFileSync(new URL("../data/sindome-output-window-presets.json", import.meta.url), "utf8"));
   const data = {
     req: {}, debugMode: true, decache: (value) => value, showReporter: () => true,
     clientOptionGroups: CLIENT_OPTION_GROUPS, shortenEnabled: false,

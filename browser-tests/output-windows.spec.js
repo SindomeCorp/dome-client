@@ -7,6 +7,23 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => window.outputTest);
 });
 
+test("game-neutral default exposes only Channels and routes any anchored channel prefix", async ({ page }) => {
+  await page.goto("/?presets=default");
+  await page.waitForFunction(() => window.outputTest);
+  await page.locator("#button-client-options").click();
+  await page.getByRole("tab", { name: "Output Windows", exact: true }).click();
+  await expect(page.getByRole("tab", { name: /^Player Filters/ })).toHaveText("Player Filters [0/1]");
+  await page.getByLabel("Channels", { exact: true }).check();
+  await expect(page.getByRole("tab", { name: /^GM Filters/ })).toHaveText("GM Filters [0/0]");
+  await expect(page.getByRole("tab", { name: /^Coder Filters/ })).toHaveText("Coder Filters [0/0]");
+  await page.locator("#button-client-options-close").click();
+  await page.locator("#button-output-split").click();
+  await page.evaluate(() => window.outputTest.feed("[-][Example] routed\n[-] also routed\nbefore [-] stays main\n"));
+  await expect(page.locator("#secondaryBuffer")).toContainText("[-][Example] routed");
+  await expect(page.locator("#secondaryBuffer")).toContainText("[-] also routed");
+  await expect(page.locator("#lineBuffer")).toContainText("before [-] stays main");
+});
+
 async function copyThroughNativeEvent(page, expected) {
   await expect.poll(async () => {
     await page.keyboard.press("Control+c");

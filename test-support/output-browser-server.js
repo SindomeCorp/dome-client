@@ -10,13 +10,14 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const bundled = await build({
   entryPoints: [root + "test-support/output-browser-entry.js"], bundle: true, write: false, format: "iife"
 });
-const presets = JSON.parse(await readFile(root + "data/output-window-presets.json", "utf8"));
+const presets = JSON.parse(await readFile(root + "data/sindome-output-window-presets.json", "utf8"));
+const defaultPresets = JSON.parse(await readFile(root + "data/output-window-presets.json", "utf8"));
 const css = await readFile(root + "public/css/client.css", "utf8");
 const app = express();
 app.get("/runtime.js", (_req, res) => res.type("js").send(bundled.outputFiles[0].text));
 app.use(express.static(root + "public"));
 app.get("/", async (req, res) => {
-  const config = { enabled: req.query.splits !== "off", customRegexEnabled: req.query.custom !== "off", presets };
+  const config = { enabled: req.query.splits !== "off", customRegexEnabled: req.query.custom !== "off", presets: req.query.presets === "default" ? defaultPresets : presets };
   const html = await renderFile(root + "views/client.ejs", {
     req: {}, debugMode: true, decache: (value) => value, showReporter: () => true,
     clientOptionGroups: CLIENT_OPTION_GROUPS, shortenEnabled: false, outputWindows: config
