@@ -10,6 +10,13 @@ This project uses a layered test strategy:
 
 After `npm run build` and `npx playwright install chromium firefox`, run
 `npm run test:browser` for Chromium, Firefox, and a narrow touch layout.
+
+To exercise Linux Chromium's actual scrollbar up-arrow, run
+`xvfb-run -a npm run test:browser -- --project=chromium --headed --grep "native scrollbar up-arrow"`.
+This headed check uses real mouse clicks on the browser control; it is skipped
+in headless projects, where the native arrow is unavailable. Slow finger-scroll
+checks use Chromium touch emulation, not an actual mobile app WebView.
+
 `npm run test:output-performance` replays 20,000, 100,000, and 1,000,000 lines
 and records mounted content, memory, and operation timings.
 

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-11-13
+
+### Fixed
+- Let small mouse-wheel movements, scrollbar arrow clicks, and slow touch swipes enter scrollback immediately instead of snapping back to the bottom.
+- Keep secondary-window controls clear of the native scrollbar arrows.
+
 ## 2026-11-12
 
 ### Added
