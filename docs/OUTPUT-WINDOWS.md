@@ -49,8 +49,8 @@ would otherwise be exported in a log. Your filters and layout remain saved.
 ## Channel presets and custom filters
 
 The default [preset file](../data/output-window-presets.json) contains one
-Player preset, **Channels**, matching the literal `[-]` prefix at the start of a
-line (`^\[-\]`). Player Filters opens by default. Operators can add presets to
+Player preset, **Channels**, matching `[+]` (primary channel) or `[-]` (secondary
+channels) at the start of a line (`^\[[+-]\]`). Player Filters opens by default. Operators can add presets to
 the Player, GM, and Coder groups for their game.
 
 The [Sindome example catalog](../data/sindome-output-window-presets.json) shows how
@@ -74,10 +74,11 @@ their column.
 For example, the default Channels pattern is:
 
 ```text
-^\[-\]
+^\[[+-]\]
 ```
 
-It matches `[-][Example] Player: Hello.`, but not
+It matches both `[+][Example] Player: Hello.` and `[-][Example] Player: Hello.`,
+but not
 `Player quoted [-][Example] in another message.`.
 
 Filters test whole incoming lines before display enhancements, ignoring ANSI
@@ -255,7 +256,7 @@ are an array of entries:
   {
     "id": "channels",
     "name": "Channels",
-    "pattern": "^\\[-\\]",
+    "pattern": "^\\[[+-]\\]",
     "ignoreCase": false,
     "group": "player"
   }

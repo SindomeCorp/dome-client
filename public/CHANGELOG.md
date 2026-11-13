@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - Prepare large logs in cancellable chunks and release offscreen media previews.
 
 ### Fixed
+- Match both primary `[+]` and secondary `[-]` channel prefixes in the default and example output filters.
 - Treat typed autocomplete text literally so brackets and other punctuation cannot throw regex errors.
 
 ## 2026-10-30

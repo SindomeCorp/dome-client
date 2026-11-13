@@ -2,7 +2,7 @@
   {
     "id": "channels",
     "name": "Channels",
-    "pattern": "^\\[-\\]",
+    "pattern": "^\\[[+-]\\]",
     "ignoreCase": false,
     "group": "player"
   }

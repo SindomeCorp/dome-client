@@ -18,10 +18,13 @@ test("game-neutral default exposes only Channels and routes any anchored channel
   await expect(page.getByRole("tab", { name: /^Coder Filters/ })).toHaveText("Coder Filters [0/0]");
   await page.locator("#button-client-options-close").click();
   await page.locator("#button-output-split").click();
-  await page.evaluate(() => window.outputTest.feed("[-][Example] routed\n[-] also routed\nbefore [-] stays main\n"));
+  await page.evaluate(() => window.outputTest.feed("[-][Example] routed\n[-] also routed\n[+][Example] primary routed\n[+] also routed\nbefore [-] stays main\nbefore [+] stays main\n"));
   await expect(page.locator("#secondaryBuffer")).toContainText("[-][Example] routed");
   await expect(page.locator("#secondaryBuffer")).toContainText("[-] also routed");
+  await expect(page.locator("#secondaryBuffer")).toContainText("[+][Example] primary routed");
+  await expect(page.locator("#secondaryBuffer")).toContainText("[+] also routed");
   await expect(page.locator("#lineBuffer")).toContainText("before [-] stays main");
+  await expect(page.locator("#lineBuffer")).toContainText("before [+] stays main");
 });
 
 async function copyThroughNativeEvent(page, expected) {
@@ -49,9 +52,11 @@ test("routing, split positions, keyboard resize and close preserve output", asyn
   await page.getByLabel("Team Chat", { exact: true }).check();
   await page.locator("#output-layout").selectOption("bottom");
   await page.locator("#button-client-options-close").click();
-  await page.evaluate(() => window.outputTest.feed("main one\n\u001b[31m[-][Team-Chat] chat\u001b[0m\nmain two\n"));
+  await page.evaluate(() => window.outputTest.feed("main one\n\u001b[31m[-][Team-Chat] chat\u001b[0m\n[+][Team-Chat] primary chat\nmain two\n"));
   await expect(page.locator("#secondaryBuffer")).toContainText("[-][Team-Chat] chat");
+  await expect(page.locator("#secondaryBuffer")).toContainText("[+][Team-Chat] primary chat");
   await expect(page.locator("#lineBuffer")).not.toContainText("[-][Team-Chat] chat");
+  await expect(page.locator("#lineBuffer")).not.toContainText("[+][Team-Chat] primary chat");
   const divider = page.getByRole("separator");
   await divider.focus();
   await divider.press("End");
