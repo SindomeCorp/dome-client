@@ -11,10 +11,13 @@ const channels = {
 
 test("default catalog contains only the game-neutral Player Channels prefix", () => {
   const presets = loadOutputWindowPresets();
-  assert.deepEqual(presets, [{ id: "channels", name: "Channels", pattern: "^\\[-\\]", ignoreCase: false, group: "player" }]);
+  assert.deepEqual(presets, [{ id: "channels", name: "Channels", pattern: "^\\[[+-]\\]", ignoreCase: false, group: "player" }]);
   const regex = new RegExp(presets[0].pattern);
-  for (const line of ["[-]", "[-] chat", "[-][Any-Game-Channel] message"]) assert.equal(regex.test(line), true, line);
-  for (const line of ["before [-] chat", " [-] chat", "plain output", "-", ""]) assert.equal(regex.test(line), false, line);
+  for (const marker of ["+", "-"]) {
+    for (const suffix of ["", " chat", "[Any-Game-Channel] message"]) assert.equal(regex.test("[" + marker + "]" + suffix), true);
+    for (const prefix of ["before ", " "]) assert.equal(regex.test(prefix + "[" + marker + "] chat"), false);
+  }
+  for (const line of ["[x] chat", "[++] chat", "[--] chat", "plain output", "-", "+", ""]) assert.equal(regex.test(line), false, line);
 });
 
 test("Sindome example channel catalog preserves exact case, anchored prefixes, and supplied groups", () => {
@@ -28,10 +31,13 @@ test("Sindome example channel catalog preserves exact case, anchored prefixes, a
       assert.equal(preset.group, group, name);
       assert.equal(preset.ignoreCase, false, name);
       const regex = new RegExp(preset.pattern);
-      const prefix = "[-][" + name + "]";
-      assert.equal(regex.test(prefix + " sample"), true, name);
-      assert.equal(regex.test("before " + prefix), false, name);
-      assert.equal(regex.test(prefix.toLowerCase()), false, name);
+      for (const marker of ["+", "-"]) {
+        const prefix = "[" + marker + "][" + name + "]";
+        assert.equal(regex.test(prefix + " sample"), true, prefix);
+        assert.equal(regex.test("before " + prefix), false, prefix);
+        assert.equal(regex.test(prefix.toLowerCase()), false, prefix);
+      }
+      assert.equal(regex.test("[x][" + name + "] sample"), false, name);
     }
   }
   for (const [id, prefix] of [["xhelp", "XHELP "], ["sic", "|C|"], ["grid-output", "[g]"], ["ooc-messages", "[OOC:"], ["puppet-1", "[p1"], ["puppet-all", "[p9"], ["all-channels", "[-]["]]) {
@@ -83,8 +89,11 @@ test("All Channels matches channel prefixes and excludes non-channel output", ()
   const all = new RegExp(presets.find((rule) => rule.id === "all-channels").pattern);
   for (const line of ["[-][Login-Watcher] joined", "[-][Grid-Info] grid", "[-][SIC-PM] private", "[-][SIC-ENC] encrypted", "[-][Local-OOC] ooc", "[-][Future-Channel] new"]) {
     assert.equal(all.test(line), true);
+    assert.equal(all.test(line.replace("[-]", "[+]")), true);
   }
   assert.equal(all.test("before [-][Grid-Info]"), false);
+  assert.equal(all.test("before [+][Grid-Info]"), false);
+  assert.equal(all.test("[x][Grid-Info]"), false);
   assert.equal(all.test("[p1 puppet"), false);
 });
 

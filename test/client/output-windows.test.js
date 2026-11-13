@@ -500,6 +500,15 @@ test("filter groups sort by name without changing saved selections or custom rul
   assert.equal(manager.views.main.index.length, 2);
 });
 
+test("channel presets route primary and secondary markers once after ANSI decoding", async (t) => {
+  const { manager, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["team-chat", "all-channels"] });
+  await feed("\u001b[33m[+][Team-Chat] primary\u001b[0m\n[-][Team-Chat] secondary\n[+][Future-Channel] primary\n[-][Future-Channel] secondary\nbefore [+][Team-Chat] quoted\n[x][Team-Chat] invalid\n");
+  assert.equal(manager.views.secondary.index.length, 4);
+  assert.equal(manager.views.main.index.length, 2);
+  assert.equal(manager.history.length, 6);
+});
+
 test("XHELP routes complete matching lines after ANSI decoding", async (t) => {
   const { manager, feed } = await createOutputApp(t);
   manager.updateSettings({ open: true, selected: ["xhelp"] });
