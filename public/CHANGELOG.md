@@ -11,7 +11,7 @@ All notable changes to this project will be documented in this file.
 - Added output-window and rendering documentation, browser checks, and long-session performance replays.
 
 ### Changed
-- Ship a game-neutral Channels preset by default and provide the Sindome preset catalog as an optional configuration example.
+- Ship a game-neutral Channels preset by default, provide the Sindome catalog as an optional example, and group environment settings under Window Splits.
 - Sort output filters alphabetically within each group, including custom filters.
 - Display output-filter checkboxes in three responsive columns on wider screens.
 - Use normal mouse selection and Ctrl/Cmd+C for copying output.
