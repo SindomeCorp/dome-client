@@ -13,6 +13,10 @@ After `npm run build` and `npx playwright install chromium firefox`, run
 `npm run test:output-performance` replays 20,000, 100,000, and 1,000,000 lines
 and records mounted content, memory, and operation timings.
 
+Channel-specific component and browser scenarios use the optional Sindome
+example catalog. Separate checks cover the game-neutral default catalog and
+its single Channels filter; the example catalog is not the production default.
+
 See [Output performance](OUTPUT-PERFORMANCE.md) for optional local-log fixtures,
 reference measurements, acceptance checks, and the distinction between retained
 history and rendered rows. The player/operator guide is

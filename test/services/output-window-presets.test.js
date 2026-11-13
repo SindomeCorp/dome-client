@@ -9,8 +9,16 @@ const channels = {
   coder: ["Debug-Info", "Trace-Backs", "Eval-Log", "Security-Theater", "Action-Listener", "Code-Talk"]
 };
 
-test("bundled channel catalog preserves exact case, anchored prefixes, and supplied groups", () => {
-  const source = readFileSync(new URL("../../data/output-window-presets.json", import.meta.url), "utf8");
+test("default catalog contains only the game-neutral Player Channels prefix", () => {
+  const presets = loadOutputWindowPresets();
+  assert.deepEqual(presets, [{ id: "channels", name: "Channels", pattern: "^\\[-\\]", ignoreCase: false, group: "player" }]);
+  const regex = new RegExp(presets[0].pattern);
+  for (const line of ["[-]", "[-] chat", "[-][Any-Game-Channel] message"]) assert.equal(regex.test(line), true, line);
+  for (const line of ["before [-] chat", " [-] chat", "plain output", "-", ""]) assert.equal(regex.test(line), false, line);
+});
+
+test("Sindome example channel catalog preserves exact case, anchored prefixes, and supplied groups", () => {
+  const source = readFileSync(new URL("../../data/sindome-output-window-presets.json", import.meta.url), "utf8");
   const presets = loadOutputWindowPresets({ readFile: () => source });
   assert.equal(presets.length, 52);
   for (const [group, names] of Object.entries(channels)) {
@@ -46,7 +54,7 @@ test("invalid or missing files warn and do not prevent startup", () => {
 });
 
 test("puppet presets match only case-sensitive digit prefixes at the start of a line", () => {
-  const presets = loadOutputWindowPresets();
+  const presets = loadOutputWindowPresets({ filePath: "data/sindome-output-window-presets.json" });
   const one = new RegExp(presets.find((preset) => preset.id === "puppet-1").pattern);
   const all = new RegExp(presets.find((preset) => preset.id === "puppet-all").pattern);
   assert.equal(one.test("[p1 puppet output"), true);
@@ -71,7 +79,7 @@ test("preset groups default to player for older JSON and reject unknown groups",
 });
 
 test("All Channels matches channel prefixes and excludes non-channel output", () => {
-  const presets = loadOutputWindowPresets();
+  const presets = loadOutputWindowPresets({ filePath: "data/sindome-output-window-presets.json" });
   const all = new RegExp(presets.find((rule) => rule.id === "all-channels").pattern);
   for (const line of ["[-][Login-Watcher] joined", "[-][Grid-Info] grid", "[-][SIC-PM] private", "[-][SIC-ENC] encrypted", "[-][Local-OOC] ooc", "[-][Future-Channel] new"]) {
     assert.equal(all.test(line), true);
@@ -81,7 +89,7 @@ test("All Channels matches channel prefixes and excludes non-channel output", ()
 });
 
 test("Grid Output matches the literal player prefix only at the start of a line", () => {
-  const preset = loadOutputWindowPresets().find((rule) => rule.id === "grid-output");
+  const preset = loadOutputWindowPresets({ filePath: "data/sindome-output-window-presets.json" }).find((rule) => rule.id === "grid-output");
   assert.equal(preset.group, "player");
   const regex = new RegExp(preset.pattern);
   assert.equal(regex.test("[g] grid output"), true);
@@ -89,7 +97,7 @@ test("Grid Output matches the literal player prefix only at the start of a line"
 });
 
 test("player SIC matches literal pipes and never treats them as regex alternatives", () => {
-  const preset = loadOutputWindowPresets().find((rule) => rule.id === "sic");
+  const preset = loadOutputWindowPresets({ filePath: "data/sindome-output-window-presets.json" }).find((rule) => rule.id === "sic");
   assert.equal(preset.group, "player");
   const regex = new RegExp(preset.pattern);
   assert.equal(regex.test("|C| SIC message"), true);
@@ -97,7 +105,7 @@ test("player SIC matches literal pipes and never treats them as regex alternativ
 });
 
 test("player XHELP requires the exact uppercase prefix and following space", () => {
-  const preset = loadOutputWindowPresets().find((rule) => rule.id === "xhelp");
+  const preset = loadOutputWindowPresets({ filePath: "data/sindome-output-window-presets.json" }).find((rule) => rule.id === "xhelp");
   assert.equal(preset.name, "XHELP");
   assert.equal(preset.group, "player");
   assert.equal(preset.ignoreCase, false);
@@ -109,7 +117,7 @@ test("player XHELP requires the exact uppercase prefix and following space", () 
 });
 
 test("Television matches supported screen broadcasts before the first colon", () => {
-  const preset = loadOutputWindowPresets().find((rule) => rule.id === "television");
+  const preset = loadOutputWindowPresets({ filePath: "data/sindome-output-window-presets.json" }).find((rule) => rule.id === "television");
   assert.equal(preset.name, "Television");
   assert.equal(preset.group, "player");
   assert.equal(preset.ignoreCase, false);

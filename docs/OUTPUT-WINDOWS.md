@@ -48,38 +48,37 @@ would otherwise be exported in a log. Your filters and layout remain saved.
 
 ## Channel presets and custom filters
 
-The bundled [preset catalog](../data/output-window-presets.json) includes the
-complete channel list, grouped as Player, GM, and Coder. Patterns are
-case-sensitive and anchored at the start of the line, including the exact
-capitalization of names such as `NPC-net`.
+The default [preset file](../data/output-window-presets.json) contains one
+Player preset, **Channels**, matching the literal `[-]` prefix at the start of a
+line (`^\[-\]`). Player Filters opens by default. Operators can add presets to
+the Player, GM, and Coder groups for their game.
 
-Player Filters opens by default and contains the eight player channels plus OOC
-Messages (`^\[OOC:`), Grid Output (`^\[g\]`), SIC (`^\|C\|`), and XHELP
-(`^XHELP `, including the space), and Television. Television matches `On the `,
-optional descriptive words, then `wall screen`, `flatscreen monitor`, `television`,
-`security monitor`, or `touch screen` immediately followed by `:`. It cannot match
-a screen name mentioned after an earlier colon. Coder Filters contains Debug Info, Trace-Backs, Eval Log,
-Security Theater, Action Listener, and Code Talk. GM Filters contains the GM
-channels plus Puppet 1 (`^\[p1`), Puppet [All] (`^\[p[0-9]`), and All Channels
-(`^\[-\]\[`). The all-puppets preset matches `[p` followed by any digit, including
-prefixes of multi-digit puppet IDs. All Channels matches any line starting `[-][`.
+The [Sindome example catalog](../data/sindome-output-window-presets.json) shows how
+a real game uses named channels and other output patterns across these groups.
+It is an optional example, not the default configuration. To use it, set:
+
+```env
+OUTPUT_WINDOWS_PRESETS_PATH=data/sindome-output-window-presets.json
+```
+
+Restart the server after changing the path or preset file.
 
 Custom Filters contains rules you create yourself. Each button shows selected/total
-counts, such as **Player Filters [1/13]**. Changing the visible group does not disable
+counts, such as **Player Filters [1/1]**. Changing the visible group does not disable
 checked rules in other groups. New custom rules start unchecked.
 Filters are listed alphabetically by name within each group, including Custom.
 Filter checkboxes use three columns on wide screens, two on medium screens, and
 one on narrow screens. Custom-filter names and edit/delete controls wrap within
 their column.
 
-For example, the Team Chat pattern is:
+For example, the default Channels pattern is:
 
 ```text
-^\[-\]\[Team-Chat\]
+^\[-\]
 ```
 
-It matches `[-][Team-Chat] Atlas: Hello.`, but not
-`Atlas quoted [-][Team-Chat] in another message.`.
+It matches `[-][Example] Player: Hello.`, but not
+`Player quoted [-][Example] in another message.`.
 
 Filters test whole incoming lines before display enhancements, ignoring ANSI
 color codes. A long line wrapping onto several screen rows is still one incoming
@@ -254,11 +253,11 @@ are an array of entries:
 ```json
 [
   {
-    "id": "team-chat",
-    "name": "Team Chat",
-    "pattern": "^\\[-\\]\\[Team-Chat\\]",
+    "id": "channels",
+    "name": "Channels",
+    "pattern": "^\\[-\\]",
     "ignoreCase": false,
-    "group": "gm"
+    "group": "player"
   }
 ]
 ```
