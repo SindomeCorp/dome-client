@@ -37,6 +37,10 @@ export function client(req, res) {
   });
 }
 
+export function outputWindow(_req, res) {
+  res.render("output-window", { layout: false });
+}
+
 export function gameOwnerQuestions(req, res) {
   if (config.node.multiMud !== true) {
     res.status(404).send("Not Found");

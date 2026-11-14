@@ -54,15 +54,15 @@ test("global and custom flags enforce policy without deleting saved rules", asyn
   assert.deepEqual(manager.settings.selected, ["custom-one"]);
 });
 
-test("nowrap blocks stay in main, share pruning, and local echo joins the unified log", async (t) => {
+test("nowrap blocks route intact, share pruning, and local echo joins the unified log", async (t) => {
   const { manager, client, feed } = await createOutputApp(t);
   client.preferences.sdwcNowrapBlocks = true;
   manager.updateSettings({ open: true, selected: ["team-chat"] });
   await feed("#$# SDWC-START-NOWRAP\n[-][Team-Chat] table\nsecond row\n#$# SDWC-END-NOWRAP\n[-][Team-Chat] routed\n");
   manager.appendLocal(">look\n", { echo: true });
   await manager.idle();
-  assert.equal(manager.views.main.index.length, 3);
-  assert.equal(manager.views.secondary.index.length, 1);
+  assert.equal(manager.views.main.index.length, 1);
+  assert.equal(manager.views.secondary.index.length, 3);
   const html = (await exportSnapshot(await manager.snapshot(), { client })).join("");
   assert.ok(html.indexOf("table") < html.indexOf("routed"));
   assert.ok(html.indexOf("routed") < html.indexOf("&gt;look"));

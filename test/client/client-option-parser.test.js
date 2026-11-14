@@ -33,6 +33,9 @@ test("readClientPreferences merges defaults, stored values, and valid URL params
   assert.equal(result.preferences.performanceBuffer, 0);
   assert.equal(result.preferences.inputFont, "menlo");
   assert.deepEqual(result.persistenceUpdates, [
+    { key: "dc-toggle-secondarycolorset", value: "acid" },
+    { key: "dc-toggle-secondaryoutfont", value: "lucida" },
+    { key: "dc-toggle-secondaryoutfontsize", value: 12 },
     { key: "dc-toggle-editorfont", value: "lucida" }
   ]);
 });
@@ -48,6 +51,9 @@ test("readClientPreferences ignores invalid URL params and disabled shortening p
   assert.equal(result.preferences.editorFont, "menlo");
   assert.equal(result.preferences.shortenUrls, false);
   assert.deepEqual(result.persistenceUpdates, [
+    { key: "dc-toggle-secondarycolorset", value: "normal" },
+    { key: "dc-toggle-secondaryoutfont", value: "standard" },
+    { key: "dc-toggle-secondaryoutfontsize", value: 9.75 },
     { key: "dc-toggle-shorten", value: false }
   ]);
 });

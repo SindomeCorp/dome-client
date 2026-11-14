@@ -28,9 +28,21 @@
         <% }); %>
       </div>
       <div id="client-options-panel-fonts" class="client-options-panel hide" role="tabpanel" aria-labelledby="client-options-tab-fonts" data-tab-panel="fonts">
+        <div class="presentation-tabs" role="tablist" aria-label="Presentation window">
+          <button type="button" class="presentation-tab active" id="presentation-tab-main" role="tab" aria-selected="true" aria-controls="presentation-panel-main" data-presentation-tab="main">Main Window</button>
+          <button type="button" class="presentation-tab" id="presentation-tab-secondary" role="tab" aria-selected="false" aria-controls="presentation-panel-secondary" data-presentation-tab="secondary">Secondary Window</button>
+        </div>
+        <div id="presentation-panel-main" role="tabpanel" aria-labelledby="presentation-tab-main" data-presentation-panel="main">
         <% clientOptionGroups.fonts.forEach(function(option) { %>
         <%- include("client-option-row", { option: option }) %>
         <% }); %>
+        </div>
+        <div id="presentation-panel-secondary" class="hide" role="tabpanel" aria-labelledby="presentation-tab-secondary" data-presentation-panel="secondary">
+          <p>These settings affect only the secondary display, including pop-outs. Saved logs use Main Window presentation settings.</p>
+          <% clientOptionGroups.secondaryFonts.forEach(function(option) { %>
+          <%- include("client-option-row", { option: option }) %>
+          <% }); %>
+        </div>
       </div>
       <div id="client-options-panel-editor" class="client-options-panel hide" role="tabpanel" aria-labelledby="client-options-tab-editor" data-tab-panel="editor">
         <% clientOptionGroups.editor.forEach(function(option) { %>

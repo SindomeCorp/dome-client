@@ -6,6 +6,7 @@ import { buildLogDownloadFilename } from "../terminal/log-download.js";
 import { SearchResults } from "./search-results.js";
 import { setupOutputClipboard } from "./selection-clipboard.js";
 import { logPreviewScript } from "./log-preview.js";
+import { getOutputPresentation } from "../../../shared/client-options.js";
 
 export async function searchSnapshot(snapshot, query, { scope = () => true, matchCase = false, signal, getRecord = (id) => snapshot.get(id) } = {}) {
   const matches = new SearchResults(query, matchCase, getRecord);
@@ -23,8 +24,15 @@ export async function searchSnapshot(snapshot, query, { scope = () => true, matc
 }
 
 export async function exportSnapshot(snapshot, { client, css = "", inlineCss = true, signal, progress = () => {} } = {}) {
-  const shell = buildLogHtml("", css, inlineCss).replace("</head>",
-    "<style>html,body{height:auto!important;overflow:visible!important}#browser-client{height:auto!important;min-height:0!important;overflow:visible!important;display:block!important}#browser-client #lineBuffer{height:auto!important;overflow:visible!important;display:block!important}</style></head>");
+  const presentation = getOutputPresentation(client.preferences);
+  const classes = presentation.font + "Text" + (presentation.theme === "normal" ? "" : " colorset-" + presentation.theme);
+  // Legacy font classes fix line-height at 15px. Scale exported line boxes
+  // with the chosen font size, including when logs use linked stylesheets.
+  const textStyle = "font-size:" + presentation.size + "pt;line-height:" + (presentation.size * 1.25) + "pt";
+  const shell = buildLogHtml("", css, inlineCss)
+    .replace("<div id=\"lineBuffer\">", "<div id=\"lineBuffer\" class=\"" + classes + "\" style=\"" + textStyle + "\">")
+    .replace("</head>",
+      "<style>html,body{height:auto!important;overflow:visible!important}#browser-client{height:auto!important;min-height:0!important;overflow:visible!important;display:block!important}#browser-client #lineBuffer{height:auto!important;overflow:visible!important;display:block!important}</style></head>");
   const suffix = "</div></div></body></html>";
   const parts = [shell.slice(0, -suffix.length)];
   let group = null;
@@ -71,6 +79,13 @@ export function setupHistoryTools(manager) {
   let refreshTimer;
   let searchSignature;
   let previousFocus;
+  let disposed = false;
+  const listeners = [];
+  function bind(target, type, handler) {
+    if (!target) return;
+    target.addEventListener(type, handler);
+    listeners.push(() => target.removeEventListener(type, handler));
+  }
 
   function report(message) { manager.report(message); }
   function updateCount() {
@@ -80,11 +95,12 @@ export function setupHistoryTools(manager) {
     return (record) => name === "all" || manager.panelFor(record, state) === name;
   }
   async function go(delta = 0) {
-    if (!matches.length) return;
+    if (disposed || !matches.length) return;
     selected = ((selected + delta) % matches.length + matches.length) % matches.length;
     const match = matches.at(selected);
     if (!match) return;
     await manager.whenIndexed();
+    if (disposed) return;
     const record = manager.history.get(match.id);
     if (record) {
       const panel = manager.panelFor(record);
@@ -92,6 +108,7 @@ export function setupHistoryTools(manager) {
         if (name !== panel) { view.highlight = null; view.schedule(); }
       }
       manager.activePanel = panel;
+      if (manager.views[panel].win !== win) manager.views[panel].win.focus();
       manager.views[panel].jump(match.id, match);
     }
     updateCount();
@@ -161,19 +178,19 @@ export function setupHistoryTools(manager) {
     }
     (previousFocus?.isConnected ? previousFocus : client.inputReader)?.focus();
   }
-  doc.querySelector("#button-output-find")?.addEventListener("click", open);
-  doc.querySelector("#output-find-close").addEventListener("click", close);
-  doc.querySelector("#output-find-previous").addEventListener("click", () => go(-1));
-  form.addEventListener("submit", (event) => { event.preventDefault(); go(1); });
+  bind(doc.querySelector("#button-output-find"), "click", open);
+  bind(doc.querySelector("#output-find-close"), "click", close);
+  bind(doc.querySelector("#output-find-previous"), "click", () => go(-1));
+  bind(form, "submit", (event) => { event.preventDefault(); go(1); });
   for (const input of [query, scope, matchCase]) {
-    input.addEventListener("input", () => {
+    bind(input, "input", () => {
       clearTimeout(refreshTimer);
       refreshTimer = null;
       clearTimeout(debounce);
       debounce = setTimeout(() => search({ jump: true }), 120);
     });
   }
-  doc.addEventListener("keydown", (event) => {
+  bind(doc, "keydown", (event) => {
     if (event.defaultPrevented) return;
     const inEditor = event.target.closest(".ace_editor, #client-options-overlay:not(.hide), #history-search-overlay:not(.hide)");
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f" && !event.altKey && !inEditor) {
@@ -210,7 +227,7 @@ export function setupHistoryTools(manager) {
     }
   }
   const clipboard = setupOutputClipboard(manager);
-  doc.querySelector("#output-operation-cancel").addEventListener("click", () => operationController?.abort());
+  bind(doc.querySelector("#output-operation-cancel"), "click", () => operationController?.abort());
 
   function saveLog() {
     perform("Preparing log…", async (snapshot, signal, progress) => {
@@ -266,5 +283,5 @@ export function setupHistoryTools(manager) {
     updateCount();
   }
   changed();
-  return { open, saveLog, changed, cancel() { operationController?.abort(); searchController?.abort(); clearTimeout(debounce); clearTimeout(refreshTimer); clipboard.cancel(); } };
+  return { open, saveLog, changed, hostChanged() { clipboard.changed({ reset: true }); }, cancel() { disposed = true; operationController?.abort(); searchController?.abort(); clearTimeout(debounce); clearTimeout(refreshTimer); clipboard.cancel(); listeners.splice(0).forEach((remove) => remove()); } };
 }

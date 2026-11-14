@@ -3,6 +3,7 @@ import {
   buildClientOptionsExportPayload,
   buildClientOptionsImportPlan
 } from "./client-options-import-export.js";
+import { SECONDARY_PRESENTATION_OPTIONS, getPreferenceNameForOptionKey } from "../../../shared/client-options.js";
 
 export function buildExportPayload({ options, actions = {} }) {
   const payload = buildClientOptionsExportPayload({
@@ -83,6 +84,11 @@ export async function importClientOptionsJson({
   plan.applied.forEach(({ name, value }) => {
     applyOptionValue(name, value);
   });
+  for (const [secondary, main] of Object.entries(SECONDARY_PRESENTATION_OPTIONS)) {
+    if (options.options[secondary] && !plan.applied.some(({ name }) => name === secondary)) {
+      applyOptionValue(secondary, actions.getPreference?.(getPreferenceNameForOptionKey(main)) ?? options.get(main).state);
+    }
+  }
   let outputSkipped = 0;
   if (Object.prototype.hasOwnProperty.call(parsed, "outputWindows")) {
     const result = actions.importOutputWindows?.(parsed.outputWindows);

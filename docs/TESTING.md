@@ -24,6 +24,31 @@ Channel-specific component and browser scenarios use the optional Sindome
 example catalog. Separate checks cover the game-neutral default catalog and
 its single Channels filter; the example catalog is not the production default.
 
+Companion-window checks cover ownership handshakes, popup failure, native close
+and redocking, shared indexes, cross-window Find and copying, background arrivals,
+and lifecycle cleanup. Native-app visibility is checked using a bridge fixture;
+browser touch emulation does not validate a real mobile app WebView.
+
+Nowrap routing checks cover first-nonblank-line filtering, blank-only blocks,
+streaming across network chunks, filter changes, split close/reopen, worker
+fallback, clear/reconnect, whole-block pruning, and chronological log export.
+Browser checks exercise Grid Output in both docked and companion windows,
+including synchronized horizontal scrolling.
+
+Presentation checks cover independent Main/Secondary fonts, sizes, and themes,
+one-time defaults copied from Main, legacy and partial imports, validation,
+reloads, reset, and the display-only note. Browser checks verify the nested tabs
+with the keyboard, docked and popped-out styles, and unified logs using Main's
+presentation. Secondary-only edits must preserve mounted Main rows and both
+history indexes.
+
+Regression checks cover cross-origin companion navigation with unload
+notifications unavailable (including an empty paused pane), URL-supplied
+secondary settings through export/import/reload, and actual standalone log line
+geometry at 24pt with embedded and linked stylesheets. Editor-list checks compare
+single-chunk and multi-chunk IDE payloads, live/closed individual windows, and
+cancelled replacement of an existing window.
+
 See [Output performance](OUTPUT-PERFORMANCE.md) for optional local-log fixtures,
 reference measurements, acceptance checks, and the distinction between retained
 history and rendered rows. The player/operator guide is

@@ -14,6 +14,7 @@ const playerClientEntries = [
 ];
 
 const pageEntries = [
+  { entry: "output-window.js", file: "output-window.js", external: [] },
   { entry: "output-rules-worker.js", file: "output-rules-worker.js", external: [] },
   { entry: "client-connect.js", file: "client-connect.js", external: ["./logger.js"] },
   { entry: "client-options.js", file: "client-options.js", external: ["./logger.js"] },

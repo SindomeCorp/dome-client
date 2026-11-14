@@ -3,6 +3,7 @@ import {
   CLIENT_OPTION_BY_PREFERENCE,
   CLIENT_OPTION_DEFINITIONS,
   CLIENT_OPTION_STORAGE_PREFIX,
+  SECONDARY_PRESENTATION_OPTIONS,
   buildPreferenceDefaults,
   coerceOptionValue,
   getClientOptionStorageKey
@@ -67,6 +68,25 @@ export function readClientPreferences({
         preferences[option.preferenceName] = coerced.value;
       }
     });
+  }
+
+  // Copy the resolved main settings once, including URL overrides. Persisting
+  // this migration makes later main-window edits independent of secondary.
+  const params = new URLSearchParams(locationSearch);
+  for (const [key, mainKey] of Object.entries(SECONDARY_PRESENTATION_OPTIONS)) {
+    const option = CLIENT_OPTION_DEFINITIONS.find((entry) => entry.key === key);
+    const main = CLIENT_OPTION_DEFINITIONS.find((entry) => entry.key === mainKey);
+    const storageKey = getClientOptionStorageKey(key, storagePrefix);
+    const saved = getStoredValue(storageKey);
+    const supplied = params.has(option.param) && coerceOptionValue(option, params.get(option.param)).valid;
+    if (supplied || saved == null || !coerceOptionValue(option, saved).valid) {
+      if (!supplied) {
+        preferences[option.preferenceName] = coerceOptionValue(option, preferences[main.preferenceName]).valid
+          ? preferences[main.preferenceName] : option.def;
+      }
+      // URL-supplied secondary values must also reach the controls/export store.
+      persistenceUpdates.push({ key: storageKey, value: preferences[option.preferenceName] });
+    }
   }
 
   const editorFontStorageKey = getClientOptionStorageKey("editorfont", storagePrefix);

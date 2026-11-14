@@ -15,8 +15,8 @@ history, with one shared command input. Routed messages are stored once.
 The initial split gives secondary 30% of the output area. Drag the divider with a
 mouse or touch to resize it. You can also focus the divider and use the arrow keys
 to adjust it by two percentage points; Home selects 15% and End selects 85%.
-Splits remain available on narrow screens. Both windows share your output font,
-font size, and color scheme.
+Splits remain available on narrow screens. Each window can have its own output
+font, font size, and color scheme under Options → Presentation.
 
 Each window has independent Pause/Resume and unread counts. The toolbar's Pause
 Scroll button always controls main; secondary has a matching button in its own
@@ -45,6 +45,57 @@ an empty secondary window and routes future matching messages.
 
 **Clear Buffer** clears both windows and their retained history, including what
 would otherwise be exported in a log. Your filters and layout remain saved.
+
+## Independent presentation
+
+Open **Options → Presentation** and choose **Main Window** or **Secondary Window**.
+Main keeps all existing presentation controls, including the shared input and
+editor settings. Secondary provides its own output font, font size, and theme.
+Its settings affect only the secondary display, including pop-outs; saved logs
+use Main Window presentation throughout their chronological output.
+
+Secondary initially copies Main's resolved settings, then remains independent
+when Main changes. Both sets save in local storage and preference exports.
+Importing an older file without secondary settings copies the resulting Main
+settings into Secondary, replacing any previous secondary customization. Missing
+fields in a partial import also copy Main; invalid fields are reported and fall
+back to Main. Reset to Defaults restores both sets. Changes apply immediately
+to retained output without changing routing or duplicating history.
+Secondary presentation supplied through connection URL settings is also saved,
+so the display, options controls, exports, and later visits agree. Logs scale
+line spacing with Main's selected font size, including wrapped and nowrap text.
+
+## Pop-out output
+
+In a web browser, click **Pop Out** in the secondary window to move it into a
+separate companion window. The browser may choose a window or a tab. Main uses
+the freed space. This transfers the existing output, pause state, unread count,
+and scroll position; it does not open another game connection or copy session
+history. Media previews start collapsed after transfer. Text selections are
+cleared, so finish copying a selection before moving the pane.
+
+Use **Redock** in the companion, main toolbar, or Output Windows options to
+return to the previous split position and size. Closing or refreshing the
+companion also redocks it, without a confirmation or merging its output into
+main. Choosing **Single window** in options still asks for confirmation and
+merges retained messages into main in order.
+Navigation away from the companion also restores its pane, even if main must
+detect the navigation through its fallback check rather than an unload message.
+
+The companion provides Pause/Resume, unread count, Find, Configure, and Redock.
+Find searches retained secondary output; main Find can also navigate to a result
+there. Configure focuses main and opens Output Windows options. Command input,
+Clear Buffer, and unified Log remain in main. Copying uses normal selection and
+Ctrl/Cmd+C, including offscreen history. Both windows share history limits and
+clearing. The companion uses Secondary Window presentation preferences.
+
+Allow pop-ups for the site if the browser blocks the window. The docked pane
+remains active until its companion is ready; a failed opening leaves it docked.
+Only one companion is supported per main client. Closing or reloading main
+closes the companion; cancelling main's navigation leaves it open. Reconnecting
+without reloading preserves it. Later visits and imported layouts always start
+docked; no pop-out opens automatically, and no new environment settings are
+needed. Native mobile app WebViews keep docked splits and hide Pop Out.
 
 ## Channel presets and custom filters
 
@@ -86,9 +137,19 @@ color codes. A long line wrapping onto several screen rows is still one incoming
 line. If any enabled rule matches, the line appears once in secondary and is
 absent from main until the split closes.
 
-Game-marked SDWC nowrap blocks stay together in main, even when their contents
-match a filter. Their lines share a horizontal scroll position when nowrap
-display is enabled. History limits remove a complete chronological prefix through
+Game-marked SDWC nowrap blocks stay together. The first nonblank content line
+is tested against the filters selected when the block starts; a match sends the
+entire block to secondary, including blank and continuation lines. For example,
+selecting **Grid Output** routes a block beginning with `[g]`. Later matches or
+filter changes do not change that block's destination. Blank-only blocks stay in
+main. A routing failure sends the whole block to main. Closing and reopening a
+split keeps the remainder of an older block in main, like its existing content.
+
+This routing works in docked and popped-out windows and does not depend on
+the nowrap display preference. Rows stream after the first routing decision,
+without waiting for the end marker. Their lines share a horizontal scroll
+position when nowrap display is enabled. History limits remove a complete
+chronological prefix through
 the end of a block when the limit cuts into it, including any command echo
 between its lines. Further lines of an unfinished, removed block are discarded
 until its end marker. See [SDWC protocol markers](SDWC-OOB.md).

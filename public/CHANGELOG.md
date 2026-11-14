@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-11-14
+
+### Fixed
+- Preserve incoming output and redock safely when a companion navigates to another origin without notifying main.
+- Keep URL-supplied secondary presentation settings consistent with controls, preference exports, and later visits.
+- Scale saved-log line spacing with the selected font size so larger text remains readable.
+- Hide the editor-window list when no individual editor windows remain, including IDE payloads, and preserve existing windows when replacement is cancelled.
+- Allow output filters to route complete SDWC nowrap blocks using their first nonblank line, preserving formatted output in secondary and popped-out windows.
+
+### Added
+- Add Main Window and Secondary Window presentation tabs with independently saved output fonts, sizes, and themes; older imports copy Main settings into Secondary, and saved logs use Main presentation.
+- Pop out secondary output into a browser companion with shared history, Find, copying, independent pause controls, and Redock in either window.
+- Automatically redock closed companions and restore docked layouts on later visits; native mobile app WebViews retain docked splits.
+
 ## 2026-11-13
 
 ### Fixed
