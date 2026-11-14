@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-14
 
 ### Fixed
+- Match both `|C|` and `|W|` prefixes with the SIC filter in the Sindome example presets.
 - Preserve incoming output and redock safely when a companion navigates to another origin without notifying main.
 - Keep URL-supplied secondary presentation settings consistent with controls, preference exports, and later visits.
 - Scale saved-log line spacing with the selected font size so larger text remains readable.

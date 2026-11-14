@@ -105,12 +105,13 @@ test("Grid Output matches the literal player prefix only at the start of a line"
   for (const line of ["before [g] output", "[G] output", "[grid] output"]) assert.equal(regex.test(line), false);
 });
 
-test("player SIC matches literal pipes and never treats them as regex alternatives", () => {
+test("player SIC matches either uppercase C or W between literal pipes at the start of a line", () => {
   const preset = loadOutputWindowPresets({ filePath: "data/sindome-output-window-presets.json" }).find((rule) => rule.id === "sic");
   assert.equal(preset.group, "player");
   const regex = new RegExp(preset.pattern);
   assert.equal(regex.test("|C| SIC message"), true);
-  for (const line of ["ordinary output", "before |C|", "|c| message", "C", ""]) assert.equal(regex.test(line), false);
+  assert.equal(regex.test("|W| SIC message"), true);
+  for (const line of ["ordinary output", "before |C|", "before |W|", "|c| message", "|w| message", "|X| message", "C", "W", "|CW| message", ""]) assert.equal(regex.test(line), false);
 });
 
 test("player XHELP requires the exact uppercase prefix and following space", () => {
