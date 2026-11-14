@@ -13,11 +13,8 @@ export function createSocketOutputEventHandler({
   const handleEditorContent = (event) => {
     const editor = event.editor;
     const spawned = client.makeEditor(editor);
-    if (event.updateEditorList) {
-      client.spawned[editor.editorName] = spawned;
-      client.updateEditorListView();
-    } else if (spawned) {
-      client.spawned[editor.editorName] = spawned;
+    if (spawned) client.spawned[editor.editorName] = spawned;
+    if (event.updateEditorList || spawned) {
       client.updateEditorListView();
     }
   };

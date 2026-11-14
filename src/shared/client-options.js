@@ -58,6 +58,9 @@ export const CLIENT_OPTION_DEFINITIONS = [
   { key: "colorset", label: "Theme", param: "cl", preferenceName: "colorSet", def: "normal", ok: COLORSET_CHOICES, choices: COLORSET_OPTION_CHOICES, group: "fonts", control: "select", inputName: "colorset-choice" },
   { key: "outfont", label: "Output Font", param: "of", preferenceName: "lineBufferFont", def: "standard", ok: FONT_CHOICES, choices: FONT_OPTION_CHOICES, group: "fonts", control: "select", inputName: "output-font-choice" },
   { key: "outfontsize", label: "Output Font Size (pt)", param: "oz", preferenceName: "lineBufferFontSizePt", def: 9.75, min: 8, max: 24, group: "fonts", control: "number", inputName: "output-font-size", step: 0.25 },
+  { key: "secondarycolorset", label: "Theme", param: "scl", preferenceName: "secondaryColorSet", def: "normal", ok: COLORSET_CHOICES, choices: COLORSET_OPTION_CHOICES, group: "secondaryFonts", control: "select", inputName: "secondary-colorset-choice" },
+  { key: "secondaryoutfont", label: "Output Font", param: "sof", preferenceName: "secondaryLineBufferFont", def: "standard", ok: FONT_CHOICES, choices: FONT_OPTION_CHOICES, group: "secondaryFonts", control: "select", inputName: "secondary-output-font-choice" },
+  { key: "secondaryoutfontsize", label: "Output Font Size (pt)", param: "soz", preferenceName: "secondaryLineBufferFontSizePt", def: 9.75, min: 8, max: 24, group: "secondaryFonts", control: "number", inputName: "secondary-output-font-size", step: 0.25 },
   { key: "inputfont", label: "Input Font", param: "if", preferenceName: "inputFont", def: "standard", ok: FONT_CHOICES, choices: FONT_OPTION_CHOICES, group: "fonts", control: "select", inputName: "input-font-choice" },
   { key: "inputfontsize", label: "Input Font Size (pt)", param: "iz", preferenceName: "inputFontSizePt", def: 11, min: 8, max: 24, group: "fonts", control: "number", inputName: "input-font-size", step: 0.5 },
   { key: "inputfontcolor", label: "Input Font Color", param: "ic", preferenceName: "inputFontColor", def: "#EEEEEE", type: "color", group: "fonts", control: "color", inputName: "input-font-color" },
@@ -77,6 +80,7 @@ export const CLIENT_OPTION_DEFINITIONS = [
 const CLIENT_OPTION_GROUP_ORDER = {
   general: ["localecho", "commands", "buffer", "broadly", "shorten", "imageview", "playding", "scroll", "scrolluppause", "transparent", "logcss", "sdwcnowrap"],
   fonts: ["outfont", "outfontsize", "editorfont", "inputfont", "inputfontsize", "inputfontcolor", "inputbgcolor", "colorset"],
+  secondaryFonts: ["secondaryoutfont", "secondaryoutfontsize", "secondarycolorset"],
   editor: ["edittype", "edittheme"]
 };
 
@@ -157,6 +161,23 @@ export function buildPreferenceDefaults() {
 
 export function getClientOptionStorageKey(optionKey, prefix = CLIENT_OPTION_STORAGE_PREFIX) {
   return `${prefix}${optionKey}`;
+}
+
+export const SECONDARY_PRESENTATION_OPTIONS = {
+  secondarycolorset: "colorset",
+  secondaryoutfont: "outfont",
+  secondaryoutfontsize: "outfontsize"
+};
+
+export function getOutputPresentation(preferences = {}, secondary = false) {
+  const font = secondary ? preferences.secondaryLineBufferFont : preferences.lineBufferFont;
+  const theme = secondary ? preferences.secondaryColorSet : preferences.colorSet;
+  const size = Number(secondary ? preferences.secondaryLineBufferFontSizePt : preferences.lineBufferFontSizePt);
+  return {
+    font: FONT_CHOICES.includes(font) ? font : "standard",
+    theme: COLORSET_CHOICES.includes(theme) ? theme : "normal",
+    size: Number.isFinite(size) && size >= 8 && size <= 24 ? size : 9.75
+  };
 }
 
 export function normalizeHexColor(value) {

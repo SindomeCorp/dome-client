@@ -35,6 +35,7 @@ router.get("/", screens.connect);
 router.post("/", screens.connect);
 router.get("/game-owner-questions/", screens.gameOwnerQuestions);
 router.get("/player-client/", screens.client);
+router.get("/output-window/", screens.outputWindow);
 router.post("/website-login/", auth.login);
 router.get("/editor/:type/", screens.editor);
 router.get("/ac/:type", autocomplete.basic);

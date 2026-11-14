@@ -39,11 +39,16 @@ Use for width-sensitive text that should remain unwrapped and horizontally scrol
 ```
 
 Client behavior:
+- With output filters enabled, the first nonblank line determines the destination
+  of the whole block using the filters selected at its start. Blank-only blocks
+  stay in main. Routing is independent of the display preference below; block
+  formatting and horizontal scrolling also work in secondary and pop-out views.
 - If `Mobile Friendly Text Wrap` is enabled:
   - Starts a nowrap block on `SDWC-START-NOWRAP`
   - Ends it on `SDWC-END-NOWRAP`
 - If disabled:
-  - Markers are ignored and normal wrapping continues
+  - Normal wrapping continues; the output-window renderer still keeps the
+    marked block together for routing and history limits
 
 Safety behavior:
 - Duplicate start while active is ignored (warn-level log)

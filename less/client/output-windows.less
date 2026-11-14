@@ -140,3 +140,10 @@ body.client { box-sizing: border-box; }
 @container (max-width: 260px) {
   .output-pause .pause-label { display: none; }
 }
+
+body.output-popout {
+  #output-secondary-panel { display: flex; flex: 1 1 0; }
+  #output-popout-status { flex: 0 0 auto; margin: 0; padding: 3px 8px; color: inherit; background: var(--output-background, #000); }
+  #output-popout-status:empty { display: none; }
+  #output-find-scope { display: none; }
+}

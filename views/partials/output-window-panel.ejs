@@ -4,7 +4,14 @@
     <span>Secondary</span>
     <span data-output-unread="secondary" class="output-unread" aria-live="polite"></span>
     <button type="button" class="btn btn-primary btn-xs output-pause" data-output-pause="secondary" aria-label="Pause secondary scrolling"><span class="pause-label">PAUSE SCROLL</span></button>
+    <% if (typeof popout !== "undefined" && popout) { %>
+    <button type="button" class="btn btn-primary btn-xs" id="button-output-find">Find</button>
+    <button type="button" class="btn btn-primary btn-xs" data-output-configure>Configure</button>
+    <button type="button" class="btn btn-primary btn-xs" id="button-output-redock">Redock</button>
+    <% } else { %>
+    <button type="button" class="btn btn-primary btn-xs hide" id="button-output-popout">Pop Out</button>
     <button type="button" class="btn btn-primary btn-xs output-close" id="button-output-close" aria-label="Close secondary output window">&times;</button>
+    <% } %>
   </header>
   <% } %>
   <div id="<%= panelName === 'main' ? 'lineBuffer' : 'secondaryBuffer' %>" class="standardText output-scroll">

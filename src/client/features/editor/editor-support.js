@@ -69,21 +69,20 @@ export function setupEditorSupport({ client, win = globalThis.window } = {}) {
     }
     v.style.display = "none";
     v.innerHTML = "";
-    if ( Object.keys( client.spawned ).length === 0 ) {
-      return;
-    }
+    const editors = Object.entries(client.spawned).filter(([title, editWin]) => {
+      if (!editWin || editWin.closed || typeof editWin.focus !== "function" || typeof editWin.close !== "function") {
+        delete client.spawned[title];
+        return false;
+      }
+      return true;
+    });
+    if (!editors.length) return;
     let listHTML = "<ul>";
-    for ( const title in client.spawned ) {
-      if ( !client.spawned.hasOwnProperty( title ) ) {
-        continue;
-      }
-      const editWin = client.spawned[ title ];
-      if ( editWin != null ) {
-        listHTML += "<li data-editor=\"" + title + "\">";
-        listHTML += "<span data-editor=\"" + title + "\" class=\"truncate\" title=\"" + title + "\">" + title + "</span>";
-        listHTML += "<a data-editor=\"" + title + "\" title=\"close editor\" href=\"javascript:void(0);\">";
-        listHTML += "<i data-editor=\"" + title + "\" class=\"glyph-button-close\"></i></a></li>";
-      }
+    for (const [title] of editors) {
+      listHTML += "<li data-editor=\"" + title + "\">";
+      listHTML += "<span data-editor=\"" + title + "\" class=\"truncate\" title=\"" + title + "\">" + title + "</span>";
+      listHTML += "<a data-editor=\"" + title + "\" title=\"close editor\" href=\"javascript:void(0);\">";
+      listHTML += "<i data-editor=\"" + title + "\" class=\"glyph-button-close\"></i></a></li>";
     }
     listHTML += "</ul>";
     v.innerHTML = listHTML;

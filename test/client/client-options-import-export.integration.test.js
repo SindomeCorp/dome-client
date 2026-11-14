@@ -27,6 +27,9 @@ const setOutputActions = (options, output = []) => {
         edittheme: "edittheme",
         editorType: "edittype",
         colorSet: "colorset",
+        secondaryColorSet: "secondarycolorset",
+        secondaryLineBufferFont: "secondaryoutfont",
+        secondaryLineBufferFontSizePt: "secondaryoutfontsize",
         performanceBuffer: "buffer"
       };
       options.clientOptions.save(keyByPreference[name], value);

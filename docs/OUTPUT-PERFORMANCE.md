@@ -20,6 +20,11 @@ ANSI formatting, wrapping, media URLs, marked blocks, and 70% matching chat line
 They exercise receipt, a jump into old history, Find, resizing, closing a split,
 export preparation, input, and clearing. No real game connection is made.
 
+Each replay also opens and redocks a companion three times, verifying that the
+same secondary height index is reused and mounted content stays bounded. The
+`popoutTransfers` timings include browser-window startup and control interaction,
+not just renderer work; they should not be interpreted as single blocking tasks.
+
 The default replay sizes are 20,000, 100,000, and 1,000,000 logical lines. You can
 change them and optionally provide a local exported log:
 
@@ -106,6 +111,49 @@ history, including Chromium with asynchronous clipboard-write permission denied.
 Selection preparation is cancellable and discards its cached text on clear or
 split closure. Saved-log preview tests open the exported document independently,
 verify that media starts unloaded, and expand and collapse the controls.
+
+### Pop-out transfer replay: 2026-11-14
+
+On the same reference machine and Chromium version, three pop-out/redock cycles
+per size reused the secondary height index without changing routing generations:
+
+| Retained lines | Mounted rows, docked | Mounted rows, companion | Pop-out/redock cycle | Close split | Export preparation |
+| --- | --- | --- | --- | --- | --- |
+| 20,000 | 137 | 39–46 | 99–146 ms | 5 ms | 43 ms |
+| 100,000 | 139 | 41–48 | 99–137 ms | 13 ms | 187 ms |
+| 1,000,000 | 138 | 41–48 | 98–140 ms | 154 ms | 1,476 ms |
+
+Cycle timings include opening a browser window and clicking Redock. They are
+elapsed interaction times, not individual main-thread tasks. No main-window
+long tasks were reported; the million-line heartbeat reached 215 ms including
+forced collection for measurements. Final clipboard and download allocations
+remain separate from these preparation timings, as described below.
+
+After each three-cycle replay, collected document counts returned to one. The
+million-line JavaScript heap was about 271.5 MiB before transfers and 271.6 MiB
+afterward; Clear Buffer and collection returned it to about 3.2 MiB. Browser
+checks also use weak references to verify that retired renderers and companion
+documents become collectible. Collection is checked after asynchronous window
+teardown, rather than immediately in the close handler.
+
+Functional checks passed in Chromium, Firefox, and Chromium's narrow touch
+emulation. Native-app hiding uses a bridge fixture; no actual mobile WebView
+was available for this run.
+
+Repeating all three sizes with whole-block filter routing retained 137–139
+mounted rows and returned to one document after companion transfers. At one
+million lines, closing took 139 ms in chunks and export preparation took
+1,482 ms, with no reported main-window long tasks. Clearing returned collected
+heap usage to about 3.2 MiB. A separate 20,000-line single-block regression
+verifies that only its first nonblank line is submitted to the routing worker;
+later rows share the decision without rescanning the block.
+
+After the companion-navigation, presentation persistence, and log-spacing fixes,
+the same three replay sizes again mounted 137–139 rows and returned to one
+document after transfers. The million-line run prepared its log in 1,482 ms and
+returned to about 3.2 MiB after clearing, with no reported main-window long tasks.
+Separate browser checks measure actual 24pt wrapped and nowrap log lines with
+embedded and linked CSS, rather than relying only on exported markup assertions.
 
 ## Acceptance checks and limitations
 

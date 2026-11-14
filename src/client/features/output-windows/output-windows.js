@@ -10,6 +10,8 @@ import { setupHistoryTools } from "./history-tools.js";
 import { showClientOptionsSaved } from "../options/client-options-toast.js";
 import { setScrollButtonUi } from "../terminal/autoscroll.js";
 import { setupOutputToolbar } from "./toolbar.js";
+import { setupOutputPopout } from "./popout.js";
+import { FONT_CHOICES, COLORSET_CHOICES, getOutputPresentation } from "../../../shared/client-options.js";
 
 export class OutputWindows {
   constructor({ client, doc, win, storage = store, logger = defaultLogger, config = win.__OUTPUT_WINDOWS__ || {}, workerFactory }) {
@@ -48,6 +50,8 @@ export class OutputWindows {
     this.refreshRules();
     this.bindControls();
     this.toolbar = setupOutputToolbar(this);
+    this.popout = setupOutputPopout(this);
+    this.popout.refresh();
     this.applyLayout();
     this.refreshPresentation();
   }
@@ -58,12 +62,16 @@ export class OutputWindows {
     if (error && /rule|routing/i.test(message)) error.textContent = message;
     const status = this.doc.querySelector("#output-announcements");
     if (status) status.textContent = message;
+    const companionStatus = this.views.secondary.element.ownerDocument !== this.doc
+      && this.views.secondary.element.ownerDocument.querySelector("#output-popout-status");
+    if (companionStatus) companionStatus.textContent = message;
   }
 
   isSplitOpen() { return this.config.enabled && this.settings.open; }
   routeState() { return { open: this.isSplitOpen(), generation: this.generation, rules: this.rules }; }
   panelFor(record, state = this.routeState()) {
-    return state.open && record.generation === state.generation && record.secondary ? "secondary" : "main";
+    const route = record.group || record;
+    return state.open && route.generation === state.generation && route.secondary ? "secondary" : "main";
   }
 
   refreshRules() {
@@ -73,6 +81,7 @@ export class OutputWindows {
   }
 
   updateSettings(patch) {
+    if (patch.open === false || Object.hasOwn(patch, "position")) this.popout?.redock({ focus: false });
     const wasOpen = this.isSplitOpen();
     this.settings = normalizeOutputWindows({ ...this.settings, ...patch }).value;
     this.storage.put(OUTPUT_WINDOWS_STORAGE_KEY, this.settings);
@@ -113,19 +122,56 @@ export class OutputWindows {
   }
 
   startBlock() {
-    if (!this.group) this.group = { id: this.history.next, scrollLeft: 0 };
+    if (this.group) return;
+    const context = this.context || this.routeState();
+    const rules = context.open ? context.rules : [];
+    this.group = {
+      id: this.history.next, scrollLeft: 0, generation: context.generation,
+      secondary: false, ready: !rules?.length, routingRules: rules
+    };
   }
-  endBlock() { this.group = null; }
+  endBlock() {
+    if (this.group?.routingRules) {
+      // An empty/blank-only block has no line to test. Release it to main.
+      this.group.ready = true;
+      delete this.group.routingRules;
+    }
+    this.group = null;
+    this.commitReady();
+  }
+
+  routeBlock(group, record) {
+    const rules = group.routingRules;
+    delete group.routingRules;
+    const epoch = this.history.epoch;
+    const controller = new AbortController();
+    this.routing.set(controller, record.id);
+    // One decision lives on the shared group. Later rows stream using it;
+    // resolving a large block never needs to visit its accumulated records.
+    const job = this.runner.match([recordText(record)], rules, { signal: controller.signal }).then((matches) => {
+      if (epoch !== this.history.epoch) return;
+      group.secondary = matches[0] === true;
+      group.ready = true;
+      this.commitReady();
+    }).finally(() => { this.pending.delete(job); this.routing.delete(controller); });
+    this.pending.add(job);
+  }
 
   appendRuns(runs, { local = false, echo = false } = {}) {
+    this.popout?.check();
     if (this.group?.discarded && !local) return;
     const context = this.context || this.routeState();
+    const group = local ? null : this.group;
     const shouldRoute = !local && !this.group && context.open && context.rules?.length;
     const records = splitRunsIntoLines(runs).map((line) => this.history.append(line, {
-      group: local ? null : this.group, generation: context.generation, ready: !shouldRoute, echo
+      group, generation: group?.generation ?? context.generation, ready: group ? group.ready : !shouldRoute, echo
     }));
     if (!records.length) return;
     this.announcement = ((this.announcement || "") + records.slice(-20).map(recordText).join("\n")).slice(-1500);
+    if (group?.routingRules?.length) {
+      const firstContent = records.find((record) => recordText(record).trim().length > 0);
+      if (firstContent) this.routeBlock(group, firstContent);
+    }
     if (shouldRoute) {
       const epoch = this.history.epoch;
       const first = records[0].id;
@@ -156,7 +202,9 @@ export class OutputWindows {
   commitReady() {
     this.committed = Math.max(this.committed, this.history.first - 1);
     const start = this.win.performance.now();
-    while (this.committed < this.history.next - 1 && this.history.get(this.committed + 1)?.ready) {
+    while (this.committed < this.history.next - 1) {
+      const record = this.history.get(this.committed + 1);
+      if (!(record?.group ? record.group.ready : record?.ready)) break;
       this.committed++;
       if (this.committed % 64 === 0 && this.win.performance.now() - start > 8) {
         if (!this.commitTimer) this.commitTimer = this.win.setTimeout(() => { this.commitTimer = null; this.commitReady(); }, 0);
@@ -182,6 +230,7 @@ export class OutputWindows {
       }
       this.updateHelp();
       this.tools.changed();
+      this.popout?.changed();
       if (this.announcement) {
         this.doc.querySelector("#output-announcements").textContent = this.announcement;
         this.announcement = "";
@@ -219,6 +268,7 @@ export class OutputWindows {
     }
     for (const view of Object.values(this.views)) view.prune(this.history.first);
     this.tools.changed();
+    this.popout?.changed();
   }
 
   reindex() {
@@ -247,16 +297,18 @@ export class OutputWindows {
     this.announcement = "";
     for (const view of Object.values(this.views)) view.reset();
     this.tools.changed({ reset: true });
+    this.popout?.changed({ reset: true });
     this.updateHelp();
   }
 
   updateViewState(view) {
-    const button = this.doc.querySelector("[data-output-pause=" + view.name + "]");
+    const host = view.element.ownerDocument;
+    const button = host.querySelector("[data-output-pause=" + view.name + "]");
     if (button) {
       setScrollButtonUi(button, view.paused, "pause-label");
       button.setAttribute("aria-label", (view.paused ? "Resume " : "Pause ") + view.name + " scrolling");
     }
-    const unread = this.doc.querySelector("[data-output-unread=" + view.name + "]");
+    const unread = host.querySelector("[data-output-unread=" + view.name + "]");
     const text = view.unread ? view.unread + " unread" : "";
     if (unread && unread.textContent !== text) {
       const previousLength = unread.textContent.length;
@@ -294,17 +346,39 @@ export class OutputWindows {
     this.workspace.style.setProperty("--output-background", colors.backgroundColor);
     this.workspace.style.setProperty("--output-foreground", colors.color);
     for (const [name, view] of Object.entries(this.views)) {
-      if (name !== "main") view.element.className = primary.className;
+      const presentation = getOutputPresentation(this.client.preferences, name === "secondary");
+      if (name !== "main") {
+        view.element.className = primary.className;
+        view.element.classList.remove(...FONT_CHOICES.map((font) => font + "Text"), ...COLORSET_CHOICES.map((theme) => "colorset-" + theme));
+        view.element.classList.add(presentation.font + "Text");
+        if (presentation.theme !== "normal") view.element.classList.add("colorset-" + presentation.theme);
+        view.element.style.fontSize = presentation.size + "pt";
+        const secondaryColors = view.win.getComputedStyle(view.element);
+        const panel = view.element.closest(".output-panel");
+        panel.style.setProperty("--output-background", secondaryColors.backgroundColor);
+        panel.style.setProperty("--output-foreground", secondaryColors.color);
+      }
       view.element.classList.toggle("scroll-disabled", view.paused);
-      view.element.style.fontSize = primary.style.fontSize;
+      if (name === "secondary" && view.element.ownerDocument !== this.doc) {
+        const root = view.element.ownerDocument.querySelector("#browser-client");
+        const secondaryColors = view.win.getComputedStyle(view.element);
+        root.style.setProperty("--output-background", secondaryColors.backgroundColor);
+        root.style.setProperty("--output-foreground", secondaryColors.color);
+        root.style.backgroundColor = secondaryColors.backgroundColor;
+        root.style.color = secondaryColors.color;
+      }
       this.updateViewState(view);
-      view.refreshPresentation();
+      const signature = JSON.stringify([presentation, this.client.preferences.imagePreview, this.client.preferences.sdwcNowrapBlocks]);
+      if (view.presentationSignature !== signature) {
+        view.presentationSignature = signature;
+        view.refreshPresentation();
+      }
     }
     this.prune();
   }
 
   updateHelp() {
-    const help = this.doc.querySelector("#output-secondary-help");
+    const help = this.views.secondary.element.ownerDocument.querySelector("#output-secondary-help");
     help.classList.toggle("hide", this.views.secondary.index.length > 0);
     help.querySelector("p").textContent = this.rules?.length
       ? "Waiting for matching output."
@@ -314,18 +388,19 @@ export class OutputWindows {
 
   applyLayout() {
     const open = this.isSplitOpen();
-    this.workspace.classList.toggle("split-open", open);
+    const detached = this.popout?.isDetached();
+    this.workspace.classList.toggle("split-open", open && !detached);
     this.workspace.dataset.position = this.settings.position;
     this.workspace.style.setProperty("--secondary-size", this.settings.secondarySize + "%");
-    this.doc.querySelector("#output-secondary-panel").classList.toggle("hide", !open);
+    this.doc.querySelector("#output-secondary-panel").classList.toggle("hide", !open || detached);
     const divider = this.doc.querySelector("#output-divider");
-    divider.classList.toggle("hide", !open);
+    divider.classList.toggle("hide", !open || detached);
     divider.setAttribute("aria-orientation", ["left", "right"].includes(this.settings.position) ? "vertical" : "horizontal");
     divider.setAttribute("aria-valuenow", Math.round(this.settings.secondarySize));
     const button = this.doc.querySelector("#button-output-split");
     button?.classList.toggle("hide", !this.config.enabled);
     button?.setAttribute("aria-expanded", String(open));
-    if (button) button.textContent = open ? "CLOSE SPLIT" : "SPLIT";
+    if (button) button.textContent = detached ? "REDOCK" : open ? "CLOSE SPLIT" : "SPLIT";
     if (!open) this.activePanel = "main";
     this.toolbar?.refresh();
     for (const view of Object.values(this.views)) view.schedule();
@@ -340,14 +415,12 @@ export class OutputWindows {
       header?.addEventListener("pointerdown", activate);
     }
     this.doc.querySelector("#button-output-split")?.addEventListener("click", () => {
+      if (this.popout.isDetached()) { this.popout.redock(); return; }
       if (this.isSplitOpen()) this.closeSplit();
       else this.updateSettings({ open: true });
     });
     this.doc.querySelector("#button-output-close").addEventListener("click", () => this.closeSplit());
-    this.doc.querySelector("#button-output-configure").addEventListener("click", () => {
-      this.client.clientOptionsOverlay.classList.remove("hide");
-      this.doc.querySelector("#client-options-tab-output")?.click();
-    });
+    this.doc.querySelector("#button-output-configure").addEventListener("click", () => this.configure());
     this.doc.querySelectorAll("[data-output-pause]").forEach((button) => {
       button.addEventListener("click", () => {
         const view = this.views[button.dataset.outputPause];
@@ -399,12 +472,19 @@ export class OutputWindows {
   }
 
   destroy() {
+    this.popout.destroy();
     this.toolbar.destroy();
     this.clear();
     this.tools.cancel();
     this.win.clearTimeout(this.indexTimer);
     this.win.clearTimeout(this.commitTimer);
     for (const view of Object.values(this.views)) view.destroy();
+  }
+
+  configure() {
+    this.win.focus();
+    this.client.clientOptionsOverlay.classList.remove("hide");
+    this.doc.querySelector("#client-options-tab-output")?.click();
   }
 }
 

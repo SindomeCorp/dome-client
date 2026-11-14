@@ -1,6 +1,8 @@
 import { store } from "../../core/store.js";
 import {
   CLIENT_OPTION_STORAGE_PREFIX,
+  SECONDARY_PRESENTATION_OPTIONS,
+  coerceOptionValue,
   buildClientOptionState,
   getClientOptionStorageKey
 } from "../../../shared/client-options.js";
@@ -23,6 +25,12 @@ export function createClientOptionsStore({
         throw new Error("invalid option name");
       }
       let state = storage.get(this.storageKey(name));
+      const mainKey = SECONDARY_PRESENTATION_OPTIONS[name];
+      if (mainKey && (state == null || !coerceOptionValue(option, state).valid)) {
+        const main = this.get(mainKey).state;
+        state = coerceOptionValue(option, main).valid ? main : option.def;
+        storage.put(this.storageKey(name), state);
+      }
       if (state == null) {
         state = option.def;
       }

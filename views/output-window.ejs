@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Secondary Output</title>
+  <link rel="stylesheet" href="/css/client.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Quantico:400,400italic,700|Roboto+Mono|Comic+Mono" />
+</head>
+<body class="client output-popout">
+  <div id="browser-client">
+    <%- include("partials/output-find") %>
+    <div id="output-workspace" class="output-workspace">
+      <%- include("partials/output-window-panel", { panelName: "secondary", popout: true }) %>
+    </div>
+    <p id="output-popout-status" role="status">Waiting for the main client…</p>
+  </div>
+  <script type="module" src="/js/output-window.js"></script>
+</body>
+</html>

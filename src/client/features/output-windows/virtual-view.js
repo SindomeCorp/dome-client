@@ -7,6 +7,10 @@ const SCROLL_EPSILON = 0.01; // Ignore rounding noise without swallowing subpixe
 export class VirtualOutputView {
   constructor({ element, client, win, name, onActive = () => {}, onState = () => {}, onMessage = () => {} }) {
     Object.assign(this, { element, client, win, name, onActive, onState, onMessage });
+    // The WindowProxy may point at another origin by the time this view is
+    // retired. Keep the original host APIs rather than looking them up then.
+    this.cancelFrame = (win.cancelAnimationFrame || win.clearTimeout).bind(win);
+    this.clearTimer = win.clearTimeout.bind(win);
     this.index = new HeightIndex();
     this.mounted = new Map();
     this.gaps = new Map();
@@ -44,6 +48,8 @@ export class VirtualOutputView {
       const selection = doc.getSelection();
       if (selection && element.contains(selection.anchorNode)) selection.removeAllRanges();
       this.setPaused(!this.paused);
+      const inputWindow = this.client.inputReader?.ownerDocument?.defaultView;
+      if (inputWindow && inputWindow !== this.win) inputWindow.focus();
       this.client.inputReader?.focus({ preventScroll: true });
     });
     this.bind(element, "pointerdown", (event) => {
@@ -56,6 +62,7 @@ export class VirtualOutputView {
     this.bind(doc, "selectionchange", () => this.schedule());
     if (win.ResizeObserver) {
       this.observer = new win.ResizeObserver((entries) => {
+        if (this.destroyed) return;
         for (const entry of entries) {
           const id = Number(entry.target.dataset.outputId);
           const index = this.index.indexOfId(id);
@@ -206,7 +213,7 @@ export class VirtualOutputView {
   }
 
   schedule() {
-    if (this.frame != null) return;
+    if (this.destroyed || this.frame != null) return;
     const schedule = this.win.requestAnimationFrame?.bind(this.win) || ((fn) => this.win.setTimeout(fn, 16));
     this.frame = schedule(() => { this.frame = null; this.render(); });
   }
@@ -240,7 +247,8 @@ export class VirtualOutputView {
     row.setAttribute("aria-setsize", this.index.length);
     row.tabIndex = -1;
     row.innerHTML = renderRecordHtml(record, {
-      client: this.client, width: this.element.clientWidth || 580, state: { collapsed: record.collapsed }
+      client: this.client, width: this.element.clientWidth || 580,
+      state: { collapsed: record.collapsed || record.id <= (this.collapsePreviewsThrough || 0) }
     });
     if (record.group && this.client.preferences.sdwcNowrapBlocks) {
       row.scrollLeft = record.group.scrollLeft || 0;
@@ -294,7 +302,7 @@ export class VirtualOutputView {
   }
 
   render() {
-    if (this.element.hidden) return;
+    if (this.destroyed || this.element.hidden) return;
     const selection = this.hasSelection() ? this.element.ownerDocument.getSelection() : null;
     const endpoints = selection && {
       anchorNode: selection.anchorNode, anchorOffset: selection.anchorOffset,
@@ -314,7 +322,11 @@ export class VirtualOutputView {
     else if (this.anchor) {
       const index = this.index.indexOfId(this.anchor.id);
       if (index < 0) return;
-      if (index >= 0) logicalTop = this.index.prefix(index) + this.anchor.offset;
+      if (index >= 0) {
+        const height = this.index.prefix(index + 1) - this.index.prefix(index);
+        this.anchor.offset = Math.max(0, Math.min(this.anchor.offset, height - SCROLL_EPSILON));
+        logicalTop = this.index.prefix(index) + this.anchor.offset;
+      }
     }
     logicalTop = Math.max(0, Math.min(logicalTop, Math.max(0, this.index.total - viewport)));
     const start = this.index.offsetIndex(Math.max(0, logicalTop - viewport));
@@ -418,8 +430,10 @@ export class VirtualOutputView {
   }
 
   destroy() {
-    if (this.frame != null) (this.win.cancelAnimationFrame || this.win.clearTimeout).call(this.win, this.frame);
-    this.win.clearTimeout(this.longPress);
+    this.destroyed = true;
+    if (this.frame != null) this.cancelFrame(this.frame);
+    this.frame = null;
+    this.clearTimer(this.longPress);
     this.observer?.disconnect();
     this.containerObserver?.disconnect();
     this.listen.forEach((remove) => remove());

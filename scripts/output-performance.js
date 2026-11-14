@@ -32,7 +32,7 @@ async function metrics(page, cdp) {
   const heap = await cdp.send("Runtime.getHeapUsage");
   const dom = await cdp.send("Memory.getDOMCounters");
   const rows = await page.locator("[data-output-id]").count();
-  return { heapBytes: heap.usedSize, domNodes: dom.nodes, mountedRows: rows };
+  return { heapBytes: heap.usedSize, documents: dom.documents, domNodes: dom.nodes, mountedRows: rows };
 }
 
 async function runReplay(size, fixture) {
@@ -104,6 +104,33 @@ async function runReplay(size, fixture) {
   const receiveMs = performance.now() - receivedAt;
   await page.waitForTimeout(100);
   const open = await metrics(page, cdp);
+  const popoutTransfers = [];
+  const secondaryIndex = await page.evaluateHandle(() => window.outputTest.manager.views.secondary.index);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.evaluate(() => { window.outputPhase = "popout"; });
+    const started = performance.now();
+    const opening = page.waitForEvent("popup");
+    await page.locator("#button-output-popout").click();
+    const popup = await opening;
+    await page.waitForFunction(() => window.outputTest.manager.popout.isDetached());
+    if (await secondaryIndex.evaluate((index) => index.length)) await popup.waitForFunction(() => Boolean(window.document.querySelector("[data-output-id]")));
+    const detachedRows = await popup.locator("[data-output-id]").count();
+    if (!await page.evaluate((index) => window.outputTest.manager.views.secondary.index === index, secondaryIndex)) throw new Error("Pop-out duplicated the secondary index.");
+    await popup.locator("#button-output-redock").click();
+    await page.waitForFunction(() => !window.outputTest.manager.popout.isDetached());
+    if (!await page.evaluate((index) => window.outputTest.manager.views.secondary.index === index, secondaryIndex)) throw new Error("Redocking rebuilt the secondary index.");
+    if (detachedRows > 1000) throw new Error("Pop-out mounted more than the viewport budget.");
+    popoutTransfers.push({ elapsedMs: performance.now() - started, mountedRows: detachedRows });
+  }
+  await secondaryIndex.dispose();
+  let afterTransfers = await metrics(page, cdp);
+  // Window teardown and observer cleanup finish in later browser tasks. Allow
+  // those tasks to run before asserting collection, as the browser tests do.
+  for (let attempt = 0; !fixture && afterTransfers.documents > open.documents && attempt < 20; attempt++) {
+    await page.waitForTimeout(50);
+    afterTransfers = await metrics(page, cdp);
+  }
+  if (!fixture && afterTransfers.documents !== open.documents) throw new Error("Closed pop-outs retained companion documents: " + afterTransfers.documents + " versus " + open.documents + ".");
   const operations = await page.evaluate(async () => {
     const { manager, searchSnapshot, exportSnapshot, client } = window.outputTest;
     const measure = async (phase, action) => {
@@ -167,6 +194,7 @@ async function runReplay(size, fixture) {
     return { jump, selectedScroll, find, commonFind, tailFind, resize, close, exportLog, input };
   });
   const closed = await metrics(page, cdp);
+  operations.popoutTransfers = popoutTransfers;
   const observations = await page.evaluate(() => {
     clearInterval(window.outputHeartbeat);
     return { longTasks: window.outputLongTasks, worstHeartbeatMs: window.outputWorstHeartbeatMs, retainedLines: window.outputTest.manager.history.length };
@@ -179,7 +207,7 @@ async function runReplay(size, fixture) {
   if (!operations.selectedScroll.value.pinnedAlive || !operations.selectedScroll.value.oldestMounted || operations.selectedScroll.value.mountedRows > 1000) {
     throw new Error("Selected scrollback did not preserve endpoints and render the new viewport within its row budget.");
   }
-  const result = { size, fixture: Boolean(fixture), receiveMs, baseline, open, closed, cleared, operations, ...observations };
+  const result = { size, fixture: Boolean(fixture), receiveMs, baseline, open, afterTransfers, closed, cleared, operations, ...observations };
   logger.info("Output replay complete", { size, receiveMs: Math.round(receiveMs), mountedRows: open.mountedRows, heapMiB: Math.round(open.heapBytes / 1024 / 1024), longTasks: observations.longTasks.length });
   await context.close();
   return result;

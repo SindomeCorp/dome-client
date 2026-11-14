@@ -16,6 +16,11 @@ const css = await readFile(root + "public/css/client.css", "utf8");
 const app = express();
 app.get("/runtime.js", (_req, res) => res.type("js").send(bundled.outputFiles[0].text));
 app.use(express.static(root + "public"));
+app.get("/editor/:type/", (_req, res) => res.type("html").send("<!doctype html><title>Editor fixture</title>"));
+app.get("/output-window/", async (_req, res) => {
+  const html = await renderFile(root + "views/output-window.ejs", {});
+  res.type("html").send(html.replace(/<link[^>]+fonts\.googleapis[^>]+>/g, ""));
+});
 app.get("/", async (req, res) => {
   const config = { enabled: req.query.splits !== "off", customRegexEnabled: req.query.custom !== "off", presets: req.query.presets === "default" ? defaultPresets : presets };
   const html = await renderFile(root + "views/client.ejs", {

@@ -7,6 +7,7 @@ import { setupButtons } from "../src/client/features/terminal/buttons.js";
 import { setupWindowHandlers } from "../src/client/features/terminal/window-handlers.js";
 import { setupInputReader } from "../src/client/features/terminal/input-reader.js";
 import { searchSnapshot, exportSnapshot } from "../src/client/features/output-windows/history-tools.js";
+import { setupEditorSupport } from "../src/client/features/editor/editor-support.js";
 
 const client = {
   client: document.querySelector("#browser-client"),
@@ -20,6 +21,7 @@ const client = {
   clientOptionsClose: document.querySelector("#button-client-options-close"),
   shortcutsButton: document.querySelector("#button-shortcuts"),
   shortcutsOverlay: document.querySelector("#shortcuts-overlay"),
+  editorListView: document.querySelector("#editor-list-view"),
   health: { showStatus(message) { window.lastOutputStatus = message; } },
   socket: { emit(_event, _command, callback) { callback?.({ status: "command sent" }); } },
   spawned: {}, preferences: {}
@@ -35,6 +37,7 @@ setupWindowHandlers({ client, doc: document, win: window });
 setupAutoscroll({ client, doc: document, win: window });
 setupOutputParser({ client, win: window });
 setupButtons({ client, doc: document });
+setupEditorSupport({ client, win: window });
 setupInputReader({ client, doc: document });
 
 window.outputTest = {

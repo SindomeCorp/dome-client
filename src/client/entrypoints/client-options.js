@@ -23,7 +23,7 @@ const clientOptions = createClientOptionsStore({
 });
 
 const createDefaultActions = () => ({
-  setClientOption() {},
+  setClientOption: null,
   parseClientOptionCommand() {},
   appendOutput() {},
   scrollBuffer() {},

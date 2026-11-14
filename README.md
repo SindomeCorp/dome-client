@@ -103,6 +103,10 @@ Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice f
 
 ## Output window configuration
 
+Secondary output can also move into a browser pop-out using **Pop Out**, then
+return using **Redock** in either window. See the [Output Windows guide](docs/OUTPUT-WINDOWS.md#pop-out-output)
+for controls, shared history, popup permissions, and native-app limitations.
+
 `OUTPUT_WINDOWS_ENABLED` and `OUTPUT_WINDOWS_CUSTOM_REGEX_ENABLED` default to
 `true`. `OUTPUT_WINDOWS_PRESETS_PATH` defaults to
 `data/output-window-presets.json`; operators can supply a different preset file

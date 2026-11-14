@@ -1,5 +1,6 @@
 /* global window, document, requestAnimationFrame */
 import { test, expect } from "@playwright/test";
+import { createServer } from "node:http";
 
 test.beforeEach(async ({ page }) => {
   page.on("dialog", (dialog) => dialog.accept());
@@ -41,6 +42,430 @@ async function copyThroughNativeEvent(page, expected) {
   await page.keyboard.press("Control+v");
   await expect(page.locator("#clipboard-verification")).toHaveValue(expected);
 }
+
+async function popOut(page) {
+  const opened = page.waitForEvent("popup");
+  await page.locator("#button-output-popout").click();
+  const popup = await opened;
+  await expect(page.locator("#button-output-split")).toHaveText("REDOCK");
+  await expect(popup.locator("#button-output-redock")).toBeVisible();
+  return popup;
+}
+
+async function redockCompanion(popup) {
+  await popup.locator("#button-output-redock").click().catch((error) => {
+    if (!popup.isClosed()) throw error; // Firefox may close it before click acknowledgement.
+  });
+}
+
+test("cross-origin navigation without a lifecycle notification redocks and retains incoming output", async ({ page }) => {
+  const otherOrigin = createServer((_req, response) => response.end("Another origin"));
+  await new Promise((resolve) => otherOrigin.listen(0, "127.0.0.1", resolve));
+  try {
+    for (const emptyPaused of [false, true]) {
+      await page.evaluate(async (empty) => {
+        const { manager, client } = window.outputTest;
+        manager.clear();
+        manager.updateSettings({ open: true, selected: ["team-chat"] });
+        if (empty) manager.views.secondary.setPaused(true);
+        else { client.parseSocketData("main\n[-][Team-Chat] before\n"); await manager.idle(); }
+        window.navigationIndex = manager.views.secondary.index;
+      }, emptyPaused);
+      const popup = await popOut(page);
+      await popup.evaluate(() => {
+        window.addEventListener("pagehide", (event) => event.stopImmediatePropagation(), { capture: true });
+      });
+      await popup.goto("http://127.0.0.1:" + otherOrigin.address().port);
+      const state = await page.evaluate(async () => {
+        const { client, manager } = window.outputTest;
+        client.parseSocketData("[-][Team-Chat] after navigation\n");
+        await manager.idle();
+        return { detached: manager.popout.isDetached(), retained: manager.history.length, sameIndex: manager.views.secondary.index === window.navigationIndex };
+      });
+      expect(state).toEqual({ detached: false, retained: emptyPaused ? 1 : 3, sameIndex: true });
+      await expect(page.locator("#secondaryBuffer")).toContainText("after navigation");
+      await expect.poll(() => popup.isClosed()).toBe(true);
+    }
+  } finally { await new Promise((resolve) => otherOrigin.close(resolve)); }
+});
+
+test("secondary presentation supplied by a URL agrees with controls, exported preferences and later visits", async ({ page }) => {
+  await page.evaluate(() => window.localStorage.clear());
+  await page.goto("/?of=menlo&cl=acid&oz=14&sof=courier&scl=snow&soz=18");
+  await page.waitForFunction(() => window.outputTest);
+  await page.locator("#button-client-options").click();
+  await page.getByRole("tab", { name: "Presentation", exact: true }).click();
+  await page.getByRole("tab", { name: "Secondary Window", exact: true }).click();
+  await expect(page.locator("#secondaryoutfont-option select")).toHaveValue("courier");
+  await expect(page.locator("#secondarycolorset-option select")).toHaveValue("snow");
+  await expect(page.locator("#secondaryoutfontsize-option input")).toHaveValue("18");
+  await page.getByRole("tab", { name: "Import/Export", exact: true }).click();
+  const saved = page.waitForEvent("download");
+  await page.locator("#client-options-export").click();
+  let json = "";
+  for await (const chunk of await (await saved).createReadStream()) json += chunk;
+  const prefs = JSON.parse(json).preferences;
+  expect([prefs.secondaryoutfont, prefs.secondarycolorset, prefs.secondaryoutfontsize]).toEqual(["courier", "snow", 18]);
+  await page.evaluate(() => window.outputTest.client.setClientOption("secondaryLineBufferFont", "lucida"));
+  await page.locator("#client-options-import-file").setInputFiles({ name: "url-options.json", mimeType: "application/json", buffer: Buffer.from(json) });
+  await page.goto("/");
+  await page.waitForFunction(() => window.outputTest);
+  expect(await page.evaluate(() => {
+    const prefs = window.outputTest.client.preferences;
+    return [prefs.secondaryLineBufferFont, prefs.secondaryColorSet, prefs.secondaryLineBufferFontSizePt];
+  })).toEqual(["courier", "snow", 18]);
+});
+
+test("exported logs keep large wrapped and nowrap fonts readable with embedded or linked CSS", async ({ page }) => {
+  const { css, logs } = await page.evaluate(async () => {
+    const { manager, client, feed, exportSnapshot } = window.outputTest;
+    client.preferences.sdwcNowrapBlocks = true;
+    await feed("FIRST_BIG_LINE\n" + "wrapped words ".repeat(60) + "\n#$# SDWC-START-NOWRAP\nNOWRAP_ONE\nNOWRAP_TWO\n#$# SDWC-END-NOWRAP\nLAST_BIG_LINE\n");
+    const logs = [];
+    for (const font of ["standard", "courier"]) {
+      client.preferences.lineBufferFont = font;
+      client.preferences.lineBufferFontSizePt = 24;
+      for (const inlineCss of [true, false]) logs.push((await exportSnapshot(await manager.snapshot(), { client, css: window.__LOG_EXPORT_CSS__, inlineCss })).join(""));
+    }
+    return { css: window.__LOG_EXPORT_CSS__, logs };
+  });
+  await page.route("https://**/*", (route) => route.abort());
+  await page.route("https://play.sindome.org/css/client.css", (route) => route.fulfill({ contentType: "text/css", body: css }));
+  for (const html of logs) {
+    await page.goto("about:blank");
+    await page.setContent(html);
+    const layout = await page.evaluate(() => {
+      const buffer = document.querySelector("#lineBuffer");
+      const rows = [...buffer.querySelectorAll(":scope > div:not(.sdwc-nowrap-block), :scope > .sdwc-nowrap-block > div")];
+      const boxes = rows.flatMap((row) => {
+        const range = document.createRange();
+        range.selectNodeContents(row);
+        return [...range.getClientRects()].filter((box) => box.width > 0 && box.height > 0).map((box) => ({ top: box.top, bottom: box.bottom }));
+      });
+      // Chromium can return separate rectangles for text and trailing spaces
+      // on the same visual line. Compare distinct lines, not those fragments.
+      const lines = boxes.filter((box, index) => index === 0 || Math.abs(box.top - boxes[index - 1].top) > 1);
+      return { fontSize: window.getComputedStyle(buffer).fontSize, lineHeight: window.getComputedStyle(buffer).lineHeight,
+        overlapping: lines.filter((box, index) => index > 0 && box.top < lines[index - 1].bottom - 1), lines: lines.length };
+    });
+    expect(layout.fontSize).toBe("32px");
+    expect(layout.lineHeight).toBe("40px");
+    expect(layout.lines).toBeGreaterThan(6);
+    expect(layout.overlapping).toEqual([]);
+  }
+});
+
+test("the editor list stays hidden for IDE payloads and only shows live individual editor windows", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { client, manager } = window.outputTest;
+    window.fixtureIdeOpens = 0;
+    client.openIDE = () => { window.fixtureIdeOpens++; };
+    client.parseSocketData("#$# edit name: ide-one upload: @program foo\nline1\n.\n");
+    await manager.idle();
+    client.parseSocketData("#$# edit name: ide-two upload: @program foo\nline2\n");
+    await manager.idle();
+    client.parseSocketData(".\n");
+    await manager.idle();
+  });
+  await expect(page.locator("#editor-list-view")).not.toBeVisible();
+  expect(await page.evaluate(() => window.fixtureIdeOpens)).toBe(2);
+  const opened = page.waitForEvent("popup");
+  await page.evaluate(async () => {
+    const { client, manager } = window.outputTest;
+    client.preferences.editorType = "windows";
+    client.parseSocketData("#$# edit name: individual upload: @program foo\nline3\n.\n");
+    await manager.idle();
+  });
+  const editor = await opened;
+  await expect(page.locator("#editor-list-view li")).toHaveCount(1);
+  await expect(page.locator("#editor-list-view")).toContainText("individual");
+  await page.locator("#editor-list-view a").click();
+  await expect.poll(() => editor.isClosed()).toBe(true);
+  await expect(page.locator("#editor-list-view")).not.toBeVisible();
+});
+
+test("presentation tabs save independent secondary display settings and keep logs styled as main", async ({ page }) => {
+  await page.locator("#button-client-options").click();
+  await page.getByRole("tab", { name: "Presentation", exact: true }).click();
+  await page.locator("#outfont-option select").selectOption("menlo");
+  await page.locator("#colorset-option select").selectOption("acid");
+  await page.getByRole("tab", { name: "Secondary Window", exact: true }).click();
+  await expect(page.locator("#presentation-panel-secondary")).toContainText("Saved logs use Main Window presentation settings.");
+  await expect(page.locator("#secondaryoutfont-option select")).toHaveValue("standard");
+  await page.locator("#secondaryoutfont-option select").selectOption("courier");
+  await page.locator("#secondarycolorset-option select").selectOption("snow");
+  await page.locator("#secondaryoutfontsize-option input").fill("16");
+  await page.locator("#secondaryoutfontsize-option input").press("Tab");
+  await page.locator("#presentation-tab-secondary").focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.locator("#presentation-tab-main")).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#client-options-tab-fonts")).toHaveAttribute("aria-selected", "true");
+  await page.locator("#outfontsize-option input").fill("12");
+  await page.locator("#outfontsize-option input").press("Tab");
+  await page.locator("#button-client-options-close").click();
+  await page.reload();
+  await page.waitForFunction(() => window.outputTest);
+  await page.evaluate(async () => {
+    window.outputTest.manager.updateSettings({ open: true, selected: ["team-chat"] });
+    await window.outputTest.feed("MAIN_PRESENTATION\n[-][Team-Chat] SECONDARY_PRESENTATION\n");
+  });
+  await expect(page.locator("#secondaryBuffer")).toHaveClass(/courierText.*colorset-snow/);
+  await expect(page.locator("#secondaryBuffer")).toHaveCSS("background-color", "rgb(226, 226, 226)");
+  await expect(page.locator("#secondaryBuffer")).toHaveCSS("font-size", "21.3333px");
+  const popup = await popOut(page);
+  await expect(popup.locator("#secondaryBuffer")).toHaveClass(/courierText.*colorset-snow/);
+  await expect(popup.locator("#secondaryBuffer")).toHaveCSS("background-color", "rgb(226, 226, 226)");
+  const saved = page.waitForEvent("download");
+  await page.locator("#button-save-mini").click();
+  let html = "";
+  for await (const chunk of await (await saved).createReadStream()) html += chunk;
+  expect(html).toContain("id=\"lineBuffer\" class=\"menloText colorset-acid\" style=\"font-size:12pt;line-height:15pt\"");
+  expect(html).toContain("SECONDARY_PRESENTATION");
+  await popup.locator("[data-output-configure]").click();
+  await page.getByRole("tab", { name: "Import/Export", exact: true }).click();
+  const exported = page.waitForEvent("download");
+  await page.locator("#client-options-export").click();
+  let json = "";
+  for await (const chunk of await (await exported).createReadStream()) json += chunk;
+  expect(JSON.parse(json).preferences.secondaryoutfont).toBe("courier");
+  await page.locator("#client-options-import-file").setInputFiles({ name: "older-options.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ preferences: { outfont: "lucida", colorset: "slither", outfontsize: 10 } })) });
+  await expect(popup.locator("#secondaryBuffer")).toHaveClass(/lucidaText.*colorset-slither/);
+  await expect(popup.locator("#secondaryBuffer")).toHaveCSS("font-size", "13.3333px");
+  await page.locator("#client-options-import-file").setInputFiles({ name: "new-options.json", mimeType: "application/json", buffer: Buffer.from(json) });
+  await expect.poll(() => popup.isClosed()).toBe(true);
+  await expect(page.locator("#secondaryBuffer")).toHaveClass(/courierText.*colorset-snow/);
+  await page.locator("#client-options-reset-defaults").click();
+  await expect.poll(() => popup.isClosed()).toBe(true);
+  expect(await page.evaluate(() => window.outputTest.client.preferences.secondaryLineBufferFont)).toBe("standard");
+  await page.reload();
+  await page.waitForFunction(() => window.outputTest);
+  expect(await page.evaluate(() => window.outputTest.client.preferences.secondaryColorSet)).toBe("normal");
+});
+
+test("grid nowrap blocks route intact through docked and popped-out views and unified logs", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { manager, client, feed } = window.outputTest;
+    client.preferences.sdwcNowrapBlocks = true;
+    manager.updateSettings({ open: true, selected: ["grid-output"] });
+    await feed("before grid\n#$# SDWC-START-NOWRAP\n\n\u001b[32m[g] GRID_HEADER " + "column ".repeat(100) + "\u001b[0m\n[g] GRID_BODY " + "column ".repeat(100) + "\n");
+  });
+  await expect(page.locator("#secondaryBuffer")).toContainText("GRID_HEADER");
+  await expect(page.locator("#lineBuffer")).not.toContainText("GRID_HEADER");
+  const rows = page.locator("#secondaryBuffer .output-nowrap-row");
+  await expect(rows).toHaveCount(3);
+  await rows.nth(1).evaluate((row) => { row.scrollLeft = 80; });
+  await expect.poll(() => rows.nth(2).evaluate((row) => row.scrollLeft)).toBe(80);
+  const popup = await popOut(page);
+  await expect(popup.locator("#secondaryBuffer")).toContainText("GRID_BODY");
+  await page.evaluate(() => window.outputTest.feed("[g] GRID_TAIL\n#$# SDWC-END-NOWRAP\nafter grid\n"));
+  await expect(popup.locator("#secondaryBuffer")).toContainText("GRID_TAIL");
+  await redockCompanion(popup);
+  await expect(page.locator("#secondaryBuffer .output-nowrap-row")).toHaveCount(4);
+  const downloading = page.waitForEvent("download");
+  await page.locator("#button-save-mini").click();
+  const stream = await (await downloading).createReadStream();
+  let html = "";
+  for await (const chunk of stream) html += chunk;
+  expect(html).toContain("sdwc-nowrap-block");
+  expect(html).toContain("xterm256-Green");
+  const labels = ["before grid", "GRID_HEADER", "GRID_BODY", "GRID_TAIL", "after grid"];
+  for (let i = 1; i < labels.length; i++) expect(html.indexOf(labels[i])).toBeGreaterThan(html.indexOf(labels[i - 1]));
+  for (const label of labels) expect(html.split(label)).toHaveLength(2);
+  await page.locator("#button-output-split").click();
+  await expect(page.locator("#lineBuffer")).toContainText("GRID_TAIL");
+});
+
+test("pop-out transfers one secondary index and preserves paused history through repeated redocking", async ({ page, browserName }) => {
+  await page.evaluate(async () => {
+    const { manager, feed } = window.outputTest;
+    manager.updateSettings({ open: true, position: "left", secondarySize: 40, selected: ["team-chat"] });
+    for (let start = 0; start < 20_000; start += 2500) {
+      await feed(Array.from({ length: 2500 }, (_, i) => "[-][Team-Chat] transfer " + (start + i)).join("\n") + "\n");
+    }
+    manager.views.secondary.jump(500);
+    window.transferIndex = manager.views.secondary.index;
+    window.transferGeneration = manager.generation;
+    await feed("[-][Team-Chat] unread after pause\nmain after pause\n");
+  });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const popup = await popOut(page);
+    expect(await page.evaluate(() => {
+      const { manager } = window.outputTest;
+      return { sameIndex: manager.views.secondary.index === window.transferIndex, sameGeneration: manager.generation === window.transferGeneration,
+        paused: manager.views.secondary.paused, unread: manager.views.secondary.unread, anchor: manager.views.secondary.anchor.id };
+    })).toEqual({ sameIndex: true, sameGeneration: true, paused: true, unread: 1, anchor: 500 });
+    await expect(page.locator("#output-divider")).not.toBeVisible();
+    expect(await popup.locator("[data-output-id]").count()).toBeLessThan(400);
+    await page.evaluate(() => {
+      const view = window.outputTest.manager.views.secondary;
+      window.retiredOutputHosts ||= [];
+      window.retiredOutputHosts.push(new WeakRef(view), new WeakRef(view.element.ownerDocument));
+    });
+    if (attempt === 0) await redockCompanion(popup);
+    else if (attempt === 1) await page.locator("#button-output-split").click();
+    else await popup.close();
+    await expect(page.locator("#output-secondary-panel")).toBeVisible();
+    await expect(page.locator("#output-workspace")).toHaveAttribute("data-position", "left");
+    expect(await page.evaluate(() => window.outputTest.manager.views.secondary.index === window.transferIndex)).toBe(true);
+  }
+  if (browserName === "chromium") {
+    const cdp = await page.context().newCDPSession(page);
+    await expect.poll(async () => {
+      await cdp.send("HeapProfiler.collectGarbage");
+      return page.evaluate(() => window.retiredOutputHosts.filter((reference) => reference.deref()).length);
+    }, { message: "closed companion documents and retired renderers must be collectible" }).toBe(0);
+    await cdp.detach();
+  }
+});
+
+test("companion Find, filters, themes, media, pruning and clearing use the shared session", async ({ page }) => {
+  await page.route("https://media.example/popout.png", (route) => route.fulfill({ contentType: "image/svg+xml", body: "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'></svg>" }));
+  await page.evaluate(async () => {
+    const { manager, feed, client } = window.outputTest;
+    client.preferences.imagePreview = true;
+    manager.updateSettings({ open: true, selected: ["team-chat"] });
+    await feed("main before\n[-][Team-Chat] https://media.example/popout.png\n" + Array.from({ length: 1000 }, (_, i) => "[-][Team-Chat] find row " + i).join("\n") + "\n");
+  });
+  const popup = await popOut(page);
+  await popup.locator("#button-output-find").click();
+  await popup.locator("#output-find-query").fill("find row 123");
+  await expect(popup.locator("mark")).toHaveText("find row 123");
+  await popup.locator("#output-find-query").press("Escape");
+  await popup.locator("[data-output-configure]").click();
+  await expect(page.locator("#client-options-tab-output")).toHaveAttribute("aria-selected", "true");
+  await page.locator("#button-client-options-close").click();
+  await page.evaluate(() => {
+    const { manager, client } = window.outputTest;
+    client.buffer.classList.remove("colorset-acid");
+    client.buffer.classList.add("colorset-snow");
+    client.preferences.secondaryColorSet = "snow";
+    manager.refreshPresentation();
+    manager.views.secondary.jump(2);
+  });
+  await expect(popup.locator("#secondaryBuffer")).toHaveClass(/colorset-snow/);
+  await expect(popup.locator("img")).toHaveCount(0);
+  await popup.locator("[data-output-media]").click();
+  await expect(popup.locator("img")).toHaveCount(1);
+  await page.evaluate(() => {
+    const { manager, client } = window.outputTest;
+    client.preferences.performanceBuffer = 5;
+    manager.prune();
+  });
+  await expect(popup.locator("img")).toHaveCount(0);
+  await page.evaluate(() => window.outputTest.manager.clear());
+  await expect(popup.locator("#output-secondary-help")).toContainText("Waiting for matching output.");
+  expect(await page.evaluate(() => window.outputTest.manager.history.length)).toBe(0);
+  await popup.close();
+});
+
+test("main Find locates popped-out output and reload closes the companion without restoring a popup", async ({ page }) => {
+  await page.evaluate(async () => {
+    window.outputTest.manager.updateSettings({ open: true, selected: ["team-chat"] });
+    await window.outputTest.feed("main\n[-][Team-Chat] needle in companion\n");
+  });
+  const popup = await popOut(page);
+  await page.locator("#button-output-find").click();
+  await page.locator("#output-find-query").fill("needle in companion");
+  await expect(popup.locator("mark")).toHaveText("needle in companion");
+  await page.reload();
+  await page.waitForFunction(() => window.outputTest);
+  await expect.poll(() => popup.isClosed()).toBe(true);
+  await expect(page.locator("#output-secondary-panel")).toBeVisible();
+  await expect(page.locator("#button-output-split")).toHaveText("CLOSE SPLIT");
+});
+
+test("blocked pop-outs retain the split and native app bridges hide the launch control", async ({ page }) => {
+  await page.evaluate(() => {
+    window.outputTest.manager.updateSettings({ open: true });
+    window.open = () => null;
+  });
+  await page.locator("#button-output-popout").click();
+  await expect(page.locator("#output-secondary-panel")).toBeVisible();
+  expect(await page.evaluate(() => window.lastOutputStatus)).toContain("blocked");
+  await page.evaluate(() => {
+    window.DomeNative = { sendInput() {} };
+    window.outputTest.manager.popout.refresh();
+  });
+  await expect(page.locator("#button-output-popout")).not.toBeVisible();
+});
+
+test("companion copies unmounted history and updates while main is in the background", async ({ page }) => {
+  await page.evaluate(async () => {
+    window.outputTest.manager.updateSettings({ open: true, selected: ["team-chat"] });
+    await window.outputTest.feed(Array.from({ length: 2000 }, (_, i) => "[-][Team-Chat] copy " + i).join("\n") + "\n");
+  });
+  const popup = await popOut(page);
+  const expected = await popup.evaluate(() => {
+    const view = window.opener.outputTest.manager.views.secondary;
+    Object.defineProperty(window.navigator, "clipboard", { get() { throw new Error("Async clipboard must not be used"); } });
+    document.addEventListener("copy", (event) => { window.copiedOutput = event.clipboardData.getData("text/plain"); });
+    view.setPaused(true);
+    view.element.focus();
+    const tail = view.mounted.get(2000).firstChild;
+    document.getSelection().setBaseAndExtent(tail, 2, tail, 8);
+    view.element.scrollTop = 0;
+    view.onScroll(); view.render();
+    document.getSelection().setBaseAndExtent(tail, 8, view.mounted.get(1).firstChild, 2);
+    const parts = Array.from({ length: 2000 }, (_, i) => "[-][Team-Chat] copy " + i);
+    parts[0] = parts[0].slice(2);
+    parts[1999] = parts[1999].slice(0, 8);
+    return parts.join("\n");
+  });
+  await copyThroughNativeEvent(popup, expected);
+  await popup.evaluate(() => {
+    document.getSelection().removeAllRanges();
+    window.opener.outputTest.manager.views.secondary.setPaused(false);
+  });
+  await popup.bringToFront();
+  await page.evaluate(async () => {
+    const { client, manager } = window.outputTest;
+    client.parseSocketData("[-][Team-Chat] background main arrival\n");
+    await manager.idle();
+  });
+  await expect(popup.locator("#secondaryBuffer")).toContainText("background main arrival");
+  await popup.close();
+});
+
+test("refreshing the companion redocks it and closing secondary entirely still confirms and merges", async ({ page }) => {
+  await page.evaluate(async () => {
+    window.outputTest.manager.updateSettings({ open: true, selected: ["team-chat"] });
+    await window.outputTest.feed("first\n[-][Team-Chat] second\nthird\n");
+  });
+  let popup = await popOut(page);
+  await popup.evaluate(() => { window.setTimeout(() => window.location.reload(), 0); });
+  await expect.poll(() => popup.isClosed()).toBe(true);
+  await expect(page.locator("#output-secondary-panel")).toBeVisible();
+  popup = await popOut(page);
+  await page.locator("#button-client-options").click();
+  await page.getByRole("tab", { name: "Output Windows", exact: true }).click();
+  page.removeAllListeners("dialog");
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page.locator("#output-layout").selectOption("single");
+  expect(popup.isClosed()).toBe(false);
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.locator("#output-layout").selectOption("single");
+  await expect.poll(() => popup.isClosed()).toBe(true);
+  expect(await page.evaluate(() => window.outputTest.manager.views.main.index.length)).toBe(3);
+});
+
+test("cancelling main navigation preserves its live companion", async ({ page }) => {
+  test.setTimeout(15_000);
+  await page.evaluate(() => window.outputTest.manager.updateSettings({ open: true }));
+  const popup = await popOut(page);
+  await page.evaluate(() => window.addEventListener("beforeunload", (event) => {
+    event.preventDefault(); event.returnValue = "";
+  }));
+  page.removeAllListeners("dialog");
+  const prompted = page.waitForEvent("dialog");
+  const navigation = page.evaluate(() => { window.setTimeout(() => window.location.reload(), 0); });
+  const dialog = await prompted;
+  await dialog.dismiss();
+  await navigation;
+  expect(popup.isClosed()).toBe(false);
+  expect(await page.evaluate(() => window.outputTest.manager.popout.isDetached())).toBe(true);
+  await redockCompanion(popup);
+  page.on("dialog", (dialog) => dialog.accept());
+});
 
 test("routing, split positions, keyboard resize and close preserve output", async ({ page }) => {
   const errors = [];
@@ -568,7 +993,7 @@ test("double-clicking either output pane toggles pause and restores the input cu
   }
 });
 
-test("empty secondary matches output themes on load and shows pause state before its first match", async ({ page }) => {
+test("empty secondary uses its configured theme on load and shows pause state before its first match", async ({ page }) => {
   await page.evaluate(() => window.outputTest.manager.updateSettings({ open: true, selected: ["ooc-chat"] }));
   const secondary = page.locator("#secondaryBuffer");
   const help = page.locator("#output-secondary-help");
@@ -577,7 +1002,10 @@ test("empty secondary matches output themes on load and shows pause state before
   await expect(secondary).toHaveCSS("background-color", "rgb(0, 0, 0)");
   await expect(page.locator("#output-secondary-panel header")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   for (const theme of ["snow", "slither", "corpie", "normal"]) {
-    await page.evaluate((theme) => window.outputTest.client.setClientOption("colorSet", theme), theme);
+    await page.evaluate((theme) => {
+      window.outputTest.client.setClientOption("colorSet", theme);
+      window.outputTest.client.setClientOption("secondaryColorSet", theme);
+    }, theme);
     const colors = await page.locator("#lineBuffer").evaluate((element) => {
       const style = window.getComputedStyle(element);
       return { background: style.backgroundColor, foreground: style.color };
