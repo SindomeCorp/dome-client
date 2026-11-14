@@ -558,6 +558,14 @@ test("new GM channels and coder tracebacks route once with All Channels selected
   }
 });
 
+test("SIC routes both ANSI-formatted prefixes and leaves quoted or lowercase prefixes in main", async (t) => {
+  const { manager, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["sic"] });
+  await feed("\u001b[32m|C| first\u001b[0m\n\u001b[33m|W| second\u001b[0m\nbefore |W| stays main\n|w| stays main\n");
+  assert.deepEqual(Array.from({ length: manager.views.secondary.index.length }, (_, i) => recordText(manager.views.secondary.index.at(i))), ["|C| first", "|W| second"]);
+  assert.deepEqual(Array.from({ length: manager.views.main.index.length }, (_, i) => recordText(manager.views.main.index.at(i))), ["before |W| stays main", "|w| stays main"]);
+});
+
 test("filter groups sort by name without changing saved selections or custom rule order", async (t) => {
   const custom = [
     { id: "custom-zulu", name: "Zulu", pattern: "^zulu" },
