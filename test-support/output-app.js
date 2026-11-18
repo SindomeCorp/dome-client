@@ -1,5 +1,6 @@
 import { renderFile } from "ejs";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import { buildPreferenceDefaults, CLIENT_OPTION_GROUPS } from "../src/shared/client-options.js";
 import { OutputWindows } from "../src/client/features/output-windows/output-windows.js";
@@ -25,7 +26,7 @@ export async function createOutputApp(t, { config = {}, stored, workerFactory = 
     clientOptionGroups: CLIENT_OPTION_GROUPS, shortenEnabled: false,
     outputWindows: { enabled: true, customRegexEnabled: true, presets, ...config }
   };
-  const html = await renderFile(new URL("../views/client.ejs", import.meta.url).pathname, data);
+  const html = await renderFile(fileURLToPath(new URL("../views/client.ejs", import.meta.url)), data);
   const dom = new JSDOM(html, { url: "https://example.com", pretendToBeVisual: true });
   const win = dom.window;
   win.confirm = () => true;

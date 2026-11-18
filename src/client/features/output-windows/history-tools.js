@@ -256,8 +256,19 @@ export function setupHistoryTools(manager) {
   function changed({ reset = false, routing = false } = {}) {
     clipboard.changed({ reset, routing });
     const secondary = scope.querySelector("[value=secondary]");
-    secondary.disabled = !manager.isSplitOpen();
-    if (secondary.disabled && scope.value === "secondary") scope.value = "all";
+    secondary.disabled = !(manager.isSecondaryOpen ? manager.isSecondaryOpen() : manager.isSplitOpen());
+    const openSplits = manager.openSplits ? manager.openSplits() : [];
+    const currentValue = scope.value;
+    scope.querySelectorAll("[data-dynamic-scope]").forEach((opt) => opt.remove());
+    for (const split of openSplits) {
+      const opt = doc.createElement("option");
+      opt.value = split.id;
+      opt.textContent = split.name;
+      opt.dataset.dynamicScope = "true";
+      scope.append(opt);
+    }
+    const validValues = new Set(["all", "main", ...(!secondary.disabled ? ["secondary"] : []), ...openSplits.map((split) => split.id)]);
+    scope.value = validValues.has(currentValue) ? currentValue : "all";
     if (reset) {
       operationController?.abort();
       searchController?.abort();

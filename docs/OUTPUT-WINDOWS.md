@@ -11,6 +11,11 @@ history, with one shared command input. Routed messages are stored once.
    empty secondary window.
 3. Select the channel filters to send matching future lines to secondary.
 4. Choose secondary on the right, left, above, or below main.
+5. To open additional split windows (`Split 2`, `Split 3`, etc.), click **+ Split**
+   in any split window's header or **+ Add split window** in **Options → Output Windows**.
+   Each split window has its own filter selection, Pause/Resume control, unread count,
+   resizable divider, Find scope option, and close (`×`) button. When multiple splits
+   are open, you can arrange them **Stacked in split area** or **Side by side**.
 
 The initial split gives secondary 30% of the output area. Drag the divider with a
 mouse or touch to resize it. You can also focus the divider and use the arrow keys

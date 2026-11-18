@@ -21,7 +21,8 @@ export function readOutputSelection(doc) {
   const panel = anchor.row.closest(".output-panel");
   if (!panel || focus.row.closest(".output-panel") !== panel) return null;
   const forward = anchor.id < focus.id || (anchor.id === focus.id && anchor.offset <= focus.offset);
-  return { panel: panel.id === "output-main-panel" ? "main" : "secondary", start: forward ? anchor : focus, end: forward ? focus : anchor };
+  const panelName = panel.dataset.outputPanel || panel.id.replace(/^output-(.+)-panel$/, "$1") || (panel.id === "output-main-panel" ? "main" : "secondary");
+  return { panel: panelName, start: forward ? anchor : focus, end: forward ? focus : anchor };
 }
 
 export async function copyOutputSelection(snapshot, selection, { scope = () => true, signal } = {}) {

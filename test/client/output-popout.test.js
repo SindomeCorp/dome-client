@@ -1,12 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderFile } from "ejs";
+import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import { createOutputApp } from "../../test-support/output-app.js";
 
 async function companion(t, options) {
   const app = await createOutputApp(t, options);
-  const html = await renderFile(new URL("../../views/output-window.ejs", import.meta.url).pathname, {});
+  const html = await renderFile(fileURLToPath(new URL("../../views/output-window.ejs", import.meta.url)), {});
   const child = new JSDOM(html, { url: "https://example.com/output-window/", pretendToBeVisual: true });
   const popup = child.window;
   let closed = false;

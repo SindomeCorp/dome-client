@@ -1,4 +1,4 @@
-<section id="output-<%= panelName %>-panel" class="output-panel <%= panelName === 'secondary' ? 'hide' : '' %>" aria-label="<%= panelName === 'main' ? 'Main output window' : 'Secondary output window' %>">
+<section id="output-<%= panelName %>-panel" data-output-panel="<%= panelName %>" class="output-panel <%= panelName === 'secondary' ? 'hide' : '' %>" aria-label="<%= panelName === 'main' ? 'Main output window' : 'Secondary output window' %>">
   <% if (panelName === "secondary") { %>
   <header class="output-panel-header">
     <span>Secondary</span>
@@ -9,6 +9,7 @@
     <button type="button" class="btn btn-primary btn-xs" data-output-configure>Configure</button>
     <button type="button" class="btn btn-primary btn-xs" id="button-output-redock">Redock</button>
     <% } else { %>
+    <button type="button" class="btn btn-primary btn-xs output-add-split" id="button-output-add-split" data-output-add-split aria-label="Add split output window">+ Split</button>
     <button type="button" class="btn btn-primary btn-xs hide" id="button-output-popout">Pop Out</button>
     <button type="button" class="btn btn-primary btn-xs output-close" id="button-output-close" aria-label="Close secondary output window">&times;</button>
     <% } %>

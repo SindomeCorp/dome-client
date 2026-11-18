@@ -114,7 +114,7 @@ const sampleData = {
   },
 };
 
-const files = await glob("views/**/*.ejs");
+const files = await glob("views/**/*.ejs", { posix: true });
 
 for (const file of files) {
   test(`renders ${file}`, async () => {

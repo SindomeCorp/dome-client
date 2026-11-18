@@ -623,3 +623,114 @@ test("Television routes complete ANSI-formatted screen broadcasts and preserves 
   assert.equal(manager.views.main.index.length, 2);
   assert.equal(recordText(manager.views.secondary.index.at(0)), "On the large wall screen: a broadcast");
 });
+
+test("multiple splits route independently, preserve sibling history when one split closes, and merge all on close all", async (t) => {
+  const { manager, doc, client, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["team-chat"] });
+  doc.querySelector("#button-output-add-split").click();
+  doc.querySelector("#output-add-split").click();
+  assert.deepEqual(manager.settings.splits.map((s) => s.id), ["split-2", "split-3"]);
+
+  // Configure Split 2 via its empty-state Configure button
+  doc.querySelector("[data-output-configure=split-2]").click();
+  assert.equal(manager.options.activeWindow, "split-2");
+  doc.querySelector("[data-filter-group=player]").click();
+  doc.querySelector("[data-output-rule-id=ooc-chat]").click();
+  assert.deepEqual(manager.settings.splits[0].selected, ["ooc-chat"]);
+
+  // Configure Split 3 via the target selector in Options
+  doc.querySelector("[data-output-window-target=split-3]").click();
+  assert.equal(manager.options.activeWindow, "split-3");
+  doc.querySelector("[data-output-rule-id=grid-output]").click();
+  assert.deepEqual(manager.settings.splits[1].selected, ["grid-output"]);
+
+  await feed(
+    "main line 1\n"
+    + "[-][Team-Chat] team message\n"
+    + "[-][OOC-Chat] ooc message\n"
+    + "#$# SDWC-START-NOWRAP\n[g] grid header\ngrid body\n#$# SDWC-END-NOWRAP\n"
+    + "main line 2\n"
+  );
+
+  assert.deepEqual(Array.from({ length: manager.views.main.index.length }, (_, i) => recordText(manager.views.main.index.at(i))), ["main line 1", "main line 2"]);
+  assert.deepEqual(Array.from({ length: manager.views.secondary.index.length }, (_, i) => recordText(manager.views.secondary.index.at(i))), ["[-][Team-Chat] team message"]);
+  assert.deepEqual(Array.from({ length: manager.views["split-2"].index.length }, (_, i) => recordText(manager.views["split-2"].index.at(i))), ["[-][OOC-Chat] ooc message"]);
+  assert.deepEqual(Array.from({ length: manager.views["split-3"].index.length }, (_, i) => recordText(manager.views["split-3"].index.at(i))), ["[g] grid header", "grid body"]);
+
+  // Close only Split 2: its output returns to main in order while Secondary and Split 3 remain intact
+  doc.querySelector("[data-output-close=split-2]").click();
+  await manager.idle();
+  assert.equal(manager.views["split-2"], undefined);
+  assert.deepEqual(Array.from({ length: manager.views.main.index.length }, (_, i) => recordText(manager.views.main.index.at(i))), [
+    "main line 1", "[-][OOC-Chat] ooc message", "main line 2"
+  ]);
+  assert.equal(manager.views.secondary.index.length, 1);
+  assert.equal(manager.views["split-3"].index.length, 2);
+
+  // Unified log still exports all retained lines once in chronological order
+  const html = (await exportSnapshot(await manager.snapshot(), { client })).join("");
+  assert.ok(html.indexOf("main line 1") < html.indexOf("team message"));
+  assert.ok(html.indexOf("team message") < html.indexOf("ooc message"));
+  assert.ok(html.indexOf("ooc message") < html.indexOf("grid header"));
+  assert.ok(html.indexOf("grid body") < html.indexOf("main line 2"));
+
+  // Close all splits via toolbar button
+  doc.querySelector("#button-output-split").click();
+  await manager.idle();
+  assert.equal(manager.isSplitOpen(), false);
+  assert.equal(manager.views.main.index.length, 6);
+});
+
+test("additional splits support independent pause, unread counts, sub-divider resizing, arrangement, and Find scoping", async (t) => {
+  const { manager, doc, win, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["team-chat"] });
+  const split2 = manager.addSplit(["ooc-chat"]);
+  assert.equal(split2.id, "split-2");
+
+  // Pause Split 2 independently
+  const pause2 = doc.querySelector("[data-output-pause=split-2]");
+  pause2.click();
+  assert.equal(manager.views["split-2"].paused, true);
+  assert.equal(manager.views.secondary.paused, false);
+  assert.equal(manager.views.main.paused, false);
+
+  await feed("main text\n[-][Team-Chat] team needle\n[-][OOC-Chat] ooc needle\n");
+  assert.equal(manager.views["split-2"].unread, 1);
+  assert.match(doc.querySelector("[data-output-unread=split-2]").textContent, /1 unread/);
+  assert.equal(manager.views.secondary.unread, 0);
+
+  // Sub-divider keyboard resizing and arrangement toggle
+  const subDivider = doc.querySelector("#output-divider-split-2");
+  assert.equal(subDivider.classList.contains("hide"), false);
+  assert.equal(subDivider.getAttribute("aria-orientation"), "horizontal");
+  subDivider.dispatchEvent(new win.KeyboardEvent("keydown", { key: "End", bubbles: true }));
+  assert.equal(manager.settings.splits[0].size, 85);
+  assert.equal(doc.querySelector("#output-secondary-panel").style.getPropertyValue("--split-size"), "15");
+  subDivider.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+  assert.equal(manager.settings.splits[0].size, 15);
+
+  const arrangement = doc.querySelector("#output-split-arrangement");
+  arrangement.value = "parallel";
+  arrangement.dispatchEvent(new win.Event("change"));
+  assert.equal(manager.settings.arrangement, "parallel");
+  assert.equal(doc.querySelector("#output-workspace").dataset.splitArrangement, "parallel");
+  assert.equal(subDivider.getAttribute("aria-orientation"), "vertical");
+
+  // Find scope includes Split 2 and jumps to matches in Split 2
+  manager.tools.open();
+  const scope = doc.querySelector("#output-find-scope");
+  assert.ok(scope.querySelector("[value=split-2]"));
+  const query = doc.querySelector("#output-find-query");
+  query.value = "needle";
+  scope.value = "split-2";
+  scope.dispatchEvent(new win.Event("input"));
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  assert.equal(doc.querySelector("#output-find-count").textContent, "1 of 1");
+  manager.views["split-2"].render();
+  assert.equal(doc.querySelector("#split-2Buffer mark").textContent, "needle");
+
+  // Closing Split 2 resets Find scope to all
+  manager.closeSplit("split-2");
+  await manager.idle();
+  assert.equal(scope.value, "all");
+});
