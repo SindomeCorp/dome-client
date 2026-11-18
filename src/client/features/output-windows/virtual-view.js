@@ -5,8 +5,8 @@ const MAX_SCROLL_HEIGHT = 8_000_000;
 const SCROLL_EPSILON = 0.01; // Ignore rounding noise without swallowing subpixel gestures.
 
 export class VirtualOutputView {
-  constructor({ element, client, win, name, onActive = () => {}, onState = () => {}, onMessage = () => {} }) {
-    Object.assign(this, { element, client, win, name, onActive, onState, onMessage });
+  constructor({ element, client, win, name, label, onActive = () => {}, onState = () => {}, onMessage = () => {} }) {
+    Object.assign(this, { element, client, win, name, label, onActive, onState, onMessage });
     // The WindowProxy may point at another origin by the time this view is
     // retired. Keep the original host APIs rather than looking them up then.
     this.cancelFrame = (win.cancelAnimationFrame || win.clearTimeout).bind(win);
@@ -29,11 +29,11 @@ export class VirtualOutputView {
     this.bottom.setAttribute("aria-hidden", "true");
     this.rows.className = "output-rows";
     this.rows.setAttribute("role", "list");
-    this.help = element.querySelector("#output-secondary-help");
+    this.help = element.querySelector("#output-secondary-help, .output-secondary-help");
     element.replaceChildren(this.top, this.rows, this.bottom);
     if (this.help) element.append(this.help);
     element.setAttribute("role", "region");
-    element.setAttribute("aria-label", name === "main" ? "Main output" : "Secondary output");
+    element.setAttribute("aria-label", name === "main" ? "Main output" : name === "secondary" ? "Secondary output" : (label || name) + " output");
     element.setAttribute("tabindex", "0");
     element.removeAttribute("aria-live");
     this.listen = [];

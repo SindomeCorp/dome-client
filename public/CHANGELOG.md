@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-11-17
+
+### Added
+- Support multiple split output windows (`+ Split` in split headers and `+ Add split window` in Options → Output Windows), with per-split filter routing, independent Pause/Resume and unread counts, draggable sub-dividers, stacked or side-by-side arrangement, Find scope selection, and individual split closure.
+
 ## 2026-11-14
 
 ### Fixed

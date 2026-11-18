@@ -30,7 +30,7 @@ export function setupOutputClipboard(manager) {
     const state = manager.routeState();
     return {
       selection: endpoints, state,
-      key: JSON.stringify([manager.history.epoch, state.open, state.generation, endpoints])
+      key: JSON.stringify([manager.history.epoch, state.open, state.generation, state.panels, endpoints])
     };
   }
 

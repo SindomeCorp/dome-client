@@ -34,6 +34,10 @@ export function setupOutputToolbar(manager) {
     if (secondaryHeader) {
       manager.workspace.style.setProperty("--secondary-header-height", Math.max(32, secondaryHeader.getBoundingClientRect().height) + "px");
     }
+    for (const header of manager.workspace.querySelectorAll(".output-panel-header")) {
+      const panel = header.closest(".output-panel");
+      if (panel) panel.style.setProperty("--secondary-header-height", Math.max(32, header.getBoundingClientRect().height) + "px");
+    }
   }
   function schedule() {
     if (frame == null) frame = win.requestAnimationFrame(refresh);

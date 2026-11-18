@@ -1,13 +1,18 @@
 export function compileRules(rules) {
-  return rules.map((rule) => ({ id: rule.id, regex: new RegExp(rule.pattern, rule.ignoreCase ? "i" : "") }));
+  return rules.map((rule) => ({
+    id: rule.id,
+    panel: rule.panel,
+    regex: new RegExp(rule.pattern, rule.ignoreCase ? "i" : "")
+  }));
 }
 
 export function matchRuleLines(compiled, lines, progress = () => {}) {
   const matches = new Array(lines.length).fill(false);
   for (const rule of compiled) {
     progress(rule.id);
+    const target = rule.panel && rule.panel !== "secondary" ? rule.panel : true;
     for (let i = 0; i < lines.length; i++) {
-      if (!matches[i]) matches[i] = rule.regex.test(lines[i]);
+      if (!matches[i] && rule.regex.test(lines[i])) matches[i] = target;
     }
   }
   return matches;

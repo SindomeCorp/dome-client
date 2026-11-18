@@ -1,11 +1,18 @@
-import { validateOutputRule } from "../../../shared/output-windows.js";
+import { MAX_ADDITIONAL_SPLITS, validateOutputRule } from "../../../shared/output-windows.js";
 
 export function setupOutputOptions(manager) {
   const { doc, config } = manager;
   const layout = doc.querySelector("#output-layout");
-  if (!layout) return { refresh() {} };
+  if (!layout) return { refresh() {}, setActiveWindow() {} };
   let editing = null;
   let activeGroup = "player";
+  let activeWindow = "secondary";
+  const arrangement = doc.querySelector("#output-split-arrangement");
+  const arrangementRow = doc.querySelector("#output-split-arrangement-row");
+  const splitTargets = doc.querySelector("#output-split-targets");
+  const addSplitButton = doc.querySelector("#output-add-split");
+  const removeSplitButton = doc.querySelector("#output-remove-split");
+  const filterDescription = doc.querySelector("#output-filter-description");
   const groups = ["player", "gm", "coder", "custom"];
   const groupLabels = { player: "Player Filters", gm: "GM Filters", coder: "Coder Filters", custom: "Custom Filters" };
   const groupButtons = [...doc.querySelectorAll("[data-filter-group]")];
@@ -32,6 +39,11 @@ export function setupOutputOptions(manager) {
     error.textContent = checked.error || "";
     return checked.rule;
   }
+  function getTargetSelected() {
+    if (activeWindow === "secondary") return manager.settings.selected || [];
+    const split = (manager.settings.splits || []).find((item) => item.id === activeWindow);
+    return split ? split.selected : manager.settings.selected || [];
+  }
   function renderRule(rule, custom) {
     const row = doc.createElement("div");
     row.className = "output-rule";
@@ -39,12 +51,33 @@ export function setupOutputOptions(manager) {
     const checkbox = doc.createElement("input");
     checkbox.type = "checkbox";
     checkbox.dataset.outputRuleId = rule.id;
-    checkbox.checked = manager.settings.selected.includes(rule.id);
+    checkbox.checked = getTargetSelected().includes(rule.id);
     checkbox.disabled = custom && !config.customRegexEnabled;
     checkbox.addEventListener("change", () => {
-      const selected = manager.settings.selected.filter((id) => id !== rule.id);
-      if (checkbox.checked) selected.push(rule.id);
-      manager.updateSettings({ selected });
+      const splits = manager.settings.splits || [];
+      if (activeWindow === "secondary") {
+        const selected = manager.settings.selected.filter((id) => id !== rule.id);
+        if (checkbox.checked) selected.push(rule.id);
+        if (checkbox.checked && splits.some((split) => split.selected.includes(rule.id))) {
+          const nextSplits = splits.map((split) => ({
+            ...split,
+            selected: split.selected.filter((id) => id !== rule.id)
+          }));
+          manager.updateSettings({ selected, splits: nextSplits });
+        } else {
+          manager.updateSettings({ selected });
+        }
+      } else {
+        const nextSelected = checkbox.checked
+          ? manager.settings.selected.filter((id) => id !== rule.id)
+          : manager.settings.selected;
+        const nextSplits = splits.map((split) => {
+          const filtered = split.selected.filter((id) => id !== rule.id);
+          if (split.id === activeWindow && checkbox.checked) filtered.push(rule.id);
+          return { ...split, selected: filtered };
+        });
+        manager.updateSettings({ selected: nextSelected, splits: nextSplits });
+      }
     });
     label.title = rule.pattern;
     label.append(checkbox, doc.createTextNode(rule.name));
@@ -72,9 +105,15 @@ export function setupOutputOptions(manager) {
       remove.setAttribute("aria-label", "Delete " + rule.name);
       remove.addEventListener("click", () => {
         if (!manager.win.confirm("Delete the custom filter “" + rule.name + "”?")) return;
+        const splits = manager.settings.splits || [];
+        const nextSplits = splits.map((split) => ({
+          ...split,
+          selected: split.selected.filter((id) => id !== rule.id)
+        }));
         manager.updateSettings({
           custom: manager.settings.custom.filter((item) => item.id !== rule.id),
-          selected: manager.settings.selected.filter((id) => id !== rule.id)
+          selected: manager.settings.selected.filter((id) => id !== rule.id),
+          ...(splits.length ? { splits: nextSplits } : {})
         });
         if (editing === rule.id) reset();
       });
@@ -85,8 +124,44 @@ export function setupOutputOptions(manager) {
   }
   function refresh() {
     const focusedRule = doc.activeElement?.dataset.outputRuleId;
+    const splits = manager.settings.splits || [];
+    if (activeWindow !== "secondary" && !splits.some((split) => split.id === activeWindow)) {
+      activeWindow = "secondary";
+    }
     layout.value = manager.isSplitOpen() ? manager.settings.position : "single";
-    const selected = new Set(manager.settings.selected);
+    if (arrangement) arrangement.value = manager.settings.arrangement || "stacked";
+    if (arrangementRow) arrangementRow.classList.toggle("hide", splits.length === 0);
+    if (splitTargets) {
+      const targets = [{ id: "secondary", name: "Secondary" }, ...splits.map((split) => ({ id: split.id, name: split.name }))];
+      splitTargets.replaceChildren(...targets.map((target) => {
+        const btn = doc.createElement("button");
+        btn.type = "button";
+        btn.className = "btn btn-xs" + (target.id === activeWindow ? " btn-primary" : "");
+        btn.dataset.outputWindowTarget = target.id;
+        btn.setAttribute("aria-pressed", String(target.id === activeWindow));
+        btn.textContent = target.name;
+        btn.addEventListener("click", () => {
+          activeWindow = target.id;
+          refresh();
+        });
+        return btn;
+      }));
+    }
+    if (addSplitButton) {
+      addSplitButton.classList.toggle("hide", !config.enabled || splits.length >= MAX_ADDITIONAL_SPLITS);
+    }
+    if (removeSplitButton) {
+      const activeSplit = splits.find((split) => split.id === activeWindow);
+      removeSplitButton.classList.toggle("hide", !activeSplit);
+      if (activeSplit) removeSplitButton.textContent = "Remove " + activeSplit.name;
+    }
+    if (filterDescription) {
+      const activeSplit = splits.find((split) => split.id === activeWindow);
+      filterDescription.textContent = activeSplit
+        ? "Selected filters move future matching lines to " + activeSplit.name + " while a split is open. Existing output stays where it is."
+        : "Selected filters move future matching lines to the secondary window while a split is open. Existing output stays where it is.";
+    }
+    const selected = new Set(getTargetSelected());
     const rulesByGroup = {
       player: config.presets.filter((rule) => (rule.group || "player") === "player"),
       gm: config.presets.filter((rule) => rule.group === "gm" || rule.group === "admin"),
@@ -135,12 +210,36 @@ export function setupOutputOptions(manager) {
   });
   layout.addEventListener("change", () => {
     if (layout.value === "single" && manager.isSplitOpen() && manager.closeSplit) {
-      manager.closeSplit();
+      manager.closeSplit("all");
       refresh();
       return;
     }
     manager.updateSettings(layout.value === "single" ? { open: false } : { open: true, position: layout.value });
   });
+  arrangement?.addEventListener("change", () => {
+    manager.updateSettings({ arrangement: arrangement.value });
+  });
+  addSplitButton?.addEventListener("click", () => {
+    const created = manager.addSplit?.();
+    if (created) {
+      activeWindow = created.id;
+      refresh();
+    }
+  });
+  removeSplitButton?.addEventListener("click", () => {
+    if (activeWindow === "secondary") return;
+    const removed = manager.closeSplit ? manager.closeSplit(activeWindow) : true;
+    if (removed) {
+      activeWindow = "secondary";
+      refresh();
+    }
+  });
+  function setActiveWindow(windowId) {
+    if (windowId === "secondary" || (manager.settings.splits || []).some((split) => split.id === windowId)) {
+      activeWindow = windowId;
+      refresh();
+    }
+  }
   cancel.addEventListener("click", reset);
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -162,5 +261,5 @@ export function setupOutputOptions(manager) {
     result.textContent = lines.map((line, index) => (matches[index] ? "✓ " : "– ") + (index + 1) + ": " + line).join("\n");
   });
   refresh();
-  return { refresh };
+  return { refresh, setActiveWindow, get activeWindow() { return activeWindow; } };
 }

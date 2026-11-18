@@ -9,7 +9,19 @@
   </select>
   <p id="output-placement-status" role="status"></p>
   <button type="button" class="btn hide" id="output-options-redock">Redock</button>
-  <p>Selected filters move future matching lines to the secondary window while a split is open. Existing output stays where it is.</p>
+  <div id="output-split-arrangement-row" class="output-split-arrangement-row hide">
+    <label for="output-split-arrangement">Multiple split arrangement</label>
+    <select id="output-split-arrangement">
+      <option value="stacked">Stacked in split area</option>
+      <option value="parallel">Side by side</option>
+    </select>
+  </div>
+  <div class="output-split-targets-bar">
+    <div id="output-split-targets" class="output-split-targets" role="group" aria-label="Split output windows"></div>
+    <button type="button" class="btn btn-xs btn-primary" id="output-add-split">+ Add split window</button>
+    <button type="button" class="btn btn-xs hide" id="output-remove-split">Remove split window</button>
+  </div>
+  <p id="output-filter-description">Selected filters move future matching lines to the secondary window while a split is open. Existing output stays where it is.</p>
   <div class="output-filter-tabs" role="tablist" aria-label="Output filter groups">
     <button type="button" class="btn btn-primary" role="tab" aria-selected="true" aria-controls="output-presets" data-filter-group="player">Player Filters</button>
     <button type="button" class="btn" role="tab" aria-selected="false" aria-controls="output-presets" data-filter-group="gm" tabindex="-1">GM Filters</button>
