@@ -223,9 +223,11 @@ needed. Choose **All output**, **Main**, or **Secondary**; secondary is availabl
 only while the split is open.
 
 Use the arrow buttons, Enter, or F3/Shift+F3 to move between matches. The matching
-window pauses and displays the result, even if that message was previously
-offscreen. Incoming output updates the result set without automatically moving
-you to a new match. Escape closes Find and returns focus.
+window pauses and centers the highlighted text, even if that message was previously
+offscreen. Near the start or end of history, scrolling stops at the boundary;
+the toolbar still leaves the result visible. Incoming output updates the result
+set without automatically moving you to a new match. Escape closes Find and
+returns focus.
 
 Live updates scan only lines received since the previous search. Result locations
 use compact counts per matching line; individual character offsets are resolved

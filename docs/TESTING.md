@@ -35,6 +35,10 @@ and redocking, shared indexes, cross-window Find and copying, background arrival
 and lifecycle cleanup. Native-app visibility is checked using a bridge fixture;
 browser touch emulation does not validate a real mobile app WebView.
 
+Find checks verify that highlighted text stays centered in Main, docked splits,
+and pop-outs, including matches inside tall wrapped lines and transfers between
+window sizes. Matches at history boundaries must remain clear of the toolbar.
+
 Nowrap routing checks cover first-nonblank-line filtering, blank-only blocks,
 streaming across network chunks, filter changes, split close/reopen, worker
 fallback, clear/reconnect, whole-block pruning, and chronological log export.

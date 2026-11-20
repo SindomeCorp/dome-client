@@ -275,6 +275,7 @@ export class OutputWindows {
     this.reindexBoundary = this.committed;
     this.indexed = this.history.first - 1;
     for (const view of Object.values(this.views)) {
+      if (view.anchor?.align === "center") view.captureAnchor();
       const anchor = view.anchor;
       const following = view.following;
       view.reset();

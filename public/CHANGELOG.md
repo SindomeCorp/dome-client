@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-20
 
 ### Fixed
+- Center highlighted Find results in their output window and keep the start of Main's history clear of its toolbar.
 - Keep output scrolling when Firefox makes a forward scroll adjustment as content grows, preventing input clicks from appearing to pause Main while Scroll Up to Pause is enabled.
 
 ## 2026-11-14

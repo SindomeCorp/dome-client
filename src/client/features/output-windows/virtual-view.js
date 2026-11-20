@@ -205,13 +205,13 @@ export class VirtualOutputView {
     this.schedule();
   }
 
-  jump(id, highlight) {
+  jump(id, highlight, { align = "start" } = {}) {
     const index = this.index.indexOfId(id);
     if (index < 0) return false;
     this.paused = true;
     this.following = false;
     this.pendingJump = true;
-    this.anchor = { id, offset: 0 };
+    this.anchor = align === "center" ? { id, offset: null, align } : { id, offset: 0 };
     this.highlight = highlight ? { id, ...highlight } : null;
     this.element.classList.add("scroll-disabled");
     this.onState(this);
@@ -308,6 +308,26 @@ export class VirtualOutputView {
     }
   }
 
+  measureCenteredAnchor() {
+    if (this.anchor?.align !== "center") return false;
+    const index = this.index.indexOfId(this.anchor.id);
+    const row = this.mounted.get(this.anchor.id);
+    if (index < 0 || !row) return false;
+    const bounds = row.getBoundingClientRect();
+    if (!(bounds.height > 0)) return false;
+    const match = row.querySelector("mark")?.getClientRects()[0];
+    const offset = match ? match.top - bounds.top + match.height / 2 : bounds.height / 2;
+    const height = this.index.prefix(index + 1) - this.index.prefix(index);
+    if (Math.abs(height - bounds.height) < SCROLL_EPSILON && this.anchor.offset != null
+      && Math.abs(this.anchor.offset - offset) < SCROLL_EPSILON) return false;
+    // Measure only the mounted result, including its wrapped match position.
+    // The next frame uses that point without measuring accumulated history.
+    this.index.measure(index, bounds.height);
+    this.anchor.offset = offset;
+    this.schedule();
+    return true;
+  }
+
   render() {
     if (this.destroyed || this.element.hidden) return;
     const selection = this.hasSelection() ? this.element.ownerDocument.getSelection() : null;
@@ -315,7 +335,7 @@ export class VirtualOutputView {
       anchorNode: selection.anchorNode, anchorOffset: selection.anchorOffset,
       focusNode: selection.focusNode, focusOffset: selection.focusOffset
     };
-    if (selection && !this.anchor) this.captureAnchor();
+    if ((selection && !this.anchor) || (this.anchor?.align === "center" && this.highlight?.id !== this.anchor.id)) this.captureAnchor();
     this.onState(this);
     if (!this.index.length && this.help) {
       this.top.style.height = this.bottom.style.height = "0px";
@@ -331,8 +351,12 @@ export class VirtualOutputView {
       if (index < 0) return;
       if (index >= 0) {
         const height = this.index.prefix(index + 1) - this.index.prefix(index);
-        this.anchor.offset = Math.max(0, Math.min(this.anchor.offset, height - SCROLL_EPSILON));
-        logicalTop = this.index.prefix(index) + this.anchor.offset;
+        if (this.anchor.align === "center") {
+          logicalTop = this.index.prefix(index) + (this.anchor.offset ?? height / 2) - viewport / 2;
+        } else {
+          this.anchor.offset = Math.max(0, Math.min(this.anchor.offset, height - SCROLL_EPSILON));
+          logicalTop = this.index.prefix(index) + this.anchor.offset;
+        }
       }
     }
     logicalTop = Math.max(0, Math.min(logicalTop, Math.max(0, this.index.total - viewport)));
@@ -340,6 +364,7 @@ export class VirtualOutputView {
     const end = this.index.length ? Math.min(this.index.length, this.index.offsetIndex(logicalTop + viewport * 2) + 1) : 0;
     const wanted = new Set();
     for (let i = start; i < end; i++) wanted.add(this.index.at(i).id);
+    if (this.anchor?.align === "center") wanted.add(this.anchor.id);
     if (endpoints) {
       for (const node of [endpoints.anchorNode, endpoints.focusNode]) {
         const row = (node.nodeType === 1 ? node : node.parentElement)?.closest("[data-output-id]");
@@ -390,6 +415,7 @@ export class VirtualOutputView {
       }
       this.applyHighlight(row, record);
     }
+    if (this.measureCenteredAnchor()) return;
     for (const [id, gap] of this.gaps) {
       if (!usedGaps.has(id)) { gap.remove(); this.gaps.delete(id); }
     }
