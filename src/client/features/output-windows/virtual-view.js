@@ -139,6 +139,13 @@ export class VirtualOutputView {
     // Remember accepted scrolls too, since several can arrive before a render.
     const movingUp = this.expectedScrollTop != null && top < this.expectedScrollTop;
     this.expectedScrollTop = top;
+    // Firefox can advance the native position slightly while incoming output
+    // or media grows the scroll surface. Being temporarily short of the new
+    // bottom is not an upward gesture; keep following until a real upward move.
+    if (this.following && !movingUp) {
+      this.schedule();
+      return;
+    }
     this.onActive(this.name);
     if (!this.index.length && this.help) return;
     const bottom = !movingUp && maximum - top <= 24;

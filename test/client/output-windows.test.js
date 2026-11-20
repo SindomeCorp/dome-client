@@ -249,6 +249,7 @@ test("manual scrollback survives repaints and measurements until new output with
     scrollHeight: { get: () => view.index.total }
   });
   assert.equal(client.preferences.scrollUpToPause, false);
+  view.render(); // Establish the painted tail position before the user's scroll.
   view.programmatic = false;
   view.element.scrollTop = 1000;
   view.onScroll();
@@ -290,6 +291,41 @@ test("clearing resets spacer heights and the expected native position before new
   manager.updateSettings({ open: true, position: "left", selected: ["team-chat"] });
   await feed("new main\n[-][Team-Chat] new secondary\n");
   for (const panel of Object.values(manager.views)) assert.equal(panel.following, true);
+});
+
+test("forward adjustments during content growth keep following but a later upward gesture pauses", async (t) => {
+  const { manager, client, doc, win, feed } = await createOutputApp(t);
+  client.preferences.autoScroll = "dbl";
+  client.preferences.scrollUpToPause = true;
+  manager.updateSettings({ open: true, selected: ["team-chat"] });
+  await feed(Array.from({ length: 1000 }, (_, i) => "main " + i + "\n[-][Team-Chat] secondary " + i).join("\n") + "\n");
+  for (const view of Object.values(manager.views)) {
+    Object.defineProperties(view.element, {
+      clientHeight: { value: 400 },
+      scrollHeight: { get: () => view.index.total + 25 }
+    });
+    view.element.style.padding = "10px 0 15px";
+    view.setPaused(false);
+    view.render();
+    const before = view.element.scrollTop;
+    // Mimic the headed Firefox trace: the scroll surface grows by a media
+    // preview, then the native viewport advances by a fraction of one pixel.
+    view.index.measure(view.index.length - 1, 268);
+    doc.querySelector("#inputBuffer").dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
+    view.element.scrollTop = before + 0.625;
+    view.onScroll();
+    assert.equal(view.paused, false, "a forward adjustment must not trigger Scroll Up to Pause");
+    assert.equal(view.following, true, "following should survive temporary distance from the new bottom");
+    view.render();
+    assert.equal(view.element.scrollTop, view.index.total - view.viewportHeight());
+    view.element.scrollTop -= 0.25;
+    view.onScroll();
+    assert.equal(view.paused, true, "genuine upward movement still pauses immediately");
+    doc.querySelector("#inputBuffer").dispatchEvent(new win.MouseEvent("dblclick", { bubbles: true }));
+    assert.equal(view.paused, true, "input gestures must not toggle buffer pause state");
+    view.element.dispatchEvent(new win.MouseEvent("dblclick", { bubbles: true }));
+    assert.equal(view.paused, false, "double-clicking the output buffer still resumes scrolling");
+  }
 });
 
 for (const mode of ["single", "split", "disabled"]) {

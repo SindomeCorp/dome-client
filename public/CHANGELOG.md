@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-11-20
+
+### Fixed
+- Keep output scrolling when Firefox makes a forward scroll adjustment as content grows, preventing input clicks from appearing to pause Main while Scroll Up to Pause is enabled.
+
 ## 2026-11-14
 
 ### Fixed
