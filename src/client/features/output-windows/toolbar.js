@@ -31,6 +31,7 @@ export function setupOutputToolbar(manager) {
     if (compact) {
       if (toolbar.parentElement !== manager.workspace.parentElement) input.before(toolbar);
     } else if (toolbar.parentElement !== main) main.prepend(toolbar);
+    manager.workspace.style.setProperty("--main-toolbar-height", (compact ? 0 : toolbar.getBoundingClientRect().height) + "px");
     if (secondaryHeader) {
       manager.workspace.style.setProperty("--secondary-header-height", Math.max(32, secondaryHeader.getBoundingClientRect().height) + "px");
     }

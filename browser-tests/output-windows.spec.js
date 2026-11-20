@@ -58,6 +58,77 @@ async function redockCompanion(popup) {
   });
 }
 
+async function expectCenteredFind(host, selector) {
+  await expect.poll(() => host.locator(selector).evaluate((element) => {
+    const mark = element.querySelector("mark");
+    if (!mark) return Infinity;
+    const fragment = mark.getClientRects()[0];
+    if (!fragment) return Infinity;
+    const bounds = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
+    const top = bounds.top + element.clientTop + parseFloat(style.paddingTop);
+    const height = element.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+    return Math.abs(fragment.top + fragment.height / 2 - (top + height / 2));
+  }), { message: "the highlighted text should be centered in the usable output viewport" }).toBeLessThan(2);
+}
+
+test("Find centers wrapped results in Main, splits and pop-outs without hiding boundary matches", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { manager, feed } = window.outputTest;
+    manager.updateSettings({ open: true, selected: ["team-chat"] });
+    const rows = ["FIRST_CENTER_EDGE"];
+    for (let i = 0; i < 1200; i++) {
+      rows.push(i === 400 ? "CENTER_MAIN_NEEDLE short" : i === 600
+        ? "wrapped context ".repeat(400) + "CENTER_MAIN_NEEDLE" + " following context".repeat(400) : "main line " + i);
+      rows.push("[-][Team-Chat] " + (i === 601
+        ? "secondary context ".repeat(300) + "CENTER_SECONDARY_NEEDLE" + " following context".repeat(300) : "secondary line " + i));
+    }
+    rows.push("LAST_CENTER_EDGE");
+    await feed(rows.join("\n") + "\n");
+  });
+  await page.locator("#inputBuffer").focus();
+  await page.keyboard.press("Control+f");
+  const query = page.locator("#output-find-query");
+  await query.fill("CENTER_MAIN_NEEDLE");
+  await expect(page.locator("#output-find-count")).toHaveText("1 of 2");
+  await expectCenteredFind(page, "#lineBuffer");
+  await query.press("Enter");
+  await expect(page.locator("#output-find-count")).toHaveText("2 of 2");
+  await expectCenteredFind(page, "#lineBuffer");
+  await page.locator("#output-find-previous").click();
+  await expect(page.locator("#output-find-count")).toHaveText("1 of 2");
+  await expectCenteredFind(page, "#lineBuffer");
+  await query.fill("CENTER_SECONDARY_NEEDLE");
+  await expectCenteredFind(page, "#secondaryBuffer");
+  const popup = await popOut(page);
+  await expectCenteredFind(popup, "#secondaryBuffer");
+  await popup.locator("#button-output-find").click();
+  await popup.locator("#output-find-query").fill("CENTER_SECONDARY_NEEDLE");
+  await expectCenteredFind(popup, "#secondaryBuffer");
+  await redockCompanion(popup);
+  await expectCenteredFind(page, "#secondaryBuffer");
+  await page.evaluate(() => window.outputTest.manager.updateSettings({ position: "bottom" }));
+  await expectCenteredFind(page, "#secondaryBuffer");
+  expect(await page.locator("[data-output-id]").count()).toBeLessThan(400);
+  await query.fill("FIRST_CENTER_EDGE");
+  await expect(page.locator("#lineBuffer mark")).toHaveText("FIRST_CENTER_EDGE");
+  await expect.poll(async () => {
+    const match = await page.locator("#lineBuffer mark").boundingBox();
+    const toolbar = page.locator(".mini-controls:not(.output-toolbar-measure)");
+    const viewport = await page.locator("#lineBuffer").boundingBox();
+    const controls = await toolbar.boundingBox();
+    const compact = await toolbar.evaluate((element) => element.classList.contains("compact-controls"));
+    return match.y - (compact ? viewport.y : controls.y + controls.height);
+  }).toBeGreaterThanOrEqual(0);
+  await query.fill("LAST_CENTER_EDGE");
+  await expect(page.locator("#lineBuffer mark")).toHaveText("LAST_CENTER_EDGE");
+  await expect.poll(async () => {
+    const match = await page.locator("#lineBuffer mark").boundingBox();
+    const viewport = await page.locator("#lineBuffer").boundingBox();
+    return viewport.y + viewport.height - match.y - match.height;
+  }).toBeGreaterThanOrEqual(0);
+});
+
 test("cross-origin navigation without a lifecycle notification redocks and retains incoming output", async ({ page }) => {
   const otherOrigin = createServer((_req, response) => response.end("Another origin"));
   await new Promise((resolve) => otherOrigin.listen(0, "127.0.0.1", resolve));

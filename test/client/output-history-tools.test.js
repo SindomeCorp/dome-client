@@ -47,6 +47,70 @@ test("Find searches unmounted output, scopes results, and clears old highlights"
   assert.equal(doc.querySelector("#output-find").classList.contains("hide"), true);
 });
 
+test("Find centers a result while keyboard jumps retain top alignment and manual scroll cancels centering", async (t) => {
+  const { manager, feed, doc, win } = await createOutputApp(t);
+  await feed(Array.from({ length: 2000 }, (_, i) => "row " + i + (i === 999 ? " CENTER_NEEDLE" : "")).join("\n") + "\n");
+  const view = manager.views.main;
+  Object.defineProperties(view.element, {
+    clientHeight: { value: 400 },
+    scrollHeight: { get: () => view.index.total + 25 }
+  });
+  view.element.style.padding = "10px 0 15px";
+  manager.tools.open();
+  const query = doc.querySelector("#output-find-query");
+  query.value = "CENTER_NEEDLE";
+  query.dispatchEvent(new win.Event("input"));
+  await settle();
+  view.render();
+  const index = view.index.indexOfId(1000);
+  const rowCenter = (view.index.prefix(index) + view.index.prefix(index + 1)) / 2;
+  assert.equal(view.element.scrollTop, rowCenter - view.viewportHeight() / 2);
+  assert.equal(view.paused, true);
+  assert.equal(view.highlight.id, 1000);
+  assert.ok(view.mounted.size < 150);
+  const searchedPosition = view.element.scrollTop;
+  doc.querySelector("#output-find-close").click();
+  view.render();
+  assert.equal(view.element.scrollTop, searchedPosition, "closing Find must not move the selected viewport");
+  view.jump(1000, { start: 0, length: 3 }, { align: "center" });
+  view.render();
+  view.element.scrollTop -= 20;
+  view.onScroll();
+  const manualPosition = view.element.scrollTop;
+  view.render();
+  assert.equal(view.element.scrollTop, manualPosition, "a manual scroll must not snap back to the result");
+  assert.equal(view.anchor.align, undefined);
+  view.jump(1000);
+  view.render();
+  assert.equal(view.element.scrollTop, view.index.prefix(index), "ordinary row navigation stays top-aligned");
+});
+
+test("centering uses the measured wrapped match and preserves the viewport when reindexing", async (t) => {
+  const { manager, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true });
+  await feed(Array.from({ length: 1000 }, (_, i) => "row " + i).join("\n") + "\n");
+  const view = manager.views.main;
+  Object.defineProperties(view.element, {
+    clientHeight: { value: 400 },
+    scrollHeight: { get: () => view.index.total }
+  });
+  view.jump(500, { start: 0, length: 3 }, { align: "center" });
+  view.render();
+  const row = view.mounted.get(500);
+  row.getBoundingClientRect = () => ({ top: 100, height: 2000 });
+  row.querySelector("mark").getClientRects = () => [{ top: 900, height: 20 }];
+  view.render();
+  view.render();
+  assert.equal(view.anchor.offset, 810, "use the highlighted fragment rather than the whole wrapped row's center");
+  assert.equal(view.element.scrollTop, view.index.prefix(499) + 810 - view.viewportHeight() / 2);
+  const topId = view.index.at(view.index.offsetIndex(view.logicalTop())).id;
+  manager.updateSettings({ open: false });
+  await manager.idle();
+  view.render();
+  assert.equal(view.anchor.id, topId, "reindexing retains the visible top anchor after clearing the highlight");
+  assert.equal(view.anchor.align, undefined);
+});
+
 test("pruning selected native text clears the selection with an explanation", async (t) => {
   const { manager, client, doc, feed, messages } = await createOutputApp(t);
   await feed("one\ntwo\nthree\nfour\nfive\n");

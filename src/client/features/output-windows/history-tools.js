@@ -109,7 +109,7 @@ export function setupHistoryTools(manager) {
       }
       manager.activePanel = panel;
       if (manager.views[panel].win !== win) manager.views[panel].win.focus();
-      manager.views[panel].jump(match.id, match);
+      manager.views[panel].jump(match.id, match, { align: "center" });
     }
     updateCount();
   }
