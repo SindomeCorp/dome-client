@@ -17,6 +17,12 @@ This headed check uses real mouse clicks on the browser control; it is skipped
 in headless projects, where the native arrow is unavailable. Slow finger-scroll
 checks use Chromium touch emulation, not an actual mobile app WebView.
 
+The input-focus regression models Firefox advancing the output viewport while
+new content increases its scroll range. Following output must remain active;
+real upward movement must still pause, and input clicks/double-clicks must not
+toggle either pane. To run it with Firefox's native window focus behavior, use
+`xvfb-run -a npm run test:browser -- --project=firefox --headed --grep "input clicks do not pause"`.
+
 `npm run test:output-performance` replays 20,000, 100,000, and 1,000,000 lines
 and records mounted content, memory, and operation timings.
 

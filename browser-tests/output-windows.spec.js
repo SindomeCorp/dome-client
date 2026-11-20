@@ -621,6 +621,43 @@ test("manual scrolling works with default preferences and resumes on arriving ou
   expect(await output.evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(25);
 });
 
+test("input clicks do not pause following output after a forward native scroll adjustment", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { manager, client, feed } = window.outputTest;
+    client.preferences.autoScroll = "dbl";
+    client.preferences.scrollUpToPause = true;
+    manager.updateSettings({ open: true, selected: ["team-chat"] });
+    await feed(Array.from({ length: 3000 }, (_, i) => "main row " + i + "\n[-][Team-Chat] secondary row " + i).join("\n") + "\n");
+  });
+  for (const panel of ["main", "secondary"]) {
+    await page.locator("#inputBuffer").click();
+    const adjusted = await page.evaluate((panel) => {
+      const view = window.outputTest.manager.views[panel];
+      const previous = view.element.scrollTop;
+      // Reproduce the geometry observed in headed Firefox: a media-sized row
+      // growth and a small forward adjustment before ResizeObserver catches up.
+      const row = view.mounted.get(view.index.at(view.index.length - 1).id);
+      const preview = document.createElement("div");
+      preview.style.height = "300px";
+      row.append(preview);
+      view.element.scrollTop = previous + 1;
+      view.element.dispatchEvent(new Event("scroll"));
+      return { paused: view.paused, following: view.following };
+    }, panel);
+    expect(adjusted).toEqual({ paused: false, following: true });
+    const output = page.locator(panel === "main" ? "#lineBuffer" : "#secondaryBuffer");
+    await expect.poll(() => output.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(2);
+    await page.locator("#inputBuffer").dblclick();
+    expect(await page.evaluate((panel) => window.outputTest.manager.views[panel].paused, panel)).toBe(false);
+    await output.dblclick({ position: { x: 20, y: 80 } });
+    expect(await page.evaluate((panel) => window.outputTest.manager.views[panel].paused, panel)).toBe(true);
+    await page.locator("#inputBuffer").click();
+    expect(await page.evaluate((panel) => window.outputTest.manager.views[panel].paused, panel)).toBe(true);
+    await output.dblclick({ position: { x: 20, y: 80 } });
+    expect(await page.evaluate((panel) => window.outputTest.manager.views[panel].paused, panel)).toBe(false);
+  }
+});
+
 for (const mode of ["single", "split", "disabled"]) {
   for (const autoPause of [false, true]) {
     test("small wheel movements and slow touch leave the tail: " + mode + ", auto-pause " + autoPause, async ({ page }, testInfo) => {
