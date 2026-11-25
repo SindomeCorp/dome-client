@@ -23,6 +23,7 @@ const env = cleanEnv(process.env, {
   NODE_SOCKET_URL_SSL: str({ default: "" }),
   NODE_SOCKET_PROXIED: bool({ default: false }),
   MULTI_MUD: bool({ default: false }),
+  CONTEXT_MENUS_ENABLED: bool({ default: true }),
   OUTPUT_WINDOWS_ENABLED: bool({ default: true }),
   OUTPUT_WINDOWS_CUSTOM_REGEX_ENABLED: bool({ default: true }),
   OUTPUT_WINDOWS_PRESETS_PATH: str({ default: "data/output-window-presets.json" }),

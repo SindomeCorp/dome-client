@@ -1,13 +1,27 @@
+import { referenceContextMenus } from "../../test-support/context-menu-reference-fixture.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { renderFile } from "ejs";
-import { CONTEXT_MENUS_KEY, defaultContextMenus, validateContextMenus, compileContextRules, matchContextRules, parseCommandTemplate, interpolateCommand } from "../../src/shared/context-menus.js";
+import { CONTEXT_MENUS_KEY, validateContextMenus, compileContextRules, matchContextRules, parseCommandTemplate, interpolateCommand } from "../../src/shared/context-menus.js";
 import { setupContextMenus } from "../../src/client/features/context-menus/controller.js";
 import { setupClientOptionsTabs } from "../../src/client/features/options/page/tabs.js";
 import { createContextMatcher } from "../../src/client/features/context-menus/worker.js";
 import { projectOutputRow, characterAtPoint } from "../../src/client/features/context-menus/output.js";
 import { createSocketOutputProtocolParser } from "../../src/client/features/terminal/socket-output-protocol.js";
+
+test("disabled context menus create no controller, worker or profile requests despite saved overrides", () => {
+  const { window } = new JSDOM("", { url: "http://localhost" });
+  try {
+    window.__CONTEXT_MENUS__ = { enabled: false };
+    window.localStorage.setItem(CONTEXT_MENUS_KEY, JSON.stringify(referenceContextMenus()));
+    window.localStorage.setItem(CONTEXT_MENUS_KEY + "-preferences", JSON.stringify({ override: true, profile: "programmer", underline: true }));
+    const client = {};
+    const unexpected = () => { assert.fail("Disabled context menus must not initialize"); };
+    assert.equal(setupContextMenus({ client, doc: window.document, win: window, matcherFactory: unexpected, profileLoader: unexpected }), null);
+    assert.equal(client.contextMenus, undefined);
+  } finally { window.close(); }
+});
 
 function localMatcher() {
   let snapshot;
@@ -23,7 +37,7 @@ function localMatcher() {
 async function fixture(t, saved, preferences) {
   const html = await renderFile("views/partials/context-menus-options.ejs", {});
   const { window } = new JSDOM("<div id='context-menu-notice' hidden></div>" + html, { url: "http://localhost", pretendToBeVisual: true });
-  if (saved) window.localStorage.setItem(CONTEXT_MENUS_KEY, saved);
+  window.localStorage.setItem(CONTEXT_MENUS_KEY, saved || JSON.stringify(referenceContextMenus()));
   if (preferences) window.localStorage.setItem(CONTEXT_MENUS_KEY + "-preferences", JSON.stringify(preferences));
   const sends = [];
   const scratches = [];
@@ -100,7 +114,7 @@ test("Context Menus Basic and Advanced tabs default to Basic and support keyboar
 });
 
 test("automatic fallback prefers Player, ignores legacy fallback settings, then uses the first profile or disables menus", async (t) => {
-  const config = defaultContextMenus();
+  const config = referenceContextMenus();
   config.profiles.unshift({ ...config.profiles[0], id: "local-gm", label: "GM" });
   const { controller, doc, window } = await fixture(t, JSON.stringify(config), { override: false, profile: "local-gm", fallback: "local-gm" });
   assert.equal(controller.active().profile.id, "player");
@@ -137,13 +151,13 @@ test("automatic fallback prefers Player, ignores legacy fallback settings, then 
     assert.equal(event.defaultPrevented, false);
   }
   assert.equal(doc.querySelector("[role=menu]"), null);
-  assert.equal(await controller.reload(JSON.stringify(defaultContextMenus())), true);
+  assert.equal(await controller.reload(JSON.stringify(referenceContextMenus())), true);
   assert.equal(controller.active().profile.id, "player");
   assert.equal(doc.querySelector("#context-menu-override").disabled, false);
 });
 
 test("default rules choose complete ANSI-independent verb, property, then object references", () => {
-  const snapshot = validateContextMenus(defaultContextMenus());
+  const snapshot = validateContextMenus(referenceContextMenus());
   const rules = [...snapshot.rules.values()];
   const matches = matchContextRules("#123:look #123.name #123", rules);
   assert.equal(matches[0].rule, "verb");
@@ -186,13 +200,13 @@ test("configuration rejects executable fields, unknown client IDs, invalid captu
     (value) => { value.profiles[0].rules.push("missing"); },
     (value) => { value.profiles.push(value.profiles[0]); }
   ];
-  for (const mutate of mutations) { const value = defaultContextMenus(); mutate(value); assert.throws(() => validateContextMenus(value)); }
+  for (const mutate of mutations) { const value = referenceContextMenus(); mutate(value); assert.throws(() => validateContextMenus(value)); }
 });
 
 test("Options reload atomically registers local profiles and global override restores latest session OOB", async (t) => {
   const { controller, doc, window, sends } = await fixture(t);
   assert.equal(doc.querySelector("#context-menu-profile").disabled, true);
-  const value = defaultContextMenus();
+  const value = referenceContextMenus();
   value.profiles.push({ ...value.profiles[0], id: "staff", label: "Programmer" });
   value.profiles.push({ ...value.profiles[0], id: "local", label: "My local tools" });
   doc.querySelector("#context-menu-json").value = JSON.stringify(value);
@@ -230,7 +244,7 @@ test("Options reload atomically registers local profiles and global override res
 
 test("explicit typed actions reject stale sessions and never substitute selection text", async (t) => {
   const { controller, client, doc, sends, scratches } = await fixture(t);
-  const value = defaultContextMenus();
+  const value = referenceContextMenus();
   value.rules[2].actions.push({ id: "verbs", label: "My verbs", type: "game-command", template: "@verbs ${object}" });
   await controller.reload(JSON.stringify(value));
   const rule = controller.snapshot.rules.get("object");
@@ -284,7 +298,7 @@ test("worker watchdog terminates pathological jobs and does not run a synchronou
 });
 
 test("compiled rules reset row state after repeated matches, caps and zero-length errors", () => {
-  const rules = compileContextRules([...validateContextMenus(defaultContextMenus()).rules.values()]);
+  const rules = compileContextRules([...validateContextMenus(referenceContextMenus()).rules.values()]);
   const expected = matchContextRules("#123:look #123.name #123", rules);
   for (const rule of rules) rule.regex.lastIndex = 1000;
   assert.deepEqual(matchContextRules("#123:look #123.name #123", rules), expected);
@@ -323,7 +337,7 @@ test("the shipped worker reuses compiled rules across rows and profiles and repl
     handler({ data: { id: ++sequence, type, ...payload } });
     return responses.pop();
   };
-  const config = defaultContextMenus();
+  const config = referenceContextMenus();
   config.profiles.push({ id: "objects", label: "Objects", rules: ["object"] });
   assert.equal(send("configure", { config }).result, true);
   assert.equal(compiled.length, 3);
@@ -366,7 +380,7 @@ test("real output parser and menu events target ANSI spans, execute one command,
   const controller = setupContextMenus({ client, doc, win, matcherFactory: localMatcher });
   t.after(() => controller.destroy());
   await controller.ready;
-  const config = defaultContextMenus();
+  const config = referenceContextMenus();
   config.rules[0].actions.push({ id: "list", label: "List verb", type: "game-command", template: "@list ${object}:${verb}" });
   config.profiles.push({ ...config.profiles[0], id: "staff", label: "Programmer" });
   await controller.reload(JSON.stringify(config));
@@ -425,7 +439,7 @@ test("switching profiles preserves prepared selected output for the first contex
   const controller = setupContextMenus({ client, doc, win, matcherFactory: localMatcher });
   t.after(() => controller.destroy());
   await controller.ready;
-  const config = defaultContextMenus();
+  const config = referenceContextMenus();
   config.profiles.push({ ...config.profiles[0], id: "gm", label: "GM" });
   await controller.reload(JSON.stringify(config));
   await feed("Existing #123\n");
@@ -457,6 +471,7 @@ test("selected output uses Copy and Scratchpad rather than token command templat
   const controller = setupContextMenus({ client, doc, win, matcherFactory: localMatcher });
   t.after(() => controller.destroy());
   await controller.ready;
+  await controller.reload(JSON.stringify(referenceContextMenus()));
   await feed("[host=example.com] #123\n@quit\n");
   const rows = doc.querySelectorAll("[data-output-id]");
   rows[1].focus();
@@ -491,6 +506,7 @@ test("legacy output parser also supports ANSI-aware keyboard context menus", asy
   const controller = setupContextMenus({ client, doc, win, matcherFactory: localMatcher });
   t.after(() => { controller.destroy(); win.close(); });
   await controller.ready;
+  await controller.reload(JSON.stringify(referenceContextMenus()));
   client.parseSocketData("#12\u001b[31m3.name\u001b[0m\n");
   await new Promise((resolve) => setTimeout(resolve, 30));
   const row = client.buffer.firstElementChild;
@@ -504,6 +520,7 @@ test("secondary pop-out and redock retain keyboard menus with one current host b
   const controller = setupContextMenus({ client, doc, win, matcherFactory: localMatcher });
   t.after(() => controller.destroy());
   await controller.ready;
+  await controller.reload(JSON.stringify(referenceContextMenus()));
   const html = await renderFile("views/output-window.ejs", {});
   const { window: popup } = new JSDOM(html, { url: "https://example.com/output-window/", pretendToBeVisual: true });
   let copied;
@@ -552,8 +569,8 @@ test("worker responses, errors and superseded reloads preserve snapshot boundari
   } });
   t.after(() => { controller.destroy(); win.close(); });
   await controller.ready;
-  const slow = controller.reload(JSON.stringify(defaultContextMenus()));
-  const config = defaultContextMenus();
+  const slow = controller.reload(JSON.stringify(referenceContextMenus()));
+  const config = referenceContextMenus();
   config.profiles[0].label = "New label";
   await controller.reload(JSON.stringify(config));
   complete(true);
@@ -564,7 +581,7 @@ test("worker responses, errors and superseded reloads preserve snapshot boundari
 test("JSON import uses the real file control and failed edits keep the last persisted registry", async (t) => {
   const { controller, doc, window: win } = await fixture(t);
   const file = doc.querySelector("#context-menu-file");
-  const config = defaultContextMenus();
+  const config = referenceContextMenus();
   config.profiles.push({ ...config.profiles[0], id: "personal", label: "Personal" });
   Object.defineProperty(file, "files", { configurable: true, value: [{ size: 1000, async text() { return JSON.stringify(config); } }] });
   file.dispatchEvent(new win.Event("change"));
@@ -582,7 +599,7 @@ test("JSON import uses the real file control and failed edits keep the last pers
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(win.localStorage.getItem(CONTEXT_MENUS_KEY), persisted);
   assert.equal(controller.active().profile.id, "personal");
-  await controller.reload(JSON.stringify(defaultContextMenus()));
+  await controller.reload(JSON.stringify(referenceContextMenus()));
   assert.equal(controller.preferences.override, false);
   assert.equal(controller.active().source, "Fallback");
   assert.match(doc.querySelector("#context-menu-error").textContent, /no longer registered/);

@@ -5,10 +5,13 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-25
 
 ### Added
+- Document MOO login notifications for selecting Player, GM or Programmer menus and resetting the session choice.
+- Add an enabled-by-default ENV switch for context menus; automatically disable them with a logged error when no registered JSON profile file is usable.
 - Add a context-menu JSON authoring guide with import instructions, a complete personal profile, safe templates, native actions and troubleshooting.
 - Add an optional Basic setting to underline text with context-menu actions across output panes and pop-outs, without changing text selection or ANSI formatting.
 
 ### Changed
+- Make Player menus selected-text Copy only, with no reference matching or underlines; keep staff reference and Scratchpad actions.
 - Match Context Menus Basic/Advanced tabs to Presentation tabs, including their styling and placement directly below the main Options tabs.
 - Simplify Context Menus Options with Basic/Advanced tabs, a bold active profile, and automatic Player-first fallback instead of a fallback dropdown; disable menus when no profiles are available.
 - Put Copy to Clipboard first in every shipped reference menu, keeping the remaining commands in their existing order.

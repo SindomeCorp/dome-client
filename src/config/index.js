@@ -6,6 +6,7 @@ function normalizeEditorParser(value) {
 }
 
 const config = {
+  contextMenus: { enabled: env.CONTEXT_MENUS_ENABLED },
   outputWindows: {
     enabled: env.OUTPUT_WINDOWS_ENABLED,
     customRegexEnabled: env.OUTPUT_WINDOWS_CUSTOM_REGEX_ENABLED,

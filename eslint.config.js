@@ -52,7 +52,7 @@ export default [
     },
   },
   {
-    files: ["src/shared/context-menus.js"],
+    files: ["src/shared/context-menus.js", "test-support/context-menu-reference-fixture.js"],
     languageOptions: { ecmaVersion: 2025 },
   },
 ];

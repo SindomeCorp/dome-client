@@ -1,8 +1,10 @@
 # Output context menus
 
+Hosting option: `CONTEXT_MENUS_ENABLED=true` (default) enables this feature. Set it to `false` to hide its Options tab and retain native browser menus. Startup validates the client-registered JSON files; if none is usable, context menus automatically disable and the server logs an error with profile details. Restore at least one valid file with actions and restart the client server. Local imports and overrides cannot bypass this switch. A failed in-session reload still keeps the last valid snapshot. The shipped profiles target MOOs; custom JSON matchers and commands can support other games.
+
 For a hands-on import workflow, a complete example and an authoring reference, see [Creating and using context-menu JSON files](CONTEXT-MENU-JSON.md).
 
-Right-click a reference in Main, Secondary, or popped-out output. ANSI colors and Find highlights do not split the reference. The shipped Player profile offers Copy for `#123:verb`, `#123.property`, and `#123`, in that specificity order. Selected output has its own Copy and Open in Scratchpad menu without regex matching. A selection takes precedence over an overlapping reference; clear it to use reference commands. Links, media, controls, blank space, unmatched text, unavailable actions and Shift-right-click retain browser menus.
+The shipped Player profile has no reference rules or underlines: select output to get Copy only. GM and Programmer offer reference actions in Main, Secondary and popped-out output, plus selected-text Copy and Open in Scratchpad. ANSI colors and Find highlights do not split references; verb/property matches take precedence over plain objects. Selection menus require no regex and take precedence over overlapping references. Links, media, controls, blank space, unmatched text, unavailable actions and Shift-right-click retain browser menus. Local JSON can explicitly add other actions to a personal profile.
 
 Tab into output and use Up/Down to focus a row, then Shift+F10 or the Menu key. A row with multiple references offers a reference chooser. Arrow keys and Home/End navigate menus; Enter/Space activate, Escape dismisses and restores focus. Selection menus also support Shift+F10. Native Copy remains available using Ctrl/Cmd+C or the browser menu.
 
@@ -57,7 +59,11 @@ After detecting the webclient and checking the logged-in player's permissions, t
 
 ```text
 #$# SDWC%%CONTEXT-PROFILE%%"player"
+#$# SDWC%%CONTEXT-PROFILE%%"gm"
+#$# SDWC%%CONTEXT-PROFILE%%"programmer"
 ```
+
+Send only the line appropriate to the logged-in user. For MOO `notify()` examples and login/role checks, see [Server integration](SDWC-OOB.md#selecting-a-logged-in-users-context-menu-profile).
 
 No profile object, regex, template, action list or URL is accepted. Invalid/unknown IDs clear the previous server override and use Options selection. There is no automatic command response to profile selection. Configure additional role profiles in client JSON before sending their IDs.
 

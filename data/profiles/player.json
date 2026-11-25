@@ -1,82 +1,17 @@
 {
   "version": 1,
-  "rules": [
-    {
-      "id": "verb",
-      "priority": 300,
-      "pattern": "(?<![A-Za-z0-9_#])(?<object>#[0-9]+):(?<verb>[A-Za-z_][A-Za-z0-9_]*)(?![A-Za-z0-9_])",
-      "captures": {
-        "object": "object-id",
-        "verb": "verb-name"
-      },
-      "actions": [
-        {
-          "id": "copy",
-          "label": "Copy to Clipboard",
-          "type": "client-action",
-          "action": "clipboard.copy",
-          "input": "target"
-        }
-      ]
-    },
-    {
-      "id": "property",
-      "priority": 200,
-      "pattern": "(?<![A-Za-z0-9_#])(?<object>#[0-9]+)\\.(?<property>[A-Za-z_][A-Za-z0-9_]*)(?![A-Za-z0-9_])",
-      "captures": {
-        "object": "object-id",
-        "property": "property-name"
-      },
-      "actions": [
-        {
-          "id": "copy",
-          "label": "Copy to Clipboard",
-          "type": "client-action",
-          "action": "clipboard.copy",
-          "input": "target"
-        }
-      ]
-    },
-    {
-      "id": "object",
-      "priority": 100,
-      "pattern": "(?<![A-Za-z0-9_#])(?<object>#[0-9]+)(?![A-Za-z0-9_])",
-      "captures": {
-        "object": "object-id"
-      },
-      "actions": [
-        {
-          "id": "copy",
-          "label": "Copy to Clipboard",
-          "type": "client-action",
-          "action": "clipboard.copy",
-          "input": "target"
-        }
-      ]
-    }
-  ],
+  "rules": [],
   "profiles": [
     {
       "id": "player",
       "label": "Player",
-      "rules": [
-        "verb",
-        "property",
-        "object"
-      ],
+      "rules": [],
       "selectionActions": [
         {
           "id": "copy",
           "label": "Copy selected text",
           "type": "client-action",
           "action": "clipboard.copy",
-          "input": "selection"
-        },
-        {
-          "id": "scratch",
-          "label": "Open in Scratchpad",
-          "type": "client-action",
-          "action": "ide.open-scratch",
           "input": "selection"
         }
       ]

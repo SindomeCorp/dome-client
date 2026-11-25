@@ -1,4 +1,4 @@
-import { validateContextMenus } from "./context-menus.js";
+import { validateContextMenus } from "./context-menu-validation.js";
 
 export const contextProfileRegistry = Object.freeze({
   player: "/profiles/player.json",

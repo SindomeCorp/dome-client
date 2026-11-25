@@ -7,6 +7,7 @@ import { build } from "esbuild";
 import { fileURLToPath } from "node:url";
 import { CLIENT_OPTION_GROUPS } from "../src/shared/client-options.js";
 import logger from "../src/logger.js";
+import { getContextMenuAvailability } from "../src/services/context-menu-profiles.js";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const bundled = await build({
@@ -55,15 +56,22 @@ app.get("/output-window/", async (_req, res) => {
 });
 app.get("/", async (req, res) => {
   const config = { enabled: req.query.splits !== "off", customRegexEnabled: req.query.custom !== "off", presets: req.query.presets === "default" ? defaultPresets : presets };
+  const contextMenus = getContextMenuAvailability({
+    enabled: req.query.context !== "off", logger,
+    readFile: ["missing", "invalid"].includes(req.query.context) ? () => {
+      if (req.query.context === "missing") throw new Error("ENOENT synthetic missing profile");
+      return "{}";
+    } : undefined
+  });
   const html = await renderFile(root + "views/client.ejs", {
     req: {}, debugMode: true, decache: (value) => value, showReporter: () => true,
-    clientOptionGroups: CLIENT_OPTION_GROUPS, shortenEnabled: false, outputWindows: config
+    clientOptionGroups: CLIENT_OPTION_GROUPS, shortenEnabled: false, outputWindows: config, contextMenus
   });
   const realEntry = req.query.entry === "real";
   const body = realEntry ? html : html.replace(/<script defer[^>]+><\/script>/g, "");
   res.type("html").send("<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
     + "<link rel=\"stylesheet\" href=\"/css/client.css\"><script>window.__OUTPUT_WINDOWS__="
-    + JSON.stringify(config).replace(/</g, "\\u003c") + ";window.__LOG_EXPORT_CSS__="
+    + JSON.stringify(config).replace(/</g, "\\u003c") + ";window.__CONTEXT_MENUS__=" + JSON.stringify(contextMenus) + ";window.__LOG_EXPORT_CSS__="
     + JSON.stringify(css).replace(/</g, "\\u003c")
     + ";window.socketUrl=window.location.origin;window.socketUrlSSL=window.location.origin;window.shortenEnabled=false;window.gameName='Local fixture';window.poweredBy='Dome Client';</script></head><body class=\"client\">"
     + body + (realEntry ? "" : "<script defer src=\"/runtime.js\"></script>") + "</body></html>");

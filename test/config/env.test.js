@@ -16,6 +16,21 @@ async function importConfig() {
   return import(moduleUrl);
 }
 
+test("context menus default on and accept an explicit ENV disable", async (t) => {
+  const previous = process.env.CONTEXT_MENUS_ENABLED;
+  t.mock.method(dotenv, "config", () => ({}));
+  t.after(() => {
+    if (previous === undefined) delete process.env.CONTEXT_MENUS_ENABLED;
+    else process.env.CONTEXT_MENUS_ENABLED = previous;
+  });
+  delete process.env.CONTEXT_MENUS_ENABLED;
+  assert.equal((await importConfig()).default.contextMenus.enabled, true);
+  process.env.CONTEXT_MENUS_ENABLED = "false";
+  assert.equal((await importConfig()).default.contextMenus.enabled, false);
+  process.env.CONTEXT_MENUS_ENABLED = "true";
+  assert.equal((await importConfig()).default.contextMenus.enabled, true);
+});
+
 test("output window flags default on and accept explicit operator configuration", async (t) => {
   const keys = ["OUTPUT_WINDOWS_ENABLED", "OUTPUT_WINDOWS_CUSTOM_REGEX_ENABLED", "OUTPUT_WINDOWS_PRESETS_PATH"];
   const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));

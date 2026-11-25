@@ -1,10 +1,11 @@
+import { referenceContextMenus } from "../../test-support/context-menu-reference-fixture.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { JSDOM } from "jsdom";
 import { renderFile } from "ejs";
 import { contextProfileRegistry, loadContextProfiles } from "../../src/shared/context-menu-profiles.js";
-import { defaultContextMenus, validateContextMenus, compileContextRules, matchContextRules, interpolateCommand, validCaptures } from "../../src/shared/context-menus.js";
+import { validateContextMenus, compileContextRules, matchContextRules, interpolateCommand, validCaptures } from "../../src/shared/context-menus.js";
 import { setupContextMenus } from "../../src/client/features/context-menus/controller.js";
 
 async function files() {
@@ -49,6 +50,13 @@ test("separate role files have exact action ordering, delimiters and safe typed 
     const snapshot = validateContextMenus(config);
     const profile = snapshot.profiles.get(id);
     const rules = compileContextRules(profile.rules.map((id) => snapshot.rules.get(id)));
+    if (id === "player") {
+      assert.deepEqual(profile.rules, []);
+      assert.deepEqual(config.rules, []);
+      assert.deepEqual(matchContextRules("#123 #123:look #123.name $object $object:look $object.name", rules), []);
+      assert.deepEqual(profile.selectionActions.map((action) => action.action), ["clipboard.copy"]);
+      continue;
+    }
     for (const [kind, reference] of Object.entries({ object: "#123", verb: "#123:look", property: "#123.name" })) {
       const match = matchContextRules(reference, rules)[0];
       assert.equal(match.text, reference);
@@ -167,14 +175,14 @@ test("file selection reuses compiled revisions, falls back on failure, preserves
   controller.update({ override: false });
   assert.equal(controller.active().source, "Fallback");
   assert.equal(controller.active().profile.id, "player");
-  assert.equal(await controller.reload(JSON.stringify(defaultContextMenus())), false);
+  assert.equal(await controller.reload(JSON.stringify(referenceContextMenus())), false);
   assert.equal(controller.revision, revision);
   fail = false;
   await controller.setServerProfile("gm");
   assert.equal(controller.active().source, "selected by server");
   documents = structuredClone(documents);
   documents[1].config.rules[2].actions.find((action) => action.id === "command-0").label = "Updated parents";
-  assert.equal(await controller.reload(JSON.stringify(defaultContextMenus())), true);
+  assert.equal(await controller.reload(JSON.stringify(referenceContextMenus())), true);
   assert.equal(controller.revision, revision + 1);
   assert.equal(controller.snapshot.rules.get("gm-object").actions.find((action) => action.id === "command-0").label, "Updated parents");
   controller.resetSession();
@@ -194,11 +202,11 @@ test("late file results cannot restore a session or overwrite newer JSON; hyphen
   finish({ documents, errors: [] });
   await selection;
   assert.equal(controller.active().source, "Fallback");
-  const slow = controller.reload(JSON.stringify(defaultContextMenus()));
+  const slow = controller.reload(JSON.stringify(referenceContextMenus()));
   await new Promise((resolve) => setTimeout(resolve, 0));
   const finishSlow = finish;
   delay = false;
-  const local = defaultContextMenus();
+  const local = referenceContextMenus();
   local.profiles.push({ ...local.profiles[0], id: "support-gm", label: "Hyphen" }, { ...local.profiles[0], id: "support_gm", label: "Underscore" });
   await controller.reload(JSON.stringify(local));
   finishSlow({ documents, errors: [] });

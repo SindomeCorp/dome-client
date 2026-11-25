@@ -5,6 +5,7 @@ import { supportsContextUnderlines } from "./underlines.js";
 import { contextProfileRegistry, loadContextProfiles, mergeContextProfiles } from "../../../shared/context-menu-profiles.js";
 
 export function setupContextMenus({ client, doc = document, win = window, matcherFactory = createContextMatcher, profileLoader = typeof win.fetch === "function" ? (ids) => loadContextProfiles({ fetchFn: win.fetch.bind(win), ids }) : null } = {}) {
+  if (win.__CONTEXT_MENUS__?.enabled === false) return null;
   if (client?.contextMenus) return client.contextMenus;
   let config = defaultContextMenus();
   let snapshot = validateContextMenus(config);

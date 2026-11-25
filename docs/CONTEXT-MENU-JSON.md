@@ -1,5 +1,7 @@
 # Creating and using context-menu JSON files
 
+Hosting option: `CONTEXT_MENUS_ENABLED=true` (default) enables this feature. Set it to `false` to hide its Options tab and retain native browser menus. Startup validates the client-registered JSON files; if none is usable, context menus automatically disable and the server logs an error with profile details. Restore at least one valid file with actions and restart the client server. Local imports and overrides cannot bypass this switch. A failed in-session reload still keeps the last valid snapshot. The shipped profiles target MOOs; custom JSON matchers and commands can support other games.
+
 This guide explains how to import a context-menu file, create your own profile and add commands without changing client code. For the complete feature overview, see [Output context menus](CONTEXT-MENUS.md).
 
 Configuration belongs to the client, not the game server. Labels, regex rules and command templates are validated client-side. Context-menu game commands are sent only when you explicitly choose one from a menu, and normal game authorization still applies.
@@ -10,7 +12,7 @@ The shipped examples are:
 
 | File | What it provides |
 | --- | --- |
-| [`data/profiles/player.json`](../data/profiles/player.json) | Minimal, copy-only numeric references. |
+| [`data/profiles/player.json`](../data/profiles/player.json) | Selected-text Copy only; no reference matching or underlines. |
 | [`data/profiles/gm.json`](../data/profiles/gm.json) | Numeric object commands; verb/property references remain copy-only. |
 | [`data/profiles/programmer.json`](../data/profiles/programmer.json) | Numeric and symbolic object/verb/property commands, plus Copy Frame for supported traceback frames. |
 
@@ -168,7 +170,7 @@ Native actions use `type: "client-action"`, an allowlisted `action` ID and an `i
 
 Rule actions use `target`; `selectionActions` use `selection`. Keep Copy in the selected-text menu: that menu requires an available Copy action. Available native actions depend on the client/browser, and clipboard permission can still be denied.
 
-Selected text never becomes a game-command template input. Scratchpad opening neither runs nor uploads the selection. It starts unsaved, so closing warns even without edits. A subsequent Save is a separate explicit action using the existing MOO-saveable Scratchpad workflow and eligibility/permission checks. Multiple scratch tabs do not imply separate server-side scratch records.
+The shipped Player profile offers only selected-text Copy. GM, Programmer and the personal example above also offer Scratchpad; a user may explicitly add reference or Scratchpad actions in local JSON. Selected text never becomes a game-command template input. Scratchpad opening neither runs nor uploads the selection. It starts unsaved, so closing warns even without edits. A subsequent Save is a separate explicit action using the existing MOO-saveable Scratchpad workflow and eligibility/permission checks. Multiple scratch tabs do not imply separate server-side scratch records.
 
 Native-action entries cannot supply JavaScript callbacks, URL-opening behavior, module imports, editor upload commands or implementations of new native handlers. New native action IDs require client development. Open at Line is not currently an implemented native context-menu action; the shipped traceback menu offers Copy Frame.
 
@@ -189,7 +191,7 @@ To remove local overrides and use only the registered files, first export a back
 
 This clears local customizations; it does **not** disable the shipped profiles while their files are available. If the merged registry has no profiles, custom menus are disabled and ordinary browser menus remain. A failed reload retains the previous valid registry instead of partially replacing it.
 
-After detecting the webclient and checking permissions, the game may select an already known ID, for example `#$# SDWC%%CONTEXT-PROFILE%%"programmer"`. It must not send JSON bodies, regexes, templates, paths or URLs. `#$# SDWC%%CONTEXT-RESET` clears the session choice at same-connection logout/character changes. See [SDWC OOB](SDWC-OOB.md) for integration details.
+After detecting the webclient and checking permissions, the game may select an already known ID, for example `#$# SDWC%%CONTEXT-PROFILE%%"programmer"`. It must not send JSON bodies, regexes, templates, paths or URLs. `#$# SDWC%%CONTEXT-RESET` clears the session choice at same-connection logout/character changes. See [Server integration and MOO notify examples](SDWC-OOB.md#selecting-a-logged-in-users-context-menu-profile) for login, role selection and session reset details.
 
 Effective selection is: enabled valid global override, then recognized current-session server ID, then `player`, then the first registered profile, otherwise disabled. The server ID is not persisted across sessions. Selecting a staff-named profile in local Options does not grant staff permissions.
 
