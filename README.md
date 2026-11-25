@@ -13,7 +13,7 @@ It is a browser-based MUD client built with Node.js, Express, and Socket.io. It 
 
 ## Try It Live
 
-Output reference and selection menus are configurable in **Options → Context Menus**. Import/edit/reload JSON, select a global override or fallback profile, and copy output or open selected text in the existing saveable IDE Scratchpad. See [Context Menus](docs/CONTEXT-MENUS.md) for configuration, safe command templates and ID-only server integration.
+Output reference and selection menus are configurable in **Options → Context Menus**. Use Basic for a global profile override and optional underlining, or Advanced to import/edit/reload JSON. Fallback automatically uses Player or the first available profile. Copy output or open selected text in the existing saveable IDE Scratchpad. See [Context Menus](docs/CONTEXT-MENUS.md) for the feature overview and [Creating context-menu JSON](docs/CONTEXT-MENU-JSON.md) for a complete example and authoring guide.
 
 Sindome provides a hosted version of the client that can connect to any MUD. You are free to use this version to check out the features, or to connect to a game you like to play.
 
@@ -268,6 +268,7 @@ If you want the IDE to function properly you'll need to make a few verb changes/
 - [MOO Verbs Setup](docs/MOO-SETUP.md)
 
 ### Advanced Setup
+- [Creating and using context-menu JSON files](docs/CONTEXT-MENU-JSON.md)
 - [Production Deployment](docs/PRODUCTION.md)
 - [Autocomplete](docs/AUTOCOMPLETE.md)
 - [URL Shortener](docs/URL-SHORTENER.md)

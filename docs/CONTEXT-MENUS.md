@@ -1,5 +1,7 @@
 # Output context menus
 
+For a hands-on import workflow, a complete example and an authoring reference, see [Creating and using context-menu JSON files](CONTEXT-MENU-JSON.md).
+
 Right-click a reference in Main, Secondary, or popped-out output. ANSI colors and Find highlights do not split the reference. The shipped Player profile offers Copy for `#123:verb`, `#123.property`, and `#123`, in that specificity order. Selected output has its own Copy and Open in Scratchpad menu without regex matching. A selection takes precedence over an overlapping reference; clear it to use reference commands. Links, media, controls, blank space, unmatched text, unavailable actions and Shift-right-click retain browser menus.
 
 Tab into output and use Up/Down to focus a row, then Shift+F10 or the Menu key. A row with multiple references offers a reference chooser. Arrow keys and Home/End navigate menus; Enter/Space activate, Escape dismisses and restores focus. Selection menus also support Shift+F10. Native Copy remains available using Ctrl/Cmd+C or the browser menu.

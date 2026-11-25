@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-25
 
 ### Added
+- Add a context-menu JSON authoring guide with import instructions, a complete personal profile, safe templates, native actions and troubleshooting.
 - Add an optional Basic setting to underline text with context-menu actions across output panes and pop-outs, without changing text selection or ANSI formatting.
 
 ### Changed
