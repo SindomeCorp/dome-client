@@ -18,7 +18,7 @@ export function setupContextMenus({ client, doc = document, win = window, matche
   let serverRequest = 0;
   let session = 0;
   let connection = 0;
-  let prefs = { override: false, profile: "player", fallback: "player" };
+  let prefs = { override: false, profile: "player" };
   let noticeTimer;
   const bindings = new Map();
   const subscribers = new Set();
@@ -32,9 +32,10 @@ export function setupContextMenus({ client, doc = document, win = window, matche
   const active = () => {
     if (prefs.override && select(prefs.profile)) return { profile: select(prefs.profile), source: "Override" };
     if (select(server)) return { profile: select(server), source: "selected by server" };
-    return { profile: select(prefs.fallback) || snapshot.profiles.values().next().value, source: "Fallback" };
+    const profile = select("player") || snapshot.profiles.values().next().value || null;
+    return { profile, source: profile ? "Fallback" : "Disabled" };
   };
-  let previous = active().profile.id;
+  let previous = active().profile?.id;
   function report(message) {
     const error = doc.querySelector("#context-menu-error");
     if (error) error.textContent = message;
@@ -47,35 +48,36 @@ export function setupContextMenus({ client, doc = document, win = window, matche
   function refresh() {
     const state = active();
     const label = doc.querySelector("#context-menu-active");
-    if (label) label.textContent = "Active profile: " + state.profile.label + " (" + state.source + ")";
+    if (label) label.textContent = state.profile ? "Active Profile: " + state.profile.label + " (" + state.source + ")" : "Active Profile: Disabled (no profiles available)";
     const override = doc.querySelector("#context-menu-override");
     if (override) override.checked = prefs.override;
-    for (const [selector, key] of [["#context-menu-profile", "profile"], ["#context-menu-fallback", "fallback"]]) {
-      const dropdown = doc.querySelector(selector);
-      if (!dropdown) continue;
+    if (override) override.disabled = snapshot.profiles.size === 0;
+    const dropdown = doc.querySelector("#context-menu-profile");
+    if (dropdown) {
       dropdown.replaceChildren(...[...snapshot.profiles.values()].map((profile) => {
         const option = doc.createElement("option");
         option.value = profile.id;
         option.textContent = profile.label;
         return option;
       }));
-      dropdown.value = select(prefs[key]) ? prefs[key] : state.profile.id;
-      dropdown.disabled = key === "profile" && !prefs.override;
+      dropdown.value = select(prefs.profile) ? prefs.profile : state.profile?.id || "";
+      dropdown.disabled = !prefs.override || snapshot.profiles.size === 0;
     }
-    if (state.profile.id !== previous) {
+    if (state.profile?.id !== previous) {
       const notice = doc.querySelector("#context-menu-notice");
       if (notice) {
         win.clearTimeout(noticeTimer);
-        notice.textContent = "Switched to " + state.profile.label + " context menus.";
+        notice.textContent = state.profile ? "Switched to " + state.profile.label + " context menus." : "Context menus disabled.";
         notice.hidden = false;
         noticeTimer = win.setTimeout(() => { notice.textContent = ""; }, 4000);
       }
     }
-    previous = state.profile.id;
+    previous = state.profile?.id;
     for (const subscriber of subscribers) subscriber();
   }
   function update(patch) {
-    prefs = { ...prefs, ...patch };
+    if (typeof patch.override === "boolean") prefs.override = patch.override;
+    if (typeof patch.profile === "string") prefs.profile = patch.profile;
     savePreferences();
     refresh();
   }
@@ -108,9 +110,8 @@ export function setupContextMenus({ client, doc = document, win = window, matche
       if (!select(prefs.profile)) {
         if (prefs.override) warning = "Override profile is no longer registered; override was disabled.";
         prefs.override = false;
-        prefs.profile = snapshot.profiles.keys().next().value;
+        prefs.profile = select("player")?.id || snapshot.profiles.keys().next().value || "player";
       }
-      if (!select(prefs.fallback)) prefs.fallback = snapshot.profiles.keys().next().value;
       if (!select(server)) server = null;
       if (persist) {
         try { win.localStorage.setItem(CONTEXT_MENUS_KEY, JSON.stringify(config)); }
@@ -136,7 +137,7 @@ export function setupContextMenus({ client, doc = document, win = window, matche
     get preferences() { return { ...prefs }; },
     subscribe(callback) { subscribers.add(callback); return () => subscribers.delete(callback); },
     async match(text) {
-      if (!matcher) return [];
+      if (!matcher || !active().profile) return [];
       if (text.length > 32768) throw new Error("Context line exceeds 32768 characters; native menus remain available.");
       return matcher.request("match", { text, profile: active().profile.id });
     },
@@ -200,7 +201,7 @@ export function setupContextMenus({ client, doc = document, win = window, matche
       return () => { binding(); bindings.delete(element); };
     },
     activate(action, context) {
-      if (context.session !== session || context.revision !== revision || context.profile !== active().profile.id) throw new Error("Context changed; open the menu again.");
+      if (!active().profile || context.session !== session || context.revision !== revision || context.profile !== active().profile.id) throw new Error("Context changed; open the menu again.");
       if (action.type === "game-command") {
         if (context.kind !== "token") throw new Error("Selections cannot be used in commands.");
         if (client?.socketState !== 1 || !client.socket?.emit) throw new Error("Connect before sending a context command.");
@@ -221,12 +222,11 @@ export function setupContextMenus({ client, doc = document, win = window, matche
   try {
     saved = win.localStorage.getItem(CONTEXT_MENUS_KEY);
     const stored = JSON.parse(win.localStorage.getItem(CONTEXT_MENUS_KEY + "-preferences") || "null");
-    if (stored) prefs = { override: stored.override === true, profile: typeof stored.profile === "string" ? stored.profile : "player", fallback: typeof stored.fallback === "string" ? stored.fallback : "player" };
+    if (stored) prefs = { override: stored.override === true, profile: typeof stored.profile === "string" ? stored.profile : "player" };
   } catch { report("Unable to read saved context menus."); }
   if (editor) editor.value = saved || JSON.stringify(config, null, 2);
   bindUI(doc.querySelector("#context-menu-override"), "change", (event) => update({ override: event.target.checked }));
   bindUI(doc.querySelector("#context-menu-profile"), "change", (event) => update({ profile: event.target.value }));
-  bindUI(doc.querySelector("#context-menu-fallback"), "change", (event) => update({ fallback: event.target.value }));
   bindUI(doc.querySelector("#context-menu-reload"), "click", () => reload(editor.value));
   const fileInput = doc.querySelector("#context-menu-file");
   bindUI(fileInput, "change", async () => {

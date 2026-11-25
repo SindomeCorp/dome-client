@@ -44,6 +44,9 @@
   pointer-events: none;
 }
 #client-options-panel-context {
+  #context-menu-active { font-weight: bold; }
+  .context-menu-tabs { display: flex; gap: 6px; margin: 12px 0; }
+  .context-menu-tab:focus-visible { outline: 2px solid #b7d9ff; outline-offset: 2px; }
   .context-option { display: block; margin: 12px 0; }
   select, textarea, input[type=file] { color: #111; background: #fff; }
   textarea { width: 100%; font-family: monospace; }

@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-25
 
 ### Changed
+- Simplify Context Menus Options with Basic/Advanced tabs, a bold active profile, and automatic Player-first fallback instead of a fallback dropdown; disable menus when no profiles are available.
 - Put Copy to Clipboard first in every shipped reference menu, keeping the remaining commands in their existing order.
 - Center profile-change notices in a translucent, nonblocking overlay above client controls.
 

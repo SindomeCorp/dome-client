@@ -1,24 +1,19 @@
-function activateClientOptionsTab(tabName, { root = document, presentation = false } = {}) {
-  root.querySelectorAll(presentation ? ".presentation-tab" : ".client-options-tab").forEach((tab) => {
-    const active = (presentation ? tab.dataset.presentationTab : tab.dataset.tab) === tabName;
-    tab.classList.toggle("active", active);
-    tab.setAttribute("aria-selected", active ? "true" : "false");
-    tab.setAttribute("tabindex", active ? "0" : "-1");
-  });
-
-  root.querySelectorAll(presentation ? "[data-presentation-panel]" : ".client-options-panel").forEach((panel) => {
-    panel.classList.toggle("hide", (presentation ? panel.dataset.presentationPanel : panel.dataset.tabPanel) !== tabName);
-  });
-}
-
-function setupClientOptionsTabs({ root = document, presentation = false } = {}) {
-  const tabs = Array.from(root.querySelectorAll(presentation ? ".presentation-tab" : ".client-options-tab"));
+function setupTabGroup(root, tabSelector, panelSelector, tabKey, panelKey) {
+  const tabs = Array.from(root.querySelectorAll(tabSelector));
   if (tabs.length === 0) return;
-
-  tabs.forEach((tab, index) => {
-    tab.addEventListener("click", () => {
-      activateClientOptionsTab(presentation ? tab.dataset.presentationTab : tab.dataset.tab, { root, presentation });
+  const activate = (tabName) => {
+    tabs.forEach((tab) => {
+      const active = tab.dataset[tabKey] === tabName;
+      tab.classList.toggle("active", active);
+      tab.setAttribute("aria-selected", active ? "true" : "false");
+      tab.setAttribute("tabindex", active ? "0" : "-1");
     });
+    root.querySelectorAll(panelSelector).forEach((panel) => {
+      panel.classList.toggle("hide", panel.dataset[panelKey] !== tabName);
+    });
+  };
+  tabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => activate(tab.dataset[tabKey]));
     tab.addEventListener("keydown", (event) => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
       event.preventDefault();
@@ -29,14 +24,20 @@ function setupClientOptionsTabs({ root = document, presentation = false } = {}) 
       if (event.key === "Home") nextIndex = 0;
       if (event.key === "End") nextIndex = tabs.length - 1;
       const nextTab = tabs[nextIndex];
-      activateClientOptionsTab(presentation ? nextTab.dataset.presentationTab : nextTab.dataset.tab, { root, presentation });
+      activate(nextTab.dataset[tabKey]);
       nextTab.focus();
     });
   });
-
   const activeTab = tabs.find((tab) => tab.classList.contains("active")) ?? tabs[0];
-  activateClientOptionsTab(presentation ? activeTab.dataset.presentationTab : activeTab.dataset.tab, { root, presentation });
-  if (!presentation) setupClientOptionsTabs({ root, presentation: true });
+  activate(activeTab.dataset[tabKey]);
+}
+
+function setupClientOptionsTabs({ root = document, presentation = false } = {}) {
+  if (!presentation) {
+    setupTabGroup(root, ".client-options-tab", ".client-options-panel", "tab", "tabPanel");
+    setupTabGroup(root, ".context-menu-tab", "[data-context-panel]", "contextTab", "contextPanel");
+  }
+  setupTabGroup(root, ".presentation-tab", "[data-presentation-panel]", "presentationTab", "presentationPanel");
 }
 
 export {

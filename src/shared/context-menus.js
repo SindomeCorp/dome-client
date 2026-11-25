@@ -113,7 +113,7 @@ export function validateContextMenus(value) {
     }
     rules.set(rule.id, { ...rule, actions: actions(rule.actions, rule.captures, false, path + ".actions") });
   });
-  check(Array.isArray(value.profiles) && value.profiles.length > 0 && value.profiles.length <= 64, "profiles", "expected 1–64 profiles");
+  check(Array.isArray(value.profiles) && value.profiles.length <= 64, "profiles", "expected at most 64 profiles");
   const profiles = new Map();
   value.profiles.forEach((profile, index) => {
     const path = "profiles[" + index + "]";

@@ -4,6 +4,7 @@ import { JSDOM } from "jsdom";
 import { renderFile } from "ejs";
 import { CONTEXT_MENUS_KEY, defaultContextMenus, validateContextMenus, compileContextRules, matchContextRules, parseCommandTemplate, interpolateCommand } from "../../src/shared/context-menus.js";
 import { setupContextMenus } from "../../src/client/features/context-menus/controller.js";
+import { setupClientOptionsTabs } from "../../src/client/features/options/page/tabs.js";
 import { createContextMatcher } from "../../src/client/features/context-menus/worker.js";
 import { projectOutputRow, characterAtPoint } from "../../src/client/features/context-menus/output.js";
 import { createSocketOutputProtocolParser } from "../../src/client/features/terminal/socket-output-protocol.js";
@@ -19,10 +20,11 @@ function localMatcher() {
   };
 }
 
-async function fixture(t, saved) {
+async function fixture(t, saved, preferences) {
   const html = await renderFile("views/partials/context-menus-options.ejs", {});
   const { window } = new JSDOM("<div id='context-menu-notice' hidden></div>" + html, { url: "http://localhost", pretendToBeVisual: true });
   if (saved) window.localStorage.setItem(CONTEXT_MENUS_KEY, saved);
+  if (preferences) window.localStorage.setItem(CONTEXT_MENUS_KEY + "-preferences", JSON.stringify(preferences));
   const sends = [];
   const scratches = [];
   const client = { socketState: 1, socket: { emit: (...args) => sends.push(args) }, openIDE: (editor) => scratches.push(editor) };
@@ -31,6 +33,68 @@ async function fixture(t, saved) {
   t.after(() => { controller.destroy(); window.close(); });
   return { window, doc: window.document, client, controller, sends, scratches };
 }
+
+test("Context Menus Basic and Advanced tabs default to Basic and support keyboard navigation", async (t) => {
+  const { doc, window } = await fixture(t);
+  setupClientOptionsTabs({ root: doc });
+  const basic = doc.querySelector("#context-menu-tab-basic");
+  const advanced = doc.querySelector("#context-menu-tab-advanced");
+  assert.equal(basic.getAttribute("aria-selected"), "true");
+  assert.equal(doc.querySelector("#context-menu-panel-advanced").classList.contains("hide"), true);
+  assert.equal(doc.querySelector("#context-menu-fallback"), null);
+  basic.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+  assert.equal(doc.activeElement, advanced);
+  assert.equal(advanced.getAttribute("aria-selected"), "true");
+  assert.equal(doc.querySelector("#context-menu-panel-basic").classList.contains("hide"), true);
+  assert.equal(doc.querySelector("#context-menu-panel-advanced").classList.contains("hide"), false);
+  advanced.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Home", bubbles: true, cancelable: true }));
+  assert.equal(doc.activeElement, basic);
+  assert.equal(basic.getAttribute("tabindex"), "0");
+  assert.equal(advanced.getAttribute("tabindex"), "-1");
+});
+
+test("automatic fallback prefers Player, ignores legacy fallback settings, then uses the first profile or disables menus", async (t) => {
+  const config = defaultContextMenus();
+  config.profiles.unshift({ ...config.profiles[0], id: "local-gm", label: "GM" });
+  const { controller, doc, window } = await fixture(t, JSON.stringify(config), { override: false, profile: "local-gm", fallback: "local-gm" });
+  assert.equal(controller.active().profile.id, "player");
+  controller.update({ override: true });
+  assert.equal(controller.active().profile.id, "local-gm");
+  controller.update({ override: false, fallback: "local-gm" });
+  assert.equal(controller.active().profile.id, "player");
+  assert.equal(Object.hasOwn(controller.preferences, "fallback"), false);
+  assert.equal(Object.hasOwn(JSON.parse(window.localStorage.getItem(CONTEXT_MENUS_KEY + "-preferences")), "fallback"), false);
+  await controller.setServerProfile("local-gm");
+  assert.equal(controller.active().source, "selected by server");
+  controller.resetSession();
+  assert.equal(controller.active().profile.id, "player");
+  config.profiles = config.profiles.filter((profile) => profile.id !== "player");
+  assert.equal(await controller.reload(JSON.stringify(config)), true);
+  assert.equal(controller.active().profile.id, "local-gm");
+  assert.equal(controller.active().source, "Fallback");
+  assert.equal(await controller.reload(JSON.stringify({ version: 1, rules: [], profiles: [] })), true);
+  assert.deepEqual(controller.active(), { profile: null, source: "Disabled" });
+  assert.deepEqual(await controller.match("#123"), []);
+  assert.throws(() => controller.activate({ type: "game-command" }, { session: controller.session, revision: controller.revision, profile: null }), /Context changed/);
+  assert.equal(doc.querySelector("#context-menu-override").disabled, true);
+  assert.equal(doc.querySelector("#context-menu-profile").disabled, true);
+  assert.match(doc.querySelector("#context-menu-active").textContent, /^Active Profile: Disabled/);
+  const output = doc.createElement("div");
+  const row = doc.createElement("div");
+  row.textContent = "#123";
+  output.append(row);
+  doc.body.append(output);
+  controller.bindOutput(output, window);
+  doc.getSelection().selectAllChildren(row);
+  for (const event of [new window.MouseEvent("contextmenu", { bubbles: true, cancelable: true }), new window.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true })]) {
+    row.dispatchEvent(event);
+    assert.equal(event.defaultPrevented, false);
+  }
+  assert.equal(doc.querySelector("[role=menu]"), null);
+  assert.equal(await controller.reload(JSON.stringify(defaultContextMenus())), true);
+  assert.equal(controller.active().profile.id, "player");
+  assert.equal(doc.querySelector("#context-menu-override").disabled, false);
+});
 
 test("default rules choose complete ANSI-independent verb, property, then object references", () => {
   const snapshot = validateContextMenus(defaultContextMenus());

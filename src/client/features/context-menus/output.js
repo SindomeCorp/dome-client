@@ -51,7 +51,7 @@ export function bindContextOutput({ controller, client, element, win }) {
     target.addEventListener(type, handler, capture);
     listeners.push(() => target.removeEventListener(type, handler, capture));
   }
-  const stamp = () => [controller.revision, controller.session, controller.active().profile.id].join(":");
+  const stamp = () => [controller.revision, controller.session, controller.active().profile?.id].join(":");
   function rows() {
     const virtual = element.querySelector(".output-rows");
     if (virtual) return [...virtual.querySelectorAll("[data-output-id]")];
@@ -171,6 +171,7 @@ export function bindContextOutput({ controller, client, element, win }) {
     const automaticSelection = !keyboard && pointerSelection?.collapsed === true;
     pointerSelection = null;
     if (event.defaultPrevented || (!keyboard && event.shiftKey) || event.target.closest?.("a," + excluded)) return;
+    if (!controller.active().profile) return;
     const position = keyboard ? (() => { const rect = event.target.getBoundingClientRect(); return { x: rect.left, y: rect.top }; })() : { x: event.clientX, y: event.clientY };
     const context = { session: controller.session, revision: controller.revision, profile: controller.active().profile.id, doc };
     const selection = doc.getSelection();

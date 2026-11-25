@@ -3,6 +3,10 @@ import { test, expect } from "@playwright/test";
 import { mkdir, chmod, readFile } from "node:fs/promises";
 import { defaultContextMenus } from "../src/shared/context-menus.js";
 
+async function setContextSection(page, section) {
+  await page.locator("#context-menu-tab-" + section).click();
+}
+
 async function start(page, { clipboardStub = true } = {}) {
   if (clipboardStub) await page.context().addInitScript(() => {
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { async writeText(text) { window.contextCopied = text; } } });
@@ -21,7 +25,9 @@ async function editConfig(page, mutate) {
   mutate(value);
   await page.locator("#button-client-options").click();
   await page.locator("#client-options-tab-context").click();
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-json").fill(JSON.stringify(value, null, 2));
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-reload").click();
   await expect.poll(() => page.evaluate(() => window.outputTest.client.contextMenus.revision)).toBeGreaterThan(revision);
   await expect(page.locator("#context-menu-error")).toBeEmpty();
@@ -59,6 +65,77 @@ async function socketFeed(page, text) {
   await page.request.post("/fixture/data", { data: { text } });
 }
 
+test("context menus: Basic is default, Advanced holds JSON tools and automatic fallback ignores legacy choices", async ({ page }) => {
+  await page.context().addInitScript(() => {
+    window.localStorage.setItem("dc-context-menus-preferences", JSON.stringify({ override: false, profile: "gm", fallback: "gm" }));
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  const basic = page.locator("#context-menu-tab-basic");
+  const advanced = page.locator("#context-menu-tab-advanced");
+  await expect(basic).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#context-menu-fallback")).toHaveCount(0);
+  await expect(page.locator("#context-menu-json")).toBeHidden();
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
+  await expect(page.locator("#context-menu-active")).toHaveCSS("font-weight", "700");
+  await expect(page.getByText("Right click on text to show a context menu with options. Use Shift+F10 on a focused output row for keyboard access. Shift-right-click keeps the browser menu.", { exact: true })).toBeVisible();
+  await basic.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(advanced).toBeFocused();
+  await expect(advanced).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#context-menu-json")).toBeVisible();
+  await expect(page.locator("#context-menu-file")).toBeVisible();
+  await expect(page.locator("#context-menu-export")).toBeVisible();
+  await expect(page.locator("#context-menu-override")).toBeHidden();
+  await page.locator("#context-menu-json").fill("{");
+  await page.locator("#context-menu-reload").click();
+  await expect(page.locator("#context-menu-error")).toContainText("Previous valid");
+  await advanced.focus();
+  await page.keyboard.press("Home");
+  await expect(basic).toBeFocused();
+  await expect(page.locator("#context-menu-json")).toBeHidden();
+  await page.locator("#context-menu-override").check();
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: GM (Override)");
+  await page.locator("#context-menu-override").uncheck();
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
+  expect(await page.evaluate(() => Object.hasOwn(JSON.parse(window.localStorage.getItem("dc-context-menus-preferences")), "fallback"))).toBe(false);
+});
+
+test("context menus: an empty available registry disables menus and can recover through Advanced", async ({ page }) => {
+  await page.context().addInitScript(() => {
+    window.localStorage.setItem("dc-context-menus", JSON.stringify({ version: 1, rules: [], profiles: [] }));
+    window.disabledContextEvents = [];
+    window.addEventListener("contextmenu", (event) => window.setTimeout(() => window.disabledContextEvents.push(event.defaultPrevented), 0), true);
+  });
+  await page.route("**/profiles/*.json", (route) => route.fulfill({ status: 404, body: "Synthetic unavailable profile" }));
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Disabled (no profiles available)");
+  await socketFeed(page, "Existing #123\n");
+  const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Existing #123" }).last();
+  await expect(row).toBeVisible();
+  await rightText(page, row, 11);
+  await expect.poll(() => page.evaluate(() => window.disabledContextEvents)).toEqual([false]);
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await expect(page.locator("#context-menu-override")).toBeDisabled();
+  await expect(page.locator("#context-menu-profile")).toBeDisabled();
+  await setContextSection(page, "advanced");
+  await page.unroute("**/profiles/*.json");
+  await page.locator("#context-menu-json").fill(JSON.stringify(defaultContextMenus()));
+  await page.locator("#context-menu-reload").click();
+  await expect(page.locator("#context-menu-error")).toBeEmpty();
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
+  await setContextSection(page, "basic");
+  await expect(page.locator("#context-menu-override")).toBeEnabled();
+});
+
 test("context menus: defaults target ANSI-split references and preserve native no-match menus", async ({ page }) => {
   await start(page);
   await feed(page, "#12\u001b[31m3:look\u001b[0m #123.name #123 ordinary\n");
@@ -81,17 +158,22 @@ test("context menus: Options commands, global override, session reset and failed
     config.profiles.push({ ...config.profiles[0], id: "local", label: "My tools" });
   });
   await feed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"staff\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-override").check();
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-profile").selectOption("local");
   await feed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"player\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: My tools (Override)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: My tools (Override)");
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-override").uncheck();
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (selected by server)");
   await page.evaluate(() => window.DomeBridge.onSessionChange("disconnected"));
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (Fallback)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
   await page.evaluate(() => window.DomeBridge.onSessionChange("connected"));
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-json").fill("{");
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-reload").click();
   await expect(page.locator("#context-menu-error")).toContainText("Previous valid");
   await page.locator("#button-client-options-close").click();
@@ -263,9 +345,11 @@ test("context menus: Programmer override opens reference actions on the first ri
   await page.locator("#button-client-options").click();
   await page.locator("#client-options-tab-context").click();
   await expect(page.locator("#context-menu-profile option")).toHaveCount(3);
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-override").check();
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-profile").selectOption("programmer");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (Override)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (Override)");
   await page.locator("#button-client-options-close").click();
   const objects = ["Copy to Clipboard", "@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"];
   const verbs = ["Copy to Clipboard", "@edit", "@show", "@args", "help"];
@@ -319,7 +403,9 @@ test("context menus: switching to GM on existing output needs no refresh or seco
   const change = async (profile) => {
     await page.locator("#button-client-options").click();
     await page.locator("#client-options-tab-context").click();
+    await setContextSection(page, "basic");
     await page.locator("#context-menu-override").check();
+    await setContextSection(page, "basic");
     await page.locator("#context-menu-profile").selectOption(profile);
     await page.locator("#button-client-options-close").click();
   };
@@ -353,6 +439,7 @@ test("context menus: real player bundle imports JSON, preserves override through
   config.profiles.push({ ...config.profiles[0], id: "staff", label: "Programmer" });
   config.profiles.push({ ...config.profiles[0], id: "local", label: "My tools" });
   config.rules[0].actions.push({ id: "show", label: "Inspect verb", type: "game-command", template: "@show ${object}:${verb}" });
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-file").setInputFiles({ name: "local-context.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(config)) });
   await expect(page.locator("#context-menu-profile option")).toHaveCount(5);
   await page.locator("#context-menu-file").focus();
@@ -362,35 +449,44 @@ test("context menus: real player bundle imports JSON, preserves override through
       .observe(document.querySelector("#context-menu-notice"), { childList: true });
   });
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"staff\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
   await expect(page.locator("#context-menu-notice")).toHaveText("Switched to Programmer context menus.");
   await expect(page.locator("#context-menu-notice")).toHaveAttribute("aria-live", "polite");
   await expect(page.locator("#context-menu-file")).toBeFocused();
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"staff\"\n");
   const reloaded = structuredClone(config);
   reloaded.profiles.push({ ...config.profiles[0], id: "reload-check", label: "Reload check" });
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-json").fill(JSON.stringify(reloaded));
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-reload").click();
   await expect(page.locator("#context-menu-profile option")).toHaveCount(6);
   await expect(page.locator("#context-menu-error")).toBeEmpty();
   expect(await page.evaluate(() => window.profileNotices)).toEqual(["Switched to Programmer context menus."]);
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-override").check();
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-profile").selectOption("local");
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"player\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: My tools (Override)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: My tools (Override)");
   const connected = (await fixtureState(page)).connections;
   await page.request.post("/fixture/reconnect");
   await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(connected);
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: My tools (Override)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: My tools (Override)");
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-override").uncheck();
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (Fallback)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"staff\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-override").check();
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: My tools (Override)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: My tools (Override)");
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-override").uncheck();
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-json").fill(JSON.stringify({ ...config, version: 999 }));
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-reload").click();
   await expect(page.locator("#context-menu-error")).toContainText("Previous valid");
   await page.locator("#button-client-options-close").click();
@@ -441,7 +537,7 @@ test("context menus: shipped role files expose exact actions and copy only match
   await page.goto("/?entry=real");
   await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\nObject #123\nVerb #12\u001b[31m3:look\u001b[0m\nProperty #123.name\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
   const object = page.locator("#lineBuffer [data-output-id]").filter({ hasText: /^Object / }).last();
   const verb = page.locator("#lineBuffer [data-output-id]").filter({ hasText: /^Verb / }).last();
   const property = page.locator("#lineBuffer [data-output-id]").filter({ hasText: /^Property / }).last();
@@ -460,7 +556,7 @@ test("context menus: shipped role files expose exact actions and copy only match
   await page.getByRole("menuitem", { name: "@show", exact: true }).click();
   await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([";$string_utils:nn(#123)", "@kids #123 -lcd", "@args #123:look", "@show #123.name"]);
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: GM (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: GM (selected by server)");
   await open(object, 8, ["Copy to Clipboard", "@parents", "@kids", "@notes", "Look"]);
   await page.getByRole("menuitem", { name: "@kids", exact: true }).click();
   for (const [row, offset, expected] of [[verb, 7, "#123:look"], [property, 11, "#123.name"]]) {
@@ -469,7 +565,7 @@ test("context menus: shipped role files expose exact actions and copy only match
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
   }
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"player\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (selected by server)");
   for (const [row, offset, expected] of [[object, 8, "#123"], [verb, 7, "#123:look"], [property, 11, "#123.name"]]) {
     await open(row, offset, ["Copy to Clipboard"]);
     await page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
@@ -490,7 +586,7 @@ test("context menus: real bundle numeric and symbolic commands, Look and traceba
   await page.goto("/?entry=real");
   await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
   const sent = [];
   const open = async (row, index, labels) => {
     await expect.poll(async () => { await rightText(page, row, index); return page.getByRole("menuitem").allTextContents(); }).toEqual(labels);
@@ -533,7 +629,7 @@ test("context menus: real bundle numeric and symbolic commands, Look and traceba
     await page.evaluate(() => document.getSelection().removeAllRanges());
   }
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\nGM #123\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: GM (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: GM (selected by server)");
   const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "GM #123" }).last();
   await open(row, 5, ["Copy to Clipboard", "@parents", "@kids", "@notes", "Look"]);
   await page.getByRole("menuitem", { name: "Look", exact: true }).click();
@@ -557,31 +653,36 @@ test("context menus: missing and invalid role files fall back and recover on Opt
   await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n");
   await expect(page.locator("#context-menu-error")).toContainText("gm");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (Fallback)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\n");
   await expect(page.locator("#context-menu-error")).toContainText("programmer");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (Fallback)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
   await page.locator("#button-client-options").click();
   await page.locator("#client-options-tab-context").click();
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-reload").click();
   await expect(page.locator("#context-menu-error")).toContainText("Previous valid");
   missingGM = false;
   invalidProgrammer = false;
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-reload").click();
   await expect(page.locator("#context-menu-error")).toBeEmpty();
   await expect(page.locator("#context-menu-profile option")).toHaveCount(3);
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-override").check();
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-profile").selectOption("gm");
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"player\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: GM (Override)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: GM (Override)");
+  await setContextSection(page, "basic");
   await page.locator("#context-menu-override").uncheck();
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (selected by server)");
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: GM (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: GM (selected by server)");
   missingGM = true;
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (Fallback)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
   missingGM = false;
   pauseGM = true;
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n");
@@ -592,7 +693,7 @@ test("context menus: missing and invalid role files fall back and recover on Opt
   releaseGM();
   await (await lateResponse).finished();
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"player\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (selected by server)");
   expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
 });
 
@@ -607,6 +708,7 @@ test("context menus: real bundle repeats rows, switches compiled profiles, reloa
   config.profiles.push({ id: "objects", label: "Objects only", rules: ["object"] });
   config.rules[0].actions.push({ id: "show", label: "Inspect verb", type: "game-command", template: "@show ${object}:${verb}" });
   config.rules[0].actions.push({ id: "verbs", label: "List object verbs", type: "game-command", template: "@verbs ${object}" });
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-file").setInputFiles({ name: "reuse-context.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(config)) });
   await expect(page.locator("#context-menu-profile option")).toHaveCount(4);
   await page.locator("#button-client-options-close").click();
@@ -618,20 +720,22 @@ test("context menus: real bundle repeats rows, switches compiled profiles, reloa
     await page.keyboard.press("Escape");
   }
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"objects\"\n#123:look\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Objects only (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Objects only (selected by server)");
   const switched = page.locator("#lineBuffer [data-output-id]").last();
   await expect.poll(async () => { await rightText(page, switched, 2); return page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).count(); }).toBe(1);
   await expect(page.getByRole("menuitem")).toHaveCount(1);
   await page.keyboard.press("Escape");
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"player\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (selected by server)");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (selected by server)");
   await expect.poll(async () => { await rightText(page, switched, 2); return page.getByRole("menuitem", { name: "Inspect verb" }).count(); }).toBe(1);
   await page.keyboard.press("Escape");
   config.rules[0].pattern = "(?<object>#[0-9]+):(?<verb>inspect)";
   config.profiles.push({ ...config.profiles[0], id: "reloaded", label: "Reload marker" });
   await page.locator("#button-client-options").click();
   await page.locator("#client-options-tab-context").click();
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-json").fill(JSON.stringify(config));
+  await setContextSection(page, "advanced");
   await page.locator("#context-menu-reload").click();
   await expect(page.locator("#context-menu-profile option")).toHaveCount(5);
   await page.locator("#button-client-options-close").click();
