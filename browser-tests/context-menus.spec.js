@@ -195,6 +195,120 @@ test("context menus: selection Scratchpad opens unsaved, warns immediately, and 
   expect(await page.evaluate(() => window.contextSent)).toEqual([["input", "@scratch Temporary Scratch Pad"], ["input", "second selection\n."]]);
 });
 
+test("context menus: profile notice is a centered translucent overlay without stealing focus or clicks", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const notice = page.locator("#context-menu-notice");
+  await expect(notice).toBeHidden();
+  await expect(notice).toHaveCSS("visibility", "visible");
+  await page.locator("#inputBuffer").focus();
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\n");
+  await expect(notice).toHaveText("Switched to Programmer context menus.");
+  await expect(notice).toHaveAttribute("aria-live", "polite");
+  for (const viewport of [{ width: 1000, height: 620 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await expect(notice).toBeVisible();
+    const rect = await notice.boundingBox();
+    expect(Math.abs(rect.x + rect.width / 2 - viewport.width / 2)).toBeLessThan(1);
+    expect(Math.abs(rect.y + rect.height / 2 - viewport.height / 2)).toBeLessThan(1);
+    expect(rect.x).toBeGreaterThanOrEqual(0);
+    expect(rect.x + rect.width).toBeLessThanOrEqual(viewport.width);
+    const style = await notice.evaluate((element) => {
+      const css = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      const target = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return { position: css.position, background: css.backgroundColor, pointerEvents: css.pointerEvents, intercepts: element === target || element.contains(target) };
+    });
+    expect(style.position).toBe("fixed");
+    expect(style.background).toBe("rgba(37, 65, 94, 0.9)");
+    expect(style.pointerEvents).toBe("none");
+    expect(style.intercepts).toBe(false);
+    await expect(page.locator("#inputBuffer")).toBeFocused();
+    if (viewport.width === 1000) {
+      await mkdir("tmp/context-menu-review", { recursive: true, mode: 0o700 });
+      const path = "tmp/context-menu-review/profile-notice-" + page.context().browser().browserType().name() + ".png";
+      await page.screenshot({ path });
+      await chmod(path, 0o600);
+    }
+  }
+  await expect(notice).toBeEmpty({ timeout: 6000 });
+  await expect(notice).toBeHidden();
+  await expect(notice).toHaveCSS("visibility", "visible");
+});
+
+test("context menus: Programmer override opens reference actions on the first right-click without automatic selection", async ({ page }) => {
+  await page.context().addInitScript(() => {
+    window.contextMatchedRows = new Set();
+    window.contextEvents = [];
+    const post = window.Worker.prototype.postMessage;
+    window.Worker.prototype.postMessage = function(message, ...args) {
+      if (message.type === "match") {
+        const receive = ({ data }) => {
+          if (data.id !== message.id) return;
+          window.contextMatchedRows.add(message.text);
+          this.removeEventListener("message", receive);
+        };
+        this.addEventListener("message", receive);
+      }
+      return post.call(this, message, ...args);
+    };
+    window.addEventListener("contextmenu", (event) => {
+      window.setTimeout(() => window.contextEvents.push({ prevented: event.defaultPrevented }), 0);
+    }, true);
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await expect(page.locator("#context-menu-profile option")).toHaveCount(3);
+  await page.locator("#context-menu-override").check();
+  await page.locator("#context-menu-profile").selectOption("programmer");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (Override)");
+  await page.locator("#button-client-options-close").click();
+  const objects = ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look", "Copy to Clipboard"];
+  const verbs = ["@edit", "@show", "@args", "help", "Copy to Clipboard"];
+  const properties = ["@edit", "@show", "Copy to Clipboard"];
+  for (const [reference, ansi, labels] of [
+    ["#123", "#123", objects],
+    ["#123:inspect", "#12\u001b[31m3:inspect\u001b[0m", verbs],
+    ["#123.name", "#123.name", properties],
+    ["$object", "$object", objects],
+    ["$object:inspect", "$object:inspect", verbs],
+    ["$object.name", "$ob\u001b[32mject.name\u001b[0m", properties]
+  ]) {
+    await socketFeed(page, "Target " + ansi + "\n");
+    const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Target " + reference }).last();
+    await row.waitFor();
+    await page.waitForFunction((text) => window.contextMatchedRows.has(text), "Target " + reference);
+    await expect(row.locator(".all-copy").first()).toHaveCSS("user-select", "text");
+    expect(await page.evaluate(() => document.getSelection().isCollapsed)).toBe(true);
+    await page.evaluate(() => { window.contextEvents = []; });
+    await rightText(page, row, 9);
+    await expect(page.getByRole("menuitem")).toHaveText(labels);
+    await expect.poll(() => page.evaluate(() => window.contextEvents)).toEqual([{ prevented: true }]);
+    expect(await page.evaluate(() => document.getSelection().isCollapsed)).toBe(true);
+    expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
+    await page.keyboard.press("Escape");
+  }
+  const selected = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Target #123" }).first();
+  await selected.evaluate((element) => {
+    const node = element.querySelector(".all-copy").firstChild;
+    const range = document.createRange();
+    range.setStart(node, 1);
+    range.setEnd(node, 3);
+    const selection = document.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    element.focus();
+    document.dispatchEvent(new Event("selectionchange"));
+  });
+  expect(await page.evaluate(() => document.getSelection().toString())).toBe("12");
+  await openSelection(page);
+  await expect(page.getByRole("menuitem")).toHaveText(["Copy selected text", "Open in Scratchpad"]);
+});
+
 test("context menus: real player bundle imports JSON, preserves override through transport reconnect, and deduplicates notices", async ({ page }) => {
   const initial = await fixtureState(page);
   await page.goto("/?entry=real");

@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-11-25
+
+### Changed
+- Center profile-change notices in a translucent, nonblocking overlay above client controls.
+
+### Fixed
+- Keep object and symbolic references normally selectable so Firefox opens reference menus on the first right-click instead of automatically selecting the reference.
+
 ## 2026-11-24
 
 ### Added

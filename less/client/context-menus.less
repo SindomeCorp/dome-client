@@ -24,17 +24,23 @@
   }
 }
 .context-menu-notice {
-  &:empty { padding: 0; }
-  position: absolute;
-  z-index: 100;
-  top: 4px;
+  &:empty { padding: 0; border: 0; box-shadow: none; }
+  position: fixed;
+  z-index: 11001;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
-  max-width: 90%;
-  padding: 7px 12px;
-  border-radius: 4px;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 90vw;
+  padding: 14px 20px;
+  border: 1px solid #ffffff40;
+  border-radius: 8px;
+  box-shadow: 0 8px 28px #0008;
+  font-size: 16px;
+  text-align: center;
   color: #fff;
-  background: #25415e;
+  background: rgba(37, 65, 94, 0.9);
   pointer-events: none;
 }
 #client-options-panel-context {
