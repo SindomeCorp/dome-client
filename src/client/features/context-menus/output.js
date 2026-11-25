@@ -1,4 +1,5 @@
 import { readOutputSelection, copyOutputSelection } from "../output-windows/selection.js";
+import { actionableContextRanges, createContextUnderlines } from "./underlines.js";
 
 const excluded = "button, [data-preview-for], img, video, iframe, input, textarea, .ace_editor";
 
@@ -37,6 +38,7 @@ export function bindContextOutput({ controller, client, element, win }) {
   const doc = element.ownerDocument;
   if (!element.hasAttribute("tabindex")) element.tabIndex = 0;
   const cache = new WeakMap();
+  const underlines = createContextUnderlines(win);
   const listeners = [];
   let timer;
   let menu;
@@ -52,6 +54,7 @@ export function bindContextOutput({ controller, client, element, win }) {
     listeners.push(() => target.removeEventListener(type, handler, capture));
   }
   const stamp = () => [controller.revision, controller.session, controller.active().profile?.id].join(":");
+  let underlineVersion = stamp();
   function rows() {
     const virtual = element.querySelector(".output-rows");
     if (virtual) return [...virtual.querySelectorAll("[data-output-id]")];
@@ -77,21 +80,39 @@ export function bindContextOutput({ controller, client, element, win }) {
         ? typeof win.navigator.clipboard?.writeText === "function" : typeof client.openIDE === "function");
     } catch { return false; }
   }
+  function paint(row, entry) {
+    if (!row.isConnected || !element.contains(row)) return;
+    const intervals = controller.preferences.underline && entry.version === stamp() && entry.matches
+      ? actionableContextRanges(entry.matches, (match) => controller.snapshot.rules.get(match.rule)?.actions.some(available)) : [];
+    underlines.update(row, entry.projection, intervals);
+  }
   function warm() {
     if (disposed) return;
     const version = stamp();
-    for (const row of rows()) {
+    const mounted = rows();
+    underlines.prune(mounted);
+    for (const row of mounted) {
       if (!row.hasAttribute("tabindex")) row.tabIndex = -1;
       const projection = projectOutputRow(row);
       const old = cache.get(row);
       if (old?.version === version && old.projection.text === projection.text) {
         old.projection = projection;
+        paint(row, old);
         continue;
       }
       const entry = { version, projection, matches: null };
       cache.set(row, entry);
+      underlines.update(row, projection, []);
       controller.match(projection.text).then((matches) => {
-        if (!disposed && cache.get(row) === entry) entry.matches = matches;
+        if (!disposed && cache.get(row) === entry && entry.version === stamp()) {
+          entry.matches = matches;
+          if (controller.preferences.underline && row.isConnected && element.contains(row)) {
+            const current = projectOutputRow(row);
+            if (current.text !== entry.projection.text) { schedule(); return; }
+            entry.projection = current;
+          }
+          paint(row, entry);
+        }
       }).catch((error) => {
         if (!disposed && entry.version === stamp() && reportedError !== error.message) { reportedError = error.message; controller.report(error.message); }
       });
@@ -226,8 +247,15 @@ export function bindContextOutput({ controller, client, element, win }) {
   bind(element, "scroll", () => close(), true);
   const observer = new win.MutationObserver(schedule);
   observer.observe(element, { childList: true, subtree: true, characterData: true });
-  const unsubscribe = controller.subscribe(() => { close(); prepareSelection(); schedule(); });
+  const unsubscribe = controller.subscribe(() => {
+    close();
+    prepareSelection();
+    const version = stamp();
+    if (!controller.preferences.underline || underlineVersion !== version) underlines.clear();
+    underlineVersion = version;
+    schedule();
+  });
   controller.ready?.then(schedule);
   schedule();
-  return () => { disposed = true; close(); selectionController?.abort(); win.clearTimeout(timer); observer.disconnect(); unsubscribe(); listeners.forEach((remove) => remove()); };
+  return () => { disposed = true; close(); underlines.clear(); selectionController?.abort(); win.clearTimeout(timer); observer.disconnect(); unsubscribe(); listeners.forEach((remove) => remove()); };
 }

@@ -34,6 +34,52 @@ async function fixture(t, saved, preferences) {
   return { window, doc: window.document, client, controller, sends, scratches };
 }
 
+test("reference underlining defaults off and persists only a validated boolean preference", async (t) => {
+  const { controller, doc, window } = await fixture(t);
+  assert.equal(controller.preferences.underline, false);
+  assert.equal(doc.querySelector("#context-menu-underline").checked, false);
+  assert.equal(doc.querySelector("#context-menu-underline").disabled, true);
+  assert.equal(doc.querySelector("#context-menu-underline").getAttribute("aria-describedby"), "context-menu-underline-help");
+  controller.update({ underline: true });
+  assert.equal(JSON.parse(window.localStorage.getItem(CONTEXT_MENUS_KEY + "-preferences")).underline, true);
+  const restored = await fixture(t, undefined, { underline: true });
+  assert.equal(restored.controller.preferences.underline, true);
+  const invalid = await fixture(t, undefined, { underline: "true" });
+  assert.equal(invalid.controller.preferences.underline, false);
+  invalid.controller.update({ underline: "true" });
+  assert.equal(invalid.controller.preferences.underline, false);
+});
+
+test("late underline matches cannot paint changed or detached output", async (t) => {
+  const { controller, doc, window } = await fixture(t);
+  window.Highlight = Set;
+  window.CSS = { highlights: new Map() };
+  controller.update({ underline: true });
+  const output = doc.createElement("div");
+  assert.equal(doc.querySelector("#context-menu-underline").getAttribute("aria-describedby"), null);
+  const row = doc.createElement("div");
+  row.textContent = "Old #123";
+  output.append(row);
+  doc.body.append(output);
+  let finish;
+  const match = controller.match.bind(controller);
+  controller.match = (text) => text === "Old #123" ? new Promise((resolve) => { finish = resolve; }) : match(text);
+  controller.bindOutput(output, window);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(typeof finish, "function");
+  row.firstChild.data = "New";
+  finish([{ rule: "object", start: 4, end: 8, text: "#123", values: { object: "#123" } }]);
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(doc.querySelector("#context-menu-error").textContent, "");
+  assert.equal(window.CSS.highlights.get("dome-context-targets").size, 0);
+  row.textContent = "Old #123";
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  row.remove();
+  finish([{ rule: "object", start: 4, end: 8, text: "#123", values: { object: "#123" } }]);
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(window.CSS.highlights.get("dome-context-targets").size, 0);
+});
+
 test("Context Menus Basic and Advanced tabs default to Basic and support keyboard navigation", async (t) => {
   const { doc, window } = await fixture(t);
   setupClientOptionsTabs({ root: doc });

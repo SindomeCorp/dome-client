@@ -2,6 +2,11 @@
 import { test, expect } from "@playwright/test";
 import { mkdir, chmod, readFile } from "node:fs/promises";
 import { defaultContextMenus } from "../src/shared/context-menus.js";
+import { CONTEXT_UNDERLINE } from "../src/client/features/context-menus/underlines.js";
+
+async function underlinedText(row) {
+  return row.evaluate((element, name) => [...(window.CSS.highlights.get(name) || [])].filter((range) => element.contains(range.startContainer)).map((range) => range.toString()).join(""), CONTEXT_UNDERLINE);
+}
 
 async function setContextSection(page, section) {
   await page.locator("#context-menu-tab-" + section).click();
@@ -149,6 +154,116 @@ test("context menus: an empty available registry disables menus and can recover 
   await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
   await setContextSection(page, "basic");
   await expect(page.locator("#context-menu-override")).toBeEnabled();
+});
+
+test("context menus: optional underlines follow active regex rules without changing selection or first-click menus", async ({ page }) => {
+  await page.context().addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { async writeText(text) { window.contextCopied = text; } } });
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const text = "Markers #123:look #456.name $object:inspect $object.name https://example.test/#777";
+  await socketFeed(page, "Markers #12\u001b[31m3:look\u001b[0m #456.name $object:inspect $object.name https://example.test/#777\n");
+  const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: text }).last();
+  await expect(row).toBeVisible();
+  const html = await row.innerHTML();
+  expect(await underlinedText(row)).toBe("");
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  const underline = page.locator("#context-menu-underline");
+  await expect(underline).not.toBeChecked();
+  await expect(underline).toBeEnabled();
+  await underline.check();
+  await page.locator("#button-client-options-close").click();
+  await expect.poll(() => underlinedText(row)).toBe("#123:look#456.name");
+  expect(await row.innerHTML()).toBe(html);
+  expect(await row.evaluate((element, name) => window.getComputedStyle(element, "::highlight(" + name + ")").textDecorationLine, CONTEXT_UNDERLINE)).toBe("underline");
+  await rightText(page, row, 10);
+  await expect(page.getByRole("menuitem")).toHaveText(["Copy to Clipboard"]);
+  await page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#123:look");
+  expect(await page.evaluate(() => document.getSelection().isCollapsed)).toBe(true);
+  await row.evaluate((element) => { element.focus(); document.getSelection().selectAllChildren(element); document.dispatchEvent(new Event("selectionchange")); });
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await underline.uncheck();
+  await page.locator("#button-client-options-close").click();
+  await expect.poll(() => underlinedText(row)).toBe("");
+  expect(await page.evaluate(() => document.getSelection().toString())).toBe(text);
+  await row.evaluate((element) => element.focus());
+  await openSelection(page);
+  await expect(page.getByRole("menuitem")).toHaveText(["Copy selected text", "Open in Scratchpad"]);
+  await page.getByRole("menuitem", { name: "Copy selected text", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe(text);
+  await page.evaluate(() => document.getSelection().removeAllRanges());
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await underline.check();
+  await page.locator("#context-menu-override").check();
+  await page.locator("#context-menu-profile").selectOption("programmer");
+  await expect.poll(() => underlinedText(row)).toBe("#123:look#456.name$object:inspect$object.name");
+  await setContextSection(page, "advanced");
+  await page.locator("#context-menu-json").fill("{");
+  await page.locator("#context-menu-reload").click();
+  await expect(page.locator("#context-menu-error")).toContainText("Previous valid");
+  expect(await underlinedText(row)).toBe("#123:look#456.name$object:inspect$object.name");
+  const config = defaultContextMenus();
+  config.rules = [config.rules.find((rule) => rule.id === "object")];
+  config.rules[0].pattern = "(?<object>#123)(?![0-9])";
+  config.profiles[0] = { ...config.profiles[0], id: "programmer", label: "Programmer", rules: ["object"] };
+  await page.locator("#context-menu-json").fill(JSON.stringify(config));
+  await page.locator("#context-menu-reload").click();
+  await expect(page.locator("#context-menu-error")).toBeEmpty();
+  await expect.poll(() => underlinedText(row)).toBe("#123");
+  expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
+  const connections = (await fixtureState(page)).connections;
+  await page.reload();
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(connections);
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await expect(underline).toBeChecked();
+  await page.locator("#button-client-options-close").click();
+  await socketFeed(page, "Persisted #123 #456\n");
+  const restored = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Persisted #123 #456" }).last();
+  await expect.poll(() => underlinedText(restored)).toBe("#123");
+  await mkdir("tmp/context-menu-review", { recursive: true, mode: 0o700 });
+  const screenshot = "tmp/context-menu-review/underlined-output-" + page.context().browser().browserType().name() + ".png";
+  await page.screenshot({ path: screenshot });
+  await chmod(screenshot, 0o600);
+});
+
+test("context menus: underlines work in both panes, pop-outs and redocked output", async ({ page }) => {
+  await start(page);
+  await page.evaluate(() => window.outputTest.manager.updateSettings({ open: true, selected: ["team-chat"] }));
+  await feed(page, "Main #123\n[-][Team-Chat] #456\n");
+  const main = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Main #123" }).last();
+  const secondary = page.locator("#secondaryBuffer [data-output-id]").last();
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await page.locator("#context-menu-underline").check();
+  await page.locator("#button-client-options-close").click();
+  await expect.poll(() => underlinedText(main)).toBe("#123");
+  await expect.poll(() => underlinedText(secondary)).toBe("#456");
+  const popupPromise = page.waitForEvent("popup");
+  await page.locator("#button-output-popout").click();
+  const popup = await popupPromise;
+  const detached = popup.locator("#secondaryBuffer [data-output-id]").last();
+  await expect.poll(() => underlinedText(detached)).toBe("#456");
+  await expect.poll(() => underlinedText(main)).toBe("#123");
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await page.locator("#context-menu-underline").uncheck();
+  await expect.poll(() => underlinedText(main)).toBe("");
+  await expect.poll(() => underlinedText(detached)).toBe("");
+  await page.locator("#context-menu-underline").check();
+  await page.locator("#button-client-options-close").click();
+  await expect.poll(() => underlinedText(detached)).toBe("#456");
+  await popup.locator("#button-output-redock").click().catch((error) => {
+    if (!popup.isClosed()) throw error;
+  });
+  await expect.poll(() => underlinedText(secondary)).toBe("#456");
+  await expect.poll(() => underlinedText(main)).toBe("#123");
 });
 
 test("context menus: defaults target ANSI-split references and preserve native no-match menus", async ({ page }) => {

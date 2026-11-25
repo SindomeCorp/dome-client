@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-11-25
 
+### Added
+- Add an optional Basic setting to underline text with context-menu actions across output panes and pop-outs, without changing text selection or ANSI formatting.
+
 ### Changed
 - Match Context Menus Basic/Advanced tabs to Presentation tabs, including their styling and placement directly below the main Options tabs.
 - Simplify Context Menus Options with Basic/Advanced tabs, a bold active profile, and automatic Player-first fallback instead of a fallback dropdown; disable menus when no profiles are available.

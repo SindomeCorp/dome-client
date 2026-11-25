@@ -1,6 +1,7 @@
 import { CONTEXT_MENUS_KEY, defaultContextMenus, validateContextMenus, interpolateCommand } from "../../../shared/context-menus.js";
 import { createContextMatcher } from "./worker.js";
 import { bindContextOutput } from "./output.js";
+import { supportsContextUnderlines } from "./underlines.js";
 import { contextProfileRegistry, loadContextProfiles, mergeContextProfiles } from "../../../shared/context-menu-profiles.js";
 
 export function setupContextMenus({ client, doc = document, win = window, matcherFactory = createContextMatcher, profileLoader = typeof win.fetch === "function" ? (ids) => loadContextProfiles({ fetchFn: win.fetch.bind(win), ids }) : null } = {}) {
@@ -18,7 +19,7 @@ export function setupContextMenus({ client, doc = document, win = window, matche
   let serverRequest = 0;
   let session = 0;
   let connection = 0;
-  let prefs = { override: false, profile: "player" };
+  let prefs = { override: false, profile: "player", underline: false };
   let noticeTimer;
   const bindings = new Map();
   const subscribers = new Set();
@@ -52,6 +53,15 @@ export function setupContextMenus({ client, doc = document, win = window, matche
     const override = doc.querySelector("#context-menu-override");
     if (override) override.checked = prefs.override;
     if (override) override.disabled = snapshot.profiles.size === 0;
+    const supportsUnderline = supportsContextUnderlines(win);
+    const underline = doc.querySelector("#context-menu-underline");
+    if (underline) {
+      underline.checked = prefs.underline;
+      underline.disabled = !supportsUnderline;
+      if (supportsUnderline) underline.removeAttribute("aria-describedby");
+      else underline.setAttribute("aria-describedby", "context-menu-underline-help");
+    }
+    doc.querySelector("#context-menu-underline-help")?.classList.toggle("hide", supportsUnderline);
     const dropdown = doc.querySelector("#context-menu-profile");
     if (dropdown) {
       dropdown.replaceChildren(...[...snapshot.profiles.values()].map((profile) => {
@@ -78,6 +88,7 @@ export function setupContextMenus({ client, doc = document, win = window, matche
   function update(patch) {
     if (typeof patch.override === "boolean") prefs.override = patch.override;
     if (typeof patch.profile === "string") prefs.profile = patch.profile;
+    if (typeof patch.underline === "boolean") prefs.underline = patch.underline;
     savePreferences();
     refresh();
   }
@@ -222,11 +233,12 @@ export function setupContextMenus({ client, doc = document, win = window, matche
   try {
     saved = win.localStorage.getItem(CONTEXT_MENUS_KEY);
     const stored = JSON.parse(win.localStorage.getItem(CONTEXT_MENUS_KEY + "-preferences") || "null");
-    if (stored) prefs = { override: stored.override === true, profile: typeof stored.profile === "string" ? stored.profile : "player" };
+    if (stored) prefs = { override: stored.override === true, profile: typeof stored.profile === "string" ? stored.profile : "player", underline: stored.underline === true };
   } catch { report("Unable to read saved context menus."); }
   if (editor) editor.value = saved || JSON.stringify(config, null, 2);
   bindUI(doc.querySelector("#context-menu-override"), "change", (event) => update({ override: event.target.checked }));
   bindUI(doc.querySelector("#context-menu-profile"), "change", (event) => update({ profile: event.target.value }));
+  bindUI(doc.querySelector("#context-menu-underline"), "change", (event) => update({ underline: event.target.checked }));
   bindUI(doc.querySelector("#context-menu-reload"), "click", () => reload(editor.value));
   const fileInput = doc.querySelector("#context-menu-file");
   bindUI(fileInput, "change", async () => {
