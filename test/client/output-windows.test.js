@@ -419,7 +419,7 @@ test("closing through either split button or layout options requires confirmatio
   await manager.idle();
   assert.equal(manager.isSplitOpen(), false);
   assert.equal(manager.views.main.index.length, 2);
-  assert.deepEqual([...doc.querySelectorAll(".client-options-tab")].map((tab) => tab.textContent), ["General", "Presentation", "Local Editor", "Output Windows", "Import/Export"]);
+  assert.deepEqual([...doc.querySelectorAll(".client-options-tab")].map((tab) => tab.textContent), ["General", "Presentation", "Local Editor", "Context Menus", "Output Windows", "Import/Export"]);
   assert.equal(doc.querySelector("#output-main-panel header"), null);
 });
 

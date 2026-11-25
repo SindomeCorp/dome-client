@@ -13,6 +13,8 @@ It is a browser-based MUD client built with Node.js, Express, and Socket.io. It 
 
 ## Try It Live
 
+Output reference and selection menus are configurable in **Options → Context Menus**. Import/edit/reload JSON, select a global override or fallback profile, and copy output or open selected text in the existing saveable IDE Scratchpad. See [Context Menus](docs/CONTEXT-MENUS.md) for configuration, safe command templates and ID-only server integration.
+
 Sindome provides a hosted version of the client that can connect to any MUD. You are free to use this version to check out the features, or to connect to a game you like to play.
 
 [Sindome Public Client](https://pubclient.sindome.org)

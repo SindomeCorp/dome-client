@@ -66,8 +66,9 @@ export function createEditableTab({
     command,
     commandTarget,
     content: editor.buffer || "",
-    savedContent: editor.buffer || "",
-    dirty: false,
+    savedContent: editor.contextScratch === true ? null : editor.buffer || "",
+    dirty: editor.contextScratch === true,
+    ...(editor.contextScratch === true ? { contextScratch: true } : {}),
     vmsNote: isProgramCommand ? "" : null
   };
 }

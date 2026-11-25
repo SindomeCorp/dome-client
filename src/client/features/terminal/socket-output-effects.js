@@ -85,6 +85,10 @@ export function createSocketOutputEventHandler({
       handleEditorContent(event);
     } else if (event.type === "fade") {
       withFadeText(event.message);
+    } else if (event.type === "context-profile") {
+      client.contextMenus?.setServerProfile(event.id);
+    } else if (event.type === "context-reset") {
+      client.contextMenus?.resetSession({ transport: false });
     } else if (event.type === "user-type") {
       client.userType = event.userType;
       if (client.inputReader && client.preferences?.commandSuggestions) {

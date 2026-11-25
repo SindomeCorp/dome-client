@@ -35,6 +35,7 @@ export function useIdeMessages({
       if (!message) return;
       if (message.type === "ide-open-tab") {
         if (message.editor && typeof message.editor === "object") {
+          if (message.editor.contextScratch === true && (!window.opener || e.source !== window.opener || e.origin !== window.location.origin)) return;
           current.addTab(message.editor);
         }
       } else if (message.type === "ide-object-verbs") {

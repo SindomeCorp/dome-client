@@ -26,14 +26,17 @@ export function setupSocket({
   poweredByValue = globalThis.poweredBy,
   sleepFn = sleep
 } = {}) {
+  client.contextMenus?.resetSession();
   client.socket?.disconnect?.();
   const onDisconnectedHandler = function() {
+    if (client.socket !== ioSocket) return;
+    client.contextMenus?.resetSession();
     log.info("disconnected");
-    ioSocket.disconnect();
     if (client.socketState != SOCKET_STATE_ENUM.CONNECTED) {
       log.warn("disconnected before we connected!");
     }
     client.socketState = SOCKET_STATE_ENUM.DISCONNECTED;
+    ioSocket.disconnect();
     if (client.activeEditor) {
       client.activeEditor.readingContent = false;
     }
@@ -48,6 +51,8 @@ export function setupSocket({
     client.disconnectView.buttonGroup.classList.add("hide");
   };
   const onReconnectFailedHandler = function() {
+    if (client.socket !== ioSocket) return;
+    client.contextMenus?.resetSession();
     client.socketState = SOCKET_STATE_ENUM.RECONNECT_FAILED;
     ioSocket.disconnect();
     client.disconnectView.overlay.classList.remove("hide");
@@ -56,6 +61,8 @@ export function setupSocket({
 
   let initialCommand = false;
   const onConnectedHandler = async function() {
+    if (client.socket !== ioSocket) return;
+    client.contextMenus?.resetSession();
     if (client.socketState == SOCKET_STATE_ENUM.DISCONNECTED) {
       onReconnectHandler();
     }
@@ -123,6 +130,12 @@ export function setupSocket({
   });
   ioSocket.on("reconnect_failed", () => {
     onReconnectFailedHandler();
+  });
+  ioSocket.on("disconnect", () => {
+    if (client.socket !== ioSocket || client.socketState === SOCKET_STATE_ENUM.DISCONNECTED || client.socketState === SOCKET_STATE_ENUM.RECONNECT_FAILED) return;
+    client.contextMenus?.resetSession();
+    client.socketState = SOCKET_STATE_ENUM.DISCONNECTED;
+    client.resetOutputStream?.();
   });
   ioSocket.on("error", (e) => {
     client.health?.handleSocketError(e);

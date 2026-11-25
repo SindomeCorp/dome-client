@@ -51,4 +51,8 @@ export default [
       "no-prototype-builtins": "off",
     },
   },
+  {
+    files: ["src/shared/context-menus.js"],
+    languageOptions: { ecmaVersion: 2025 },
+  },
 ];

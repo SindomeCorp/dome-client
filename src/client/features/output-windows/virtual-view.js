@@ -36,6 +36,7 @@ export class VirtualOutputView {
     element.setAttribute("aria-label", name === "main" ? "Main output" : "Secondary output");
     element.setAttribute("tabindex", "0");
     element.removeAttribute("aria-live");
+    this.disposeContextMenus = client.contextMenus?.bindOutput(element, win);
     this.listen = [];
     this.bind(element, "scroll", () => this.onScroll());
     this.bind(element, "pointerdown", () => this.activate());
@@ -53,6 +54,7 @@ export class VirtualOutputView {
       this.client.inputReader?.focus({ preventScroll: true });
     });
     this.bind(element, "pointerdown", (event) => {
+      if (event.button != null && event.button !== 0) return;
       if (client.preferences.autoScroll !== "long" || event.target.closest("button,a")) return;
       this.longPress = win.setTimeout(() => this.setPaused(!this.paused), 2000);
     });
@@ -90,6 +92,7 @@ export class VirtualOutputView {
   }
 
   onKey(event) {
+    if (event.defaultPrevented) return;
     if (!this.index.length) return;
     if (event.target.closest("button,a")) return;
     const movement = { ArrowUp: -1, ArrowDown: 1, PageUp: -20, PageDown: 20 }[event.key];
@@ -437,6 +440,7 @@ export class VirtualOutputView {
   }
 
   destroy() {
+    this.disposeContextMenus?.();
     this.destroyed = true;
     if (this.frame != null) this.cancelFrame(this.frame);
     this.frame = null;

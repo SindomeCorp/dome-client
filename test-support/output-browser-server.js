@@ -1,4 +1,6 @@
 import express from "express";
+import { createServer } from "node:http";
+import { Server } from "socket.io";
 import { renderFile } from "ejs";
 import { readFile } from "node:fs/promises";
 import { build } from "esbuild";
@@ -14,9 +16,38 @@ const presets = JSON.parse(await readFile(root + "data/sindome-output-window-pre
 const defaultPresets = JSON.parse(await readFile(root + "data/output-window-presets.json", "utf8"));
 const css = await readFile(root + "public/css/client.css", "utf8");
 const app = express();
+const server = createServer(app);
+const sockets = new Server(server);
+const commands = [];
+let connections = 0;
+sockets.on("connection", (socket) => {
+  connections++;
+  socket.on("input", (command, acknowledge) => {
+    commands.push(command);
+    acknowledge?.();
+  });
+  socket.emit("connected");
+});
+app.use(express.json());
+app.post("/fixture/data", (req, res) => {
+  sockets.emit("data", String(req.body.text));
+  res.sendStatus(204);
+});
+app.post("/fixture/reconnect", (_req, res) => {
+  for (const socket of sockets.sockets.sockets.values()) socket.conn.close();
+  res.sendStatus(204);
+});
+app.get("/fixture/state", (_req, res) => res.json({ commands, connections }));
 app.get("/runtime.js", (_req, res) => res.type("js").send(bundled.outputFiles[0].text));
 app.use(express.static(root + "public"));
-app.get("/editor/:type/", (_req, res) => res.type("html").send("<!doctype html><title>Editor fixture</title>"));
+app.get("/editor/:type/", async (req, res) => {
+  if (req.params.type !== "ide") return res.type("html").send("<!doctype html><title>Editor fixture</title>");
+  const html = await renderFile(root + "views/editors/ide.ejs", {
+    req, meta: { title: "IDE fixture", description: "Local test", keywords: "test" }, decache: (value) => value,
+    editor: { ideScratchEnabled: req.query.scratch !== "off", ideHoverOverlaysEnabled: true, ideObjectBrowserEnabled: false, idePropertyBrowserEnabled: false, ideReferenceNavigationEnabled: false }
+  });
+  res.type("html").send(html.replace(/<link[^>]+fonts\.googleapis[^>]+>/g, ""));
+});
 app.get("/output-window/", async (_req, res) => {
   const html = await renderFile(root + "views/output-window.ejs", {});
   res.type("html").send(html.replace(/<link[^>]+fonts\.googleapis[^>]+>/g, ""));
@@ -27,12 +58,18 @@ app.get("/", async (req, res) => {
     req: {}, debugMode: true, decache: (value) => value, showReporter: () => true,
     clientOptionGroups: CLIENT_OPTION_GROUPS, shortenEnabled: false, outputWindows: config
   });
-  const body = html.replace(/<script defer[^>]+><\/script>/g, "");
+  const realEntry = req.query.entry === "real";
+  const body = realEntry ? html : html.replace(/<script defer[^>]+><\/script>/g, "");
   res.type("html").send("<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
     + "<link rel=\"stylesheet\" href=\"/css/client.css\"><script>window.__OUTPUT_WINDOWS__="
     + JSON.stringify(config).replace(/</g, "\\u003c") + ";window.__LOG_EXPORT_CSS__="
     + JSON.stringify(css).replace(/</g, "\\u003c")
-    + ";</script></head><body class=\"client\">" + body + "<script defer src=\"/runtime.js\"></script></body></html>");
+    + ";window.socketUrl=window.location.origin;window.socketUrlSSL=window.location.origin;window.shortenEnabled=false;window.gameName='Local fixture';window.poweredBy='Dome Client';</script></head><body class=\"client\">"
+    + body + (realEntry ? "" : "<script defer src=\"/runtime.js\"></script>") + "</body></html>");
 });
-const server = app.listen(Number(process.argv[2] || 4318), "127.0.0.1", () => logger.info("Output browser fixture ready."));
+server.on("error", (error) => {
+  logger.error("Output browser fixture could not listen: " + error.message);
+  process.exitCode = 1;
+});
+server.listen(Number(process.argv[2] || 4318), "127.0.0.1", () => logger.info("Output browser fixture ready."));
 for (const signal of ["SIGTERM", "SIGINT"]) process.on(signal, () => server.close(() => process.exit(0)));

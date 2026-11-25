@@ -1,0 +1,13 @@
+<p id="context-menu-active" role="status">Active profile: Player (Fallback)</p>
+<p>Right-click a reference for actions. Select output for Copy or Open in Scratchpad. Use Shift+F10 on a focused output row for keyboard access. Shift-right-click keeps the browser menu.</p>
+<label class="context-option"><input id="context-menu-override" type="checkbox" /> Override server context menu selection</label>
+<label class="context-option">Override profile <select id="context-menu-profile" disabled aria-describedby="context-menu-permissions"></select></label>
+<label class="context-option">Fallback profile <select id="context-menu-fallback"></select></label>
+<p id="context-menu-permissions">These choices apply across all connections. The game always enforces command permissions.</p>
+<label class="context-option" for="context-menu-json">Context menu JSON</label>
+<textarea id="context-menu-json" rows="16" spellcheck="false" aria-describedby="context-menu-source context-menu-error"></textarea>
+<p id="context-menu-source">Edit JSON here or import a file. Reload validates and saves a browser-local copy for restart. To read later edits to a disk file, select it again.</p>
+<label class="context-option">Import JSON <input id="context-menu-file" type="file" accept=".json,application/json" /></label>
+<button id="context-menu-reload" type="button" class="btn btn-primary">Reload context menus</button>
+<button id="context-menu-export" type="button" class="btn btn-default">Export JSON</button>
+<p id="context-menu-error" role="alert"></p>

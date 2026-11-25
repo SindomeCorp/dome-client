@@ -2,6 +2,13 @@ import { SOCKET_STATE_ENUM } from "./constants.js";
 
 export const installDomeBridge = ({ client, win = globalThis.window, hasNativeBridge = false }) => {
   win.DomeBridge = {
+    onSessionChange(state) {
+      if (!["connected", "disconnected", "logout", "character-changed"].includes(state)) return;
+      client.contextMenus?.resetSession();
+      client.resetOutputStream?.();
+      if (state === "connected") client.socketState = SOCKET_STATE_ENUM.CONNECTED;
+      if (state === "disconnected") client.socketState = SOCKET_STATE_ENUM.DISCONNECTED;
+    },
     onData(payload) {
       if (typeof client.parseSocketData === "function") {
         client.parseSocketData(String(payload ?? ""));

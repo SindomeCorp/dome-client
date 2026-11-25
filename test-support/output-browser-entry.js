@@ -8,6 +8,11 @@ import { setupWindowHandlers } from "../src/client/features/terminal/window-hand
 import { setupInputReader } from "../src/client/features/terminal/input-reader.js";
 import { searchSnapshot, exportSnapshot } from "../src/client/features/output-windows/history-tools.js";
 import { setupEditorSupport } from "../src/client/features/editor/editor-support.js";
+import { setupIdeLauncher } from "../src/client/features/editor/ide.js";
+import { setupContextMenus } from "../src/client/features/context-menus/controller.js";
+import { installDomeBridge } from "../src/client/core/native-bridge.js";
+
+window.contextSent = [];
 
 const client = {
   client: document.querySelector("#browser-client"),
@@ -23,7 +28,8 @@ const client = {
   shortcutsOverlay: document.querySelector("#shortcuts-overlay"),
   editorListView: document.querySelector("#editor-list-view"),
   health: { showStatus(message) { window.lastOutputStatus = message; } },
-  socket: { emit(_event, _command, callback) { callback?.({ status: "command sent" }); } },
+  socket: { emit(event, command, callback) { window.contextSent.push([event, command]); callback?.({ status: "command sent" }); } },
+  socketState: 1,
   spawned: {}, preferences: {}
 };
 setupClientPreferences({ client, doc: document, win: window });
@@ -39,6 +45,9 @@ setupOutputParser({ client, win: window });
 setupButtons({ client, doc: document });
 setupEditorSupport({ client, win: window });
 setupInputReader({ client, doc: document });
+setupIdeLauncher({ client, win: window });
+setupContextMenus({ client, doc: document, win: window });
+installDomeBridge({ client, win: window });
 
 window.outputTest = {
   client, manager,

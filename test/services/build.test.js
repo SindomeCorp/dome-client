@@ -78,6 +78,7 @@ test("compileJs bundles entry and produces normal and minified outputs", async t
   const outDir = await fs.mkdtemp(path.join(os.tmpdir(), "js-"));
   await compileJs(outDir);
   const expected = [
+    "context-menus-worker.js",
     "output-window.js",
     "output-rules-worker.js",
     "player-client.js",
@@ -97,6 +98,7 @@ test("compileJs bundles entry and produces normal and minified outputs", async t
   }
   const removed = rm.mock.calls.map(c => path.basename(c.arguments[0])).sort();
   assert.deepStrictEqual(removed, [
+    "context-menus-worker.js",
     "output-window.js",
     "output-rules-worker.js",
     "client-connect.js",
@@ -115,6 +117,7 @@ test("browser entry manifest declares expected output files once", () => {
   const expected = [
     "player-client.js",
     "player-client.min.js",
+    "context-menus-worker.js",
     "output-window.js",
     "output-rules-worker.js",
     "client-connect.js",

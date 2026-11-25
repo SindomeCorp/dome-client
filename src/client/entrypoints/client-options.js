@@ -11,6 +11,7 @@ import { createClientOptionControlBinder } from "../features/options/page/contro
 import { createClientOptionsImportExportBinder } from "../features/options/page/import-export.js";
 import { setupClientOptionsTabs } from "../features/options/page/tabs.js";
 import { setupStandaloneOutputOptions } from "../features/output-windows/standalone-options.js";
+import { setupContextMenus } from "../features/context-menus/controller.js";
 
 // Expose color set choices for modules that read from the window object.
 if (typeof window !== "undefined" && !window.COLORSET_CHOICES) {
@@ -90,6 +91,7 @@ if (globalThis.document && globalThis.window) {
     if (window.__domeClientOptionsInitialized) return;
     window.__domeClientOptionsInitialized = true;
     if (!document.querySelector("#output-workspace")) {
+      setupContextMenus({ doc: document, win: window });
       const { actions } = setupStandaloneOutputOptions({ doc: document, win: window, storage: store, onSave: showClientOptionsSaved });
       setClientOptionsActions({ ...getClientOptionsActions(), ...actions });
     }

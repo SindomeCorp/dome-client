@@ -15,12 +15,24 @@ export async function forwardMudData({
     if (displayData.length === 0) {
       return;
     }
-    const text = displayData.toString();
-    if (text.indexOf(CLIENT_USER_MARKER) !== -1) {
+    let text = (socket.domeMarkerCarry || "") + displayData.toString();
+    socket.domeMarkerCarry = "";
+    const markerIndex = text.indexOf(CLIENT_USER_MARKER);
+    if (markerIndex !== -1) {
       const identity = Object.prototype.hasOwnProperty.call(socket, "hostname") ? socket.hostname : getUserIdentity(socket);
       moo.write("@dome-client-user " + identity + "\r\n", "utf8");
-      return;
+      const lineStart = text.lastIndexOf("\n", markerIndex) + 1;
+      const lineEnd = text.indexOf("\n", markerIndex);
+      text = text.slice(0, lineStart) + (lineEnd < 0 ? "" : text.slice(lineEnd + 1));
     }
+    // Keep only a possible fragmented metadata marker, not ordinary output.
+    for (let length = Math.min(text.length, CLIENT_USER_MARKER.length - 1); length > 0; length--) {
+      if (!text.endsWith(CLIENT_USER_MARKER.slice(0, length))) continue;
+      socket.domeMarkerCarry = text.slice(-length);
+      text = text.slice(0, -length);
+      break;
+    }
+    if (!text) return;
     if (!shortenEnabled || !socket.shortenUrls) {
       emitActiveData(socket, text);
       return;

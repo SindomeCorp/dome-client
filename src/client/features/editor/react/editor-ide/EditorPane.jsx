@@ -61,7 +61,7 @@ function EditableDocument({
         </div>
       )}
       <div
-        ref={(node) => setEditorRef(tab.id, node, tab.content, tab.command, tab.commandTarget)}
+        ref={(node) => setEditorRef(tab.id, node, tab.content, tab.command, tab.commandTarget, tab.contextScratch === true)}
         className="w-full flex-1"
       />
     </div>

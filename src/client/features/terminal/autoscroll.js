@@ -153,7 +153,8 @@ export function setupAutoscroll(context, winArg = window) {
     };
     client.buffer.addEventListener("dblclick", client._autoScrollDbl);
   } else if (preferences.autoScroll === "long") {
-    client._autoScrollDown = () => {
+    client._autoScrollDown = (event) => {
+      if (event.button != null && event.button !== 0) return;
       client._longClickTimeout = win.setTimeout(client.onToggleAutoScroll, 2000);
     };
     client._autoScrollUp = () => {

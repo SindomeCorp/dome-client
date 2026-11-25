@@ -1,5 +1,7 @@
 # SDWC OOB Commands
 
+Context menu profiles use `#$# SDWC%%CONTEXT-PROFILE%%"player"` to select a client-registered ID for the current session. No profile bodies, regexes or templates are accepted. Use `#$# SDWC%%CONTEXT-RESET` on same-connection logout/character changes and resend the appropriate ID after login. Options may override the server selection; game permissions always apply. See [Context Menus](CONTEXT-MENUS.md).
+
 This document describes Dome Client out-of-band markers sent over MOO output lines and SDWC commands sent from the web client to the MOO.
 
 SDWC markers are used for:

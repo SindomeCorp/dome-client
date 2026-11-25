@@ -131,6 +131,15 @@ test("forwardMudData responds to dome-client-user marker", async () => {
   assert.deepEqual(context.events, []);
 });
 
+test("fragmented login detection preserves a coalesced context profile and display text", async () => {
+  const context = createContext();
+  const options = { ...context, shortenEnabled: false, getUserIdentity: () => "127.0.0.9" };
+  await forwardMudData({ ...options, data: Buffer.from("Welcome\n#$# dome-client-") });
+  await forwardMudData({ ...options, data: Buffer.from("user\n#$# SDWC%%CONTEXT-PROFILE%%\"player\"\nReady\n") });
+  assert.deepEqual(context.writes, ["@dome-client-user 127.0.0.9\r\n"]);
+  assert.equal(context.events.map((event) => event[1]).join(""), "Welcome\n#$# SDWC%%CONTEXT-PROFILE%%\"player\"\nReady\n");
+});
+
 test("forwardMudData does not emit inactive socket data", async () => {
   const context = createContext();
   context.socket.isActive = false;

@@ -60,6 +60,60 @@ reference measurements, acceptance checks, and the distinction between retained
 history and rendered rows. The player/operator guide is
 [Output windows](OUTPUT-WINDOWS.md).
 
+## Context menus in Chromium
+
+After `npm run build`, run `npm run test:browser -- --project=chromium`.
+`browser-tests/context-menus.spec.js` exercises ANSI-split pointer targets,
+keyboard menus and viewport clamping, secondary/companion selections, profile
+Options/import/reload, and unsaved IDE scratch tabs with explicit Save. The
+`?entry=real` fixture serves the actual built `player-client.js` and IDE bundles;
+its loopback Socket.IO endpoint records inputs and simulates transport reconnects
+without connecting to a MOO. Other output cases retain their selective fixture
+for direct virtual-history inspection. The reverse 2,000-line selection case
+checks partial endpoints through real Clipboard API Copy and the IDE; the
+existing native Copy/paste baseline remains separate and unchanged.
+
+Reuse checks exercise the shipped worker's RegExp construction, repeated rows,
+`lastIndex` isolation after success/errors, profile switching, and valid/invalid
+reloads. A real-bundle browser case also captures the open reference menu over
+synthetic output to `tmp/context-menu-review/open-reference-menu.png`. This
+ignored local artifact uses an owner-only directory and file permissions and is
+not served by the fixture. External fonts are unavailable in the offline runner,
+so the screenshot uses installed fallback fonts.
+
+Chromium projects explicitly enable Chromium's sandbox. If a restricted runner
+denies localhost binding or browser IPC, use the ordinary approval mechanism for
+the exact test invocation. Do not disable Chromium's sandbox or change host
+AppArmor/sysctl settings. A tested alternative is the existing official
+Playwright container, running non-root with its documented namespace-enabled
+[seccomp profile](https://playwright.dev/docs/docker#crawling-and-scraping).
+For example, from this worktree, with Docker and the image already available:
+
+```bash
+mkdir -p node_modules/.cache/playwright-tmp
+export TMPDIR="$PWD/node_modules/.cache/playwright-tmp"
+export PLAYWRIGHT_BROWSERS_PATH="$PWD/node_modules/.cache/playwright-browsers"
+npx playwright install chromium
+curl --fail --silent --show-error \
+  https://raw.githubusercontent.com/microsoft/playwright/v1.62.1/utils/docker/seccomp_profile.json \
+  -o node_modules/.cache/playwright-seccomp.json
+docker run --rm --init --network none --user "$(id -u):$(id -g)" \
+  --security-opt "seccomp=$PWD/node_modules/.cache/playwright-seccomp.json" \
+  --mount "type=bind,src=$PWD,dst=/work" --workdir /work --shm-size=1g \
+  --env PLAYWRIGHT_BROWSERS_PATH=/work/node_modules/.cache/playwright-browsers \
+  --env "GIT_HASH=$(git rev-parse HEAD)" \
+  mcr.microsoft.com/playwright:v1.62.1-noble \
+  npm run test:browser -- --project=chromium
+```
+
+The image supplies system libraries; the worktree-local browser download matches
+the installed Playwright package rather than using the image's older browsers.
+The container retains default AppArmor isolation, uses private shared memory,
+publishes no ports and has no external network. For headed checks, replace its
+last line with `xvfb-run -a npm run test:browser -- --project=chromium --headed`.
+Browser caches are ignored and all artifacts remain local. These tests do not
+verify live MOO permissions, native app WebViews or assistive-technology speech.
+
 ## Requirements
 
 - Node.js 22+

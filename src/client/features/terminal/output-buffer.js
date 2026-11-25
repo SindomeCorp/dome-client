@@ -61,7 +61,9 @@ export function setupOutputParser({
   client.parseSocketData = (incomingSegmentRaw) => {
     if (!client.outputWindows) return parseSegment(incomingSegmentRaw);
     const windows = client.outputWindows;
+    const connection = client.contextMenus?.connection;
     windows.inputQueue.text(String(incomingSegmentRaw ?? ""), (part, context) => {
+      if (connection !== client.contextMenus?.connection) return;
       windows.withContext(context, () => parseSegment(part));
     }, windows.routeState());
   };

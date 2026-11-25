@@ -115,6 +115,18 @@ const createSocket = async (t) => {
   return { ioSocket, emitter: currentEmitter };
 };
 
+test("connection replacement and transport disconnect reset only session context selection", async (t) => {
+  let resets = 0;
+  dome.contextMenus = { resetSession() { resets++; } };
+  t.after(() => { delete dome.contextMenus; });
+  const { ioSocket } = await createSocket(t);
+  assert.ok(resets >= 1);
+  const previous = resets;
+  ioSocket.emit("disconnect", "transport close");
+  assert.ok(resets > previous);
+  assert.equal(dome.socketState, SOCKET_STATE_ENUM.DISCONNECTED);
+});
+
 test("handlers manage reconnect, login branches, and errors", async (t) => {
   {
     const { ioSocket } = await createSocket(t);

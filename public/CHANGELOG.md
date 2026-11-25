@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-11-24
+
+### Added
+- Add configurable reference and selection context menus across output panes and pop-outs, with keyboard access, editable JSON, session-selected profiles, and a global Options override.
+- Copy selected output or open it unsaved in the existing IDE Scratchpad; saving to the game remains a separate explicit action.
+
+### Changed
+- Reuse compiled context-menu regex rules across output rows, refreshing them when JSON configuration reloads.
+
+### Fixed
+- Target right-clicked references across auto-selecting ANSI spans, and list keyboard reference choices in text order.
+
 ## 2026-11-20
 
 ### Fixed

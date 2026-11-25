@@ -97,6 +97,13 @@ function parseSdwcMetaCommand(metaCommand) {
 
   const sdwcCommand = (sdwcParts[1] || "").trim().toLowerCase();
   const sdwcPayload = sdwcParts.slice(2).join("%%").trim();
+  if (sdwcCommand === "context-profile") {
+    try {
+      const id = sdwcPayload.length <= 128 ? JSON.parse(sdwcPayload) : null;
+      return { event: { type: "context-profile", id: typeof id === "string" && /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(id) ? id : null } };
+    } catch { return { event: { type: "context-profile", id: null } }; }
+  }
+  if (sdwcCommand === "context-reset" && !sdwcPayload) return { event: { type: "context-reset" } };
   if (sdwcCommand === "verbs" && sdwcPayload) {
     return parseJsonPayload("sdwc-verbs", sdwcPayload);
   }

@@ -36,7 +36,7 @@ export function setupIdeLauncher({
   client.openIDE = (editor) => {
     const uploadCommand = editor?.uploadCommand || "";
     const { command, commandTarget } = parseCommand(uploadCommand);
-    logger.info("IDE editor invoked", { ...editor, uploadCommand, command, commandTarget });
+    logger.info("IDE editor invoked", editor?.contextScratch ? { contextScratch: true } : { ...editor, uploadCommand, command, commandTarget });
 
     let existing = ideWindow && !ideWindow.closed ? ideWindow : null;
     if (!existing) {
@@ -98,9 +98,14 @@ export function setupIdeLauncher({
       primeWindowState(ideWindow);
       client.ideWindow = ideWindow;
     }
+    if (!ideWindow) throw new Error("The browser blocked the IDE. Allow pop-ups and try again.");
   };
 
   win.addEventListener("message", (event) => {
+    if (event.data?.type === "ide-scratch-unavailable" && event.source === ideWindow && event.origin === win.location.origin) {
+      client.health?.showStatus("Scratchpad is disabled by this client's existing IDE settings.");
+      return;
+    }
     if (!(event.data && event.data.type === "ide-ready" && event.source === ideWindow)) {
       return;
     }

@@ -60,6 +60,7 @@ export function setupWindowHandlers({
   };
 
   const onFocusHandler = function() {
+    if (doc.activeElement?.closest?.(".context-menu-popup, .output-scroll")) return;
     client.alert.active = false;
     if (client.alert.titleProc != null) {
       win.clearInterval(client.alert.titleProc);
