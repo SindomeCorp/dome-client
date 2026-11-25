@@ -77,6 +77,21 @@ test("context menus: Basic is default, Advanced holds JSON tools and automatic f
   const basic = page.locator("#context-menu-tab-basic");
   const advanced = page.locator("#context-menu-tab-advanced");
   await expect(basic).toHaveAttribute("aria-selected", "true");
+  for (const [tab, reference] of [[basic, "#presentation-tab-main"], [advanced, "#presentation-tab-secondary"]]) {
+    const properties = ["backgroundColor", "color", "borderTopColor", "borderTopWidth", "borderRadius", "padding", "fontFamily", "fontSize"];
+    const readStyle = (element, properties) => {
+      const style = window.getComputedStyle(element);
+      return Object.fromEntries(properties.map((property) => [property, style[property]]));
+    };
+    expect(await tab.evaluate(readStyle, properties)).toEqual(await page.locator(reference).evaluate(readStyle, properties));
+  }
+  const tabsBox = await page.locator(".context-menu-tabs").boundingBox();
+  const labelBox = await page.locator("#context-menu-active").boundingBox();
+  expect(tabsBox.y + tabsBox.height).toBeLessThanOrEqual(labelBox.y);
+  await mkdir("tmp/context-menu-review", { recursive: true, mode: 0o700 });
+  const screenshot = "tmp/context-menu-review/context-options-basic-" + page.context().browser().browserType().name() + ".png";
+  await page.screenshot({ path: screenshot });
+  await chmod(screenshot, 0o600);
   await expect(page.locator("#context-menu-fallback")).toHaveCount(0);
   await expect(page.locator("#context-menu-json")).toBeHidden();
   await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
