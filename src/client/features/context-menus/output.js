@@ -106,10 +106,10 @@ export function bindContextOutput({ controller, client, element, win }) {
     const selection = doc.getSelection();
     if (!selection || selection.isCollapsed || !element.contains(selection.anchorNode) || !element.contains(selection.focusNode)) return null;
     const descriptor = readOutputSelection(doc);
-    if (!descriptor) return { key: stamp() + selection.toString(), text: selection.toString() };
+    if (!descriptor) return { key: JSON.stringify([controller.session, selection.toString()]), text: selection.toString() };
     const manager = client.outputWindows;
     const values = { panel: descriptor.panel, start: { id: descriptor.start.id, offset: descriptor.start.offset }, end: { id: descriptor.end.id, offset: descriptor.end.offset } };
-    return { key: JSON.stringify([stamp(), manager.history.epoch, manager.history.first, manager.routeState(), values]), descriptor: values };
+    return { key: JSON.stringify([controller.session, manager.history.epoch, manager.history.first, manager.routeState(), values]), descriptor: values };
   }
   function prepareSelection() {
     const selected = selectionKey();
@@ -225,7 +225,7 @@ export function bindContextOutput({ controller, client, element, win }) {
   bind(element, "scroll", () => close(), true);
   const observer = new win.MutationObserver(schedule);
   observer.observe(element, { childList: true, subtree: true, characterData: true });
-  const unsubscribe = controller.subscribe(() => { close(); selectionController?.abort(); selectionCache = null; schedule(); });
+  const unsubscribe = controller.subscribe(() => { close(); prepareSelection(); schedule(); });
   controller.ready?.then(schedule);
   schedule();
   return () => { disposed = true; close(); selectionController?.abort(); win.clearTimeout(timer); observer.disconnect(); unsubscribe(); listeners.forEach((remove) => remove()); };

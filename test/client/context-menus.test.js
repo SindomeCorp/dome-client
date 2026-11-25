@@ -307,6 +307,36 @@ test("real output parser and menu events target ANSI spans, execute one command,
   assert.equal(controller.active().source, "Fallback", "queued old-connection OOB must not reactivate staff");
 });
 
+test("switching profiles preserves prepared selected output for the first context-menu event", async (t) => {
+  const { createOutputApp } = await import("../../test-support/output-app.js");
+  const { client, doc, win, feed } = await createOutputApp(t);
+  Object.defineProperty(win.navigator, "clipboard", { configurable: true, value: { async writeText() {} } });
+  client.openIDE = () => {};
+  const controller = setupContextMenus({ client, doc, win, matcherFactory: localMatcher });
+  t.after(() => controller.destroy());
+  await controller.ready;
+  const config = defaultContextMenus();
+  config.profiles.push({ ...config.profiles[0], id: "gm", label: "GM" });
+  await controller.reload(JSON.stringify(config));
+  await feed("Existing #123\n");
+  const row = doc.querySelector("[data-output-id]");
+  doc.getSelection().selectAllChildren(row);
+  doc.dispatchEvent(new win.Event("selectionchange"));
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  for (const profile of ["gm", "player", "gm"]) {
+    controller.update({ override: true, profile });
+    const event = new win.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true });
+    row.dispatchEvent(event);
+    assert.equal(event.defaultPrevented, true, "profile switches must not discard already prepared selected text");
+    assert.deepEqual([...doc.querySelectorAll("[role=menuitem]")].map((item) => item.textContent), ["Copy selected text", "Open in Scratchpad"]);
+    doc.querySelector("[role=menu]").dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+  }
+  controller.resetSession();
+  const stale = new win.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true });
+  row.dispatchEvent(stale);
+  assert.equal(stale.defaultPrevented, false, "a new session must prepare selection text again");
+});
+
 test("selected output uses Copy and Scratchpad rather than token command templates", async (t) => {
   const { createOutputApp } = await import("../../test-support/output-app.js");
   const { client, doc, win, feed } = await createOutputApp(t);

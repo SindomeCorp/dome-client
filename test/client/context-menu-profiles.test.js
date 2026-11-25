@@ -56,8 +56,8 @@ test("separate role files have exact action ordering, delimiters and safe typed 
       const commands = rule.actions.filter((action) => action.type === "game-command");
       assert.deepEqual(commands.map((action) => interpolateCommand(action, rule, match.values)), expected[id][kind]);
       const labels = expected[id][kind].map((command) => command.startsWith(";") ? "Name and Number" : command.startsWith("look ") ? "Look" : command.split(" ")[0]);
-      assert.deepEqual(rule.actions.map((action) => action.label), [...labels, "Copy to Clipboard"]);
-      assert.deepEqual(rule.actions.at(-1), { id: "copy", label: "Copy to Clipboard", type: "client-action", action: "clipboard.copy", input: "target" });
+      assert.deepEqual(rule.actions.map((action) => action.label), ["Copy to Clipboard", ...labels]);
+      assert.deepEqual(rule.actions[0], { id: "copy", label: "Copy to Clipboard", type: "client-action", action: "clipboard.copy", input: "target" });
       for (const action of commands) {
         for (const object of ["#123\n@quit", "#123);evil()", "#123.property"]) assert.throws(() => interpolateCommand(action, rule, { ...match.values, object }), /capture/);
         if (kind === "verb") assert.throws(() => interpolateCommand(action, rule, { ...match.values, verb: "look);evil()" }), /capture/);
@@ -173,10 +173,10 @@ test("file selection reuses compiled revisions, falls back on failure, preserves
   await controller.setServerProfile("gm");
   assert.equal(controller.active().source, "selected by server");
   documents = structuredClone(documents);
-  documents[1].config.rules[2].actions[0].label = "Updated parents";
+  documents[1].config.rules[2].actions.find((action) => action.id === "command-0").label = "Updated parents";
   assert.equal(await controller.reload(JSON.stringify(defaultContextMenus())), true);
   assert.equal(controller.revision, revision + 1);
-  assert.equal(controller.snapshot.rules.get("gm-object").actions[0].label, "Updated parents");
+  assert.equal(controller.snapshot.rules.get("gm-object").actions.find((action) => action.id === "command-0").label, "Updated parents");
   controller.resetSession();
   assert.equal(controller.active().source, "Fallback");
 });

@@ -11,6 +11,13 @@
       },
       "actions": [
         {
+          "id": "copy",
+          "label": "Copy to Clipboard",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "target"
+        },
+        {
           "id": "command-0",
           "label": "@edit",
           "type": "game-command",
@@ -33,13 +40,6 @@
           "label": "help",
           "type": "game-command",
           "template": "help ${object}:${verb}"
-        },
-        {
-          "id": "copy",
-          "label": "Copy to Clipboard",
-          "type": "client-action",
-          "action": "clipboard.copy",
-          "input": "target"
         }
       ]
     },
@@ -53,6 +53,13 @@
       },
       "actions": [
         {
+          "id": "copy",
+          "label": "Copy to Clipboard",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "target"
+        },
+        {
           "id": "command-0",
           "label": "@edit",
           "type": "game-command",
@@ -63,13 +70,6 @@
           "label": "@show",
           "type": "game-command",
           "template": "@show ${object}.${property}"
-        },
-        {
-          "id": "copy",
-          "label": "Copy to Clipboard",
-          "type": "client-action",
-          "action": "clipboard.copy",
-          "input": "target"
         }
       ]
     },
@@ -81,6 +81,13 @@
         "object": "object-reference"
       },
       "actions": [
+        {
+          "id": "copy",
+          "label": "Copy to Clipboard",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "target"
+        },
         {
           "id": "command-0",
           "label": "@show",
@@ -134,13 +141,6 @@
           "label": "Look",
           "type": "game-command",
           "template": "look ${object}"
-        },
-        {
-          "id": "copy",
-          "label": "Copy to Clipboard",
-          "type": "client-action",
-          "action": "clipboard.copy",
-          "input": "target"
         }
       ]
     },

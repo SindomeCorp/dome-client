@@ -267,9 +267,9 @@ test("context menus: Programmer override opens reference actions on the first ri
   await page.locator("#context-menu-profile").selectOption("programmer");
   await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (Override)");
   await page.locator("#button-client-options-close").click();
-  const objects = ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look", "Copy to Clipboard"];
-  const verbs = ["@edit", "@show", "@args", "help", "Copy to Clipboard"];
-  const properties = ["@edit", "@show", "Copy to Clipboard"];
+  const objects = ["Copy to Clipboard", "@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"];
+  const verbs = ["Copy to Clipboard", "@edit", "@show", "@args", "help"];
+  const properties = ["Copy to Clipboard", "@edit", "@show"];
   for (const [reference, ansi, labels] of [
     ["#123", "#123", objects],
     ["#123:inspect", "#12\u001b[31m3:inspect\u001b[0m", verbs],
@@ -307,6 +307,39 @@ test("context menus: Programmer override opens reference actions on the first ri
   expect(await page.evaluate(() => document.getSelection().toString())).toBe("12");
   await openSelection(page);
   await expect(page.getByRole("menuitem")).toHaveText(["Copy selected text", "Open in Scratchpad"]);
+});
+
+test("context menus: switching to GM on existing output needs no refresh or second right-click", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await socketFeed(page, "Existing #123\n");
+  const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Existing #123" }).last();
+  await expect(row).toBeVisible();
+  const change = async (profile) => {
+    await page.locator("#button-client-options").click();
+    await page.locator("#client-options-tab-context").click();
+    await page.locator("#context-menu-override").check();
+    await page.locator("#context-menu-profile").selectOption(profile);
+    await page.locator("#button-client-options-close").click();
+  };
+  for (const profile of ["programmer", "gm", "player", "gm"]) {
+    await change(profile);
+    await rightText(page, row, 11);
+    const commands = profile === "gm" ? ["@parents", "@kids", "@notes", "Look"] : profile === "programmer" ? ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"] : [];
+    await expect(page.getByRole("menuitem")).toHaveText(["Copy to Clipboard", ...commands]);
+    await page.keyboard.press("Escape");
+  }
+  await row.evaluate((element) => { element.focus(); document.getSelection().selectAllChildren(element); document.dispatchEvent(new Event("selectionchange")); });
+  await openSelection(page);
+  await page.keyboard.press("Escape");
+  for (const profile of ["programmer", "gm"]) {
+    await change(profile);
+    expect(await page.evaluate(() => document.getSelection().toString())).toBe("Existing #123");
+    await rightText(page, row, 11);
+    await expect(page.getByRole("menuitem")).toHaveText(["Copy selected text", "Open in Scratchpad"]);
+    await page.keyboard.press("Escape");
+  }
 });
 
 test("context menus: real player bundle imports JSON, preserves override through transport reconnect, and deduplicates notices", async ({ page }) => {
@@ -415,20 +448,20 @@ test("context menus: shipped role files expose exact actions and copy only match
   const open = async (row, offset, labels) => {
     await expect.poll(async () => { await rightText(page, row, offset); return page.getByRole("menuitem").allTextContents(); }).toEqual(labels);
   };
-  const programmerObjects = ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look", "Copy to Clipboard"];
+  const programmerObjects = ["Copy to Clipboard", "@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"];
   await open(object, 8, programmerObjects);
   expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
   await page.getByRole("menuitem", { name: "Name and Number", exact: true }).click();
   await open(object, 8, programmerObjects);
   await page.getByRole("menuitem", { name: "@kids", exact: true }).click();
-  await open(verb, 7, ["@edit", "@show", "@args", "help", "Copy to Clipboard"]);
+  await open(verb, 7, ["Copy to Clipboard", "@edit", "@show", "@args", "help"]);
   await page.getByRole("menuitem", { name: "@args", exact: true }).click();
-  await open(property, 11, ["@edit", "@show", "Copy to Clipboard"]);
+  await open(property, 11, ["Copy to Clipboard", "@edit", "@show"]);
   await page.getByRole("menuitem", { name: "@show", exact: true }).click();
   await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([";$string_utils:nn(#123)", "@kids #123 -lcd", "@args #123:look", "@show #123.name"]);
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n");
   await expect(page.locator("#context-menu-active")).toHaveText("Active profile: GM (selected by server)");
-  await open(object, 8, ["@parents", "@kids", "@notes", "Look", "Copy to Clipboard"]);
+  await open(object, 8, ["Copy to Clipboard", "@parents", "@kids", "@notes", "Look"]);
   await page.getByRole("menuitem", { name: "@kids", exact: true }).click();
   for (const [row, offset, expected] of [[verb, 7, "#123:look"], [property, 11, "#123.name"]]) {
     await open(row, offset, ["Copy to Clipboard"]);
@@ -472,13 +505,13 @@ test("context menus: real bundle numeric and symbolic commands, Look and traceba
       await socketFeed(page, "Reference " + object.slice(0, 2) + "\u001b[32m" + object.slice(2) + suffix + "\u001b[0m\n");
       const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Reference " + reference }).last();
       for (let index = 0; index < labels.length; index++) {
-        await open(row, 11, [...labels, "Copy to Clipboard"]);
+        await open(row, 11, ["Copy to Clipboard", ...labels]);
         expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
         await page.getByRole("menuitem", { name: labels[index], exact: true }).click();
         sent.push(commands[index]);
         await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
       }
-      await open(row, 11, [...labels, "Copy to Clipboard"]);
+      await open(row, 11, ["Copy to Clipboard", ...labels]);
       await page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
       await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(reference);
     }
@@ -502,7 +535,7 @@ test("context menus: real bundle numeric and symbolic commands, Look and traceba
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\nGM #123\n");
   await expect(page.locator("#context-menu-active")).toHaveText("Active profile: GM (selected by server)");
   const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "GM #123" }).last();
-  await open(row, 5, ["@parents", "@kids", "@notes", "Look", "Copy to Clipboard"]);
+  await open(row, 5, ["Copy to Clipboard", "@parents", "@kids", "@notes", "Look"]);
   await page.getByRole("menuitem", { name: "Look", exact: true }).click();
   sent.push("look #123");
   await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);

@@ -5,9 +5,11 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-25
 
 ### Changed
+- Put Copy to Clipboard first in every shipped reference menu, keeping the remaining commands in their existing order.
 - Center profile-change notices in a translucent, nonblocking overlay above client controls.
 
 ### Fixed
+- Keep prepared selected-text menus available immediately after switching profiles, without needing a second right-click or refresh.
 - Keep object and symbolic references normally selectable so Firefox opens reference menus on the first right-click instead of automatically selecting the reference.
 
 ## 2026-11-24

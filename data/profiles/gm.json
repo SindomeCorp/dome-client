@@ -46,6 +46,13 @@
       },
       "actions": [
         {
+          "id": "copy",
+          "label": "Copy to Clipboard",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "target"
+        },
+        {
           "id": "command-0",
           "label": "@parents",
           "type": "game-command",
@@ -68,13 +75,6 @@
           "label": "Look",
           "type": "game-command",
           "template": "look ${object}"
-        },
-        {
-          "id": "copy",
-          "label": "Copy to Clipboard",
-          "type": "client-action",
-          "action": "clipboard.copy",
-          "input": "target"
         }
       ]
     }
