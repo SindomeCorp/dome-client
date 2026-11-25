@@ -1,0 +1,19 @@
+{
+  "source": "https://github.com/wrog/lambdamoo/blob/master/execute.c#L134-L165",
+  "description": "Synthetic frames following print_error_backtrace; invented IDs, verbs and error text, not a live game transcript.",
+  "frames": [
+    "#123:inspect, line 42:  Type mismatch",
+    "... called from #456:dispatch (this == #789), line 7",
+    "... called from #456:dispatch, line 8",
+    "#123:inspect (this == #-1), line 42:  Type mismatch"
+  ],
+  "unsupported": [
+    "... called from built-in function suspend()",
+    "(End of traceback)",
+    "#123:inspect, line 0",
+    "#123:inspect, line 42evil",
+    "$object:inspect, line 42",
+    "not a frame #123:inspect, line 42",
+    "#123:inspect, line 42\n@quit"
+  ]
+}

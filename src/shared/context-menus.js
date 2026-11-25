@@ -1,9 +1,11 @@
-import defaults from "../../data/context-menus.json" with { type: "json" };
+import defaults from "../../data/profiles/player.json" with { type: "json" };
 
 export const CONTEXT_MENUS_KEY = "dc-context-menus";
 export const defaultContextMenus = () => structuredClone(defaults);
 const types = {
   "object-id": /^#[0-9]+$/,
+  "object-reference": /^(?:#[0-9]+|\$[A-Za-z_][A-Za-z0-9_]*)$/,
+  "line-number": /^[1-9][0-9]{0,8}$/,
   "verb-name": /^[A-Za-z_][A-Za-z0-9_]*$/,
   "property-name": /^[A-Za-z_][A-Za-z0-9_]*$/
 };
@@ -42,7 +44,7 @@ export function parseCommandTemplate(template, captures) {
 }
 
 export function validCaptures(rule, values) {
-  return Object.entries(rule.captures).every(([name, type]) => typeof values?.[name] === "string" && values[name].length <= 128 && types[type].test(values[name]));
+  return Object.entries(rule.captures).every(([name, type]) => typeof values?.[name] === "string" && values[name].length <= 128 && !controls.test(values[name]) && types[type].test(values[name]));
 }
 
 export function interpolateCommand(action, rule, values) {

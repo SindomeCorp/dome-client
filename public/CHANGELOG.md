@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-24
 
 ### Added
+- Add typed symbolic Programmer references and source-shaped traceback Copy Frame, plus Look before Copy in GM and Programmer object menus.
+- Ship separate Player, GM and Programmer context-menu JSON files, with typed role actions and safe registered-file fallback.
 - Add configurable reference and selection context menus across output panes and pop-outs, with keyboard access, editable JSON, session-selected profiles, and a global Options override.
 - Copy selected output or open it unsaved in the existing IDE Scratchpad; saving to the game remains a separate explicit action.
 

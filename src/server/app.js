@@ -104,6 +104,7 @@ export function createApp({
   });
 
   app.use("/css", express.static(path.join(__dirname, "../public/css"), { dotfiles: "ignore" }));
+  app.use("/profiles", express.static(path.join(__dirname, "../data/profiles"), { dotfiles: "ignore", index: false }));
   app.use(express.static(path.join(__dirname, "../public"), { dotfiles: "ignore" }));
 
   if (config.node.healthEndpointEnabled === false) {

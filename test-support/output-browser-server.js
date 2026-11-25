@@ -39,6 +39,7 @@ app.post("/fixture/reconnect", (_req, res) => {
 });
 app.get("/fixture/state", (_req, res) => res.json({ commands, connections }));
 app.get("/runtime.js", (_req, res) => res.type("js").send(bundled.outputFiles[0].text));
+app.use("/profiles", express.static(root + "data/profiles", { dotfiles: "ignore", index: false }));
 app.use(express.static(root + "public"));
 app.get("/editor/:type/", async (req, res) => {
   if (req.params.type !== "ide") return res.type("html").send("<!doctype html><title>Editor fixture</title>");

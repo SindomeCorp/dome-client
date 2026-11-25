@@ -276,7 +276,7 @@ test("real output parser and menu events target ANSI spans, execute one command,
   row.dispatchEvent(new win.MouseEvent("pointerdown", { button: 2, bubbles: true }));
   doc.getSelection().selectAllChildren(textNode.parentElement);
   assert.equal(contextClick().defaultPrevented, true);
-  assert.deepEqual([...doc.querySelectorAll("[role=menuitem]")].map((item) => item.textContent), ["Copy verb reference", "List verb"]);
+  assert.deepEqual([...doc.querySelectorAll("[role=menuitem]")].map((item) => item.textContent), ["Copy to Clipboard", "List verb"]);
   assert.deepEqual(sends, []);
   doc.querySelector("[role=menuitem]").click();
   assert.equal(copied, "#123:look");
@@ -355,7 +355,7 @@ test("legacy output parser also supports ANSI-aware keyboard context menus", asy
   await new Promise((resolve) => setTimeout(resolve, 30));
   const row = client.buffer.firstElementChild;
   row.dispatchEvent(new win.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true }));
-  assert.equal(doc.querySelector("[role=menuitem]").textContent, "Copy property reference");
+  assert.equal(doc.querySelector("[role=menuitem]").textContent, "Copy to Clipboard");
 });
 
 test("secondary pop-out and redock retain keyboard menus with one current host binding", async (t) => {

@@ -1,6 +1,6 @@
 /* global window, document, NodeFilter */
 import { test, expect } from "@playwright/test";
-import { mkdir, chmod } from "node:fs/promises";
+import { mkdir, chmod, readFile } from "node:fs/promises";
 import { defaultContextMenus } from "../src/shared/context-menus.js";
 
 async function start(page, { clipboardStub = true } = {}) {
@@ -63,10 +63,10 @@ test("context menus: defaults target ANSI-split references and preserve native n
   await start(page);
   await feed(page, "#12\u001b[31m3:look\u001b[0m #123.name #123 ordinary\n");
   const row = page.locator("#lineBuffer [data-output-id]").last();
-  await expect.poll(async () => { await rightText(page, row); return page.getByRole("menuitem", { name: "Copy verb reference" }).count(); }).toBe(1);
-  await page.getByRole("menuitem", { name: "Copy verb reference" }).click();
+  await expect.poll(async () => { await rightText(page, row); return page.getByRole("menuitem", { name: "Copy to Clipboard" }).count(); }).toBe(1);
+  await page.getByRole("menuitem", { name: "Copy to Clipboard" }).click();
   await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#123:look");
-  await expect.poll(async () => { await rightText(page, row, 10); return page.getByRole("menuitem", { name: "Copy property reference" }).count(); }).toBe(1);
+  await expect.poll(async () => { await rightText(page, row, 10); return page.getByRole("menuitem", { name: "Copy to Clipboard" }).count(); }).toBe(1);
   await page.keyboard.press("Escape");
   await rightText(page, row, 25);
   await expect(page.getByRole("menu")).toHaveCount(0);
@@ -116,7 +116,7 @@ test("context menus: keyboard actions work in secondary and detached output", as
   await expect.poll(async () => {
     await row.focus();
     await page.keyboard.press("Shift+F10");
-    return page.getByRole("menuitem", { name: "Copy object reference" }).count();
+    return page.getByRole("menuitem", { name: "Copy to Clipboard" }).count();
   }).toBe(1);
   await page.keyboard.press("Enter");
   await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#123");
@@ -128,7 +128,7 @@ test("context menus: keyboard actions work in secondary and detached output", as
   await expect.poll(async () => {
     await detached.focus();
     await popup.keyboard.press("Shift+F10");
-    return popup.getByRole("menuitem", { name: "Copy object reference" }).count();
+    return popup.getByRole("menuitem", { name: "Copy to Clipboard" }).count();
   }).toBe(1);
   await popup.keyboard.press("Enter");
   await expect.poll(() => popup.evaluate(() => window.contextCopied)).toBe("#123");
@@ -207,7 +207,7 @@ test("context menus: real player bundle imports JSON, preserves override through
   config.profiles.push({ ...config.profiles[0], id: "local", label: "My tools" });
   config.rules[0].actions.push({ id: "show", label: "Inspect verb", type: "game-command", template: "@show ${object}:${verb}" });
   await page.locator("#context-menu-file").setInputFiles({ name: "local-context.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(config)) });
-  await expect(page.locator("#context-menu-profile option")).toHaveCount(3);
+  await expect(page.locator("#context-menu-profile option")).toHaveCount(5);
   await page.locator("#context-menu-file").focus();
   await page.evaluate(() => {
     window.profileNotices = [];
@@ -224,7 +224,7 @@ test("context menus: real player bundle imports JSON, preserves override through
   reloaded.profiles.push({ ...config.profiles[0], id: "reload-check", label: "Reload check" });
   await page.locator("#context-menu-json").fill(JSON.stringify(reloaded));
   await page.locator("#context-menu-reload").click();
-  await expect(page.locator("#context-menu-profile option")).toHaveCount(4);
+  await expect(page.locator("#context-menu-profile option")).toHaveCount(6);
   await expect(page.locator("#context-menu-error")).toBeEmpty();
   expect(await page.evaluate(() => window.profileNotices)).toEqual(["Switched to Programmer context menus."]);
   await page.locator("#context-menu-override").check();
@@ -283,9 +283,170 @@ test("context menus: pointer positioning, keyboard chooser and native bypass sta
   await page.keyboard.press("End");
   await expect(page.getByRole("menuitem", { name: "#456.name", exact: true })).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("menuitem", { name: "Copy property reference" })).toBeFocused();
+  await expect(page.getByRole("menuitem", { name: "Copy to Clipboard" })).toBeFocused();
   await page.keyboard.press("Space");
   await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#456.name");
+});
+
+test("context menus: shipped role files expose exact actions and copy only matched reference text", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\nObject #123\nVerb #12\u001b[31m3:look\u001b[0m\nProperty #123.name\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (selected by server)");
+  const object = page.locator("#lineBuffer [data-output-id]").filter({ hasText: /^Object / }).last();
+  const verb = page.locator("#lineBuffer [data-output-id]").filter({ hasText: /^Verb / }).last();
+  const property = page.locator("#lineBuffer [data-output-id]").filter({ hasText: /^Property / }).last();
+  const open = async (row, offset, labels) => {
+    await expect.poll(async () => { await rightText(page, row, offset); return page.getByRole("menuitem").allTextContents(); }).toEqual(labels);
+  };
+  const programmerObjects = ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look", "Copy to Clipboard"];
+  await open(object, 8, programmerObjects);
+  expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
+  await page.getByRole("menuitem", { name: "Name and Number", exact: true }).click();
+  await open(object, 8, programmerObjects);
+  await page.getByRole("menuitem", { name: "@kids", exact: true }).click();
+  await open(verb, 7, ["@edit", "@show", "@args", "help", "Copy to Clipboard"]);
+  await page.getByRole("menuitem", { name: "@args", exact: true }).click();
+  await open(property, 11, ["@edit", "@show", "Copy to Clipboard"]);
+  await page.getByRole("menuitem", { name: "@show", exact: true }).click();
+  await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([";$string_utils:nn(#123)", "@kids #123 -lcd", "@args #123:look", "@show #123.name"]);
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: GM (selected by server)");
+  await open(object, 8, ["@parents", "@kids", "@notes", "Look", "Copy to Clipboard"]);
+  await page.getByRole("menuitem", { name: "@kids", exact: true }).click();
+  for (const [row, offset, expected] of [[verb, 7, "#123:look"], [property, 11, "#123.name"]]) {
+    await open(row, offset, ["Copy to Clipboard"]);
+    await page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
+  }
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"player\"\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (selected by server)");
+  for (const [row, offset, expected] of [[object, 8, "#123"], [verb, 7, "#123:look"], [property, 11, "#123.name"]]) {
+    await open(row, offset, ["Copy to Clipboard"]);
+    await page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
+  }
+  await object.evaluate((element) => { element.focus(); document.getSelection().selectAllChildren(element); document.dispatchEvent(new Event("selectionchange")); });
+  await openSelection(page);
+  await expect(page.getByRole("menuitem")).toHaveText(["Copy selected text", "Open in Scratchpad"]);
+  await page.getByRole("menuitem", { name: "Copy selected text" }).click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("Object #123");
+  expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([";$string_utils:nn(#123)", "@kids #123 -lcd", "@args #123:look", "@show #123.name", "@kids #123"]);
+});
+
+test("context menus: real bundle numeric and symbolic commands, Look and traceback Copy Frame stay explicit", async ({ page }) => {
+  const frameFixture = JSON.parse(await readFile(new URL("../test-support/fixtures/context-menu-frames.json", import.meta.url), "utf8"));
+  const initial = await fixtureState(page);
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (selected by server)");
+  const sent = [];
+  const open = async (row, index, labels) => {
+    await expect.poll(async () => { await rightText(page, row, index); return page.getByRole("menuitem").allTextContents(); }).toEqual(labels);
+  };
+  for (const object of ["#123", "$object"]) {
+    for (const [suffix, labels, commands] of [
+      ["", ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"], ["@show " + object, ";$string_utils:nn(" + object + ")", "@verbs " + object, "@props " + object, "@parents " + object, "@kids " + object + " -lcd", "@siblings " + object, "@tree " + object, "look " + object]],
+      [":inspect", ["@edit", "@show", "@args", "help"], ["@edit " + object + ":inspect", "@show " + object + ":inspect", "@args " + object + ":inspect", "help " + object + ":inspect"]],
+      [".name", ["@edit", "@show"], ["@edit " + object + ".name", "@show " + object + ".name"]]
+    ]) {
+      const reference = object + suffix;
+      await socketFeed(page, "Reference " + object.slice(0, 2) + "\u001b[32m" + object.slice(2) + suffix + "\u001b[0m\n");
+      const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Reference " + reference }).last();
+      for (let index = 0; index < labels.length; index++) {
+        await open(row, 11, [...labels, "Copy to Clipboard"]);
+        expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+        await page.getByRole("menuitem", { name: labels[index], exact: true }).click();
+        sent.push(commands[index]);
+        await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+      }
+      await open(row, 11, [...labels, "Copy to Clipboard"]);
+      await page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
+      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(reference);
+    }
+  }
+  for (const frame of frameFixture.frames) {
+    await socketFeed(page, frame.replace(":", "\u001b[31m:\u001b[0m") + "\n");
+    const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: frame }).last();
+    await open(row, frame.indexOf(":") + 2, ["Copy Frame"]);
+    await page.keyboard.press("Escape");
+    await row.evaluate((element) => { document.getSelection().removeAllRanges(); element.focus(); });
+    await expect.poll(async () => { await page.keyboard.press("Shift+F10"); return page.getByRole("menuitem").allTextContents(); }).toEqual(["Copy Frame"]);
+    await page.keyboard.press("Enter");
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(frame);
+    expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+    await row.evaluate((element) => { element.focus(); document.getSelection().selectAllChildren(element); document.dispatchEvent(new Event("selectionchange")); });
+    await openSelection(page);
+    await expect(page.getByRole("menuitem")).toHaveText(["Copy selected text", "Open in Scratchpad"]);
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => document.getSelection().removeAllRanges());
+  }
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\nGM #123\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: GM (selected by server)");
+  const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "GM #123" }).last();
+  await open(row, 5, ["@parents", "@kids", "@notes", "Look", "Copy to Clipboard"]);
+  await page.getByRole("menuitem", { name: "Look", exact: true }).click();
+  sent.push("look #123");
+  await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+});
+
+test("context menus: missing and invalid role files fall back and recover on Options reload", async ({ page }) => {
+  let missingGM = true;
+  let invalidProgrammer = true;
+  let pauseGM = false;
+  let releaseGM;
+  await page.route("**/profiles/gm.json", async (route) => {
+    if (pauseGM) await new Promise((resolve) => { releaseGM = resolve; });
+    if (missingGM) await route.fulfill({ status: 404, body: "Missing test fixture" });
+    else await route.continue();
+  });
+  await page.route("**/profiles/programmer.json", (route) => invalidProgrammer ? route.fulfill({ contentType: "application/json", body: "{" }) : route.continue());
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n");
+  await expect(page.locator("#context-menu-error")).toContainText("gm");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (Fallback)");
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\n");
+  await expect(page.locator("#context-menu-error")).toContainText("programmer");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (Fallback)");
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await page.locator("#context-menu-reload").click();
+  await expect(page.locator("#context-menu-error")).toContainText("Previous valid");
+  missingGM = false;
+  invalidProgrammer = false;
+  await page.locator("#context-menu-reload").click();
+  await expect(page.locator("#context-menu-error")).toBeEmpty();
+  await expect(page.locator("#context-menu-profile option")).toHaveCount(3);
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Programmer (selected by server)");
+  await page.locator("#context-menu-override").check();
+  await page.locator("#context-menu-profile").selectOption("gm");
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"player\"\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: GM (Override)");
+  await page.locator("#context-menu-override").uncheck();
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (selected by server)");
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: GM (selected by server)");
+  missingGM = true;
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (Fallback)");
+  missingGM = false;
+  pauseGM = true;
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n");
+  await expect.poll(() => typeof releaseGM).toBe("function");
+  await socketFeed(page, "#$# SDWC%%CONTEXT-RESET\n");
+  const lateResponse = page.waitForResponse((response) => response.url().endsWith("/profiles/gm.json"));
+  pauseGM = false;
+  releaseGM();
+  await (await lateResponse).finished();
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"player\"\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Player (selected by server)");
+  expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
 });
 
 test("context menus: real bundle repeats rows, switches compiled profiles, reloads rules and captures menu styling", async ({ page }) => {
@@ -300,7 +461,7 @@ test("context menus: real bundle repeats rows, switches compiled profiles, reloa
   config.rules[0].actions.push({ id: "show", label: "Inspect verb", type: "game-command", template: "@show ${object}:${verb}" });
   config.rules[0].actions.push({ id: "verbs", label: "List object verbs", type: "game-command", template: "@verbs ${object}" });
   await page.locator("#context-menu-file").setInputFiles({ name: "reuse-context.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(config)) });
-  await expect(page.locator("#context-menu-profile option")).toHaveCount(2);
+  await expect(page.locator("#context-menu-profile option")).toHaveCount(4);
   await page.locator("#button-client-options-close").click();
   for (const text of ["#123:look", "#123:look", "#456:look"]) {
     await socketFeed(page, text + "\n");
@@ -312,7 +473,7 @@ test("context menus: real bundle repeats rows, switches compiled profiles, reloa
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"objects\"\n#123:look\n");
   await expect(page.locator("#context-menu-active")).toHaveText("Active profile: Objects only (selected by server)");
   const switched = page.locator("#lineBuffer [data-output-id]").last();
-  await expect.poll(async () => { await rightText(page, switched, 2); return page.getByRole("menuitem", { name: "Copy object reference", exact: true }).count(); }).toBe(1);
+  await expect.poll(async () => { await rightText(page, switched, 2); return page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).count(); }).toBe(1);
   await expect(page.getByRole("menuitem")).toHaveCount(1);
   await page.keyboard.press("Escape");
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"player\"\n");
@@ -325,16 +486,16 @@ test("context menus: real bundle repeats rows, switches compiled profiles, reloa
   await page.locator("#client-options-tab-context").click();
   await page.locator("#context-menu-json").fill(JSON.stringify(config));
   await page.locator("#context-menu-reload").click();
-  await expect(page.locator("#context-menu-profile option")).toHaveCount(3);
+  await expect(page.locator("#context-menu-profile option")).toHaveCount(5);
   await page.locator("#button-client-options-close").click();
-  await expect.poll(async () => { await rightText(page, switched, 2); return page.getByRole("menuitem", { name: "Copy object reference", exact: true }).count(); }).toBe(1);
+  await expect.poll(async () => { await rightText(page, switched, 2); return page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).count(); }).toBe(1);
   await expect(page.getByRole("menuitem")).toHaveCount(1);
   await page.keyboard.press("Escape");
   await socketFeed(page, "\nLocal synthetic preview — no game connection\nObject: #123\nProperty: #123.name\nVerb: #12\u001b[36m3:inspect\u001b[0m\n");
   const preview = page.locator("#lineBuffer [data-output-id]").last();
   await expect(preview).toHaveText("Verb: #123:inspect");
   await expect.poll(async () => { await rightText(page, preview, 9); return page.getByRole("menuitem", { name: "Inspect verb" }).count(); }).toBe(1);
-  await expect(page.getByRole("menuitem")).toHaveText(["Copy verb reference", "Inspect verb", "List object verbs"]);
+  await expect(page.getByRole("menuitem")).toHaveText(["Copy to Clipboard", "Inspect verb", "List object verbs"]);
   const directory = "tmp/context-menu-review";
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await chmod(directory, 0o700);

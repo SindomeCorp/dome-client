@@ -1,15 +1,21 @@
 import { CONTEXT_MENUS_KEY, defaultContextMenus, validateContextMenus, interpolateCommand } from "../../../shared/context-menus.js";
 import { createContextMatcher } from "./worker.js";
 import { bindContextOutput } from "./output.js";
+import { contextProfileRegistry, loadContextProfiles, mergeContextProfiles } from "../../../shared/context-menu-profiles.js";
 
-export function setupContextMenus({ client, doc = document, win = window, matcherFactory = createContextMatcher } = {}) {
+export function setupContextMenus({ client, doc = document, win = window, matcherFactory = createContextMatcher, profileLoader = typeof win.fetch === "function" ? (ids) => loadContextProfiles({ fetchFn: win.fetch.bind(win), ids }) : null } = {}) {
   if (client?.contextMenus) return client.contextMenus;
   let config = defaultContextMenus();
   let snapshot = validateContextMenus(config);
   let matcher;
   let revision = 0;
   let reloadId = 0;
+  let pendingUserReload = false;
   let server = null;
+  let requestedServer = null;
+  let fileProfiles = new Set(profileLoader ? [] : ["player"]);
+  let fileDocuments = [];
+  let serverRequest = 0;
   let session = 0;
   let connection = 0;
   let prefs = { override: false, profile: "player", fallback: "player" };
@@ -22,6 +28,7 @@ export function setupContextMenus({ client, doc = document, win = window, matche
     if (target) uiBindings.push(() => target.removeEventListener(type, handler));
   }
   const select = (id) => snapshot.profiles.get(id);
+  const serverChoice = (id) => typeof id === "string" && select(id) && (!Object.hasOwn(contextProfileRegistry, id) || fileProfiles.has(id)) ? id : null;
   const active = () => {
     if (prefs.override && select(prefs.profile)) return { profile: select(prefs.profile), source: "Override" };
     if (select(server)) return { profile: select(server), source: "selected by server" };
@@ -72,23 +79,32 @@ export function setupContextMenus({ client, doc = document, win = window, matche
     savePreferences();
     refresh();
   }
-  async function reload(text, { persist = true } = {}) {
+  async function reload(text, { persist = true, allowPartial = false, loadFiles = true, documents, isCurrent = () => true } = {}) {
     const request = ++reloadId;
+    if (!documents) pendingUserReload = true;
     let candidate;
     try {
       if (text.length > 262144) throw new Error("Configuration exceeds 256 KiB.");
       const parsed = JSON.parse(text);
-      const checked = validateContextMenus(parsed);
+      validateContextMenus(parsed);
+      const loaded = documents ? { documents, errors: [] } : loadFiles && profileLoader ? await profileLoader() : { documents: [], errors: [] };
+      if (request !== reloadId || !isCurrent()) return false;
+      if (loaded.errors.length && !allowPartial) throw new Error("Profile files could not load: " + loaded.errors.join("; "));
+      const effective = mergeContextProfiles(parsed, loaded.documents);
+      const checked = validateContextMenus(effective);
       candidate = matcherFactory();
-      await candidate.request("configure", { config: parsed });
-      if (request !== reloadId) { candidate.destroy(); return false; }
+      await candidate.request("configure", { config: effective });
+      if (request !== reloadId || !isCurrent()) { candidate.destroy(); return false; }
       const old = matcher;
       matcher = candidate;
       config = parsed;
       snapshot = checked;
+      fileDocuments = loaded.documents;
+      fileProfiles = new Set(profileLoader ? loaded.documents.map((document) => document.id) : ["player"]);
+      server = serverChoice(requestedServer);
       revision++;
       old?.destroy();
-      let warning = "";
+      let warning = loaded.errors.length ? "Unavailable profile files: " + loaded.errors.join("; ") : "";
       if (!select(prefs.profile)) {
         if (prefs.override) warning = "Override profile is no longer registered; override was disabled.";
         prefs.override = false;
@@ -106,9 +122,9 @@ export function setupContextMenus({ client, doc = document, win = window, matche
       return true;
     } catch (error) {
       candidate?.destroy();
-      if (request === reloadId) report(error.message + " Previous valid context menus remain active.");
+      if (request === reloadId && isCurrent()) report(error.message + " Previous valid context menus remain active.");
       return false;
-    }
+    } finally { if (!documents && request === reloadId) pendingUserReload = false; }
   }
   const controller = {
     active, reload, report, update,
@@ -124,15 +140,57 @@ export function setupContextMenus({ client, doc = document, win = window, matche
       if (text.length > 32768) throw new Error("Context line exceeds 32768 characters; native menus remain available.");
       return matcher.request("match", { text, profile: active().profile.id });
     },
-    setServerProfile(id) {
-      server = typeof id === "string" && select(id) ? id : null;
+    async setServerProfile(id) {
+      const request = ++serverRequest;
+      requestedServer = typeof id === "string" ? id : null;
+      if (profileLoader && Object.hasOwn(contextProfileRegistry, requestedServer)) {
+        if (server !== id) server = null;
+        refresh();
+        await controller.ready;
+        if (pendingUserReload) return;
+        const generation = reloadId;
+        const selectedSession = session;
+        const isCurrent = () => request === serverRequest && selectedSession === session;
+        if (!isCurrent()) return;
+        try {
+          const loaded = await profileLoader([id]);
+          if (!isCurrent() || generation !== reloadId) return;
+          const document = loaded.documents.find((document) => document.id === id);
+          if (!document || loaded.errors.length) throw new Error(loaded.errors.join("; ") || "Missing registered profile file: " + id);
+          const previous = fileDocuments.find((document) => document.id === id);
+          if (previous && select(id) && JSON.stringify(previous.config) === JSON.stringify(document.config)) {
+            fileProfiles.add(id);
+            server = serverChoice(id);
+            report("");
+            refresh();
+            return;
+          }
+          const documents = [...fileDocuments.filter((document) => document.id !== id), document];
+          const ok = await reload(JSON.stringify(config), { persist: false, documents, isCurrent });
+          if (!isCurrent()) return;
+          if (ok) return;
+          server = null;
+          fileProfiles.delete(id);
+        } catch (error) {
+          if (!isCurrent()) return;
+          server = null;
+          fileProfiles.delete(id);
+          report("Context profile unavailable; using Options selection. " + error.message);
+        }
+        refresh();
+        return;
+      }
+      server = serverChoice(requestedServer);
+      if (!server) requestedServer = null;
       if (!server) report("Unknown or invalid server context profile; using Options selection.");
       refresh();
     },
     resetSession({ transport = true } = {}) {
+      serverRequest++;
       session++;
       if (transport) { connection++; client?.resetOutputProtocol?.(); }
       server = null;
+      requestedServer = null;
       refresh();
     },
     bindOutput(element, host) {
@@ -155,7 +213,7 @@ export function setupContextMenus({ client, doc = document, win = window, matche
         return client.openIDE({ contextScratch: true, buffer: context.text });
       }
     },
-    destroy() { reloadId++; matcher?.destroy(); for (const dispose of bindings.values()) dispose(); bindings.clear(); subscribers.clear(); uiBindings.splice(0).forEach((remove) => remove()); win.clearTimeout(noticeTimer); }
+    destroy() { reloadId++; serverRequest++; matcher?.destroy(); for (const dispose of bindings.values()) dispose(); bindings.clear(); subscribers.clear(); uiBindings.splice(0).forEach((remove) => remove()); win.clearTimeout(noticeTimer); }
   };
   if (client) client.contextMenus = controller;
   const editor = doc.querySelector("#context-menu-json");
@@ -191,10 +249,11 @@ export function setupContextMenus({ client, doc = document, win = window, matche
     win.URL.revokeObjectURL(url);
   });
   refresh();
-  controller.ready = reload(saved || JSON.stringify(config), { persist: false }).then(async (ok) => {
-    if (!ok && saved) {
+  const initialRequest = reloadId + 1;
+  controller.ready = reload(saved || JSON.stringify(config), { persist: false, allowPartial: true }).then(async (ok) => {
+    if (!ok && reloadId === initialRequest) {
       const message = doc.querySelector("#context-menu-error")?.textContent;
-      await reload(JSON.stringify(defaultContextMenus()), { persist: false });
+      await reload(JSON.stringify(defaultContextMenus()), { persist: false, loadFiles: false });
       report(message || "Saved configuration failed; shipped rules are active.");
     }
   });
