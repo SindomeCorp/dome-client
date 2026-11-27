@@ -488,10 +488,9 @@ test("integration: status endpoint maps timeout-like upstream failure to degrade
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://status.test")
-    .persist()
+  const upstream = nock("http://status.test")
     .get("/moo/status/")
-    .replyWithError({ code: "ETIMEOUT", message: "status timed out" });
+    .replyWithError(Object.assign(new Error("status timed out"), { code: "ETIMEDOUT" }));
 
   const { baseUrl } = await bootServer(t);
   const { refreshStatus } = await import("../../src/controllers/status.js");
@@ -499,7 +498,8 @@ test("integration: status endpoint maps timeout-like upstream failure to degrade
   await refreshStatus();
   const res = await http.get("/moo/status/").expect(200);
   assert.equal(res.body.state, "SITE_DOWN");
-  assert.match(String(res.body.message || ""), /status service/i);
+  assert.match(res.body.message, /status service took too long to respond/i);
+  upstream.done();
 });
 
 test("integration: status endpoint transitions ok to degraded and recovers to ok", async (t) => {
@@ -643,7 +643,7 @@ test("integration: website login network failure sets session error and redirect
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://remoteauth.test")
+  const upstream = nock("http://remoteauth.test")
     .post("/session/authenticate/")
     .replyWithError("upstream unavailable");
 
@@ -654,22 +654,25 @@ test("integration: website login network failure sets session error and redirect
 
   const loginResponse = await agent
     .post("/website-login/")
+    .timeout({ deadline: 5000 })
     .type("form")
     .send({ email: "player@test", pass: "secret" })
     .expect(302);
   assert.equal(loginResponse.headers.location, "/");
 
   const home = await agent.get("/").expect(200);
-  assert.match(home.text, /upstream unavailable/i);
+  assert.match(home.text, /fetch failed/i);
+  assert.doesNotMatch(home.text, /Play As/i);
+  upstream.done();
 });
 
 test("integration: website login timeout-like upstream failure sets session error and redirects", async (t) => {
   nock.disableNetConnect();
   nock.enableNetConnect("127.0.0.1");
 
-  nock("http://remoteauth.test")
+  const upstream = nock("http://remoteauth.test")
     .post("/session/authenticate/")
-    .replyWithError({ code: "ETIMEDOUT", message: "request timed out" });
+    .replyWithError(Object.assign(new Error("request timed out"), { code: "ETIMEDOUT" }));
 
   mockStatusOk();
 
@@ -678,13 +681,16 @@ test("integration: website login timeout-like upstream failure sets session erro
 
   const loginResponse = await agent
     .post("/website-login/")
+    .timeout({ deadline: 5000 })
     .type("form")
     .send({ email: "player@test", pass: "secret" })
     .expect(302);
   assert.equal(loginResponse.headers.location, "/");
 
   const home = await agent.get("/").expect(200);
+  assert.match(home.text, /fetch failed/i);
   assert.doesNotMatch(home.text, /Play As/i);
+  upstream.done();
 });
 
 test("integration: website login malformed upstream responses set session errors and redirect", async (t) => {

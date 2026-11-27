@@ -39,17 +39,17 @@ export function createStatusPoller({ serviceUrl, logger, fetchStatus = (...args)
     state: STATUS_ENABLED ? MOO_STATUS_ENUM.UNKNOWN : undefined
   };
 
-  function handleHealthCheckError(err) {
+  function handleHealthCheckError(code) {
     const status = {
       ...lastStatus,
       checked: Date.now(),
       state: MOO_STATUS_ENUM.WEBSITE_DOWN
     };
-    if (err?.code == "ECONNREFUSED") {
+    if (code === "ECONNREFUSED") {
       status.message = "moo status unknown, status service is probably down (or restarting)";
-    } else if (err?.code == "ETIMEOUT") {
+    } else if (code === "ETIMEOUT" || code === "ETIMEDOUT") {
       status.message = "moo status unknown, status service took too long to respond";
-    } else if (err?.code == "ENOTFOUND") {
+    } else if (code === "ENOTFOUND") {
       status.message = "moo status unknown, status service host unreachable from webclient server";
     } else {
       status.message = "moo status unknown, status service returned an unexpected response";
@@ -86,7 +86,7 @@ export function createStatusPoller({ serviceUrl, logger, fetchStatus = (...args)
         logger.warn(
           `status service request failed: url=${STATUS_URL} status=${res.status} contentType=${contentType || "unknown"} bodyPreview=${JSON.stringify(bodyText.slice(0, 160))}`
         );
-        lastStatus = handleHealthCheckError({ code: "EBADSTATUS" });
+        lastStatus = handleHealthCheckError("EBADSTATUS");
         return lastStatus;
       }
 
@@ -94,7 +94,7 @@ export function createStatusPoller({ serviceUrl, logger, fetchStatus = (...args)
         logger.warn(
           `status service returned non-JSON response: url=${STATUS_URL} status=${res.status} contentType=${contentType || "unknown"} bodyPreview=${JSON.stringify(bodyText.slice(0, 160))}`
         );
-        lastStatus = handleHealthCheckError({ code: "EBADCONTENTTYPE" });
+        lastStatus = handleHealthCheckError("EBADCONTENTTYPE");
         return lastStatus;
       }
 
@@ -105,7 +105,7 @@ export function createStatusPoller({ serviceUrl, logger, fetchStatus = (...args)
         logger.warn(
           `status service returned invalid JSON: url=${STATUS_URL} status=${res.status} bodyPreview=${JSON.stringify(bodyText.slice(0, 160))}`
         );
-        lastStatus = handleHealthCheckError({ code: "EBADJSON" });
+        lastStatus = handleHealthCheckError("EBADJSON");
         return lastStatus;
       }
 
@@ -113,7 +113,7 @@ export function createStatusPoller({ serviceUrl, logger, fetchStatus = (...args)
         logger.warn(
           `status service returned unexpected schema: url=${STATUS_URL} bodyPreview=${JSON.stringify(bodyText.slice(0, 160))}`
         );
-        lastStatus = handleHealthCheckError({ code: "EBADSCHEMA" });
+        lastStatus = handleHealthCheckError("EBADSCHEMA");
         return lastStatus;
       }
 
@@ -121,8 +121,9 @@ export function createStatusPoller({ serviceUrl, logger, fetchStatus = (...args)
     } catch (error) {
       if (cancellation.aborted) return lastStatus;
       const err = signal.reason?.name === "TimeoutError" ? { code: "ETIMEOUT", message: signal.reason.message } : error;
-      logger.warn(`failed to get status: url=${STATUS_URL} code=${err?.code || "UNKNOWN"} message=${err?.message || "no message"}`);
-      lastStatus = handleHealthCheckError(err);
+      const code = err?.code ?? err?.cause?.code;
+      logger.warn(`failed to get status: url=${STATUS_URL} code=${code || "UNKNOWN"} message=${err?.message || "no message"}`);
+      lastStatus = handleHealthCheckError(code);
     }
     return lastStatus;
   }

@@ -4,7 +4,7 @@
 </p>
 <br />
 
-[![Node.js](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](#requirements)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D26-339933?logo=node.js&logoColor=white)](#requirements)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE.txt)
 
 Dome Client is the maintained successor to the [Legacy Dome Client](https://github.com/javaChilly/dome-client.js), with ongoing fixes, modernized dependencies, a developer IDE for editing MOO verbs & properties, and expanded documentation.
@@ -65,7 +65,7 @@ Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice f
 
 ## Requirements
 
-- Node.js 22+
+- Node.js 26+
 - npm
 
 ## Terminology
@@ -219,7 +219,7 @@ sudo supervisorctl reread
 sudo supervisorctl update
 ```
 
-After linking, manage the service with `sudo supervisorctl start dome-client`, `sudo supervisorctl restart dome-client`, etc. Adjust the paths inside `supervisor.conf` if the repository lives somewhere other than `/opt/dome-client`.
+After linking, manage the service with `sudo supervisorctl start dome-client`, `sudo supervisorctl restart dome-client`, etc. Adjust the repository path and Node binary in `supervisor.conf` for your installation. The binary must run Node.js 26 or newer.
 
 ## Running without Supervisor
 
@@ -307,5 +307,3 @@ Run `npm run lint` and `npm test` before committing. Coverage must remain at or 
 Use Node.js 26 for development and test tools. The pinned version is in
 [`.nvmrc`](.nvmrc). The [testing guide](docs/TESTING.md) documents the same Node
 version in the browser, coverage, and mutation test runner.
-
-The server runtime minimum remains Node.js 22.

@@ -55,9 +55,9 @@ test("caps cache at configured limit", async t => {
   const scope = nock(`http://${config.shorten.host}:${config.shorten.port}`)
     .post(config.shorten.path)
     .times(7)
-    .reply(200, (uri, body) => {
-      const decoded = decodeURIComponent(body.toString().replace("url=", ""));
-      return { url: decoded, key: `${callCount++}` };
+    .reply(200, async request => {
+      const body = new URLSearchParams(await request.text());
+      return { url: body.get("url"), key: `${callCount++}` };
     });
   t.after(() => nock.cleanAll());
   const base = "http://example.com/";
@@ -108,19 +108,17 @@ test("returns input on network failures", async t => {
           .replyWithError("boom");
         t.after(() => nock.cleanAll());
       },
-      message: "url shortener connection failed: boom"
+      message: "url shortener connection failed: fetch failed"
     },
     {
       name: "request timeout",
-      setup(t, longUrl) {
+      setup(t) {
         config.shorten.requestTimeout = 50;
-        nock(`http://${config.shorten.host}:${config.shorten.port}`)
-          .post(config.shorten.path)
-          .delayBody(100)
-          .reply(200, { url: longUrl, key: "late" });
-        t.after(() => {
-          nock.cleanAll();
-          delete config.shorten.requestTimeout;
+        t.after(() => delete config.shorten.requestTimeout);
+        t.mock.method(globalThis, "fetch", async (_url, { signal }) => {
+          await new Promise((_, reject) => {
+            signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+          });
         });
       },
       message: "url shortener request timed out"
@@ -137,12 +135,12 @@ test("returns input on network failures", async t => {
     }
   ];
   for (const c of cases) {
-    await t.test(c.name, async t => {
+    await t.test(c.name, { timeout: 5000 }, async t => {
       const shorten = await loadShorten();
       const longUrl = "http://example.com/" + c.name[0].repeat(config.shorten.minimum + 10);
       const warn = t.mock.method(logger, "warn");
       t.after(() => warn.mock.restore());
-      c.setup(t, longUrl);
+      c.setup(t);
       const result = await shorten.urls(longUrl);
       assert.equal(result, longUrl);
       assert.equal(warn.mock.calls[0].arguments[0], c.message);
@@ -163,7 +161,7 @@ test("does not cache failed network responses", async t => {
   t.after(() => warn.mock.restore());
   const first = await shorten.urls(longUrl);
   assert.equal(first, longUrl);
-  assert.equal(warn.mock.calls[0].arguments[0], "url shortener connection failed: ouch");
+  assert.equal(warn.mock.calls[0].arguments[0], "url shortener connection failed: fetch failed");
   const second = await shorten.urls(longUrl);
   assert.equal(second, `https://${config.shorten.domain}/retry`);
   assert.ok(scope.isDone());

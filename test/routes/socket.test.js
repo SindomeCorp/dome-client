@@ -710,7 +710,7 @@ test("moo and socket events", async (t) => {
 });
 
 test("socket route connection lifecycle", async (t) => {
-  await t.test("forwards data and shortens URLs", async () => {
+  await t.test("forwards data and shortens URLs", async t => {
     const moo = new EventEmitter();
     moo.write = (data, enc, cb) => { if (cb) cb(); };
     moo.end = () => { moo.emit("end"); };
@@ -719,8 +719,17 @@ test("socket route connection lifecycle", async (t) => {
       connect: net.connect,
       reverse: dns.promises.reverse,
     };
-    net.connect = () => moo;
+    net.connect = (options, ...args) => {
+      // Leave native fetch's connection available to the HTTP interceptor.
+      if (options?.host === config.moo.host && options.port === config.moo.port) return moo;
+      return original.connect(options, ...args);
+    };
     dns.promises.reverse = async () => ["host"];
+    t.after(() => {
+      net.connect = original.connect;
+      dns.promises.reverse = original.reverse;
+      nock.cleanAll();
+    });
 
     const longUrl = "http://example.com/" + "a".repeat(60);
 
@@ -747,11 +756,7 @@ test("socket route connection lifecycle", async (t) => {
     });
     const lastData = events.filter(e => e[0] === "data").pop();
     assert.equal(lastData[1], `https://${config.shorten.domain}/abc`);
-    assert.ok(scope.isDone());
-
-    net.connect = original.connect;
-    dns.promises.reverse = original.reverse;
-    nock.cleanAll();
+    scope.done();
   });
 
   await t.test("marker response falls back to userIp when hostname is not present", async () => {

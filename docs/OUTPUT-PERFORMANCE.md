@@ -190,9 +190,7 @@ embedded and linked CSS, rather than relying only on exported markup assertions.
 - Unlimited history still consumes memory as retained text grows. Browser storage
   and reload recovery are outside this version.
 
-Run `npm run coverage` on the supported Node 22 runtime. The installed c8/yargs
-combination may fail to start on Node 26; browser performance replays themselves
-can run there.
+Run `npm run coverage` on Node.js 26, the same baseline used for browser replays.
 
 See [the user and operator guide](OUTPUT-WINDOWS.md) and
 [Testing](TESTING.md) for functional checks.

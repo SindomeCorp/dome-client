@@ -191,23 +191,23 @@ test("sets session error on remote error status", async t => {
   assert.strictEqual(redirect.url, "/");
 });
 
-test("handles response error", async t => {
+test("handles response error", { timeout: 5000 }, async t => {
   const { login, setupAuth } = await load(t);
   const { req, res, scope, redirect, done } = setupAuth({ error: "fail" });
   login(req, res);
   await done;
   scope.done();
-  assert.strictEqual(req.session.error, "fail");
+  assert.strictEqual(req.session.error, "fetch failed");
   assert.strictEqual(redirect.url, "/");
 });
 
-test("handles request error", async t => {
+test("handles request error", { timeout: 5000 }, async t => {
   const { login, setupAuth } = await load(t);
   const { req, res, scope, redirect, done } = setupAuth({ error: "boom" });
   login(req, res);
   await done;
   scope.done();
-  assert.strictEqual(req.session.error, "boom");
+  assert.strictEqual(req.session.error, "fetch failed");
   assert.strictEqual(redirect.url, "/");
 });
 

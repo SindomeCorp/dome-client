@@ -5,7 +5,7 @@ This guide describes the minimum production setup for Dome Client when optional 
 ## Production Checklist
 
 - Point a public DNS record, such as `play.example.com`, at the server.
-- Install Node.js 22+, npm, git, Supervisor, and Certbot.
+- Install Node.js 26+, npm, git, Supervisor, and Certbot.
 - Copy `.env-example-production` to `.env` and update the required production values.
 - Generate a strong `SESSION_SECRET`.
 - Configure `NODE_SOCKET_URL` and `NODE_SOCKET_URL_SSL` to the public URL players will open in their browsers.
@@ -17,11 +17,14 @@ This guide describes the minimum production setup for Dome Client when optional 
 
 ## Install
 
+Install Node.js 26 or newer and confirm it with `node --version` before running
+the following commands. Ensure the service account uses the same Node.js version.
+
 Ubuntu example:
 
 ```bash
 sudo apt update
-sudo apt install -y nodejs npm git supervisor certbot
+sudo apt install -y git supervisor certbot
 git clone https://github.com/SindomeCorp/dome-client.git
 cd dome-client
 npm ci
@@ -107,7 +110,9 @@ If Certbot needs port 80 for renewal and Dome Client is bound directly to port 8
 
 ## Running the Service
 
-The repository includes `supervisor.conf`. Review the paths first; the checked-in file assumes the app lives at `/home/ubuntu/dome-client`.
+The included `supervisor.conf` assumes the app lives at
+`/home/ubuntu/dome-client` and starts `/usr/bin/node`. If Node.js 26 or newer is
+installed elsewhere, set `command` to that binary's absolute path.
 
 ```bash
 sudo ln -s "$(pwd)/supervisor.conf" /etc/supervisor/conf.d/dome-client.conf
