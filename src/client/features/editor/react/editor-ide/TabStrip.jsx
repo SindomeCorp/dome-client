@@ -46,7 +46,7 @@ function TabButton({
   const isProgramTab = tab.command === "@program";
   const baseTab =
     "relative pr-9 group flex items-center gap-2 px-3 py-2 text-sm sm:text-base rounded-md border transition";
-  const activeStyles = "bg-bg-surface shadow-sm border-line-strong";
+  const activeStyles = "bg-bg-surface shadow-xs border-line-strong";
   const inactiveStyles = "border-line-subtle hover:bg-bg-sunken";
   const programOutline = isProgramTab ? "border-b-2 border-b-yellow-300" : "";
   const labelClass = orientation === "left" ? "truncate" : "truncate max-w-[16rem]";
@@ -62,7 +62,7 @@ function TabButton({
       title={tab.title}
     >
       <div className="absolute left-0 bottom-full mb-1 z-30 hidden group-hover:block pointer-events-none">
-        <div className="px-2 py-1 rounded bg-ink text-ink-invert text-sm shadow-card whitespace-nowrap">
+        <div className="px-2 py-1 rounded-sm bg-ink text-ink-invert text-sm shadow-card whitespace-nowrap">
           {tab.title}
         </div>
       </div>
@@ -80,7 +80,7 @@ function TabButton({
       )}
 
       <button
-        className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded hover:bg-bg-sunken text-xl leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+        className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-sm hover:bg-bg-sunken text-xl leading-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500/40"
         onClick={(e) => {
           e.stopPropagation();
           onClose(tab.id);

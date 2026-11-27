@@ -67,6 +67,7 @@ Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice f
 
 - Node.js 26+
 - npm
+- The local editor needs a modern browser. Its styling targets Chrome 111+, Firefox 128+, and Safari 16.4+.
 
 ## Terminology
 

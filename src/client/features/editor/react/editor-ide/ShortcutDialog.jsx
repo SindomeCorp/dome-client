@@ -25,54 +25,54 @@ export function ShortcutDialog({ onClose, referenceNavigationEnabled = true }) {
             <tbody className="text-sm sm:text-base">
               <tr>
                 <td className="py-1 px-2 sm:px-4">Save tab</td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ S</kbd></td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl S</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">⌘ S</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">Ctrl S</kbd></td>
               </tr>
               <tr>
                 <td className="py-1 px-2 sm:px-4">Close tab</td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ E</kbd></td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl E</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">⌘ E</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">Ctrl E</kbd></td>
               </tr>
               <tr>
                 <td className="py-1 px-2 sm:px-4">Enable VIM mode</td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ 1</kbd></td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl 1</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">⌘ 1</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">Ctrl 1</kbd></td>
               </tr>
               <tr>
                 <td className="py-1 px-2 sm:px-4">Disable VIM mode</td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ 0</kbd></td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl 0</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">⌘ 0</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">Ctrl 0</kbd></td>
               </tr>
               <tr>
                 <td className="py-1 px-2 sm:px-4">Previous tab</td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ [</kbd></td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl [</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">⌘ [</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">Ctrl [</kbd></td>
               </tr>
               <tr>
                 <td className="py-1 px-2 sm:px-4">Next tab</td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ ]</kbd></td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl ]</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">⌘ ]</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">Ctrl ]</kbd></td>
               </tr>
               <tr>
                 <td className="py-1 px-2 sm:px-4">Toggle word wrap</td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl Shift L</kbd></td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl Shift L</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">Ctrl Shift L</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">Ctrl Shift L</kbd></td>
               </tr>
               <tr>
                 <td className="py-1 px-2 sm:px-4">Toggle tab alignment</td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ ⇧ X</kbd></td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl Shift X</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">⌘ ⇧ X</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">Ctrl Shift X</kbd></td>
               </tr>
               <tr>
                 <td className="py-1 px-2 sm:px-4">Toggle shortcuts overlay</td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ /</kbd></td>
-                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl /</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">⌘ /</kbd></td>
+                <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">Ctrl /</kbd></td>
               </tr>
               {referenceNavigationEnabled && (
                 <tr>
                   <td className="py-1 px-2 sm:px-4">Edit Verb / Prop</td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">⌘ Click ref</kbd></td>
-                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border rounded text-sm sm:text-base">Ctrl Click ref</kbd></td>
+                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">⌘ Click ref</kbd></td>
+                  <td className="py-1 px-2 sm:px-4"><kbd className="px-2 py-1 border border-line-subtle rounded-sm text-sm sm:text-base">Ctrl Click ref</kbd></td>
                 </tr>
               )}
             </tbody>

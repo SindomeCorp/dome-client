@@ -75,7 +75,7 @@ function PropertySection({
       </div>
       {!collapsed && (
         <div className="mt-2 space-y-1 text-lg">
-          <div className="rounded-sm bg-bg-canvas/40 px-2 py-1 text-sm text-ink-muted">
+          <div className="rounded-xs bg-bg-canvas/40 px-2 py-1 text-sm text-ink-muted">
             <div className="grid grid-cols-[minmax(12rem,2fr)_minmax(8rem,1fr)_minmax(8rem,1fr)_minmax(8rem,1fr)] gap-3 items-start font-semibold">
               <span>Prop name</span>
               <span>Is Clear</span>

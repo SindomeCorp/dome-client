@@ -29,7 +29,7 @@ export function VmsPromptDialog({
           type="text"
           value={prompt.value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-2 rounded-md border border-line-subtle bg-bg-sunken text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+          className="w-full px-3 py-2 rounded-md border border-line-subtle bg-bg-sunken text-ink focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500/40"
           placeholder="Optional VMS note"
           aria-label="VMS note prompt input"
         />
@@ -37,14 +37,14 @@ export function VmsPromptDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-base rounded-md border border-line-subtle bg-bg-sunken hover:bg-bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+            className="px-4 py-2 text-base rounded-md border border-line-subtle bg-bg-sunken hover:bg-bg-surface focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500/40"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onSubmit}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-600 text-ink-invert hover:bg-brand-500 active:translate-y-[0.5px] transition text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-600 text-ink-invert hover:bg-brand-500 active:translate-y-[0.5px] transition text-base focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500/50"
           >
             Submit
           </button>

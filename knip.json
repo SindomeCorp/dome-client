@@ -34,7 +34,8 @@
   ],
   "ignoreUnresolved": ["/js/parsers/web-tree-sitter.js"],
   "ignoreDependencies": [
-    "@stryker-mutator/command-runner"
+    "@stryker-mutator/command-runner",
+    "tailwindcss"
   ],
   "ignoreIssues": {
     "src/client/core/preferences.js": [

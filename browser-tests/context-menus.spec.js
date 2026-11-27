@@ -580,6 +580,14 @@ test("context menus: selection Scratchpad opens unsaved, warns immediately, and 
   await page.getByRole("menuitem", { name: "Open in Scratchpad" }).click();
   const ide = await popupPromise;
   await expect(ide.getByRole("tab")).toHaveCount(1);
+  await expect(ide.locator("body")).toHaveCSS("background-color", "rgb(15, 23, 42)");
+  const editorShell = ide.locator("#root > div > div > div");
+  await expect(editorShell).toHaveCSS("background-color", "rgb(17, 24, 39)");
+  await expect(editorShell).toHaveCSS("border-top-color", "rgb(51, 65, 85)");
+  await ide.getByRole("button", { name: "Switch to light mode" }).click();
+  await expect(ide.locator("body")).toHaveCSS("background-color", "rgb(248, 250, 252)");
+  await expect(editorShell).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(editorShell).toHaveCSS("border-top-color", "rgb(226, 232, 240)");
   await expect(ide.getByText("Unsaved", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
   const confirm = ide.waitForEvent("dialog").then(async (dialog) => {

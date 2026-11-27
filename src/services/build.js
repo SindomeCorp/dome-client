@@ -4,8 +4,7 @@ import { createRequire } from "node:module";
 import less from "less";
 import esbuild from "esbuild";
 import postcss from "postcss";
-import autoprefixer from "autoprefixer";
-import tailwindcss from "tailwindcss";
+import tailwindcss from "@tailwindcss/postcss";
 import { named } from "../logger.js";
 
 import { fileURLToPath } from "node:url";
@@ -58,7 +57,7 @@ async function compileReactCss(outDir = path.join(publicDir, "css")) {
   await fs.mkdir(outDir, { recursive: true });
   try {
     const data = await fs.readFile(srcFile, "utf8");
-    const result = await postcss([tailwindcss, autoprefixer]).process(data, {
+    const result = await postcss([tailwindcss()]).process(data, {
       from: srcFile
     });
     await fs.writeFile(path.join(outDir, "ide.css"), result.css, "utf8");

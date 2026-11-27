@@ -23,6 +23,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Refresh the client build, server, and editor dependencies while retaining the existing runtime and browser support requirements.
 - Require Node.js 26 or newer to run the client server and development tools.
+- Upgrade the local editor to Tailwind CSS 4. The editor now targets Chrome 111+, Firefox 128+, and Safari 16.4+.
 
 ## 2026-11-25
 
