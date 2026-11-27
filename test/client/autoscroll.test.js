@@ -165,7 +165,6 @@ test("long mode scroll calculation and user scroll disables auto-scroll", async 
   assert.ok(cleared);
   assert.equal(clientLocal.pauseBuffer, false);
 
-  cleared = false;
   clientLocal.buffer.dispatchEvent(new window.Event("mousedown"));
   assert.ok(timeoutFn);
   timeoutFn();

@@ -75,7 +75,7 @@ function actions(items, captures, selection, path) {
         checkChannelArgument(segments, captures);
         return { ...item, segments };
       }
-      catch (error) { throw new Error(location + "." + error.message); }
+      catch (error) { throw new Error(location + "." + error.message, { cause: error }); }
     }
     check(item.type === "client-action" && item.template === undefined, location, "expected a typed client action or game command");
     check(["clipboard.copy", "ide.open-scratch"].includes(item.action), location + ".action", "unknown client action ID");
@@ -114,7 +114,7 @@ export function validateContextMenus(value) {
     check(typeof rule.pattern === "string" && rule.pattern.length > 0 && rule.pattern.length <= 2048, path + ".pattern", "expected regex source (1–2048 characters)");
     check(rule.flags === undefined || ["", "i", "u", "iu", "ui"].includes(rule.flags), path + ".flags", "only i and u flags are supported");
     try { new RegExp(rule.pattern, rule.flags || "u"); }
-    catch (error) { throw new Error(path + ".pattern: " + error.message); }
+    catch (error) { throw new Error(path + ".pattern: " + error.message, { cause: error }); }
     fields(rule.captures, Object.keys(rule.captures || {}), path + ".captures");
     const names = groupNames(rule.pattern);
     for (const [name, type] of Object.entries(rule.captures)) {
@@ -123,7 +123,7 @@ export function validateContextMenus(value) {
     const checked = { ...rule, actions: actions(rule.actions, rule.captures, false, path + ".actions") };
     for (const field of ["heading", "target"]) if (rule[field] !== undefined) {
       try { checked[field + "Segments"] = parseCommandTemplate(rule[field], rule.captures); }
-      catch (error) { throw new Error(path + "." + field + ": " + error.message); }
+      catch (error) { throw new Error(path + "." + field + ": " + error.message, { cause: error }); }
     }
     check(rule.relatedContexts === undefined || (Array.isArray(rule.relatedContexts) && rule.relatedContexts.length <= 4), path + ".relatedContexts", "expected at most four related contexts");
     rules.set(rule.id, checked);

@@ -95,7 +95,7 @@ export function createSocketOutputRenderer({
     if (!client.alert || !client.alert.active || client.alert.pattern == null) return;
 
     const pattern = client.alert.pattern;
-    let matched = false;
+    let matched;
     if (pattern instanceof RegExp) {
       const flags = pattern.flags.includes("i") ? pattern.flags : pattern.flags + "i";
       matched = new RegExp(pattern.source, flags).test(outputSegment);

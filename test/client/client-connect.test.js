@@ -21,7 +21,6 @@ function createStore(t) {
 }
 
 test("guest connect stores initial command", async (t) => {
-  t.mock.timers.enable();
   const { window } = setupDom(t, "<!doctype html><html><body><a class=\"btn-connect-guest\" href=\"/player-client/\"></a></body></html>", { suppressNavigationErrors: true });
   const { store } = await import("../../src/client/core/store.js");
   Object.assign(store, {
@@ -34,9 +33,13 @@ test("guest connect stores initial command", async (t) => {
     purge: () => {}
   });
 
+  // Wait for the synthetic document to finish its own ready event before
+  // reproducing the deferred script lifecycle.
+  if (window.document.readyState === "loading") {
+    await new Promise((resolve) => window.document.addEventListener("DOMContentLoaded", resolve, { once: true }));
+  }
   await import("../../src/client/entrypoints/client-connect.js?guest");
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
-  t.mock.timers.tick(10);
   const button = window.document.querySelector(".btn-connect-guest");
   const evt = new window.Event("click", { cancelable: true });
   try {
@@ -202,7 +205,7 @@ test("connect page chrome temporarily clears existing background images", (t) =>
 
   t.mock.timers.tick(10);
 
-  assert.equal(window.document.body.style.backgroundImage, "url(\"hero.png\")");
+  assert.equal(window.document.body.style.backgroundImage, "url(\"http://example.com/hero.png\")");
 });
 
 test("connect action stores login only when credentials are present", (t) => {

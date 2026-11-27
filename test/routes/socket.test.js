@@ -877,10 +877,9 @@ test("socket route connection lifecycle", async (t) => {
     moo.emit("connect");
     await p;
 
-    let writeCalled = 0;
     socket.emit("input", "@quit");
     await new Promise(r => setImmediate(r));
-    writeCalled = writes.length;
+    const writeCalled = writes.length;
 
     assert.equal(writeCalled, 1);
     assert.ok(writes.includes("@quit\r\n"));

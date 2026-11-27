@@ -84,44 +84,52 @@ so the screenshot uses installed fallback fonts.
 Chromium projects explicitly enable Chromium's sandbox. If a restricted runner
 denies localhost binding or browser IPC, use the ordinary approval mechanism for
 the exact test invocation. Do not disable Chromium's sandbox or change host
-AppArmor/sysctl settings. A tested alternative is the existing official
-Playwright container, running non-root with its documented namespace-enabled
+AppArmor/sysctl settings. The test runner uses the official Playwright image
+for browser libraries and pins Node.js 26 separately. Run it non-root with
+Playwright’s documented namespace-enabled
 [seccomp profile](https://playwright.dev/docs/docker#crawling-and-scraping).
-For example, from this worktree, with Docker and the image already available:
+From the repository root with Docker available:
 
 ```bash
-mkdir -p node_modules/.cache/playwright-tmp
-export TMPDIR="$PWD/node_modules/.cache/playwright-tmp"
+nvm use
+npm ci
+npm run build
+docker build -t dome-client-test:node26 test-support/runner
+mkdir -p node_modules/.cache
 export PLAYWRIGHT_BROWSERS_PATH="$PWD/node_modules/.cache/playwright-browsers"
-npx playwright install chromium
+npx playwright install chromium firefox
 curl --fail --silent --show-error \
   https://raw.githubusercontent.com/microsoft/playwright/v1.62.1/utils/docker/seccomp_profile.json \
   -o node_modules/.cache/playwright-seccomp.json
 docker run --rm --init --network none --user "$(id -u):$(id -g)" \
   --security-opt "seccomp=$PWD/node_modules/.cache/playwright-seccomp.json" \
   --mount "type=bind,src=$PWD,dst=/work" --workdir /work --shm-size=1g \
+  --env SHORTEN_ENABLED=true \
   --env PLAYWRIGHT_BROWSERS_PATH=/work/node_modules/.cache/playwright-browsers \
   --env "GIT_HASH=$(git rev-parse HEAD)" \
-  mcr.microsoft.com/playwright:v1.62.1-noble \
-  npm run test:browser -- --project=chromium
+  dome-client-test:node26 \
+  xvfb-run -a npm run test:browser -- --project=chromium --project=firefox --headed
 ```
 
-The image supplies system libraries; the worktree-local browser download matches
-the installed Playwright package rather than using the image's older browsers.
+The Dockerfile keeps Node.js 26.12.1 and the browser system libraries separate.
+The worktree-local browser download matches the installed Playwright package.
 The container retains default AppArmor isolation, uses private shared memory,
-publishes no ports and has no external network. For headed checks, replace its
-last line with `xvfb-run -a npm run test:browser -- --project=chromium --headed`.
+publishes no ports and has no external network. Use the same image for coverage
+or mutation checks by replacing the final
+command with `npm run coverage` or `npm run test:mutation:warm`. The socket tests
+expect `SHORTEN_ENABLED=true` for the local shortener fixture.
 Browser caches are ignored and all artifacts remain local. These tests do not
 verify live MOO permissions, native app WebViews or assistive-technology speech.
 
 ## Requirements
 
-- Node.js 22+
+- Node.js 26 for development, coverage, browser, and mutation tests. The
+  pinned version is in [`.nvmrc`](../.nvmrc).
 - npm
 
 ## Core Checks
 
-From a clean checkout with the supported Node version, install the locked dependencies and run the core checks:
+From a clean checkout with Node 26, install the locked dependencies and run the core checks:
 
 ```bash
 npm ci

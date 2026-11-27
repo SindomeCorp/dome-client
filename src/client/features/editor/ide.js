@@ -78,7 +78,7 @@ export function setupIdeLauncher({
         try { existing && existing.close(); } catch {}
       }
 
-      let opened = null;
+      let opened;
       try {
         opened = win.open(IDE_WINDOW_URL, "dome-ide", IDE_WINDOW_FEATURES);
       } catch {

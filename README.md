@@ -302,13 +302,10 @@ See the dedicated testing guide: [docs/TESTING.md](docs/TESTING.md).
 
 Run `npm run lint` and `npm test` before committing. Coverage must remain at or above 80%.
 
-## Node.js 26 validation
+## Development baseline
 
-Validated on Linux with **Node.js 26.12.1** on **2026-10-26**. The template lint, automated test suite, and asset build passed.
+Use Node.js 26 for development and test tools. The pinned version is in
+[`.nvmrc`](.nvmrc). The [testing guide](docs/TESTING.md) documents the same Node
+version in the browser, coverage, and mutation test runner.
 
-With Node.js 26.12.1 selected, reproduce the checks with:
-
-```sh
-npm test
-npm run build
-```
+The server runtime minimum remains Node.js 22.

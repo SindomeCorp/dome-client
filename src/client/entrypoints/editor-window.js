@@ -103,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // upload button
   const getUploadData = () => {
-    let uploadData = "";
+    let uploadData;
     if (verbEditor != null) {
       uploadData = verbEditor.getValue();
       // update sync in status

@@ -40,7 +40,7 @@ async function compileLess(outDir = path.join(publicDir, "css")) {
     const full = path.join(srcDir, file);
     const data = await fs.readFile(full, "utf8");
     const output = await less.render(data, { filename: full });
-    let plugins = [];
+    let plugins;
     if (typeof postcss.loadConfig === "function") {
       ({ plugins } = await postcss.loadConfig());
     } else {
@@ -173,7 +173,7 @@ async function publishAssets(output, stage, scratch) {
         if (entry.hadPrevious) await fs.rename(entry.backup, entry.target);
       } catch (rollbackError) { rollbackErrors.push(rollbackError); }
     }
-    if (rollbackErrors.length) throw new AggregateError([error, ...rollbackErrors], "Asset rollback failed; backups remain at " + scratch);
+    if (rollbackErrors.length) throw new AggregateError([error, ...rollbackErrors], "Asset rollback failed; backups remain at " + scratch, { cause: error });
     throw error;
   }
 }
