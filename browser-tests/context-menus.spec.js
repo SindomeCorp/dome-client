@@ -582,7 +582,7 @@ test("context menus: Programmer override opens reference actions on the first ri
   await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (Override)");
   await page.locator("#button-client-options-close").click();
   const objects = ["Copy to Clipboard", "@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"];
-  const verbs = ["Copy to Clipboard", "@edit", "@show", "@args", "help"];
+  const verbs = ["Copy to Clipboard", "@edit", "@list", "@show", "@args", "help"];
   const properties = ["Copy to Clipboard", "@edit", "@show"];
   for (const [reference, ansi, labels] of [
     ["#123", "#123", objects],
@@ -780,7 +780,7 @@ test("context menus: shipped role files expose exact actions and copy only match
   await page.getByRole("menuitem", { name: "Name and Number", exact: true }).click();
   await open(object, 8, programmerObjects);
   await page.getByRole("menuitem", { name: "@kids", exact: true }).click();
-  await open(verb, 7, ["Copy to Clipboard", "@edit", "@show", "@args", "help"]);
+  await open(verb, 7, ["Copy to Clipboard", "@edit", "@list", "@show", "@args", "help"]);
   await page.getByRole("menuitem", { name: "@args", exact: true }).click();
   await open(property, 11, ["Copy to Clipboard", "@edit", "@show"]);
   await page.getByRole("menuitem", { name: "@show", exact: true }).click();
@@ -824,7 +824,7 @@ test("context menus: real bundle numeric and symbolic commands, Look and traceba
   for (const object of ["#123", "$object"]) {
     for (const [suffix, labels, commands] of [
       ["", ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"], ["@show " + object, ";$string_utils:nn(" + object + ")", "@verbs " + object, "@props " + object, "@parents " + object, "@kids " + object + " -lcd", "@siblings " + object, "@tree " + object, "look " + object]],
-      [":inspect", ["@edit", "@show", "@args", "help"], ["@edit " + object + ":inspect", "@show " + object + ":inspect", "@args " + object + ":inspect", "help " + object + ":inspect"]],
+      [":inspect", ["@edit", "@list", "@show", "@args", "help"], ["@edit " + object + ":inspect", "@list " + object + ":inspect", "@show " + object + ":inspect", "@args " + object + ":inspect", "help " + object + ":inspect"]],
       [".name", ["@edit", "@show"], ["@edit " + object + ".name", "@show " + object + ".name"]]
     ]) {
       const reference = object + suffix;

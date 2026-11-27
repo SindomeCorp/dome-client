@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-11-27
+
+### Added
+- Add @list immediately below @edit in Programmer verb menus for numeric and symbolic references.
+
 ## 2026-11-25
 
 ### Added

@@ -42,7 +42,7 @@ test("separate role files have exact action ordering, delimiters and safe typed 
     gm: { object: ["@parents #123", "@kids #123", "@notes #123", "look #123"], verb: [], property: [] },
     programmer: {
       object: ["@show #123", ";$string_utils:nn(#123)", "@verbs #123", "@props #123", "@parents #123", "@kids #123 -lcd", "@siblings #123", "@tree #123", "look #123"],
-      verb: ["@edit #123:look", "@show #123:look", "@args #123:look", "help #123:look"],
+      verb: ["@edit #123:look", "@list #123:look", "@show #123:look", "@args #123:look", "help #123:look"],
       property: ["@edit #123.name", "@show #123.name"]
     }
   };

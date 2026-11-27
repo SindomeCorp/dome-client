@@ -24,6 +24,12 @@
           "template": "@edit ${object}:${verb}"
         },
         {
+          "id": "list",
+          "label": "@list",
+          "type": "game-command",
+          "template": "@list ${object}:${verb}"
+        },
+        {
           "id": "command-1",
           "label": "@show",
           "type": "game-command",
