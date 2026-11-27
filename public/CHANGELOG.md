@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-27
 
 ### Fixed
+- Keep context menus available throughout large output bursts without overflowing the matching queue.
+- Apply edits to shipped Player JSON unless explicitly overridden by local configuration.
+- Restore the latest recognized server profile after a failed context-menu reload while preserving session resets and user overrides.
+- Reject unusable profile regexes during bounded startup validation and disable context menus with a logged error when no usable files remain.
 - Preserve output line boundaries around client control messages so login profile selection works regardless of network packet splits, including split CRLF newlines.
 
 ### Added

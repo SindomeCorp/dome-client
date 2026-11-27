@@ -50,6 +50,9 @@ export function bindContextOutput({ controller, client, element, win }) {
   let pointerSelection;
   let disposed = false;
   let reportedError = "";
+  const matchQueue = new Map();
+  let matching = false;
+  let retryTimer;
   function bind(target, type, handler, capture = false) {
     target.addEventListener(type, handler, capture);
     listeners.push(() => target.removeEventListener(type, handler, capture));
@@ -96,10 +99,54 @@ export function bindContextOutput({ controller, client, element, win }) {
       ? actionableContextRanges(entry.matches, (match) => groupsFor(match).length > 0) : [];
     underlines.update(row, entry.projection, intervals);
   }
+  function pumpMatches() {
+    if (disposed || matching || retryTimer) return;
+    let job;
+    while (matchQueue.size) {
+      const [row, entry] = matchQueue.entries().next().value;
+      matchQueue.delete(row);
+      if (row.isConnected && element.contains(row) && cache.get(row) === entry && entry.version === stamp() && entry.matches === null && !entry.failed) {
+        job = { row, entry };
+        break;
+      }
+    }
+    if (!job) return;
+    const { row, entry } = job;
+    matching = true;
+    let busy = false;
+    controller.match(entry.projection.text).then((matches) => {
+      if (!disposed && cache.get(row) === entry && entry.version === stamp()) {
+        entry.matches = matches;
+        if (controller.preferences.underline && row.isConnected && element.contains(row)) {
+          const current = projectOutputRow(row);
+          if (current.text !== entry.projection.text) { schedule(); return; }
+          entry.projection = current;
+        }
+        paint(row, entry);
+      }
+    }).catch((error) => {
+      if (!disposed && cache.get(row) === entry && entry.version === stamp()) {
+        if (error.code === "CONTEXT_MATCHER_BUSY") {
+          busy = true;
+          matchQueue.set(row, entry);
+        } else {
+          entry.failed = true;
+          if (reportedError !== error.message) { reportedError = error.message; controller.report(error.message); }
+        }
+      }
+    }).finally(() => {
+      matching = false;
+      if (disposed) return;
+      if (busy) retryTimer = win.setTimeout(() => { retryTimer = null; pumpMatches(); }, 25);
+      else pumpMatches();
+    });
+  }
   function warm() {
     if (disposed) return;
     const version = stamp();
     const mounted = rows();
+    const retained = new Set(mounted);
+    for (const row of matchQueue.keys()) if (!retained.has(row)) matchQueue.delete(row);
     underlines.prune(mounted);
     for (const row of mounted) {
       if (!row.hasAttribute("tabindex")) row.tabIndex = -1;
@@ -107,26 +154,16 @@ export function bindContextOutput({ controller, client, element, win }) {
       const old = cache.get(row);
       if (old?.version === version && old.projection.text === projection.text) {
         old.projection = projection;
+        if (old.matches === null && !old.failed) matchQueue.set(row, old);
         paint(row, old);
         continue;
       }
       const entry = { version, projection, matches: null };
       cache.set(row, entry);
       underlines.update(row, projection, []);
-      controller.match(projection.text).then((matches) => {
-        if (!disposed && cache.get(row) === entry && entry.version === stamp()) {
-          entry.matches = matches;
-          if (controller.preferences.underline && row.isConnected && element.contains(row)) {
-            const current = projectOutputRow(row);
-            if (current.text !== entry.projection.text) { schedule(); return; }
-            entry.projection = current;
-          }
-          paint(row, entry);
-        }
-      }).catch((error) => {
-        if (!disposed && entry.version === stamp() && reportedError !== error.message) { reportedError = error.message; controller.report(error.message); }
-      });
+      matchQueue.set(row, entry);
     }
+    pumpMatches();
   }
   function schedule() {
     win.clearTimeout(timer);
@@ -287,5 +324,5 @@ export function bindContextOutput({ controller, client, element, win }) {
   });
   controller.ready?.then(schedule);
   schedule();
-  return () => { disposed = true; close(); underlines.clear(); selectionController?.abort(); win.clearTimeout(timer); observer.disconnect(); unsubscribe(); listeners.forEach((remove) => remove()); };
+  return () => { disposed = true; close(); underlines.clear(); selectionController?.abort(); matchQueue.clear(); win.clearTimeout(retryTimer); win.clearTimeout(timer); observer.disconnect(); unsubscribe(); listeners.forEach((remove) => remove()); };
 }

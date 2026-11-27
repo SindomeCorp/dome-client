@@ -228,3 +228,84 @@ test("late file results cannot restore a session or overwrite newer JSON; hyphen
   assert.equal(controller.config.profiles[0].label, "Latest local draft");
   assert.equal(controller.active().profile.id, "gm");
 });
+
+
+test("registered Player JSON is the baseline, including edits and reloads, unless locally overridden", async (t) => {
+  const documents = await files();
+  const player = documents.find((document) => document.id === "player").config;
+  player.profiles[0].label = "Custom Player";
+  player.rules[0].actions[0].label = "Custom rewind";
+  const { controller } = await app(t, async () => ({ documents, errors: [] }));
+  await controller.ready;
+  assert.deepEqual(controller.config, { version: 1, rules: [], profiles: [] });
+  assert.equal(controller.active().profile.label, "Custom Player");
+  assert.equal(controller.snapshot.rules.get("player-channel").actions[0].label, "Custom rewind");
+  await controller.setServerProfile("player");
+  assert.equal(controller.active().profile.label, "Custom Player");
+  player.profiles[0].label = "Reloaded Player";
+  player.rules[0].actions[0].label = "Reloaded rewind";
+  assert.equal(await controller.reload(JSON.stringify(controller.config)), true);
+  assert.equal(controller.active().profile.label, "Reloaded Player");
+  assert.equal(controller.snapshot.rules.get("player-channel").actions[0].label, "Reloaded rewind");
+  const local = { version: 1, rules: [], profiles: [{ ...player.profiles[0], label: "Personal override" }] };
+  assert.equal(await controller.reload(JSON.stringify(local)), false, "local profiles still need self-contained rule declarations");
+  local.rules = player.rules;
+  assert.equal(await controller.reload(JSON.stringify(local)), true);
+  assert.equal(controller.active().profile.label, "Personal override");
+});
+
+test("failed reload applies the latest recognized OOB choice while preserving override, reset and snapshot", async (t) => {
+  const documents = await files();
+  let release;
+  let delay = false;
+  const { controller } = await app(t, async () => delay ? new Promise((resolve) => { release = resolve; }) : { documents, errors: [] });
+  await controller.ready;
+  const revision = controller.revision;
+  const snapshot = controller.snapshot;
+  async function failDuring(action) {
+    delay = true;
+    const reload = controller.reload(JSON.stringify(controller.config));
+    await action();
+    release({ documents: [], errors: ["gm: HTTP 500"] });
+    assert.equal(await reload, false);
+    assert.equal(controller.revision, revision);
+    assert.equal(controller.snapshot, snapshot);
+    delay = false;
+  }
+  await failDuring(async () => {
+    await controller.setServerProfile("gm");
+    await controller.setServerProfile("programmer");
+  });
+  assert.equal(controller.active().profile.id, "programmer");
+  assert.equal(controller.active().source, "selected by server");
+  controller.update({ override: true, profile: "gm" });
+  await failDuring(() => controller.setServerProfile("player"));
+  assert.equal(controller.active().profile.id, "gm");
+  assert.equal(controller.active().source, "Override");
+  controller.update({ override: false });
+  assert.equal(controller.active().profile.id, "player");
+  assert.equal(controller.active().source, "selected by server");
+  await failDuring(async () => {
+    await controller.setServerProfile("programmer");
+    controller.resetSession();
+  });
+  assert.equal(controller.active().profile.id, "player");
+  assert.equal(controller.active().source, "Fallback");
+  await failDuring(() => controller.setServerProfile("unknown"));
+  assert.equal(controller.active().source, "Fallback");
+});
+
+test("startup worker validation isolates broken files and never invents a bundled profile when all fail", async (t) => {
+  const documents = await files();
+  const bad = structuredClone(documents.find((document) => document.id === "gm"));
+  bad.config.rules.push({ id: "empty", priority: 0, pattern: "^", captures: {}, actions: [] });
+  const mixed = await app(t, async () => ({ documents: documents.map((document) => document.id === "gm" ? bad : document), errors: [] }));
+  await mixed.controller.ready;
+  assert.deepEqual([...mixed.controller.snapshot.profiles.keys()], ["player", "programmer"]);
+  assert.match(mixed.window.document.querySelector("#context-menu-error").textContent, /gm:.*zero-length/);
+  const broken = await app(t, async () => ({ documents: [bad], errors: [] }));
+  await broken.controller.ready;
+  assert.equal(broken.controller.active().profile, null);
+  assert.equal(broken.controller.snapshot.profiles.size, 0);
+  assert.match(broken.window.document.querySelector("#context-menu-error").textContent, /zero-length/);
+});

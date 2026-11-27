@@ -58,8 +58,12 @@ app.get("/", async (req, res) => {
   const config = { enabled: req.query.splits !== "off", customRegexEnabled: req.query.custom !== "off", presets: req.query.presets === "default" ? defaultPresets : presets };
   const contextMenus = getContextMenuAvailability({
     enabled: req.query.context !== "off", logger,
-    readFile: ["missing", "invalid"].includes(req.query.context) ? () => {
+    readFile: ["missing", "invalid", "zero"].includes(req.query.context) ? (path) => {
       if (req.query.context === "missing") throw new Error("ENOENT synthetic missing profile");
+      if (req.query.context === "zero") return JSON.stringify({ version: 1,
+        rules: [{ id: "empty", priority: 0, pattern: "^", captures: {}, actions: [{ id: "copy", label: "Copy", type: "client-action", action: "clipboard.copy", input: "target" }] }],
+        profiles: [{ id: path.pathname.split("/").pop().replace(".json", ""), label: "Unusable", rules: ["empty"] }]
+      });
       return "{}";
     } : undefined
   });

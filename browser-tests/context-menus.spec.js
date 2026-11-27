@@ -99,7 +99,7 @@ test("context menus: admin disable and unusable JSON retain native menus despite
   const workers = [];
   page.on("request", (request) => { if (new URL(request.url()).pathname.startsWith("/profiles/")) requests.push(request.url()); });
   page.on("worker", (worker) => workers.push(worker.url()));
-  for (const mode of ["off", "missing", "invalid"]) {
+  for (const mode of ["off", "missing", "invalid", "zero"]) {
     const initial = await fixtureState(page);
     await page.goto("/?entry=real&context=" + mode);
     await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
@@ -1245,4 +1245,123 @@ test("context menus: reverse 2000-line virtual selection copies partial endpoint
   await expect(ide.getByText("Unsaved", { exact: true })).toBeVisible();
   await expect.poll(() => ide.evaluate(() => document.querySelector(".ace_editor")?.env.editor.getValue())).toBe(expected);
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+});
+
+
+test("context menus: edited shipped Player JSON is used on startup and Options reload without local overrides", async ({ page }) => {
+  const player = JSON.parse(await readFile(new URL("../data/profiles/player.json", import.meta.url), "utf8"));
+  player.profiles[0].label = "Edited Player";
+  player.rules[0].actions[0].label = "Edited rewind";
+  await page.route("**/profiles/player.json", (route) => route.fulfill({ json: player }));
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Edited Player (Fallback)");
+  await socketFeed(page, "[-][SIC-PM] Edited file test\r\n");
+  const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Edited file test" });
+  await expect(row).toBeVisible();
+  await expect.poll(async () => { await row.focus(); await page.keyboard.press("Shift+F10"); return page.getByRole("menuitem", { name: "Edited rewind", exact: true }).count(); }).toBe(1);
+  await page.keyboard.press("Escape");
+  player.profiles[0].label = "Reloaded Player";
+  player.rules[0].actions[0].label = "Reloaded rewind";
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await setContextSection(page, "advanced");
+  await expect(page.locator("#context-menu-json")).toHaveValue(JSON.stringify({ version: 1, rules: [], profiles: [] }, null, 2));
+  await page.locator("#context-menu-reload").click();
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Reloaded Player (Fallback)");
+  await page.locator("#button-client-options-close").click();
+  await expect.poll(async () => { await rightText(page, row, 5); return page.getByRole("menuitem", { name: "Reloaded rewind", exact: true }).count(); }).toBe(1);
+  expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
+});
+
+test("context menus: a mounted burst beyond the worker queue cap retains first and last row menus", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 3200 });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await expect(page.locator("#context-menu-profile option")).toHaveCount(3);
+  await socketFeed(page, Array.from({ length: 2000 }, (_, index) => "[-][SIC-PM] Burst " + index).join("\r\n") + "\r\n");
+  const last = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Burst 1999" });
+  await expect(last).toBeVisible();
+  await expect.poll(() => page.locator("#lineBuffer [data-output-id]").count()).toBeGreaterThan(257);
+  const config = defaultContextMenus();
+  config.profiles[0].label = "Burst Player";
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await setContextSection(page, "advanced");
+  await page.locator("#context-menu-json").fill(JSON.stringify(config));
+  await page.locator("#context-menu-reload").click();
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Burst Player (Fallback)");
+  await page.locator("#button-client-options-close").click();
+  await expect.poll(async () => { await last.focus(); await page.keyboard.press("Shift+F10"); return page.getByRole("menuitem", { name: "@rewind", exact: true }).count(); }).toBe(1);
+  await page.keyboard.press("Escape");
+  const firstPrevented = await page.locator("#lineBuffer [data-output-id]").first().evaluate((element) => {
+    const event = new window.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true });
+    element.dispatchEvent(event);
+    return event.defaultPrevented;
+  });
+  expect(firstPrevented).toBe(true);
+  await expect(page.getByRole("menuitem", { name: "@rewind", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await rightText(page, last, 5);
+  await expect(page.getByRole("menuitem", { name: "@rewind", exact: true })).toBeVisible();
+  await expect(page.locator("#context-menu-error")).toBeEmpty();
+  expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
+  await page.getByRole("menuitem", { name: "@rewind", exact: true }).click();
+  await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(["@rewind SIC-PM"]);
+});
+
+test("context menus: failed Options reload applies intervening OOB and cannot restore a reset session", async ({ page }) => {
+  let paused = false;
+  let release;
+  await page.route("**/profiles/gm.json", async (route) => {
+    if (!paused) { await route.continue(); return; }
+    await new Promise((resolve) => { release = resolve; });
+    await route.fulfill({ status: 500, body: "Synthetic failed reload" });
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await expect(page.locator("#context-menu-profile option")).toHaveCount(3);
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await setContextSection(page, "advanced");
+  paused = true;
+  for (const reset of [false, true]) {
+    release = null;
+    await page.locator("#context-menu-reload").click();
+    await expect.poll(() => typeof release).toBe("function");
+    await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\r\n" + (reset ? "#$# SDWC%%CONTEXT-RESET\r\n" : "") + "Reload barrier " + reset + "\r\n");
+    await expect(page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Reload barrier " + reset })).toHaveCount(1);
+    release();
+    await expect(page.locator("#context-menu-error")).toContainText("Previous valid");
+    await expect(page.locator("#context-menu-active")).toHaveText(reset ? "Active Profile: Player (Fallback)" : "Active Profile: Programmer (selected by server)");
+  }
+  expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
+});
+
+test("context menus: worker-unusable fetched files disable rather than activating bundled Player rules", async ({ page }) => {
+  await page.route("**/profiles/*.json", async (route) => {
+    const id = new URL(route.request().url()).pathname.split("/").pop().replace(".json", "");
+    const config = JSON.parse(await readFile(new URL("../data/profiles/" + id + ".json", import.meta.url), "utf8"));
+    config.rules.push({ id: "empty", priority: 0, pattern: "^", captures: {}, actions: [] });
+    await route.fulfill({ json: config });
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await expect(page.locator("#context-menu-error")).toContainText("zero-length");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Disabled (no profiles available)");
+  await expect(page.locator("#context-menu-profile option")).toHaveCount(0);
+  await socketFeed(page, "[-][SIC-PM] No usable rules\r\n");
+  const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "No usable rules" });
+  await expect(row).toBeVisible();
+  await row.focus();
+  await page.keyboard.press("Shift+F10");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await rightText(page, row, 5);
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
 });

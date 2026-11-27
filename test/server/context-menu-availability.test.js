@@ -1,7 +1,7 @@
 import { referenceContextMenus } from "../../test-support/context-menu-reference-fixture.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { getContextMenuAvailability } from "../../src/services/context-menu-profiles.js";
+import { getContextMenuAvailability, checkContextProfileRuntime } from "../../src/services/context-menu-profiles.js";
 import { defaultContextMenus } from "../../src/shared/context-menus.js";
 import { build } from "esbuild";
 import { readFileSync } from "node:fs";
@@ -43,6 +43,12 @@ test("no usable files disables context menus and logs actionable errors", async 
     oversized: () => " ".repeat(262145),
     mismatched: () => JSON.stringify({ version: 1, rules: [], profiles: [] }),
     empty: (path) => JSON.stringify({ version: 1, rules: [], profiles: [{ id: path.pathname.split("/").pop().replace(".json", ""), label: "Empty", rules: [] }] }),
+    zeroLength: (path) => {
+      const config = defaultContextMenus();
+      config.profiles[0].id = path.pathname.split("/").pop().replace(".json", "");
+      config.rules.push({ id: "empty", priority: 0, pattern: "^", captures: {}, actions: [] });
+      return JSON.stringify(config);
+    },
     regex: () => { const config = referenceContextMenus(); config.rules[0].pattern = "["; return JSON.stringify(config); }
   })) await t.test(name, () => {
     const result = fixture(readFile);
@@ -65,4 +71,33 @@ test("one valid registered file keeps the feature available and warns about the 
   assert.match(result.warnings[0], /gm: Expected registered profile ID gm/);
   assert.equal(paths.length, 3);
   assert.ok(paths.every((path) => /\/data\/profiles\/(player|gm|programmer)\.json$/.test(path)));
+});
+
+
+test("startup regex validation is bounded and validator failures fail closed", () => {
+  for (const result of [
+    { error: new Error("ETIMEDOUT"), status: null },
+    { status: 1 },
+    { status: 0, stdout: "{" },
+    { status: 0, stdout: JSON.stringify({ error: "zero-length matches are not supported" }) }
+  ]) {
+    assert.throws(() => checkContextProfileRuntime(defaultContextMenus(), (_executable, args, options) => {
+      assert.ok(args[0].endsWith("context-menu-profile-check.js"));
+      assert.equal(options.timeout, 3000);
+      assert.equal(options.input, JSON.stringify(defaultContextMenus()));
+      return result;
+    }));
+  }
+  assert.doesNotThrow(() => checkContextProfileRuntime(defaultContextMenus(), () => ({ status: 0, stdout: "{\"ok\":true}" })));
+});
+
+test("a worker-rejected file does not disable the other usable registered files", () => {
+  const result = fixture((path) => {
+    const config = JSON.parse(readFileSync(path, "utf8"));
+    if (path.pathname.endsWith("/gm.json")) config.rules.push({ id: "empty", priority: 0, pattern: "^", captures: {}, actions: [] });
+    return JSON.stringify(config);
+  });
+  assert.equal(result.availability.enabled, true);
+  assert.deepEqual(result.errors, []);
+  assert.match(result.warnings[0], /gm: empty: zero-length/);
 });

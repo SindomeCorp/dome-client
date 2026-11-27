@@ -604,3 +604,118 @@ test("JSON import uses the real file control and failed edits keep the last pers
   assert.equal(controller.active().source, "Fallback");
   assert.match(doc.querySelector("#context-menu-error").textContent, /no longer registered/);
 });
+
+
+test("output matching drains a burst beyond the worker queue cap without dropping unchanged rows", async (t) => {
+  const { controller, doc, window, client } = await fixture(t);
+  Object.defineProperty(window.navigator, "clipboard", { value: { async writeText() {} } });
+  const output = doc.createElement("div");
+  const rows = Array.from({ length: 300 }, (_, index) => {
+    const row = doc.createElement("div");
+    row.textContent = "Row " + index + " #123";
+    output.append(row);
+    return row;
+  });
+  doc.body.append(output);
+  let count = 0;
+  let active = 0;
+  let maximum = 0;
+  const handlers = {};
+  let snapshot;
+  const matcher = createContextMatcher({ workerFactory: () => ({
+    addEventListener(type, handler) { handlers[type] = handler; },
+    postMessage(data) {
+      active++;
+      maximum = Math.max(maximum, active);
+      queueMicrotask(() => {
+        let result;
+        if (data.type === "configure") { snapshot = validateContextMenus(data.config); result = true; }
+        else {
+          count++;
+          result = matchContextRules(data.text, snapshot.profiles.get(data.profile).rules.map((id) => snapshot.rules.get(id)));
+        }
+        active--;
+        handlers.message({ data: { id: data.id, result } });
+      });
+    },
+    terminate() {}
+  }) });
+  await matcher.request("configure", { config: controller.config });
+  controller.match = (text) => matcher.request("match", { text, profile: controller.active().profile.id });
+  t.after(() => matcher.destroy());
+  controller.bindOutput(output, window);
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(count, 300);
+  assert.equal(maximum, 1);
+  for (const row of [rows[0], rows.at(-1)]) {
+    const event = new window.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true });
+    row.dispatchEvent(event);
+    assert.equal(event.defaultPrevented, true);
+    doc.querySelector("[role=menuitem]").dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  }
+  output.append(doc.createComment("unchanged rows"));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(count, 300, "completed matches must still be reused");
+  assert.equal(doc.querySelector("#context-menu-error").textContent, "");
+  assert.equal(client.socketState, 1);
+});
+
+test("temporary worker saturation retries unchanged output but terminal failures keep native menus", async (t) => {
+  const { controller, doc, window } = await fixture(t);
+  Object.defineProperty(window.navigator, "clipboard", { value: { async writeText() {} } });
+  const output = doc.createElement("div");
+  const row = doc.createElement("div");
+  row.textContent = "#123";
+  output.append(row);
+  doc.body.append(output);
+  const match = controller.match.bind(controller);
+  let calls = 0;
+  controller.match = (text) => {
+    if (++calls === 1) return Promise.reject(Object.assign(new Error("busy"), { code: "CONTEXT_MATCHER_BUSY" }));
+    return match(text);
+  };
+  controller.bindOutput(output, window);
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.equal(calls, 2);
+  const event = new window.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true });
+  row.dispatchEvent(event);
+  assert.equal(event.defaultPrevented, true);
+  assert.equal(doc.querySelector("#context-menu-error").textContent, "");
+  doc.querySelector("[role=menuitem]").dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  controller.match = () => { calls++; return Promise.reject(new Error("timed out")); };
+  row.textContent = "#456";
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(calls, 3, "terminal worker failures must not create retry loops");
+  const native = new window.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true });
+  row.dispatchEvent(native);
+  assert.equal(native.defaultPrevented, false);
+});
+
+
+test("queued output removed and reattached before matching is not stranded in a pending cache entry", async (t) => {
+  const { controller, doc, window } = await fixture(t);
+  const output = doc.createElement("div");
+  const first = doc.createElement("div");
+  const second = doc.createElement("div");
+  first.textContent = "First #123";
+  second.textContent = "Second #456";
+  output.append(first, second);
+  doc.body.append(output);
+  const match = controller.match.bind(controller);
+  const calls = [];
+  let release;
+  controller.match = (text) => {
+    calls.push(text);
+    if (text === first.textContent) return new Promise((resolve) => { release = async () => resolve(await match(text)); });
+    return match(text);
+  };
+  controller.bindOutput(output, window);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  second.remove();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  output.append(second);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  await release();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.deepEqual(calls, ["First #123", "Second #456"]);
+});

@@ -6,6 +6,8 @@ This guide explains how to import a context-menu file, create your own profile a
 
 Configuration belongs to the client, not the game server. Labels, regex rules and command templates are validated client-side. Context-menu game commands are sent only when you explicitly choose one from a menu, and normal game authorization still applies.
 
+Registered files supply the baseline profiles. With no saved local JSON, the Advanced editor starts with an empty overlay (`{"version":1,"rules":[],"profiles":[]}`), so edits to shipped files take effect on reload. Imported or edited local rules and profiles override matching IDs explicitly. Loading that empty overlay removes local customizations without disabling usable registered files. Invalid reloads keep the last valid snapshot; startup rejects unusable files and logs an error if none remain.
+
 ## 1. Start with a working file
 
 The shipped examples are:
@@ -224,7 +226,7 @@ Personal imported profiles need no new hosted file or registry entry. For a self
 
 1. Put a complete document under `data/profiles/`, defining exactly one profile with the intended ID.
 2. Add that ID and its known `/profiles/...json` path to the client-owned registry in [`src/shared/context-menu-profiles.js`](../src/shared/context-menu-profiles.js). Merely adding a file does not register it.
-3. Rebuild and serve the updated client through your normal deployment process. Player JSON is also bundled as the default/offline document, so changes to that bundled copy require a rebuild.
+3. Rebuild and serve the updated client through your normal deployment process when changing the registry. Editing an already registered JSON file requires no browser-bundle rebuild; reload its files in Options. Restart the client server if its startup availability decision needs to change.
 4. Use **Advanced → Reload context menus** to refetch registered files. Existing local rules/profiles with the same IDs still override those files.
 
 To remove local overrides and use only the registered files, first export a backup, then load this empty local overlay:
@@ -245,7 +247,7 @@ Effective selection is: enabled valid global override, then recognized current-s
 | --- | --- |
 | New profile is missing from the dropdown | The document must load successfully; check Advanced errors, unique IDs and referenced rule IDs. |
 | Player remains active | Check the active label/source. Enable the global override to choose your personal profile; an unknown server ID cannot create a profile. |
-| Shipped-file edits do not appear | Reload/refetch registered files, check the local overlay for same-ID replacements, and rebuild if relying on the bundled Player copy. |
+| Shipped-file edits do not appear | Reload/refetch registered files and check the local overlay for same-ID replacements. An empty overlay uses the registered files directly. |
 | Copy/Scratchpad appears instead of object commands | Clear the genuine text selection, then right-click the reference. Selection menus intentionally take precedence. |
 | A matched target offers only Copy | Check the active profile, the winning rule's priority and its action list. GM verb/property menus are intentionally copy-only. |
 | Reload fails | Fix the displayed JSON/schema/regex/template error and retry. The last valid configuration remains in use. |

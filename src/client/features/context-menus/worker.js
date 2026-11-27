@@ -33,7 +33,11 @@ export function createContextMatcher({ workerFactory = () => new Worker("/js/con
   }
   return {
     request(type, payload) {
-      if (disposed || pending.length >= 256) return Promise.reject(new Error("Context matcher unavailable or busy; native menus remain available."));
+      if (disposed || pending.length >= 256) {
+        const error = new Error("Context matcher unavailable or busy; native menus remain available.");
+        if (!disposed) error.code = "CONTEXT_MATCHER_BUSY";
+        return Promise.reject(error);
+      }
       return new Promise((resolve, reject) => { pending.push({ id: ++sequence, type, payload, resolve, reject }); pump(); });
     },
     destroy

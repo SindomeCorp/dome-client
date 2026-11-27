@@ -7,7 +7,9 @@ import { contextProfileRegistry, loadContextProfiles, mergeContextProfiles } fro
 export function setupContextMenus({ client, doc = document, win = window, matcherFactory = createContextMatcher, profileLoader = typeof win.fetch === "function" ? (ids) => loadContextProfiles({ fetchFn: win.fetch.bind(win), ids }) : null } = {}) {
   if (win.__CONTEXT_MENUS__?.enabled === false) return null;
   if (client?.contextMenus) return client.contextMenus;
-  let config = defaultContextMenus();
+  // Registered files are the baseline; only genuine local JSON overrides them.
+  const emptyConfig = () => ({ version: 1, rules: [], profiles: [] });
+  let config = profileLoader ? emptyConfig() : defaultContextMenus();
   let snapshot = validateContextMenus(config);
   let matcher;
   let revision = 0;
@@ -101,7 +103,23 @@ export function setupContextMenus({ client, doc = document, win = window, matche
       if (text.length > 262144) throw new Error("Configuration exceeds 256 KiB.");
       const parsed = JSON.parse(text);
       validateContextMenus(parsed);
-      const loaded = documents ? { documents, errors: [] } : loadFiles && profileLoader ? await profileLoader() : { documents: [], errors: [] };
+      let loaded = documents ? { documents, errors: [] } : loadFiles && profileLoader ? await profileLoader() : { documents: [], errors: [] };
+      if (allowPartial && loaded.documents.length) {
+        const usable = [];
+        const errors = [...loaded.errors];
+        // Check files independently in bounded workers so one broken file cannot
+        // hide the remaining registered profiles during startup recovery.
+        for (const document of loaded.documents) {
+          const probe = matcherFactory();
+          try {
+            await probe.request("configure", { config: document.config });
+            usable.push(document);
+          } catch (error) { errors.push(document.id + ": " + error.message); }
+          finally { probe.destroy(); }
+          if (request !== reloadId || !isCurrent()) return false;
+        }
+        loaded = { documents: usable, errors };
+      }
       if (request !== reloadId || !isCurrent()) return false;
       if (loaded.errors.length && !allowPartial) throw new Error("Profile files could not load: " + loaded.errors.join("; "));
       const effective = mergeContextProfiles(parsed, loaded.documents);
@@ -137,7 +155,15 @@ export function setupContextMenus({ client, doc = document, win = window, matche
       candidate?.destroy();
       if (request === reloadId && isCurrent()) report(error.message + " Previous valid context menus remain active.");
       return false;
-    } finally { if (!documents && request === reloadId) pendingUserReload = false; }
+    } finally {
+      if (!documents && request === reloadId) {
+        pendingUserReload = false;
+        // OOB may arrive while a reload is pending. Even on rollback, apply its
+        // latest recognized choice using the retained, validated snapshot.
+        server = serverChoice(requestedServer);
+        refresh();
+      }
+    }
   }
   const controller = {
     active, reload, report, update,
@@ -266,8 +292,8 @@ export function setupContextMenus({ client, doc = document, win = window, matche
   controller.ready = reload(saved || JSON.stringify(config), { persist: false, allowPartial: true }).then(async (ok) => {
     if (!ok && reloadId === initialRequest) {
       const message = doc.querySelector("#context-menu-error")?.textContent;
-      await reload(JSON.stringify(defaultContextMenus()), { persist: false, loadFiles: false });
-      report(message || "Saved configuration failed; shipped rules are active.");
+      await reload(JSON.stringify(profileLoader ? emptyConfig() : defaultContextMenus()), { persist: false, allowPartial: true });
+      report(message || "Saved configuration failed; available shipped rules are active.");
     }
   });
   for (const view of Object.values(client?.outputWindows?.views || {})) view.disposeContextMenus = controller.bindOutput(view.element, view.win);
