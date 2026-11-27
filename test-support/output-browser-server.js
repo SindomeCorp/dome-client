@@ -1,7 +1,7 @@
 import express from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import { renderFile } from "ejs";
+import ejs from "ejs";
 import { readFile } from "node:fs/promises";
 import { build } from "esbuild";
 import { fileURLToPath } from "node:url";
@@ -44,14 +44,14 @@ app.use("/profiles", express.static(root + "data/profiles", { dotfiles: "ignore"
 app.use(express.static(root + "public"));
 app.get("/editor/:type/", async (req, res) => {
   if (req.params.type !== "ide") return res.type("html").send("<!doctype html><title>Editor fixture</title>");
-  const html = await renderFile(root + "views/editors/ide.ejs", {
+  const html = await ejs.renderFile(root + "views/editors/ide.ejs", {
     req, meta: { title: "IDE fixture", description: "Local test", keywords: "test" }, decache: (value) => value,
     editor: { ideScratchEnabled: req.query.scratch !== "off", ideHoverOverlaysEnabled: true, ideObjectBrowserEnabled: false, idePropertyBrowserEnabled: false, ideReferenceNavigationEnabled: false }
   });
   res.type("html").send(html.replace(/<link[^>]+fonts\.googleapis[^>]+>/g, ""));
 });
 app.get("/output-window/", async (_req, res) => {
-  const html = await renderFile(root + "views/output-window.ejs", {});
+  const html = await ejs.renderFile(root + "views/output-window.ejs", {});
   res.type("html").send(html.replace(/<link[^>]+fonts\.googleapis[^>]+>/g, ""));
 });
 app.get("/", async (req, res) => {
@@ -67,7 +67,7 @@ app.get("/", async (req, res) => {
       return "{}";
     } : undefined
   });
-  const html = await renderFile(root + "views/client.ejs", {
+  const html = await ejs.renderFile(root + "views/client.ejs", {
     req: {}, debugMode: true, decache: (value) => value, showReporter: () => true,
     clientOptionGroups: CLIENT_OPTION_GROUPS, shortenEnabled: false, outputWindows: config, contextMenus
   });

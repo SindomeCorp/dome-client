@@ -1,14 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { renderFile } from "ejs";
+import ejs from "ejs";
 import { setupStandaloneOutputOptions } from "../../src/client/features/output-windows/standalone-options.js";
 import { CLIENT_OPTION_GROUPS } from "../../src/shared/client-options.js";
 import { outputWindowDefaults } from "../../src/shared/output-windows.js";
 import { FakeRuleWorker } from "../../test-support/output-app.js";
 
 test("connection-page output options persist and participate in imports and resets", async (t) => {
-  const html = await renderFile(new URL("../../views/partials/client-options-overlay.ejs", import.meta.url).pathname, {
+  const html = await ejs.renderFile(new URL("../../views/partials/client-options-overlay.ejs", import.meta.url).pathname, {
     clientOptionGroups: CLIENT_OPTION_GROUPS, shortenEnabled: false
   });
   const dom = new JSDOM(html);

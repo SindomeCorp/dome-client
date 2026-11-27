@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { JSDOM } from "jsdom";
-import { renderFile } from "ejs";
+import ejs from "ejs";
 import { contextProfileRegistry, loadContextProfiles } from "../../src/shared/context-menu-profiles.js";
 import { validateContextMenus, compileContextRules, matchContextRules, interpolateCommand, validCaptures } from "../../src/shared/context-menus.js";
 import { setupContextMenus } from "../../src/client/features/context-menus/controller.js";
@@ -29,7 +29,7 @@ function matcher() {
 }
 
 async function app(t, profileLoader) {
-  const html = await renderFile("views/partials/context-menus-options.ejs", {});
+  const html = await ejs.renderFile("views/partials/context-menus-options.ejs", {});
   const { window } = new JSDOM("<div id='context-menu-notice'></div>" + html, { url: "https://example.com" });
   const controller = setupContextMenus({ client: {}, win: window, doc: window.document, matcherFactory: matcher, profileLoader });
   t.after(() => { controller.destroy(); window.close(); });

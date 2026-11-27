@@ -20,6 +20,9 @@ All notable changes to this project will be documented in this file.
 - Group GM and Programmer verb/property actions separately from all owning-object actions, with explicit target headers, keyboard navigation and configurable JSON composition.
 - Add @list immediately below @edit in Programmer verb menus for numeric and symbolic references.
 
+### Changed
+- Refresh the client build, server, and editor dependencies while retaining the existing runtime and browser support requirements.
+
 ## 2026-11-25
 
 ### Added

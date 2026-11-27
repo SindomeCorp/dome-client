@@ -17,7 +17,6 @@
     "src/**/*.js",
     "src/**/*.jsx",
     "test/**/*.js",
-    "less/**/*.less",
     "views/**/*.ejs",
     "scripts/**/*.{awk,sh}",
     "*.js",

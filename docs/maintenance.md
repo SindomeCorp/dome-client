@@ -23,3 +23,16 @@ When adding a new suppression, document whether it is a test seam, runtime entry
 - Keep the [architecture guide](ARCHITECTURE.md) current when moving ownership
   between entrypoints, services, and features. Record any new compatibility
   paths and the condition under which they can be removed.
+
+
+## Dependency updates
+
+Keep browser and server pairs together when updating React and React DOM or
+Socket.IO and its client. After a clean install, run the build, Node suite,
+coverage, lint, dead-code check, and both desktop browser projects. Check
+Playwright's browser revisions after upgrading the runner.
+
+Review dependency engine requirements, including transitive development tools,
+before adopting a major release. Tailwind 4 also changes the browser minimum and
+CSS pipeline. UAParser.js 2 changes its license terms. Treat changes to those
+requirements as separate decisions.

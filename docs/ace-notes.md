@@ -1,6 +1,6 @@
 # Ace Integration Notes
 
-This project bundles Ace v1.43.2.
+This project bundles Ace v1.45.2.
 
 ## Directories
 

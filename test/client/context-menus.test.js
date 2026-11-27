@@ -2,7 +2,7 @@ import { referenceContextMenus } from "../../test-support/context-menu-reference
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { renderFile } from "ejs";
+import ejs from "ejs";
 import { CONTEXT_MENUS_KEY, validateContextMenus, compileContextRules, matchContextRules, parseCommandTemplate, interpolateCommand } from "../../src/shared/context-menus.js";
 import { setupContextMenus } from "../../src/client/features/context-menus/controller.js";
 import { setupClientOptionsTabs } from "../../src/client/features/options/page/tabs.js";
@@ -35,7 +35,7 @@ function localMatcher() {
 }
 
 async function fixture(t, saved, preferences) {
-  const html = await renderFile("views/partials/context-menus-options.ejs", {});
+  const html = await ejs.renderFile("views/partials/context-menus-options.ejs", {});
   const { window } = new JSDOM("<div id='context-menu-notice' hidden></div>" + html, { url: "http://localhost", pretendToBeVisual: true });
   window.localStorage.setItem(CONTEXT_MENUS_KEY, saved || JSON.stringify(referenceContextMenus()));
   if (preferences) window.localStorage.setItem(CONTEXT_MENUS_KEY + "-preferences", JSON.stringify(preferences));
@@ -522,7 +522,7 @@ test("secondary pop-out and redock retain keyboard menus with one current host b
   t.after(() => controller.destroy());
   await controller.ready;
   await controller.reload(JSON.stringify(referenceContextMenus()));
-  const html = await renderFile("views/output-window.ejs", {});
+  const html = await ejs.renderFile("views/output-window.ejs", {});
   const { window: popup } = new JSDOM(html, { url: "https://example.com/output-window/", pretendToBeVisual: true });
   let copied;
   Object.defineProperty(popup.navigator, "clipboard", { value: { async writeText(text) { copied = text; } } });
