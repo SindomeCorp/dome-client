@@ -169,6 +169,43 @@ test("context menus: shipped Player leaves references native and unhighlighted, 
   expect((await fixtureState(page)).commands).toEqual(connected.commands);
 });
 
+test("context menus: login profile markers preserve output boundaries across coalesced and fragmented packets", async ({ page }) => {
+  const fixture = JSON.parse(await readFile(new URL("../test-support/fixtures/context-profile-login.json", import.meta.url), "utf8"));
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await expect(page.locator("#context-menu-profile option")).toHaveCount(3);
+  const connected = await fixtureState(page);
+  const user = "#$# user-type " + fixture.userType;
+  const profile = "#$# SDWC%%CONTEXT-PROFILE%%" + JSON.stringify(fixture.profile);
+  const packets = [
+    { chunks: [fixture.notice + "\r\n" + user + "\r\n" + profile + "\r\n" + fixture.after + "\r\n"] },
+    { chunks: [fixture.notice + "\r\n", user + "\r\n" + profile + "\r\n", fixture.after + "\r\n"] },
+    { chunks: [fixture.notice + "\r", "\n" + user + "\r", "\n" + profile.slice(0, 26), profile.slice(26) + "\r", "\n" + fixture.after + "\r", "\n"] },
+    { chunks: [fixture.notice + "\r\n", "\r\n" + user + "\r\n" + profile + "\r\n" + fixture.after + "\r\n"], blankLines: 1 }
+  ];
+  for (const [index, { chunks, blankLines = 0 }] of packets.entries()) {
+    await socketFeed(page, "#$# SDWC%%CONTEXT-RESET\r\n");
+    await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
+    const before = await page.locator("#lineBuffer [data-output-id]").count();
+    for (const chunk of chunks) await socketFeed(page, chunk);
+    await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
+    const notice = page.locator("#lineBuffer [data-output-id]").filter({ hasText: fixture.notice });
+    const after = page.locator("#lineBuffer [data-output-id]").filter({ hasText: fixture.after });
+    await expect(notice).toHaveCount(index + 1);
+    await expect(after).toHaveCount(index + 1);
+    await expect(notice.last()).toHaveText(fixture.notice);
+    await expect(after.last()).toHaveText(fixture.after);
+    await expect(page.locator("#lineBuffer [data-output-id]")).toHaveCount(before + 2 + blankLines);
+    await expect(page.locator("#lineBuffer")).not.toContainText("CONTEXT-PROFILE");
+    await expect(page.locator("#lineBuffer")).not.toContainText("user-type");
+    await expect.poll(async () => { await rightText(page, after.last(), fixture.after.indexOf("inspect")); return page.getByRole("group").count(); }).toBe(2);
+    await expect(page.getByRole("group", { name: "Verb #123:inspect", exact: true }).getByRole("menuitem", { name: "@list", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    expect((await fixtureState(page)).commands).toEqual(connected.commands);
+  }
+});
+
 test("context menus: Basic is default, Advanced holds JSON tools and automatic fallback ignores legacy choices", async ({ page }) => {
   await page.context().addInitScript(() => {
     window.localStorage.setItem("dc-context-menus-preferences", JSON.stringify({ override: false, profile: "gm", fallback: "gm" }));
