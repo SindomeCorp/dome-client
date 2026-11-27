@@ -158,6 +158,29 @@ Unknown/missing placeholders, expression syntax such as `${object.trim()}`, posi
 
 Configure exactly one intended game command per action. The client sends one single-line input; it does not interpret the game's command or evaluation language to certify that a literal command is read-only. Use trusted fixed command syntax, never try to build a scripting runtime in JSON, and rely on the game to authorize execution. Displaying a menu, matching text, switching profiles or reloading JSON does not send these commands.
 
+### Compose reference and owning-object sections
+
+The shipped GM and Programmer profiles show a verb/property section first, followed by all actions from the owning-object rule. Right-clicking anywhere in `#123:look` (including `look`) opens **Verb #123:look** and **Object #123**; `$object.name` similarly opens **Property $object.name** and **Object $object** in Programmer. Each section's Copy copies its own reference, and its commands use that section's captures. Player remains selected-text Copy only. Traceback frames keep their own higher-priority Copy Frame menu.
+
+To opt in for your own JSON, add these fields to the existing verb rule (keeping its pattern, captures and actions):
+
+```json
+{
+  "heading": "Verb ${object}:${verb}",
+  "relatedContexts": [
+    { "rule": "my-object", "captures": { "object": "object" } }
+  ]
+}
+```
+
+Add `"heading": "Object ${object}"` and `"target": "${object}"` to the existing `my-object` rule. For a property rule, use `"heading": "Property ${object}.${property}"` with the same related-context declaration. The `captures` mapping uses destination capture names as keys and the primary rule's capture names as values. The object rule's actions are reused directly, so adding a command there also updates both compound menus.
+
+`heading` and `target` use the same parsed `${capture}` / `$$` grammar as command templates, with declared typed captures and no control characters. They are display/clipboard text, never executable code. The primary section copies the exact regex match; the related section copies its `target` text. Related targets are derived from validated captures without another regex search, so they work even when the pointer is over the verb/property name rather than the object prefix. No neighboring object match is included implicitly.
+
+Related rules must exist in the same profile, declare `heading` and `target`, and receive all required captures with compatible types. Equal types are accepted, as is `object-id` into `object-reference`; other conversions are rejected. Duplicate targets, unknown fields/captures, nested/cyclic composition and more than four related contexts are rejected. The combined menu retains a maximum of 24 actions. Reload validates the entire candidate before swapping; failures keep the last valid snapshot. Group headers are not keyboard stops; arrow keys navigate actions across sections, and tall menus scroll within the window. Genuine selection keeps precedence and uses only `selectionActions`.
+
+Grouped fields require the updated client; existing flat JSON remains supported. These snippets are additional rule fields, not complete configuration documents.
+
 ## 7. Use native client actions and selected text
 
 Native actions use `type: "client-action"`, an allowlisted `action` ID and an `input` context:

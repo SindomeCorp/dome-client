@@ -10,6 +10,8 @@ Tab into output and use Up/Down to focus a row, then Shift+F10 or the Menu key. 
 
 ## Options and persistence
 
+GM and Programmer verb/property menus have two labeled sections: the specific reference first (for example **Verb #123:look**), then **Object #123** with every existing object action. Copy and game commands bind to the section's target, including symbolic Programmer references. This is driven by optional JSON `heading`, `target` and `relatedContexts` fields; see [Composing contexts](CONTEXT-MENU-JSON.md#compose-reference-and-owning-object-sections). Primary match priority, traceback handling and selected-text precedence remain unchanged. Headers do not receive keyboard focus, and tall menus scroll within the viewport.
+
 Basic also offers **Underline right-clickable text**, unchecked by default and saved globally for this client origin. It uses the active profile's already prepared regex matches and available actions, including matches split across ANSI/Find spans. Underlines update when the profile, configuration or mounted output changes; links and other native-menu targets are not marked. They are paint-only CSS highlights, not selectable wrappers, and do not alter text, selection, Copy, Scratchpad or command activation. Browsers without CSS Custom Highlight support show this setting as unavailable; context menus still work normally.
 
 Options → Context Menus shows the active human label and its source: selected by server, Override or Fallback. A brief polite main-window notice announces changes of effective profile ID without taking focus. Identical server messages, source-only changes and reloads retaining the same profile do not repeat it.

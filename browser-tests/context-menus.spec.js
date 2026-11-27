@@ -422,16 +422,18 @@ test("context menus: Options commands, global override, session reset and failed
 test("context menus: keyboard actions work in secondary and detached output", async ({ page }) => {
   await start(page);
   await page.evaluate(() => window.outputTest.manager.updateSettings({ open: true, selected: ["team-chat"] }));
-  await feed(page, "[-][Team-Chat] #123\n");
+  await feed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
+  await feed(page, "[-][Team-Chat] #12\u001b[31m3.name\u001b[0m\n");
   const row = page.locator("#secondaryBuffer [data-output-id]").last();
   await expect(row).toBeVisible();
   await expect.poll(async () => {
     await row.focus();
     await page.keyboard.press("Shift+F10");
-    return page.getByRole("menuitem", { name: "Copy to Clipboard" }).count();
+    return page.getByRole("group", { name: "Property #123.name", exact: true }).count();
   }).toBe(1);
   await page.keyboard.press("Enter");
-  await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#123");
+  await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#123.name");
   const popupPromise = page.waitForEvent("popup");
   await page.locator("#button-output-popout").click();
   const popup = await popupPromise;
@@ -440,9 +442,19 @@ test("context menus: keyboard actions work in secondary and detached output", as
   await expect.poll(async () => {
     await detached.focus();
     await popup.keyboard.press("Shift+F10");
-    return popup.getByRole("menuitem", { name: "Copy to Clipboard" }).count();
+    return popup.getByRole("group", { name: "Property #123.name", exact: true }).count();
   }).toBe(1);
   await popup.keyboard.press("Enter");
+  await expect.poll(() => popup.evaluate(() => window.contextCopied)).toBe("#123.name");
+  await detached.focus();
+  await popup.keyboard.press("Shift+F10");
+  const ownerCopy = popup.getByRole("group", { name: "Object #123", exact: true }).getByRole("menuitem", { name: "Copy to Clipboard", exact: true });
+  await expect(ownerCopy).toBeVisible();
+  await mkdir("tmp/context-menu-review", { recursive: true, mode: 0o700 });
+  const screenshot = "tmp/context-menu-review/grouped-context-menu-" + page.context().browser().browserType().name() + ".png";
+  await popup.screenshot({ path: screenshot });
+  await chmod(screenshot, 0o600);
+  await ownerCopy.click();
   await expect.poll(() => popup.evaluate(() => window.contextCopied)).toBe("#123");
   const selected = await detached.textContent();
   await detached.evaluate((element) => {
@@ -582,8 +594,8 @@ test("context menus: Programmer override opens reference actions on the first ri
   await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (Override)");
   await page.locator("#button-client-options-close").click();
   const objects = ["Copy to Clipboard", "@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"];
-  const verbs = ["Copy to Clipboard", "@edit", "@list", "@show", "@args", "help"];
-  const properties = ["Copy to Clipboard", "@edit", "@show"];
+  const verbs = ["Copy to Clipboard", "@edit", "@list", "@show", "@args", "help", ...objects];
+  const properties = ["Copy to Clipboard", "@edit", "@show", ...objects];
   for (const [reference, ansi, labels] of [
     ["#123", "#123", objects],
     ["#123:inspect", "#12\u001b[31m3:inspect\u001b[0m", verbs],
@@ -780,18 +792,18 @@ test("context menus: shipped role files expose exact actions and copy only match
   await page.getByRole("menuitem", { name: "Name and Number", exact: true }).click();
   await open(object, 8, programmerObjects);
   await page.getByRole("menuitem", { name: "@kids", exact: true }).click();
-  await open(verb, 7, ["Copy to Clipboard", "@edit", "@list", "@show", "@args", "help"]);
+  await open(verb, 7, ["Copy to Clipboard", "@edit", "@list", "@show", "@args", "help", ...programmerObjects]);
   await page.getByRole("menuitem", { name: "@args", exact: true }).click();
-  await open(property, 11, ["Copy to Clipboard", "@edit", "@show"]);
-  await page.getByRole("menuitem", { name: "@show", exact: true }).click();
+  await open(property, 11, ["Copy to Clipboard", "@edit", "@show", ...programmerObjects]);
+  await page.getByRole("group", { name: "Property #123.name", exact: true }).getByRole("menuitem", { name: "@show", exact: true }).click();
   await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([";$string_utils:nn(#123)", "@kids #123 -lcd", "@args #123:look", "@show #123.name"]);
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n");
   await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: GM (selected by server)");
   await open(object, 8, ["Copy to Clipboard", "@parents", "@kids", "@notes", "Look"]);
   await page.getByRole("menuitem", { name: "@kids", exact: true }).click();
   for (const [row, offset, expected] of [[verb, 7, "#123:look"], [property, 11, "#123.name"]]) {
-    await open(row, offset, ["Copy to Clipboard"]);
-    await page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
+    await open(row, offset, ["Copy to Clipboard", "Copy to Clipboard", "@parents", "@kids", "@notes", "Look"]);
+    await page.getByRole("group", { name: (expected.includes(":") ? "Verb " : "Property ") + expected, exact: true }).getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
     await expectClipboard(page, expected);
   }
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"player\"\n");
@@ -821,25 +833,45 @@ test("context menus: real bundle numeric and symbolic commands, Look and traceba
   const open = async (row, index, labels) => {
     await expect.poll(async () => { await rightText(page, row, index); return page.getByRole("menuitem").allTextContents(); }).toEqual(labels);
   };
+  const objectLabels = ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"];
   for (const object of ["#123", "$object"]) {
+    const objectCommands = ["@show " + object, ";$string_utils:nn(" + object + ")", "@verbs " + object, "@props " + object, "@parents " + object, "@kids " + object + " -lcd", "@siblings " + object, "@tree " + object, "look " + object];
     for (const [suffix, labels, commands] of [
       ["", ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"], ["@show " + object, ";$string_utils:nn(" + object + ")", "@verbs " + object, "@props " + object, "@parents " + object, "@kids " + object + " -lcd", "@siblings " + object, "@tree " + object, "look " + object]],
       [":inspect", ["@edit", "@list", "@show", "@args", "help"], ["@edit " + object + ":inspect", "@list " + object + ":inspect", "@show " + object + ":inspect", "@args " + object + ":inspect", "help " + object + ":inspect"]],
       [".name", ["@edit", "@show"], ["@edit " + object + ".name", "@show " + object + ".name"]]
     ]) {
       const reference = object + suffix;
+      const expected = ["Copy to Clipboard", ...labels, ...(suffix ? ["Copy to Clipboard", ...objectLabels] : [])];
+      const offset = suffix ? 10 + object.length + 1 : 11;
+      const primary = suffix ? page.getByRole("group", { name: (suffix.startsWith(":") ? "Verb " : "Property ") + reference, exact: true }) : page;
       await socketFeed(page, "Reference " + object.slice(0, 2) + "\u001b[32m" + object.slice(2) + suffix + "\u001b[0m\n");
       const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Reference " + reference }).last();
       for (let index = 0; index < labels.length; index++) {
-        await open(row, 11, ["Copy to Clipboard", ...labels]);
+        await open(row, offset, expected);
         expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
-        await page.getByRole("menuitem", { name: labels[index], exact: true }).click();
+        await primary.getByRole("menuitem", { name: labels[index], exact: true }).click();
         sent.push(commands[index]);
         await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
       }
-      await open(row, 11, ["Copy to Clipboard", ...labels]);
-      await page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
+      await open(row, offset, expected);
+      await primary.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
       await expectClipboard(page, reference);
+      if (suffix) {
+        const owner = page.getByRole("group", { name: "Object " + object, exact: true });
+        for (let index = 0; index < objectLabels.length; index++) {
+          await open(row, offset, expected);
+          await expect(page.getByRole("group")).toHaveCount(2);
+          await expect(owner.getByRole("menuitem")).toHaveText(["Copy to Clipboard", ...objectLabels]);
+          expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+          await owner.getByRole("menuitem", { name: objectLabels[index], exact: true }).click();
+          sent.push(objectCommands[index]);
+          await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+        }
+        await open(row, offset, expected);
+        await owner.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
+        await expectClipboard(page, object);
+      }
     }
   }
   for (const frame of frameFixture.frames) {
@@ -865,6 +897,76 @@ test("context menus: real bundle numeric and symbolic commands, Look and traceba
   await page.getByRole("menuitem", { name: "Look", exact: true }).click();
   sent.push("look #123");
   await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+});
+
+test("context menus: grouped targets support keyboard, bounded positioning, atomic reload and selection precedence", async ({ page }) => {
+  await page.setViewportSize({ width: 760, height: 460 });
+  await page.context().addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { async writeText(text) { window.contextCopied = text; } } });
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\nNeighbor #999 and #12\u001b[31m3:inspect\u001b[0m\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
+  const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Neighbor #999 and #123:inspect" });
+  await expect(row).toBeVisible();
+  const open = async () => {
+    await expect.poll(async () => { await rightText(page, row, 23); return page.getByRole("group").allTextContents(); }).toHaveLength(2);
+    await expect(page.getByRole("group").nth(0)).toHaveAttribute("aria-label", "Verb #123:inspect");
+    await expect(page.getByRole("group").nth(1)).toHaveAttribute("aria-label", "Object #123");
+  };
+  await open();
+  const menu = page.getByRole("menu");
+  const box = await menu.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(760);
+  expect(box.y + box.height).toBeLessThanOrEqual(460);
+  expect(await menu.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await page.keyboard.press("End");
+  await expect(page.getByRole("group", { name: "Object #123", exact: true }).getByRole("menuitem", { name: "Look", exact: true })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("group", { name: "Verb #123:inspect", exact: true }).getByRole("menuitem", { name: "Copy to Clipboard", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
+  expect(await page.evaluate(() => window.contextCopied)).toBe("#123:inspect");
+  const config = await (await page.request.get("/profiles/programmer.json")).json();
+  config.rules[0].relatedContexts[0].captures.object = "missing";
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await setContextSection(page, "advanced");
+  await page.locator("#context-menu-json").fill(JSON.stringify(config));
+  await page.locator("#context-menu-reload").click();
+  await expect(page.locator("#context-menu-error")).toContainText("compatible type");
+  await page.locator("#button-client-options-close").click();
+  await open();
+  await page.keyboard.press("Escape");
+  config.rules[0].relatedContexts[0].captures.object = "object";
+  config.rules.find((rule) => rule.id === "programmer-object").actions.push({ id: "review", label: "Review object", type: "game-command", template: "@show ${object}" });
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await setContextSection(page, "advanced");
+  await page.locator("#context-menu-json").fill(JSON.stringify(config));
+  await page.locator("#context-menu-reload").click();
+  await expect(page.locator("#context-menu-error")).toBeEmpty();
+  await page.locator("#button-client-options-close").click();
+  await open();
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
+  await page.getByRole("group", { name: "Object #123", exact: true }).getByRole("menuitem", { name: "Review object", exact: true }).click();
+  await expect.poll(async () => (await fixtureState(page)).commands.slice(connected.commands.length)).toEqual(["@show #123"]);
+  await row.evaluate((element) => { element.focus(); document.getSelection().selectAllChildren(element); document.dispatchEvent(new Event("selectionchange")); });
+  await openSelection(page);
+  await expect(page.getByRole("group")).toHaveCount(0);
+  await expect(page.getByRole("menuitem")).toHaveText(["Copy selected text", "Open in Scratchpad"]);
+  await page.keyboard.press("Escape");
+  await page.evaluate(() => document.getSelection().removeAllRanges());
+  await row.focus();
+  await page.keyboard.press("Shift+F10");
+  await expect(page.getByRole("menuitem")).toHaveText(["#999", "#123:inspect"]);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("group").nth(1)).toHaveAttribute("aria-label", "Object #123");
 });
 
 test("context menus: missing and invalid role files fall back and recover on Options reload", async ({ page }) => {

@@ -1,0 +1,86 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { buildContextGroups } from "../../src/shared/context-menu-groups.js";
+import { validateContextMenus, compileContextRules, matchContextRules, interpolateCommand } from "../../src/shared/context-menus.js";
+
+async function config(id = "programmer") {
+  return JSON.parse(await readFile(new URL("../../data/profiles/" + id + ".json", import.meta.url), "utf8"));
+}
+
+test("compound contexts bind each full numeric/symbolic target and reuse all owning-object actions", async () => {
+  for (const id of ["programmer", "gm"]) {
+    const snapshot = validateContextMenus(await config(id));
+    const rules = compileContextRules([...snapshot.rules.values()]);
+    for (const object of id === "gm" ? ["#123"] : ["#123", "$object"]) for (const [suffix, label] of [[":inspect", "Verb"], [".name", "Property"]]) {
+      const reference = object + suffix;
+      const match = matchContextRules("#999 " + reference, rules).find((match) => match.text === reference);
+      const groups = buildContextGroups(snapshot, id, match);
+      assert.deepEqual(groups.map((group) => group.heading), [label + " " + reference, "Object " + object]);
+      assert.deepEqual(groups.map((group) => group.text), [reference, object]);
+      assert.strictEqual(groups[1].actions, snapshot.rules.get(id + "-object").actions);
+      assert.equal(groups[1].match.values.object, object);
+      for (const group of groups) {
+        const show = group.actions.find((action) => action.label === "@show");
+        if (show) assert.equal(interpolateCommand(show, snapshot.rules.get(group.match.rule), group.match.values), "@show " + group.text);
+      }
+      assert.equal(groups[0].actions[0].action, "clipboard.copy");
+      assert.equal(groups[1].actions[0].action, "clipboard.copy");
+    }
+    const plain = matchContextRules("#123", rules)[0];
+    assert.equal(buildContextGroups(snapshot, id, plain).length, 1);
+  }
+});
+
+test("context composition uses typed captures without matching the related regex again", async () => {
+  const value = await config();
+  value.rules.find((rule) => rule.id === "programmer-object").pattern = "(?<object>#[0-9]+)never-matches";
+  const snapshot = validateContextMenus(value);
+  const match = matchContextRules("#123:inspect", compileContextRules([...snapshot.rules.values()]))[0];
+  assert.equal(buildContextGroups(snapshot, "programmer", match)[1].text, "#123");
+  assert.deepEqual(buildContextGroups(snapshot, "missing", match), []);
+  assert.deepEqual(buildContextGroups(snapshot, "programmer", { ...match, values: { ...match.values, object: "#123\n@quit" } }), []);
+  const frames = JSON.parse(await readFile(new URL("../../test-support/fixtures/context-menu-frames.json", import.meta.url), "utf8"));
+  const frame = matchContextRules(frames.frames[0], compileContextRules([...snapshot.rules.values()]))[0];
+  assert.equal(frame.rule, "programmer-frame");
+  assert.deepEqual(buildContextGroups(snapshot, "programmer", frame).map((group) => group.actions.map((action) => action.label)), [["Copy Frame"]]);
+});
+
+test("composition rejects invalid references, mappings, nesting, profile leaks and oversized menus on reload", async (t) => {
+  const cases = {
+    unknown: (value, verb) => { verb.relatedContexts[0].rule = "unknown"; },
+    duplicate: (_value, verb) => { verb.relatedContexts.push(structuredClone(verb.relatedContexts[0])); },
+    self: (_value, verb) => { verb.relatedContexts[0].rule = verb.id; },
+    missing: (_value, verb) => { verb.relatedContexts[0].captures = {}; },
+    incompatible: (_value, verb) => { verb.relatedContexts[0].captures.object = "verb"; },
+    narrowing: (_value, _verb, object) => { object.captures.object = "object-id"; },
+    unknownCapture: (_value, verb) => { verb.relatedContexts[0].captures.object = "missing"; },
+    wrongType: (_value, verb) => { verb.relatedContexts[0].captures.object = ["object"]; },
+    extra: (_value, verb) => { verb.relatedContexts[0].captures.extra = "object"; },
+    code: (_value, verb) => { verb.relatedContexts[0].execute = "alert(1)"; },
+    missingHeading: (_value, _verb, object) => { delete object.heading; },
+    missingTarget: (_value, _verb, object) => { delete object.target; },
+    badHeading: (_value, verb) => { verb.heading = "${unknown}"; },
+    badTarget: (_value, _verb, object) => { object.target = "${object}\n@quit"; },
+    nested: (_value, _verb, object) => { object.relatedContexts = [{ rule: "programmer-property", captures: { object: "object" } }]; },
+    profile: (value) => { value.profiles[0].rules = ["programmer-verb"]; },
+    limit: (_value, verb, object) => { object.actions = Array.from({ length: 24 }, (_, index) => ({ ...object.actions[0], id: "copy-" + index })); },
+    groupLimit: (_value, verb) => { verb.relatedContexts = Array(5).fill(verb.relatedContexts[0]); },
+    notArray: (_value, verb) => { verb.relatedContexts = {}; }
+  };
+  for (const [name, mutate] of Object.entries(cases)) await t.test(name, async () => {
+    const value = await config();
+    mutate(value, value.rules[0], value.rules.find((rule) => rule.id === "programmer-object"));
+    assert.throws(() => validateContextMenus(value));
+  });
+});
+
+test("a numeric capture can widen to a related object-reference capture without evaluating expressions", async () => {
+  const value = await config("gm");
+  value.rules.find((rule) => rule.id === "gm-object").captures.object = "object-reference";
+  const snapshot = validateContextMenus(value);
+  const match = matchContextRules("#123:inspect", compileContextRules([...snapshot.rules.values()]))[0];
+  const group = buildContextGroups(snapshot, "gm", match)[1];
+  assert.equal(group.text, "#123");
+  assert.equal(interpolateCommand(group.actions.find((action) => action.label === "Look"), snapshot.rules.get(group.match.rule), group.match.values), "look #123");
+});

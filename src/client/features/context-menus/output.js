@@ -1,5 +1,6 @@
 import { readOutputSelection, copyOutputSelection } from "../output-windows/selection.js";
 import { actionableContextRanges, createContextUnderlines } from "./underlines.js";
+import { buildContextGroups } from "../../../shared/context-menu-groups.js";
 
 const excluded = "button, [data-preview-for], img, video, iframe, input, textarea, .ace_editor";
 
@@ -80,10 +81,19 @@ export function bindContextOutput({ controller, client, element, win }) {
         ? typeof win.navigator.clipboard?.writeText === "function" : typeof client.openIDE === "function");
     } catch { return false; }
   }
+  function groupsFor(match) {
+    try {
+      return buildContextGroups(controller.snapshot, controller.active().profile?.id, match)
+        .map((group) => ({ ...group, items: group.actions.filter(available) })).filter((group) => group.items.length);
+    } catch (error) {
+      if (reportedError !== error.message) { reportedError = error.message; controller.report(error.message); }
+      return [];
+    }
+  }
   function paint(row, entry) {
     if (!row.isConnected || !element.contains(row)) return;
     const intervals = controller.preferences.underline && entry.version === stamp() && entry.matches
-      ? actionableContextRanges(entry.matches, (match) => controller.snapshot.rules.get(match.rule)?.actions.some(available)) : [];
+      ? actionableContextRanges(entry.matches, (match) => groupsFor(match).length > 0) : [];
     underlines.update(row, entry.projection, intervals);
   }
   function warm() {
@@ -150,7 +160,7 @@ export function bindContextOutput({ controller, client, element, win }) {
       if (!signal.aborted && selectionCache === state) state.text = text;
     }).catch((error) => { if (error.name !== "AbortError" && !disposed) controller.report(error.message); });
   }
-  function show(items, context, position) {
+  function show(items, context, position, groups) {
     close();
     savedSelection = context.selectionRange;
     restoreFocus = context.row || element;
@@ -158,21 +168,36 @@ export function bindContextOutput({ controller, client, element, win }) {
     menu.className = "context-menu-popup";
     menu.setAttribute("role", "menu");
     menu.setAttribute("aria-label", context.kind === "selection" ? "Selected output actions" : "Reference actions");
-    for (const item of items) {
-      const button = doc.createElement("button");
-      button.type = "button";
-      button.setAttribute("role", "menuitem");
-      button.textContent = item.label;
-      button.addEventListener("click", () => {
-        try {
-          if (item.choose) { item.choose(); return; }
-          if (context.row && !context.row.isConnected) throw new Error("Output changed; open the menu again.");
-          const result = controller.activate(item, context);
-          Promise.resolve(result).catch((error) => controller.report(error.message));
-          close(true);
-        } catch (error) { controller.report(error.message); close(true); }
-      });
-      menu.append(button);
+    for (const group of groups || [{ items, context }]) {
+      const itemContext = group.context;
+      const container = groups ? doc.createElement("div") : menu;
+      if (groups) {
+        container.className = "context-menu-group";
+        container.setAttribute("role", "group");
+        container.setAttribute("aria-label", group.heading);
+        const heading = doc.createElement("div");
+        heading.className = "context-menu-heading";
+        heading.setAttribute("aria-hidden", "true");
+        heading.textContent = group.heading;
+        container.append(heading);
+        menu.append(container);
+      }
+      for (const item of group.items) {
+        const button = doc.createElement("button");
+        button.type = "button";
+        button.setAttribute("role", "menuitem");
+        button.textContent = item.label;
+        button.addEventListener("click", () => {
+          try {
+            if (item.choose) { item.choose(); return; }
+            if (itemContext.row && !itemContext.row.isConnected) throw new Error("Output changed; open the menu again.");
+            const result = controller.activate(item, itemContext);
+            Promise.resolve(result).catch((error) => controller.report(error.message));
+            close(true);
+          } catch (error) { controller.report(error.message); close(true); }
+        });
+        container.append(button);
+      }
     }
     menu.addEventListener("keydown", (event) => {
       const buttons = [...menu.querySelectorAll("button")];
@@ -214,11 +239,16 @@ export function bindContextOutput({ controller, client, element, win }) {
     const matches = entry.matches.filter((match) => keyboard || (offset !== null && offset >= match.start && offset < match.end));
     const winners = [];
     for (const match of matches) if (!winners.some((target) => match.start < target.end && match.end > target.start)) winners.push(match);
-    const usable = winners.filter((match) => controller.snapshot.rules.get(match.rule).actions.some(available)).sort((left, right) => left.start - right.start);
+    const usable = winners.filter((match) => groupsFor(match).length).sort((left, right) => left.start - right.start);
     if (!usable.length) return;
     // user-select: all ANSI spans can select themselves between right-down and contextmenu.
     if (automaticSelection) selection?.removeAllRanges();
-    const openMatch = (match) => show(controller.snapshot.rules.get(match.rule).actions.filter(available), { ...context, kind: "token", row, match, text: match.text }, position);
+    const openMatch = (match) => {
+      const target = { ...context, kind: "token", row, match, text: match.text };
+      const groups = groupsFor(match).map((group) => ({ ...group, context: { ...target, match: group.match, text: group.text } }));
+      const grouped = controller.snapshot.rules.get(match.rule).relatedContexts?.length;
+      show(groups[0].items, target, position, grouped ? groups : undefined);
+    };
     event.preventDefault();
     event.stopPropagation();
     if (!keyboard || usable.length === 1) openMatch(usable[0]);

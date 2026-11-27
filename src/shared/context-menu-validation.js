@@ -95,7 +95,7 @@ export function validateContextMenus(value) {
   const rules = new Map();
   value.rules.forEach((rule, index) => {
     const path = "rules[" + index + "]";
-    fields(rule, ["id", "priority", "pattern", "flags", "captures", "actions"], path);
+    fields(rule, ["id", "priority", "pattern", "flags", "captures", "actions", "heading", "target", "relatedContexts"], path);
     check(typeof rule.id === "string" && identifier.test(rule.id) && !rules.has(rule.id), path, "invalid or duplicate ID");
     check(Number.isInteger(rule.priority) && Math.abs(rule.priority) <= 10000, path + ".priority", "expected bounded integer");
     check(typeof rule.pattern === "string" && rule.pattern.length > 0 && rule.pattern.length <= 2048, path + ".pattern", "expected regex source (1–2048 characters)");
@@ -107,8 +107,15 @@ export function validateContextMenus(value) {
     for (const [name, type] of Object.entries(rule.captures)) {
       check(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && Object.hasOwn(types, type) && names.has(name), path + ".captures." + name, "expected a declared named group with a supported type");
     }
-    rules.set(rule.id, { ...rule, actions: actions(rule.actions, rule.captures, false, path + ".actions") });
+    const checked = { ...rule, actions: actions(rule.actions, rule.captures, false, path + ".actions") };
+    for (const field of ["heading", "target"]) if (rule[field] !== undefined) {
+      try { checked[field + "Segments"] = parseCommandTemplate(rule[field], rule.captures); }
+      catch (error) { throw new Error(path + "." + field + ": " + error.message); }
+    }
+    check(rule.relatedContexts === undefined || (Array.isArray(rule.relatedContexts) && rule.relatedContexts.length <= 4), path + ".relatedContexts", "expected at most four related contexts");
+    rules.set(rule.id, checked);
   });
+  for (const rule of rules.values()) validateRelatedContexts(rule, rules);
   check(Array.isArray(value.profiles) && value.profiles.length <= 64, "profiles", "expected at most 64 profiles");
   const profiles = new Map();
   value.profiles.forEach((profile, index) => {
@@ -117,9 +124,34 @@ export function validateContextMenus(value) {
     check(typeof profile.id === "string" && identifier.test(profile.id) && !profiles.has(profile.id), path, "invalid or duplicate ID");
     label(profile.label, path + ".label");
     check(Array.isArray(profile.rules) && profile.rules.length <= 128 && new Set(profile.rules).size === profile.rules.length && profile.rules.every((id) => rules.has(id)), path + ".rules", "unknown or duplicate rule");
+    for (const id of profile.rules) for (const related of rules.get(id).relatedContexts || []) {
+      check(profile.rules.includes(related.rule), path + ".rules", "related contexts must use a rule in the same profile");
+    }
     profiles.set(profile.id, { ...profile, selectionActions: actions(profile.selectionActions || [], {}, true, path + ".selectionActions") });
   });
   return { rules, profiles };
+}
+
+function validateRelatedContexts(rule, rules) {
+  const seen = new Set();
+  let count = rule.actions.length;
+  for (const [index, related] of (rule.relatedContexts || []).entries()) {
+    const path = rule.id + ".relatedContexts[" + index + "]";
+    fields(related, ["rule", "captures"], path);
+    const target = rules.get(related.rule);
+    check(target && target !== rule && !seen.has(target.id), path + ".rule", "expected a unique known related rule");
+    seen.add(target.id);
+    check(!target.relatedContexts?.length, path + ".rule", "nested or recursive related contexts are not supported");
+    check(target.headingSegments && target.targetSegments, path + ".rule", "related rule requires heading and target templates");
+    fields(related.captures, Object.keys(target.captures), path + ".captures");
+    for (const [name, type] of Object.entries(target.captures)) {
+      const source = related.captures[name];
+      const sourceType = typeof source === "string" ? rule.captures[source] : null;
+      check(typeof source === "string" && Object.hasOwn(rule.captures, source) && (sourceType === type || (sourceType === "object-id" && type === "object-reference")), path + ".captures." + name, "expected a declared capture with a compatible type");
+    }
+    count += target.actions.length;
+    check(count <= 24, path, "combined menu exceeds 24 actions");
+  }
 }
 
 export function compileContextRules(rules) {

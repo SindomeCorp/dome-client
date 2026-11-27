@@ -47,6 +47,15 @@
           "type": "game-command",
           "template": "help ${object}:${verb}"
         }
+      ],
+      "heading": "Verb ${object}:${verb}",
+      "relatedContexts": [
+        {
+          "rule": "programmer-object",
+          "captures": {
+            "object": "object"
+          }
+        }
       ]
     },
     {
@@ -76,6 +85,15 @@
           "label": "@show",
           "type": "game-command",
           "template": "@show ${object}.${property}"
+        }
+      ],
+      "heading": "Property ${object}.${property}",
+      "relatedContexts": [
+        {
+          "rule": "programmer-object",
+          "captures": {
+            "object": "object"
+          }
         }
       ]
     },
@@ -148,7 +166,9 @@
           "type": "game-command",
           "template": "look ${object}"
         }
-      ]
+      ],
+      "heading": "Object ${object}",
+      "target": "${object}"
     },
     {
       "id": "programmer-frame",

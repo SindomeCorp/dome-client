@@ -17,6 +17,15 @@
           "action": "clipboard.copy",
           "input": "target"
         }
+      ],
+      "heading": "Verb ${object}:${verb}",
+      "relatedContexts": [
+        {
+          "rule": "gm-object",
+          "captures": {
+            "object": "object"
+          }
+        }
       ]
     },
     {
@@ -34,6 +43,15 @@
           "type": "client-action",
           "action": "clipboard.copy",
           "input": "target"
+        }
+      ],
+      "heading": "Property ${object}.${property}",
+      "relatedContexts": [
+        {
+          "rule": "gm-object",
+          "captures": {
+            "object": "object"
+          }
         }
       ]
     },
@@ -76,7 +94,9 @@
           "type": "game-command",
           "template": "look ${object}"
         }
-      ]
+      ],
+      "heading": "Object ${object}",
+      "target": "${object}"
     }
   ],
   "profiles": [
