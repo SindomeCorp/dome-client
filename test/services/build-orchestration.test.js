@@ -1,54 +1,49 @@
-/* eslint indent: ["error", 2], quotes: ["error", "double"], semi: ["error", "always"] */
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import less from "less";
+import build from "../../src/services/build.js";
+import { browserOutputFiles } from "../../src/services/browser-entry-manifest.js";
 
-const fns = {
-  compileLess() {},
-  compileReactCss() {},
-  compileJs() {},
-  compileEjsScripts() {},
-  copyAce() {},
-  copyMooParserWasm() {}
-};
+test("the real asset build preserves the served release on failure and publishes a complete retry", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "dome-assets-test-"));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const output = path.join(directory, "public");
+  const js = path.join(output, "js");
+  const css = path.join(output, "css");
+  await fs.mkdir(js, { recursive: true });
+  await fs.mkdir(css, { recursive: true });
+  const bundle = path.join(js, "player-client.js");
+  await fs.writeFile(bundle, "previous release");
+  await fs.writeFile(path.join(js, "custom.js"), "custom script");
+  await fs.writeFile(path.join(css, "custom.css"), "custom static asset");
 
-test("build compiles assets", async t => {
-  t.mock.method(fns, "compileLess");
-  t.mock.method(fns, "compileReactCss");
-  t.mock.method(fns, "compileJs");
-  t.mock.method(fns, "compileEjsScripts");
-  t.mock.method(fns, "copyAce");
-  t.mock.method(fns, "copyMooParserWasm");
+  const failure = t.mock.method(less, "render", async () => { throw new Error("synthetic stylesheet error"); });
+  await assert.rejects(build({ output }), /Asset compilation failed/);
+  failure.mock.restore();
+  assert.equal(await fs.readFile(bundle, "utf8"), "previous release");
+  assert.deepEqual(await fs.readdir(directory), ["public"]);
 
-  t.mock.module("../../src/services/build.js", {
-    namedExports: fns,
-    defaultExport: async (options = {}) => {
-      await Promise.all([
-        fns.compileLess(),
-        fns.compileReactCss(),
-        fns.compileJs(options.jsOutDir),
-        fns.compileEjsScripts(options.jsOutDir),
-        fns.copyAce(options.aceOutDir),
-        fns.copyMooParserWasm(options.parserOutDir)
-      ]);
-    }
+  const rename = fs.rename.bind(fs);
+  const publicationFailure = t.mock.method(fs, "rename", async (source, target) => {
+    if (target === path.join(css, "ide.css")) throw new Error("synthetic publication error");
+    return rename(source, target);
   });
+  await assert.rejects(build({ output }), /synthetic publication error/);
+  publicationFailure.mock.restore();
+  assert.equal(await fs.readFile(bundle, "utf8"), "previous release");
+  assert.deepEqual(await fs.readdir(js), ["custom.js", "player-client.js"]);
+  assert.deepEqual(await fs.readdir(directory), ["public"]);
 
-  const {
-    default: build,
-    compileLess,
-    compileReactCss,
-    compileJs,
-    compileEjsScripts,
-    copyAce,
-    copyMooParserWasm
-  } = await import("../../src/services/build.js");
-
-  await build();
-
-  assert.strictEqual(compileLess.mock.calls.length, 1);
-  assert.strictEqual(compileReactCss.mock.calls.length, 1);
-  assert.strictEqual(compileJs.mock.calls.length, 1);
-  assert.strictEqual(compileEjsScripts.mock.calls.length, 1);
-  assert.strictEqual(copyAce.mock.calls.length, 1);
-  assert.strictEqual(copyMooParserWasm.mock.calls.length, 1);
+  await build({ output });
+  for (const asset of [
+    ...browserOutputFiles.map((name) => "js/" + name),
+    "js/master-header.js", "js/parsers/web-tree-sitter.wasm", "js/ace/ace.js",
+    "css/client.css", "css/ide.css"
+  ]) assert.ok((await fs.stat(path.join(output, asset))).size > 0, asset);
+  assert.notEqual(await fs.readFile(bundle, "utf8"), "previous release");
+  assert.equal(await fs.readFile(path.join(css, "custom.css"), "utf8"), "custom static asset");
+  assert.equal(await fs.readFile(path.join(js, "custom.js"), "utf8"), "custom script");
 });

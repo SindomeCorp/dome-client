@@ -60,9 +60,9 @@ reference measurements, acceptance checks, and the distinction between retained
 history and rendered rows. The player/operator guide is
 [Output windows](OUTPUT-WINDOWS.md).
 
-## Context menus in Chromium
+## Context menus in Firefox and Chromium
 
-After `npm run build`, run `npm run test:browser -- --project=chromium`.
+After `npm run build`, run `npm run test:browser -- --project=chromium --project=firefox --grep "context menus:"`. Use headed mode under Xvfb for tests that need native window or clipboard behavior.
 `browser-tests/context-menus.spec.js` exercises ANSI-split pointer targets,
 keyboard menus and viewport clamping, secondary/companion selections, profile
 Options/import/reload, and unsaved IDE scratch tabs with explicit Save. The
@@ -121,11 +121,15 @@ verify live MOO permissions, native app WebViews or assistive-technology speech.
 
 ## Core Checks
 
-Run lint + default test suite:
+From a clean checkout with the supported Node version, install the locked dependencies and run the core checks:
 
 ```bash
+npm ci
 npm run lint
 npm test
+npm run coverage
+npm run build
+npm run deadcode
 ```
 
 Default `npm test` includes:
@@ -188,6 +192,7 @@ Coverage must remain at or above:
 - 80% lines
 - 80% functions
 - 80% statements
+- 80% branches
 
 Mutation testing notes:
 

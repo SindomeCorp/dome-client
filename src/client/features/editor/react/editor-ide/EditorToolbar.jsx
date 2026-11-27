@@ -127,25 +127,25 @@ export function EditorToolbar({
             </div>
           )}
 
-        {activeTab?.commandTarget &&
+          {activeTab?.commandTarget &&
           activeTab.commandTarget !== "none" && (
-          <button
-            onClick={onSave}
-            className="inline-flex items-center gap-1 md:gap-2 px-1 py-0.5 text-[11px] md:px-4 md:py-2 md:text-base rounded-md bg-brand-600 text-ink-invert hover:bg-brand-500 active:translate-y-[0.5px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
-            title="Save active tab (⌘/Ctrl+S)"
-          >
-            <svg className="w-3.5 h-3.5 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M5 21h14V7l-4-4H5v18Zm3-3h8M9 3v4h6"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <button
+              onClick={onSave}
+              className="inline-flex items-center gap-1 md:gap-2 px-1 py-0.5 text-[11px] md:px-4 md:py-2 md:text-base rounded-md bg-brand-600 text-ink-invert hover:bg-brand-500 active:translate-y-[0.5px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+              title="Save active tab (⌘/Ctrl+S)"
+            >
+              <svg className="w-3.5 h-3.5 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M5 21h14V7l-4-4H5v18Zm3-3h8M9 3v4h6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             Save
-          </button>
-        )}
+            </button>
+          )}
 
           <button
             onClick={() => (active !== null ? onClose(active) : window.close())}

@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-27
 
 ### Fixed
+- Keep the previous client assets when a build fails and prevent startup without a successful build.
+- Cancel incomplete game connections and wait for the TLS handshake before reporting a secure connection.
+- Prevent overlapping status checks from replacing fresh results with stale responses.
+- Discard queued output from old connections even when context menus are disabled.
 - Keep context menus available throughout large output bursts without overflowing the matching queue.
 - Apply edits to shipped Player JSON unless explicitly overridden by local configuration.
 - Restore the latest recognized server profile after a failed context-menu reload while preserving session resets and user overrides.

@@ -426,6 +426,7 @@ test("real output parser and menu events target ANSI spans, execute one command,
   await feed("#$# SDWC%%CONTEXT-RESET\n#$# SDWC%%CONTEXT-PROFILE%%\"staff\"\n");
   assert.equal(controller.active().profile.id, "staff");
   client.parseSocketData("#$# SDWC%%CONTEXT-PROFILE%%\"staff\"\n");
+  client.resetOutputStream();
   controller.resetSession();
   await app.manager.idle();
   assert.equal(controller.active().source, "Fallback", "queued old-connection OOB must not reactivate staff");

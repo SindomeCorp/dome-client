@@ -26,6 +26,7 @@ export function setupSocket({
   poweredByValue = globalThis.poweredBy,
   sleepFn = sleep
 } = {}) {
+  client.resetOutputStream?.();
   client.contextMenus?.resetSession();
   client.socket?.disconnect?.();
   const onDisconnectedHandler = function() {
@@ -52,6 +53,7 @@ export function setupSocket({
   };
   const onReconnectFailedHandler = function() {
     if (client.socket !== ioSocket) return;
+    client.resetOutputStream?.();
     client.contextMenus?.resetSession();
     client.socketState = SOCKET_STATE_ENUM.RECONNECT_FAILED;
     ioSocket.disconnect();

@@ -88,7 +88,7 @@ export function createSocketOutputEventHandler({
     } else if (event.type === "context-profile") {
       client.contextMenus?.setServerProfile(event.id);
     } else if (event.type === "context-reset") {
-      client.contextMenus?.resetSession({ transport: false });
+      client.contextMenus?.resetSession();
     } else if (event.type === "user-type") {
       client.userType = event.userType;
       if (client.inputReader && client.preferences?.commandSuggestions) {

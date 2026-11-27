@@ -21,7 +21,6 @@ export function setupContextMenus({ client, doc = document, win = window, matche
   let fileDocuments = [];
   let serverRequest = 0;
   let session = 0;
-  let connection = 0;
   let prefs = { override: false, profile: "player", underline: false };
   let noticeTimer;
   const bindings = new Map();
@@ -171,7 +170,6 @@ export function setupContextMenus({ client, doc = document, win = window, matche
     get snapshot() { return snapshot; },
     get revision() { return revision; },
     get session() { return session; },
-    get connection() { return connection; },
     get preferences() { return { ...prefs }; },
     subscribe(callback) { subscribers.add(callback); return () => subscribers.delete(callback); },
     async match(text) {
@@ -224,10 +222,9 @@ export function setupContextMenus({ client, doc = document, win = window, matche
       if (!server) report("Unknown or invalid server context profile; using Options selection.");
       refresh();
     },
-    resetSession({ transport = true } = {}) {
+    resetSession() {
       serverRequest++;
       session++;
-      if (transport) { connection++; client?.resetOutputProtocol?.(); }
       server = null;
       requestedServer = null;
       refresh();

@@ -37,8 +37,14 @@ test("connectToMud selects tls connector when requested", async (t) => {
     netConnect,
     tlsConnect
   });
+  let ready = false;
+  pending.then(() => { ready = true; });
   stream.emit("connect");
+  await Promise.resolve();
+  assert.equal(ready, false);
+  stream.emit("secureConnect");
   assert.equal(await pending, stream);
+  assert.equal(stream.listenerCount("error"), 0);
   assert.equal(netConnect.mock.callCount(), 0);
   assert.equal(tlsConnect.mock.callCount(), 1);
 });
@@ -58,6 +64,7 @@ test("connectToMud rejects on stream error", async (t) => {
 
 test("connectToMud rejects when handshake times out", async (t) => {
   const stream = new EventEmitter();
+  stream.destroy = t.mock.fn();
   const unref = t.mock.fn();
   t.mock.method(global, "setTimeout", (fn) => {
     fn();
@@ -69,4 +76,17 @@ test("connectToMud rejects when handshake times out", async (t) => {
     netConnect: () => stream
   }), /socket connect timeout/);
   assert.equal(unref.mock.callCount(), 1);
+  assert.equal(stream.destroy.mock.callCount(), 1);
+  assert.deepEqual(stream.eventNames(), []);
+});
+
+test("canceling a pending connection destroys the transport and removes listeners", async (t) => {
+  const stream = new EventEmitter();
+  stream.destroy = t.mock.fn();
+  const cancellation = new AbortController();
+  const pending = connectToMud({ host: "fixture.invalid", port: 7777, signal: cancellation.signal, netConnect: () => stream });
+  cancellation.abort();
+  await assert.rejects(pending, { name: "AbortError" });
+  assert.equal(stream.destroy.mock.callCount(), 1);
+  assert.deepEqual(stream.eventNames(), []);
 });

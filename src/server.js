@@ -1,5 +1,6 @@
 /** General Requires **/
 import config from "./config/index.js";
+import * as status from "./controllers/status.js";
 import path from "node:path";
 import { named } from "./logger.js";
 import { Server } from "socket.io";
@@ -95,14 +96,8 @@ export async function start(options = {}) {
     httpsPort = config.ssl?.port,
     skipBuild = false
   } = options;
+  if (!skipBuild) await build();
   bindStartupSideEffects();
-  if (!skipBuild) {
-    try {
-      await build();
-    } catch (err) {
-      logger.error("asset build failed", err);
-    }
-  }
   if (config.autocomplete.enabled !== false) {
     try {
       await fs.promises.readFile(config.autocomplete.p);
@@ -126,6 +121,7 @@ export async function start(options = {}) {
       logger.info(vDesc + " (node " + process.version + ") listening on port " + httpsPort);
     }
   }
+  status.startStatusPolling();
   return {
     http: resolveBoundAddress(server),
     https: resolveBoundAddress(sslServer),
@@ -134,6 +130,7 @@ export async function start(options = {}) {
 }
 
 export async function stop() {
+  status.stopStatusPolling();
   await close(httpMgr);
   await close(server);
   await close(httpsMgr);
@@ -145,7 +142,11 @@ export async function stop() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  start();
+  start().catch((error) => {
+    logger.error("Server startup failed", error);
+    process.exitCode = 1;
+    return stop();
+  });
 }
 
 function onUncaughtException(err) {

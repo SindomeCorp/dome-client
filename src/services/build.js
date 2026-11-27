@@ -6,6 +6,7 @@ import esbuild from "esbuild";
 import postcss from "postcss";
 import autoprefixer from "autoprefixer";
 import tailwindcss from "tailwindcss";
+import { named } from "../logger.js";
 
 import { fileURLToPath } from "node:url";
 import {
@@ -17,6 +18,7 @@ import {
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const require = createRequire(import.meta.url);
 
+const publicDir = path.join(__dirname, "../../public");
 let buildPromise;
 
 async function cleanDir(dir, filter) {
@@ -28,9 +30,8 @@ async function cleanDir(dir, filter) {
   }
 }
 
-async function compileLess() {
+async function compileLess(outDir = path.join(publicDir, "css")) {
   const srcDir = path.join(__dirname, "..", "..", "less");
-  const outDir = path.join(__dirname, "..", "..", "public", "css");
   const files = ["client.less"];
   const outFiles = files.map(f => f.replace(/\.less$/, ".css"));
   await fs.mkdir(outDir, { recursive: true });
@@ -52,9 +53,8 @@ async function compileLess() {
   }
 }
 
-async function compileReactCss() {
+async function compileReactCss(outDir = path.join(publicDir, "css")) {
   const srcFile = path.join(__dirname, "..", "client", "features", "editor", "react", "ide.css");
-  const outDir = path.join(__dirname, "..", "..", "public", "css");
   await fs.mkdir(outDir, { recursive: true });
   try {
     const data = await fs.readFile(srcFile, "utf8");
@@ -63,7 +63,7 @@ async function compileReactCss() {
     });
     await fs.writeFile(path.join(outDir, "ide.css"), result.css, "utf8");
   } catch (err) {
-    if (err.code !== "ENOENT") throw err;
+    throw new Error("Could not compile IDE CSS", { cause: err });
   }
 }
 
@@ -115,14 +115,7 @@ async function compileEjsScripts(outDir = path.join(__dirname, "..", "..", "publ
 }
 
 async function copyAce(outDir = path.join(__dirname, "..", "..", "public", "js", "ace")) {
-  const srcDir = path.join(
-    __dirname,
-    "..",
-    "..",
-    "node_modules",
-    "ace-builds",
-    "src-min-noconflict"
-  );
+  const srcDir = path.dirname(require.resolve("ace-builds/src-min-noconflict/ace.js"));
   await fs.rm(outDir, { recursive: true, force: true });
   await fs.mkdir(outDir, { recursive: true });
   await fs.cp(srcDir, outDir, { recursive: true });
@@ -150,19 +143,73 @@ export {
   copyMooParserWasm
 };
 
-export default function build(options = {}) {
-  if (!buildPromise) {
-    buildPromise = (async () => {
-      await Promise.all([
-        compileLess(),
-        compileReactCss(),
-        compileJs(options.jsOutDir),
-        compileEjsScripts(options.jsOutDir),
-        copyAce(options.aceOutDir),
-        copyMooParserWasm(options.parserOutDir),
-      ]);
-    })();
+// Compilation never writes to the served tree. Keep backups until every
+// generated destination has been published so a failed publication can roll back.
+async function publishAssets(output, stage, scratch) {
+  const published = [];
+  try {
+    await fs.mkdir(path.join(output, "css"), { recursive: true });
+    await fs.mkdir(path.join(output, "js"), { recursive: true });
+    const bundles = await fs.readdir(path.join(stage, "js"));
+    for (const name of [...bundles.map((name) => "js/" + name), "css/client.css", "css/ide.css"]) {
+      const target = path.join(output, name);
+      const backup = path.join(scratch, published.length + ".previous");
+      let hadPrevious = true;
+      try { await fs.rename(target, backup); }
+      catch (error) {
+        if (error.code !== "ENOENT") throw error;
+        hadPrevious = false;
+      }
+      const entry = { target, backup, hadPrevious, installed: false };
+      published.push(entry);
+      await fs.rename(path.join(stage, name), target);
+      entry.installed = true;
+    }
+  } catch (error) {
+    const rollbackErrors = [];
+    for (const entry of published.reverse()) {
+      try {
+        if (entry.installed) await fs.rm(entry.target, { recursive: true, force: true });
+        if (entry.hadPrevious) await fs.rename(entry.backup, entry.target);
+      } catch (rollbackError) { rollbackErrors.push(rollbackError); }
+    }
+    if (rollbackErrors.length) throw new AggregateError([error, ...rollbackErrors], "Asset rollback failed; backups remain at " + scratch);
+    throw error;
   }
+}
+
+async function buildAssets(output) {
+  await fs.mkdir(output, { recursive: true });
+  const scratch = await fs.mkdtemp(path.join(path.dirname(output), ".dome-assets-"));
+  const stage = path.join(scratch, "stage");
+  const css = path.join(stage, "css");
+  const js = path.join(stage, "js");
+  let keepBackups = false;
+  try {
+    await fs.mkdir(js, { recursive: true });
+    const results = await Promise.allSettled([
+      compileLess(css),
+      compileReactCss(css),
+      compileJs(js),
+      compileEjsScripts(js),
+      copyAce(path.join(js, "ace")),
+      copyMooParserWasm(path.join(js, "parsers"))
+    ]);
+    const failures = results.filter((result) => result.status === "rejected");
+    if (failures.length) throw new AggregateError(failures.map(({ reason }) => reason), "Asset compilation failed");
+    try { await publishAssets(output, stage, scratch); }
+    catch (error) {
+      keepBackups = error instanceof AggregateError;
+      throw error;
+    }
+  } finally {
+    if (!keepBackups) await fs.rm(scratch, { recursive: true, force: true });
+  }
+}
+
+export default function build({ output = publicDir } = {}) {
+  if (output !== publicDir) return buildAssets(output);
+  buildPromise ??= buildAssets(output).finally(() => { buildPromise = undefined; });
   return buildPromise;
 }
 
@@ -170,8 +217,7 @@ const runAsScript = process.argv[1] && fileURLToPath(import.meta.url) === path.r
 
 if (runAsScript) {
   build().catch((err) => {
-    const message = err?.stack || err?.message || String(err);
-    process.stderr.write(`${message}\n`);
+    named("build").error("Asset build failed", err);
     process.exitCode = 1;
   });
 }

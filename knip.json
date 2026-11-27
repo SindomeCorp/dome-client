@@ -33,6 +33,7 @@
     ".stryker-tmp/**",
     "src/client/features/editor/ace/mode-moo.js"
   ],
+  "ignoreUnresolved": ["/js/parsers/web-tree-sitter.js"],
   "ignoreDependencies": [
     "@stryker-mutator/command-runner"
   ],

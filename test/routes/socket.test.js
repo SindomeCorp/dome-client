@@ -234,7 +234,7 @@ test("connection selects TLS connector from single-MUD env config", async () => 
   const { socket } = createSocket();
   socket.handshake.query = { host: "example.net", port: "8888", transport_mode: "tcp" };
   const pending = route.connection(socket);
-  moo.emit("connect");
+  moo.emit("secureConnect");
   await pending;
 
   assert.equal(netCalls.length, 0);
@@ -271,7 +271,7 @@ test("connection honors multi-mud TLS query only when feature is enabled", async
   const { socket: tlsSocket } = createSocket();
   tlsSocket.handshake.query = { host: "secure.example", port: "6697", transport_mode: "tls" };
   const pendingTls = enabledRoute.connection(tlsSocket);
-  moo.emit("connect");
+  moo.emit("secureConnect");
   await pendingTls;
 
   const disabledRoute = await loadRoute({ multiMud: true, mudTlsEnabled: false });

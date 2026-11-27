@@ -33,7 +33,7 @@ If you provide only a host (like `status.example.com`), the web client treats it
 
 ## What Request Is Made
 
-The web client backend polls the status endpoint every 15 seconds.
+The web client backend polls the status endpoint every 15 seconds while the server is running. Requests have a five-second deadline, and overlapping refreshes share the current request. Stopping the server cancels that request.
 
 Request:
 

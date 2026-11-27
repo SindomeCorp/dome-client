@@ -24,6 +24,7 @@ async function loadStatus(t, { fetchImpl, logger, skipInitialCheck = false, serv
   });
   const fetchMock = t.mock.method(global, "fetch", fetchImpl);
   const mod = await import("../../src/controllers/status.js?c=" + Date.now());
+  mod.startStatusPolling();
   if (!skipInitialCheck && healthCheckPromise?.then) {
     await healthCheckPromise;
   }
@@ -361,7 +362,7 @@ test("interval and timeout handles call unref when available", async (t) => {
     interval: 5,
     state: "OK"
   })));
-  await import(`../../src/controllers/status.js?unref=${Date.now()}`);
+  (await import(`../../src/controllers/status.js?unref=${Date.now()}`)).startStatusPolling();
   assert.equal(unrefInterval.mock.callCount(), 1);
   assert.equal(unrefTimeout.mock.callCount(), 1);
   const runInterval = intervalFn?.();
@@ -406,7 +407,7 @@ test("interval and timeout handles skip unref when unavailable", async (t) => {
     interval: 5,
     state: "OK"
   })));
-  await import(`../../src/controllers/status.js?nounref=${Date.now()}`);
+  (await import(`../../src/controllers/status.js?nounref=${Date.now()}`)).startStatusPolling();
   assert.equal(intervalMock.mock.callCount(), 1);
   assert.equal(timeoutMock.mock.callCount(), 1);
   const runInterval = intervalFn?.();

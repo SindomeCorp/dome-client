@@ -1,6 +1,6 @@
 // This function is embedded in standalone downloads. Keep it self-contained:
 // templates are inert until opened, and collapsing releases the media elements.
-export function installLogPreviewControls(doc) {
+function installLogPreviewControls(doc) {
   doc.addEventListener("click", (event) => {
     const control = event.target.closest?.("[data-output-media]");
     if (!control) return;

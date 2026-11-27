@@ -1,4 +1,5 @@
 /* global window, document */
+import "../src/client/entrypoints/client-options.js";
 import { setupClientPreferences } from "../src/client/core/preferences.js";
 import { setupOutputWindows } from "../src/client/features/output-windows/output-windows.js";
 import { setupOutputParser } from "../src/client/features/terminal/output-buffer.js";

@@ -239,19 +239,11 @@ On production systems, SSL certificates are typically readable only by root. Sta
 
 ## Project Structure
 
-All application code resides in `src/` and follows a layered design:
-
-- `src/server.js` starts the Express application.
-- `src/config/` builds configuration objects from environment variables.
-- `src/routes/` maps HTTP routes to controllers.
-- `src/controllers/` handle request and response logic.
-- `src/services/` contain reusable domain logic.
-- `src/middleware/` contains middleware helpers (for example error and LESS middleware).
-- `src/logger.js` exposes a shared Winston logger.
-- `src/env.js` defines and validates environment variables.
-- View templates live in `views/`; see [`views/README.md`](views/README.md) for directory layout and templating guidelines.
-
-Controllers may depend on services and configuration, but services remain independent of Express. Tests live in `test/` and mirror this structure.
+The browser entrypoints and features live in `src/client/`, shared schemas in
+`src/shared/`, and the Express and Socket.IO runtime in `src/server.js` and
+`src/server/`. See the [architecture guide](docs/ARCHITECTURE.md) for ownership,
+initialization, worker boundaries, generated assets, and where to make changes.
+[View conventions](views/README.md) cover the EJS templates.
 
 ## IP Block List
 

@@ -61,7 +61,7 @@ export const notifyNativeBridgeReady = ({ win = globalThis.window }) => {
   if (win.DomeNative && typeof win.DomeNative.bridgeReady === "function") {
     try {
       win.DomeNative.bridgeReady();
-    } catch (err) {
+    } catch {
       // Ignore bridge ready handshake failures.
     }
   }
@@ -69,7 +69,7 @@ export const notifyNativeBridgeReady = ({ win = globalThis.window }) => {
   if (typeof win.DomeNativeFlushQueuedEvents === "function") {
     try {
       win.DomeNativeFlushQueuedEvents();
-    } catch (err) {
+    } catch {
       // Ignore queue flush failures so the client can continue initializing.
     }
   }

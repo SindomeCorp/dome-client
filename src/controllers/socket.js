@@ -70,22 +70,30 @@ export async function connection(socket) {
     mudTlsEnabled: MUD_TLS_ENABLED
   });
   socket.gameAddress = gameAddress;
+  const pendingConnection = new AbortController();
+  const cancelConnection = () => pendingConnection.abort();
+  socket.once("disconnect", cancelConnection);
   let moo;
   try {
     moo = await connectToMud({
       host: gameAddress.host,
       port: gameAddress.port,
       useTls: gameAddress.useTls,
+      signal: pendingConnection.signal,
       timeoutMs: DEFAULT_SOCKET_CONNECT_TIMEOUT_MS,
       netConnect: net.connect,
       tlsConnect: tls.connect
     });
   } catch (err) {
+    if (pendingConnection.signal.aborted) return;
     logger.error("error while connecting to moo");
     logError(socket, err);
     socket.emit("error", err.toString());
     return;
+  } finally {
+    socket.removeListener("disconnect", cancelConnection);
   }
+  if (pendingConnection.signal.aborted || socket.disconnected === true) { moo.destroy(); return; }
 
   const onConnect = async () => {
     recordConnection(gameAddress.host, gameAddress.port, gameAddress.useTls);

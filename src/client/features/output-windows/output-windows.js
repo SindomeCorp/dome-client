@@ -13,7 +13,7 @@ import { setupOutputToolbar } from "./toolbar.js";
 import { setupOutputPopout } from "./popout.js";
 import { FONT_CHOICES, COLORSET_CHOICES, getOutputPresentation } from "../../../shared/client-options.js";
 
-export class OutputWindows {
+class OutputWindows {
   constructor({ client, doc, win, storage = store, logger = defaultLogger, config = win.__OUTPUT_WINDOWS__ || {}, workerFactory }) {
     Object.assign(this, { client, doc, win, storage, logger });
     this.config = { enabled: config.enabled !== false, customRegexEnabled: config.customRegexEnabled !== false, presets: config.presets || [] };
