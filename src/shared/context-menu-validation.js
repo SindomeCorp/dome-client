@@ -3,7 +3,8 @@ const types = {
   "object-reference": /^(?:#[0-9]+|\$[A-Za-z_][A-Za-z0-9_]*)$/,
   "line-number": /^[1-9][0-9]{0,8}$/,
   "verb-name": /^[A-Za-z_][A-Za-z0-9_]*$/,
-  "property-name": /^[A-Za-z_][A-Za-z0-9_]*$/
+  "property-name": /^[A-Za-z_][A-Za-z0-9_]*$/,
+  "channel-name": /^[^\]]+$/u
 };
 const controls = /[\p{Cc}\u2028\u2029]/u;
 const identifier = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
@@ -40,11 +41,19 @@ export function parseCommandTemplate(template, captures) {
 }
 
 export function validCaptures(rule, values) {
-  return Object.entries(rule.captures).every(([name, type]) => typeof values?.[name] === "string" && values[name].length <= 128 && !controls.test(values[name]) && types[type].test(values[name]));
+  return Object.entries(rule.captures).every(([name, type]) => typeof values?.[name] === "string" && values[name].length <= 128 && !controls.test(values[name]) && types[type].test(values[name]) && (type !== "channel-name" || values[name].trim().length > 0));
+}
+
+function checkChannelArgument(segments, captures) {
+  if (!segments.some((part) => part.capture && captures[part.capture] === "channel-name")) return;
+  // Wildcard names can contain punctuation. They are lookup data for @rewind,
+  // never expression fragments or arguments to an evaluation command.
+  check(segments.length === 2 && segments[0].literal === "@rewind " && captures[segments[1].capture] === "channel-name", "template", "channel-name requires @rewind followed by one whole-argument capture");
 }
 
 export function interpolateCommand(action, rule, values) {
   check(validCaptures(rule, values), "captures", "missing or invalid typed capture");
+  if (action.type === "game-command") checkChannelArgument(action.segments, rule.captures);
   const command = action.segments.map((part) => part.literal ?? values[part.capture]).join("");
   check(command.trim() && command.length <= 2048 && !controls.test(command), "command", "invalid single-line command");
   return command;
@@ -61,7 +70,11 @@ function actions(items, captures, selection, path) {
     label(item.label, location + ".label");
     if (item.type === "game-command") {
       check(!selection && item.action === undefined && item.input === undefined, location, "commands require token captures, never a selection");
-      try { return { ...item, segments: parseCommandTemplate(item.template, captures) }; }
+      try {
+        const segments = parseCommandTemplate(item.template, captures);
+        checkChannelArgument(segments, captures);
+        return { ...item, segments };
+      }
       catch (error) { throw new Error(location + "." + error.message); }
     }
     check(item.type === "client-action" && item.template === undefined, location, "expected a typed client action or game command");

@@ -127,7 +127,7 @@ test("context menus: admin disable and unusable JSON retain native menus despite
   expect(workers).toEqual([]);
 });
 
-test("context menus: shipped Player leaves references native and unhighlighted, with selected-text Copy only", async ({ page }) => {
+test("context menus: shipped Player leaves object references native and unhighlighted, with selected-text Copy only", async ({ page }) => {
   await page.context().addInitScript(() => {
     window.localStorage.setItem("dc-context-menus-preferences", JSON.stringify({ underline: true }));
     window.playerContextEvents = [];
@@ -203,6 +203,40 @@ test("context menus: login profile markers preserve output boundaries across coa
     await expect(page.getByRole("group", { name: "Verb #123:inspect", exact: true }).getByRole("menuitem", { name: "@list", exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     expect((await fixtureState(page)).commands).toEqual(connected.commands);
+  }
+});
+
+test("context menus: wildcard channel tags rewind in every profile only after explicit activation", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  const sent = [];
+  for (const id of ["player", "gm", "programmer"]) {
+    await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%" + JSON.stringify(id) + "\r\n");
+    await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: " + ({ player: "Player", gm: "GM", programmer: "Programmer" })[id] + " (selected by server)");
+    for (const sign of ["-", "+"]) for (const name of ["Login-Watcher", "Bit-Chat", "SIC-COMM", "SIC-PM", "Any channel 42", "quotes \"; ${object}"]) {
+      const tag = "[" + sign + "][" + name + "]";
+      await socketFeed(page, "Tag [" + sign + "][" + name.slice(0, 2) + "\u001b[32m" + name.slice(2) + "\u001b[0m] synthetic text\r\n");
+      const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Tag " + tag + " synthetic text" }).last();
+      await expect(row).toBeVisible();
+      await expect.poll(async () => { await rightText(page, row, 10); return page.getByRole("menuitem").allTextContents(); }).toEqual(["@rewind"]);
+      expect((await fixtureState(page)).commands.slice(connected.commands.length)).toEqual(sent);
+      await page.getByRole("menuitem", { name: "@rewind", exact: true }).click();
+      sent.push("@rewind " + name);
+      await expect.poll(async () => (await fixtureState(page)).commands.slice(connected.commands.length)).toEqual(sent);
+    }
+    const row = page.locator("#lineBuffer [data-output-id]").last();
+    await row.focus();
+    await page.keyboard.press("Shift+F10");
+    await expect(page.getByRole("menuitem")).toHaveText(["@rewind"]);
+    await page.keyboard.press("Escape");
+    await row.evaluate((element) => { element.focus(); document.getSelection().selectAllChildren(element); document.dispatchEvent(new Event("selectionchange")); });
+    await openSelection(page);
+    await expect(page.getByRole("menuitem")).toHaveText(id === "player" ? ["Copy selected text"] : ["Copy selected text", "Open in Scratchpad"]);
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => document.getSelection().removeAllRanges());
+    expect((await fixtureState(page)).commands.slice(connected.commands.length)).toEqual(sent);
   }
 });
 
@@ -467,8 +501,11 @@ test("context menus: keyboard actions work in secondary and detached output", as
   await expect.poll(async () => {
     await row.focus();
     await page.keyboard.press("Shift+F10");
-    return page.getByRole("group", { name: "Property #123.name", exact: true }).count();
-  }).toBe(1);
+    return page.getByRole("menuitem").allTextContents();
+  }).toEqual(["[-][Team-Chat]", "#123.name"]);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("group", { name: "Property #123.name", exact: true })).toBeVisible();
   await page.keyboard.press("Enter");
   await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#123.name");
   const popupPromise = page.waitForEvent("popup");
@@ -479,12 +516,22 @@ test("context menus: keyboard actions work in secondary and detached output", as
   await expect.poll(async () => {
     await detached.focus();
     await popup.keyboard.press("Shift+F10");
-    return popup.getByRole("group", { name: "Property #123.name", exact: true }).count();
-  }).toBe(1);
+    return popup.getByRole("menuitem").allTextContents();
+  }).toEqual(["[-][Team-Chat]", "#123.name"]);
+  await popup.keyboard.press("Enter");
+  await expect(popup.getByRole("menuitem")).toHaveText(["@rewind"]);
+  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+  await popup.keyboard.press("Enter");
+  await expect.poll(() => page.evaluate(() => window.contextSent)).toEqual([["input", "@rewind Team-Chat"]]);
+  await detached.focus();
+  await popup.keyboard.press("Shift+F10");
+  await popup.getByRole("menuitem", { name: "#123.name", exact: true }).click();
+  await expect(popup.getByRole("group", { name: "Property #123.name", exact: true })).toBeVisible();
   await popup.keyboard.press("Enter");
   await expect.poll(() => popup.evaluate(() => window.contextCopied)).toBe("#123.name");
   await detached.focus();
   await popup.keyboard.press("Shift+F10");
+  await popup.getByRole("menuitem", { name: "#123.name", exact: true }).click();
   const ownerCopy = popup.getByRole("group", { name: "Object #123", exact: true }).getByRole("menuitem", { name: "Copy to Clipboard", exact: true });
   await expect(ownerCopy).toBeVisible();
   await mkdir("tmp/context-menu-review", { recursive: true, mode: 0o700 });
@@ -508,7 +555,7 @@ test("context menus: keyboard actions work in secondary and detached output", as
   const ide = await scratch;
   await expect(ide.getByText("Unsaved", { exact: true })).toBeVisible();
   await expect.poll(() => ide.evaluate(() => document.querySelector(".ace_editor")?.env.editor.getValue())).toBe(selected);
-  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+  expect(await page.evaluate(() => window.contextSent)).toEqual([["input", "@rewind Team-Chat"]]);
 });
 
 test("context menus: selection Scratchpad opens unsaved, warns immediately, and writes only on Save", async ({ page }) => {

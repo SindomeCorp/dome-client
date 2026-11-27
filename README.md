@@ -13,7 +13,7 @@ It is a browser-based MUD client built with Node.js, Express, and Socket.io. It 
 
 ## Try It Live
 
-Output reference and selection menus are configurable in **Options → Context Menus**. Use Basic for a global profile override and optional underlining, or Advanced to import/edit/reload JSON. Fallback automatically uses Player or the first available profile. Player offers selected-text Copy only; GM and Programmer also offer reference actions and the existing saveable IDE Scratchpad. See [Context Menus](docs/CONTEXT-MENUS.md) for the feature overview and [Creating context-menu JSON](docs/CONTEXT-MENU-JSON.md) for a complete example and authoring guide.
+Output reference and selection menus are configurable in **Options → Context Menus**. Use Basic for a global profile override and optional underlining, or Advanced to import/edit/reload JSON. Fallback automatically uses Player or the first available profile. Player offers selected-text Copy and channel-tag `@rewind`; GM and Programmer also offer reference actions and the existing saveable IDE Scratchpad. See [Context Menus](docs/CONTEXT-MENUS.md) for the feature overview and [Creating context-menu JSON](docs/CONTEXT-MENU-JSON.md) for a complete example and authoring guide.
 
 Sindome provides a hosted version of the client that can connect to any MUD. You are free to use this version to check out the features, or to connect to a game you like to play.
 

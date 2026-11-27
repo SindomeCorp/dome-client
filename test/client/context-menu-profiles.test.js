@@ -51,8 +51,9 @@ test("separate role files have exact action ordering, delimiters and safe typed 
     const profile = snapshot.profiles.get(id);
     const rules = compileContextRules(profile.rules.map((id) => snapshot.rules.get(id)));
     if (id === "player") {
-      assert.deepEqual(profile.rules, []);
-      assert.deepEqual(config.rules, []);
+      assert.deepEqual(profile.rules, ["player-channel"]);
+      assert.equal(config.rules.length, 1);
+      assert.deepEqual(config.rules[0].captures, { channel: "channel-name" });
       assert.deepEqual(matchContextRules("#123 #123:look #123.name $object $object:look $object.name", rules), []);
       assert.deepEqual(profile.selectionActions.map((action) => action.action), ["clipboard.copy"]);
       continue;

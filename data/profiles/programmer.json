@@ -188,6 +188,22 @@
           "input": "target"
         }
       ]
+    },
+    {
+      "id": "programmer-channel",
+      "priority": 350,
+      "pattern": "\\[[+-]\\]\\[(?<channel>[^\\]\\r\\n]{1,128})\\]",
+      "captures": {
+        "channel": "channel-name"
+      },
+      "actions": [
+        {
+          "id": "rewind",
+          "label": "@rewind",
+          "type": "game-command",
+          "template": "@rewind ${channel}"
+        }
+      ]
     }
   ],
   "profiles": [
@@ -198,7 +214,8 @@
         "programmer-verb",
         "programmer-property",
         "programmer-object",
-        "programmer-frame"
+        "programmer-frame",
+        "programmer-channel"
       ],
       "selectionActions": [
         {

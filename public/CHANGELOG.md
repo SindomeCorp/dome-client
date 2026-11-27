@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - Preserve output line boundaries around client control messages so login profile selection works regardless of network packet splits, including split CRLF newlines.
 
 ### Added
+- Add wildcard @rewind menus for `[+][channel]` and `[-][channel]` tags in Player, GM and Programmer profiles.
 - Group GM and Programmer verb/property actions separately from all owning-object actions, with explicit target headers, keyboard navigation and configurable JSON composition.
 - Add @list immediately below @edit in Programmer verb menus for numeric and symbolic references.
 

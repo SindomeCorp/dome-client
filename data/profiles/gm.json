@@ -97,6 +97,22 @@
       ],
       "heading": "Object ${object}",
       "target": "${object}"
+    },
+    {
+      "id": "gm-channel",
+      "priority": 350,
+      "pattern": "\\[[+-]\\]\\[(?<channel>[^\\]\\r\\n]{1,128})\\]",
+      "captures": {
+        "channel": "channel-name"
+      },
+      "actions": [
+        {
+          "id": "rewind",
+          "label": "@rewind",
+          "type": "game-command",
+          "template": "@rewind ${channel}"
+        }
+      ]
     }
   ],
   "profiles": [
@@ -106,7 +122,8 @@
       "rules": [
         "gm-verb",
         "gm-property",
-        "gm-object"
+        "gm-object",
+        "gm-channel"
       ],
       "selectionActions": [
         {

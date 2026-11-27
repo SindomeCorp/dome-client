@@ -12,7 +12,7 @@ The shipped examples are:
 
 | File | What it provides |
 | --- | --- |
-| [`data/profiles/player.json`](../data/profiles/player.json) | Selected-text Copy only; no reference matching or underlines. |
+| [`data/profiles/player.json`](../data/profiles/player.json) | Selected-text Copy and wildcard channel-tag @rewind; no object/verb/property matching. |
 | [`data/profiles/gm.json`](../data/profiles/gm.json) | Numeric object commands; verb/property references remain copy-only. |
 | [`data/profiles/programmer.json`](../data/profiles/programmer.json) | Numeric and symbolic object/verb/property commands, plus Copy Frame for supported traceback frames. |
 
@@ -134,9 +134,30 @@ The example uses lookbehind/lookahead boundaries to avoid matching references in
 | `object-reference` | A numeric object ID or `$` followed by an ASCII identifier, such as `$player` or `$_tools2`. |
 | `verb-name` | ASCII letter/underscore, then letters, digits or underscores. |
 | `property-name` | Same identifier grammar as `verb-name`. |
+| `channel-name` | Nonblank channel-tag content, up to 128 characters, without a closing bracket, control characters or line separators. Spaces, punctuation and Unicode are allowed; command use is restricted to the complete argument of `@rewind`. |
 | `line-number` | Decimal integer from 1 through 999999999, without leading zeroes. |
 
-Each capture is limited to 128 characters and cannot contain control characters. These are narrow syntax types: they do not accept arbitrary expressions, calls, negative object IDs, quoted names or wildcard verb aliases. Adding another capture type requires client development; adding another label, regex rule or supported single-command template does not.
+Each capture is limited to 128 characters and cannot contain control characters. Object/verb/property captures are narrow syntax types: they do not accept arbitrary expressions, calls, negative object IDs, quoted names or wildcard verb aliases. The channel capture retains punctuation as lookup data under the command restrictions below. Adding another capture type requires client development; adding another label, regex rule or supported single-command template does not.
+
+### Wildcard channel rewind
+
+All shipped profiles match `[+][name]` and `[-][name]` without a hard-coded channel list: Login-Watcher, Bit-Chat, SIC-COMM, SIC-PM and other names use the same rule. ANSI spans do not split the tag. The menu offers `@rewind` and sends exactly `@rewind ` followed by the captured name, only on explicit activation. Selecting text keeps priority and offers the profile's normal selection actions instead.
+
+For a custom profile, add a rule like this and include its ID in the profile's `rules` list:
+
+```json
+{
+  "id": "my-channel",
+  "priority": 350,
+  "pattern": "\\[[+-]\\]\\[(?<channel>[^\\]\\r\\n]{1,128})\\]",
+  "captures": { "channel": "channel-name" },
+  "actions": [
+    { "id": "rewind", "label": "@rewind", "type": "game-command", "template": "@rewind ${channel}" }
+  ]
+}
+```
+
+The wildcard reads through the first closing bracket. Empty/whitespace-only names, control characters, multiline names and names beyond the capture limit do not produce an action. Since channel names may contain punctuation, `channel-name` may only be substituted as the entire unquoted argument in `@rewind ${channel}`. It cannot become a command name, eval input, quoted fragment or part of a larger expression. Display/clipboard text can still use the validated capture. Other, narrower capture types retain their configurable command templates. The game resolves the channel and enforces listening/rewind permissions; the client does not assume a matched tag names an accessible channel.
 
 ## 6. Add game commands safely
 
@@ -160,7 +181,7 @@ Configure exactly one intended game command per action. The client sends one sin
 
 ### Compose reference and owning-object sections
 
-The shipped GM and Programmer profiles show a verb/property section first, followed by all actions from the owning-object rule. Right-clicking anywhere in `#123:look` (including `look`) opens **Verb #123:look** and **Object #123**; `$object.name` similarly opens **Property $object.name** and **Object $object** in Programmer. Each section's Copy copies its own reference, and its commands use that section's captures. Player remains selected-text Copy only. Traceback frames keep their own higher-priority Copy Frame menu.
+The shipped GM and Programmer profiles show a verb/property section first, followed by all actions from the owning-object rule. Right-clicking anywhere in `#123:look` (including `look`) opens **Verb #123:look** and **Object #123**; `$object.name` similarly opens **Property $object.name** and **Object $object** in Programmer. Each section's Copy copies its own reference, and its commands use that section's captures. Player keeps selected-text Copy and channel-tag @rewind, without object/verb/property actions. Traceback frames keep their own higher-priority Copy Frame menu.
 
 To opt in for your own JSON, add these fields to the existing verb rule (keeping its pattern, captures and actions):
 
@@ -193,7 +214,7 @@ Native actions use `type: "client-action"`, an allowlisted `action` ID and an `i
 
 Rule actions use `target`; `selectionActions` use `selection`. Keep Copy in the selected-text menu: that menu requires an available Copy action. Available native actions depend on the client/browser, and clipboard permission can still be denied.
 
-The shipped Player profile offers only selected-text Copy. GM, Programmer and the personal example above also offer Scratchpad; a user may explicitly add reference or Scratchpad actions in local JSON. Selected text never becomes a game-command template input. Scratchpad opening neither runs nor uploads the selection. It starts unsaved, so closing warns even without edits. A subsequent Save is a separate explicit action using the existing MOO-saveable Scratchpad workflow and eligibility/permission checks. Multiple scratch tabs do not imply separate server-side scratch records.
+The shipped Player profile offers selected-text Copy and channel-tag @rewind. GM, Programmer and the personal example above also offer Scratchpad; a user may explicitly add reference or Scratchpad actions in local JSON. Selected text never becomes a game-command template input. Scratchpad opening neither runs nor uploads the selection. It starts unsaved, so closing warns even without edits. A subsequent Save is a separate explicit action using the existing MOO-saveable Scratchpad workflow and eligibility/permission checks. Multiple scratch tabs do not imply separate server-side scratch records.
 
 Native-action entries cannot supply JavaScript callbacks, URL-opening behavior, module imports, editor upload commands or implementations of new native handlers. New native action IDs require client development. Open at Line is not currently an implemented native context-menu action; the shipped traceback menu offers Copy Frame.
 
