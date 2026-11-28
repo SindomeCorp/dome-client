@@ -184,6 +184,49 @@ test("native log export uses history and clear cancels a pending export", async 
   assert.doesNotMatch(status.textContent, /failed:/);
 });
 
+test("a superseded export cannot hide or cancel its replacement", { timeout: 5000 }, async (t) => {
+  const { manager, win, feed, doc } = await createOutputApp(t);
+  await feed("Log export fixture\n");
+
+  const first = { started: Promise.withResolvers(), snapshot: Promise.withResolvers() };
+  const second = { started: Promise.withResolvers(), snapshot: Promise.withResolvers() };
+  const requests = [first, second];
+  t.mock.method(manager, "snapshot", (signal) => {
+    const request = requests.shift();
+    request.started.resolve(signal);
+    return request.snapshot.promise;
+  });
+  const downloads = [];
+  const saved = Promise.withResolvers();
+  win.DomeNative = {
+    downloadLog(_name, html) {
+      downloads.push(html);
+      saved.resolve();
+    }
+  };
+  const operation = doc.querySelector("#output-operation");
+  const status = doc.querySelector("#output-announcements");
+
+  manager.tools.saveLog();
+  const oldSignal = await first.started.promise;
+  manager.tools.saveLog();
+  const currentSignal = await second.started.promise;
+  assert.equal(oldSignal.aborted, true);
+  assert.equal(currentSignal.aborted, false);
+  first.snapshot.reject(oldSignal.reason);
+  await Promise.resolve();
+
+  assert.equal(operation.classList.contains("hide"), false);
+  assert.doesNotMatch(status.textContent, /failed:/);
+  assert.equal(downloads.length, 0);
+  second.snapshot.resolve(manager.history.snapshot());
+  await saved.promise;
+  await settle();
+  assert.equal(downloads.length, 1);
+  assert.match(downloads[0], /Log export fixture/);
+  assert.equal(operation.classList.contains("hide"), true);
+});
+
 test("clear discards a partial protocol line and later output remains usable", async (t) => {
   const { manager, client, feed } = await createOutputApp(t);
   await feed("partial");
