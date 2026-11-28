@@ -59,6 +59,26 @@ test("readClientPreferences ignores invalid URL params and disabled shortening p
   ]);
 });
 
+test("URL preference overrides preserve false and ignore incomplete colors and out-of-range numbers", () => {
+  const stored = new Map([
+    ["dc-toggle-commands", true],
+    ["dc-toggle-inputfontcolor", "#123456"],
+    ["dc-toggle-outfontsize", 14],
+    ["dc-toggle-secondaryoutfontsize", 16],
+    ["dc-toggle-buffer", 3000]
+  ]);
+  const { preferences, persistenceUpdates } = readClientPreferences({
+    locationSearch: "?cs=false&ic=sample%23AABBCC&oz=7.99&soz=24.01&pb=not-a-number",
+    getStoredValue: (key) => stored.get(key) ?? null
+  });
+  assert.equal(preferences.commandSuggestions, false);
+  assert.equal(preferences.inputFontColor, "#123456");
+  assert.equal(preferences.lineBufferFontSizePt, 14);
+  assert.equal(preferences.secondaryLineBufferFontSizePt, 16);
+  assert.equal(preferences.performanceBuffer, 3000);
+  assert.equal(persistenceUpdates.some(({ key }) => key === "dc-toggle-secondaryoutfontsize"), false);
+});
+
 test("client option command parser returns command intent without side effects", () => {
   assert.deepEqual(parseClientOptionCommandIntent("@client-options"), { type: "list" });
   assert.deepEqual(parseClientOptionCommandIntent("@client-option"), { type: "help" });

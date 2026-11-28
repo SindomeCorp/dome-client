@@ -187,6 +187,19 @@ test("secondary presentation supplied by a URL agrees with controls, exported pr
     const prefs = window.outputTest.client.preferences;
     return [prefs.secondaryLineBufferFont, prefs.secondaryColorSet, prefs.secondaryLineBufferFontSizePt];
   })).toEqual(["courier", "snow", 18]);
+
+  await page.goto("/?sof=unknown&scl=unknown&soz=24.01&cs=false&ic=sample%23AABBCC");
+  await page.waitForFunction(() => window.outputTest);
+  expect(await page.evaluate(() => {
+    const prefs = window.outputTest.client.preferences;
+    return { hints: prefs.commandSuggestions, inputColor: prefs.inputFontColor };
+  })).toEqual({ hints: false, inputColor: "#EEEEEE" });
+  await page.locator("#button-client-options").click();
+  await page.getByRole("tab", { name: "Presentation", exact: true }).click();
+  await page.getByRole("tab", { name: "Secondary Window", exact: true }).click();
+  await expect(page.locator("#secondaryoutfont-option select")).toHaveValue("courier");
+  await expect(page.locator("#secondarycolorset-option select")).toHaveValue("snow");
+  await expect(page.locator("#secondaryoutfontsize-option input")).toHaveValue("18");
 });
 
 test("exported logs keep large wrapped and nowrap fonts readable with embedded or linked CSS", async ({ page }) => {
