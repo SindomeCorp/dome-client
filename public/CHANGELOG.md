@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 - Reject context menu imports with invalid selection actions and keep the previous configuration active.
 - Reject context menu rules that declare a capture type as a non-string value.
 - Reject malformed preference imports without applying settings from outside the preferences object.
+- Report preference download failures and release temporary download links so exporting can be retried.
 
 ## 2026-11-27
 

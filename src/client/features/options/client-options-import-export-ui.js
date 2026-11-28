@@ -29,24 +29,32 @@ function downloadClientOptionsJson({
     actions.scrollBuffer();
     return;
   }
-  const payload = buildExportPayload({ options, actions });
-  const filename = buildClientOptionsExportFilename();
-  const blob = new blobCtor([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+  try {
+    const payload = buildExportPayload({ options, actions });
+    const filename = buildClientOptionsExportFilename();
+    const blob = new blobCtor([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
 
-  if (nav?.msSaveOrOpenBlob) {
-    nav.msSaveOrOpenBlob(blob, filename);
-    showToast("Preferences exported.");
+    if (nav?.msSaveOrOpenBlob) {
+      nav.msSaveOrOpenBlob(blob, filename);
+    } else {
+      const anchor = doc.createElement("a");
+      const url = urlApi.createObjectURL(blob);
+      try {
+        anchor.href = url;
+        anchor.download = filename;
+        doc.body.append(anchor);
+        anchor.click();
+      } finally {
+        anchor.remove();
+        urlApi.revokeObjectURL(url);
+      }
+    }
+  } catch {
+    actions.appendOutput("Client options export error: unable to download preferences.\n");
+    actions.scrollBuffer();
+    showToast("Export failed.", true);
     return;
   }
-
-  const url = urlApi.createObjectURL(blob);
-  const anchor = doc.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  doc.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  urlApi.revokeObjectURL(url);
   showToast("Preferences exported.");
 }
 

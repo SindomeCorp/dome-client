@@ -223,6 +223,60 @@ test("the real Options import distinguishes malformed files from a partial impor
   expect(accepted.outputWindows).toMatchObject({ open: true, position: "left", custom: [] });
 });
 
+test("the real Options export reports a failed download and releases the abandoned URL", async ({ page }) => {
+  const connections = async () => (await (await page.request.get("/fixture/state")).json()).connections;
+  const previous = await connections();
+  await page.goto("/?entry=real");
+  await expect.poll(connections).toBeGreaterThan(previous);
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-importexport").click();
+  await page.evaluate(() => {
+    const revoke = window.URL.revokeObjectURL.bind(window.URL);
+    const click = window.HTMLAnchorElement.prototype.click;
+    window.preferenceDownloads = { attempted: [], released: [] };
+    window.URL.revokeObjectURL = (url) => {
+      window.preferenceDownloads.released.push(url);
+      revoke(url);
+    };
+    window.HTMLAnchorElement.prototype.click = function () {
+      if (this.download.startsWith("dome-client-options-")) {
+        window.preferenceDownloads.attempted.push(this.href);
+        if (window.preferenceDownloads.attempted.length === 1) throw new Error("Fixture preference download failure");
+      }
+      click.call(this);
+    };
+  });
+
+  const exportButton = page.getByRole("button", { name: "Export File", exact: true });
+  const toast = page.locator("#client-options-import-export-indicator");
+  const exportLinks = page.locator("a[download^=dome-client-options-]");
+  await exportButton.click();
+  await expect(toast).toHaveText("Export failed.");
+  await expect(toast).toHaveClass(/is-error/);
+  await expect(page.locator("#lineBuffer").getByText("Client options export error: unable to download preferences.", { exact: true })).toBeAttached();
+  await expect(exportLinks).toHaveCount(0);
+  const downloads = () => page.evaluate(() => window.preferenceDownloads);
+  const failed = await downloads();
+  expect(failed.attempted).toHaveLength(1);
+  expect(failed.released).toEqual(failed.attempted);
+
+  const pending = page.waitForEvent("download");
+  await exportButton.click();
+  const saved = await pending;
+  let json = "";
+  for await (const part of await saved.createReadStream()) json += part;
+  expect(JSON.parse(json)).toMatchObject({ type: "dome-client-options", version: 1 });
+  await expect(toast).toHaveText("Preferences exported.");
+  await expect(toast).not.toHaveClass(/is-error/);
+  await expect(exportLinks).toHaveCount(0);
+  const completed = await downloads();
+  expect(completed.attempted).toHaveLength(2);
+  expect(completed.released).toEqual(completed.attempted);
+  expect(errors).toEqual([]);
+});
+
 test("secondary presentation supplied by a URL agrees with controls, exported preferences and later visits", async ({ page }) => {
   await page.evaluate(() => window.localStorage.clear());
   await page.goto("/?of=menlo&cl=acid&oz=14&sof=courier&scl=snow&soz=18");
