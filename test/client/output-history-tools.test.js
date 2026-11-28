@@ -198,8 +198,99 @@ test("live Find visits only new rows, updates during continuous traffic, and pre
   await expectText(count, "1 of 2");
 });
 
-test("clearing during Find cancels the old snapshot and subsequent results contain only new history", async (t) => {
+test("live Find queues one refresh while the previous output snapshot is pending", { timeout: 5000 }, async (t) => {
+  const { manager, doc, feed } = await createOutputApp(t);
+  const query = doc.querySelector("#output-find-query");
+  const count = doc.querySelector("#output-find-count");
+  await feed("needle original\n");
+  const snapshotStarted = Promise.withResolvers();
+  const releaseSnapshot = Promise.withResolvers();
+  t.after(releaseSnapshot.resolve);
+  const starts = [];
+  const snapshot = manager.snapshot.bind(manager);
+  t.mock.method(manager, "snapshot", async (signal, first, last) => {
+    starts.push(first);
+    // A refresh loop can also start before the first new line arrives.
+    if (starts.length > 3) doc.querySelector("#output-find-close").click();
+    const result = await snapshot(signal, first, last);
+    if (starts.length === 2) {
+      snapshotStarted.resolve();
+      await releaseSnapshot.promise;
+    }
+    return result;
+  });
+  query.value = "needle";
+  manager.tools.open();
+  await expectText(count, "1 of 1");
+  await feed("needle first arrival\n");
+  await snapshotStarted.promise;
+  assert.equal(count.textContent, "Searching…");
+
+  const refreshAttempted = Promise.withResolvers();
+  const schedule = globalThis.setTimeout;
+  t.mock.method(globalThis, "setTimeout", (callback, delay, ...args) => {
+    if (delay !== 120) return schedule(callback, delay, ...args);
+    return schedule(() => { callback(...args); refreshAttempted.resolve(); }, delay);
+  });
+  await feed("needle second arrival\nneedle third arrival\n");
+  await refreshAttempted.promise;
+  assert.deepEqual(starts, [undefined, 2], "more output must not restart an active incremental search");
+
+  releaseSnapshot.resolve();
+  await expectText(count, "1 of 4");
+  assert.deepEqual(starts, [undefined, 2, 3], "the pending refresh starts after the earlier snapshot boundary");
+});
+
+test("Find reports a snapshot failure and the next query can recover", async (t) => {
+  const { manager, doc, win, feed, messages } = await createOutputApp(t);
+  await feed("searchable line\n");
+  t.mock.method(manager, "snapshot", () => Promise.reject(new Error("Fixture history unavailable")), { times: 1 });
+  const query = doc.querySelector("#output-find-query");
+  const count = doc.querySelector("#output-find-count");
+  query.value = "searchable";
+  manager.tools.open();
+  await expectText(count, "No matches");
+  assert.ok(messages.includes("Output search failed: Fixture history unavailable"));
+
+  query.value = "line";
+  query.dispatchEvent(new win.Event("input"));
+  await expectText(count, "1 of 1");
+});
+
+test("an aborted Find snapshot cannot clear the newer query's searching status", { timeout: 5000 }, async (t) => {
   const { manager, doc, win, feed } = await createOutputApp(t);
+  await feed("first result\nsecond result\n");
+  const queries = Array.from({ length: 2 }, () => ({ started: Promise.withResolvers(), release: Promise.withResolvers() }));
+  t.after(() => queries.forEach(({ release }) => release.resolve()));
+  const snapshot = manager.snapshot.bind(manager);
+  let next = 0;
+  t.mock.method(manager, "snapshot", async (...args) => {
+    const current = queries[next++];
+    const result = await snapshot(...args);
+    current.started.resolve();
+    await current.release.promise;
+    return result;
+  });
+  const query = doc.querySelector("#output-find-query");
+  const count = doc.querySelector("#output-find-count");
+  query.value = "first";
+  manager.tools.open();
+  await queries[0].started.promise;
+  query.value = "second";
+  query.dispatchEvent(new win.Event("input"));
+  await queries[1].started.promise;
+  assert.equal(count.textContent, "Searching…");
+
+  queries[0].release.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(count.textContent, "Searching…");
+  queries[1].release.resolve();
+  await expectText(count, "1 of 1");
+  assert.equal(next, 2);
+});
+
+test("clearing during Find cancels the old snapshot and subsequent results contain only new history", async (t) => {
+  const { manager, doc, win, feed, messages } = await createOutputApp(t);
   await feed(Array.from({ length: 2000 }, () => "needle old").join("\n") + "\n");
   manager.tools.open();
   const snapshot = manager.history.snapshot.bind(manager.history);
@@ -230,6 +321,7 @@ test("clearing during Find cancels the old snapshot and subsequent results conta
   manager.views.main.render();
   assert.equal(manager.views.main.highlight.id, manager.history.first);
   assert.equal(doc.querySelector("mark").textContent, "needle");
+  assert.equal(messages.some((message) => message.startsWith("Output search failed:")), false);
 });
 
 test("selected endpoints stay mounted while older rows render and Ctrl+C includes unmounted lines", async (t) => {

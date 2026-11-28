@@ -556,7 +556,7 @@ test("blocked pop-outs retain the split and native app bridges hide the launch c
   });
   await page.locator("#button-output-popout").click();
   await expect(page.locator("#output-secondary-panel")).toBeVisible();
-  expect(await page.evaluate(() => window.lastOutputStatus)).toContain("blocked");
+  await expect(page.getByText("The browser blocked the pop-out. Allow pop-ups for this site and try again.", { exact: true })).toBeVisible();
   await page.evaluate(() => {
     window.DomeNative = { sendInput() {} };
     window.outputTest.manager.popout.refresh();
@@ -661,8 +661,19 @@ test("routing, split positions, keyboard resize and close preserve output", asyn
   await divider.focus();
   await divider.press("End");
   await expect(divider).toHaveAttribute("aria-valuenow", "85");
+  for (const [key, size] of [["ArrowLeft", "83"], ["ArrowDown", "81"], ["ArrowRight", "83"], ["ArrowUp", "85"]]) {
+    await divider.press(key);
+    await expect(divider).toHaveAttribute("aria-valuenow", size);
+  }
   await divider.press("Home");
   await expect(divider).toHaveAttribute("aria-valuenow", "15");
+  const keepsDefault = (key) => divider.evaluate((element, pressedKey) => element.dispatchEvent(
+    new window.KeyboardEvent("keydown", { key: pressedKey, bubbles: true, cancelable: true })
+  ), key);
+  expect(await keepsDefault("a")).toBe(true);
+  await expect(divider).toHaveAttribute("aria-valuenow", "15");
+  expect(await keepsDefault("ArrowUp")).toBe(false);
+  await expect(divider).toHaveAttribute("aria-valuenow", "17");
   await page.getByRole("button", { name: "Close secondary output window" }).click();
   await expect(page.locator("#lineBuffer")).toContainText("[-][Team-Chat] chat");
   await expect(page.locator("#secondaryBuffer")).not.toBeVisible();
