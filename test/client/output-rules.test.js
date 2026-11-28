@@ -177,3 +177,55 @@ test("a worker failure from old settings does not disable newer routing", async 
   assert.deepEqual(await newBatch, [true]);
   assert.deepEqual(errors, []);
 });
+
+test("the routing watchdog gives each rule its own time and suspends only the stalled rule", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const workers = [];
+  const errors = [];
+  const other = { id: "grid", name: "Grid", pattern: "^grid" };
+  const runner = createRuleRunner({
+    timeoutMs: 10,
+    onError: (message, id) => errors.push({ message, id }),
+    workerFactory: () => {
+      const worker = {
+        addEventListener(name, listener) { this[name] = listener; },
+        postMessage(message) { this.sent = message; },
+        terminate() { this.terminated = true; }
+      };
+      workers.push(worker);
+      return worker;
+    }
+  });
+  t.after(() => runner.cancel());
+
+  const result = runner.match(["grid"], [...rules, other]);
+  const first = workers[0];
+  const id = first.sent.id;
+  t.mock.timers.tick(8);
+  first.message({ data: { id, activeRule: "grid" } });
+  t.mock.timers.tick(5);
+  assert.equal(first.terminated, undefined);
+  assert.equal(runner.pendingLines, 1);
+  first.message({ data: { id, activeRule: "chat" } });
+  t.mock.timers.tick(9);
+  assert.deepEqual(errors, []);
+  t.mock.timers.tick(1);
+  assert.equal(runner.pendingLines, 0);
+  assert.equal(first.terminated, true);
+  assert.deepEqual([...runner.suspended], ["chat"]);
+  assert.deepEqual(errors, [{
+    message: "A routing rule exceeded one second and was suspended.",
+    id: "chat"
+  }]);
+  assert.deepEqual(await result, [false]);
+
+  const next = runner.match(["grid"], [...rules, other]);
+  const replacement = workers[1];
+  assert.deepEqual(replacement.sent.rules, [other]);
+  replacement.message({ data: { id: replacement.sent.id, matches: [true] } });
+  assert.equal(runner.pendingLines, 0);
+  t.mock.timers.tick(10);
+  assert.equal(replacement.terminated, undefined);
+  assert.equal(errors.length, 1);
+  assert.deepEqual(await next, [true]);
+});
