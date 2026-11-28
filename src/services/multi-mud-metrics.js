@@ -20,7 +20,7 @@ function normalizeHost(host) {
 }
 
 function normalizePort(port) {
-  const numeric = Number.parseInt(String(port || ""), 10);
+  const numeric = Number.parseInt(String(port), 10);
   if (!Number.isFinite(numeric) || numeric < 23 || numeric > 65535) {
     return null;
   }
@@ -36,23 +36,18 @@ function normalizeAddress(host, port) {
   return `${normalizedHost}:${normalizedPort}`;
 }
 
-function normalizeTransportMode(useTls) {
-  return useTls === true ? "tls" : "tcp";
-}
-
-function normalizeMetricKey(host, port, useTls = false) {
+function normalizeMetricKey(host, port, useTls) {
   const address = normalizeAddress(host, port);
   if (!address) {
     return null;
   }
-  return normalizeTransportMode(useTls) === "tls" ? `${address}|tls` : address;
+  return useTls === true ? `${address}|tls` : address;
 }
 
 function parseMetricKey(key) {
-  const rawKey = String(key || "");
-  const [addressPart, transportPart] = rawKey.split("|");
+  const [addressPart, transportPart] = key.split("|");
   const separator = addressPart.lastIndexOf(":");
-  if (separator < 0) {
+  if (separator < 1) {
     return null;
   }
   const host = addressPart.slice(0, separator);
@@ -84,7 +79,7 @@ function loadMetrics() {
     }
     const parsed = JSON.parse(raw);
     const parsedCount = Number.parseInt(String(parsed?.count || 0), 10);
-    metrics.count = Number.isFinite(parsedCount) && parsedCount >= 0 ? parsedCount : 0;
+    metrics.count = Number.isFinite(parsedCount) ? Math.max(0, parsedCount) : 0;
     const parsedGames = parsed?.games && typeof parsed.games === "object" ? parsed.games : {};
     const normalizedGames = {};
     for (const [key, value] of Object.entries(parsedGames)) {
@@ -116,7 +111,7 @@ function saveMetrics() {
       fs.mkdirSync(dir, { recursive: true });
     }
     const tempPath = `${metricsPath}.tmp`;
-    fs.writeFileSync(tempPath, JSON.stringify(metrics, null, 2), "utf8");
+    fs.writeFileSync(tempPath, JSON.stringify(metrics, null, 2));
     fs.renameSync(tempPath, metricsPath);
   } catch (err) {
     const warn = typeof logger.warn === "function"

@@ -1,7 +1,6 @@
 import net from "node:net";
 import tls from "node:tls";
 import dns from "node:dns";
-import path from "node:path";
 import { parse } from "../services/ua.js";
 import config from "../config/index.js";
 import { named, inspect } from "../logger.js";
@@ -14,10 +13,8 @@ import { forwardMudData } from "../services/socket-data-flow.js";
 import { createTelnetIacProcessor } from "../services/telnet-iac-processor.js";
 import { bindSocketSession } from "../services/socket-session.js";
 import { handleTelnetIacEvent } from "./telnet-iac.js";
-import { fileURLToPath } from "node:url";
 
-const __filename = fileURLToPath(import.meta.url);
-const logger = named("controllers/" + path.basename(__filename, ".js"));
+const logger = named("controllers/socket");
 
 export function error(err) {
   logger.error(err);
@@ -25,14 +22,14 @@ export function error(err) {
   inspect(arguments);
 }
 
-const SOCKET_PROXIED = config.node?.socketProxied ?? false;
-const SHORTEN_ENABLED = config.shorten?.enabled ?? true;
-const MULTI_MUD_ENABLED = config.node?.multiMud === true;
-const MUD_TLS_ENABLED = config.moo?.tlsEnabled === true;
+const SOCKET_PROXIED = config.node.socketProxied;
+const SHORTEN_ENABLED = config.shorten.enabled;
+const MULTI_MUD_ENABLED = config.node.multiMud;
+const MUD_TLS_ENABLED = config.moo.tlsEnabled;
 
 export function userIp(socket) {
   let handshakeAddress = socket.handshake.address;
-  if (typeof handshakeAddress === "object" && Object.prototype.hasOwnProperty.call(handshakeAddress, "address")) {
+  if (Object.hasOwn(handshakeAddress, "address")) {
     handshakeAddress = handshakeAddress.address;
   }
   const tempAddress = SOCKET_PROXIED ? (socket.handshake.headers["x-forwarded-for"] || handshakeAddress) : handshakeAddress;
@@ -59,7 +56,6 @@ export function logError(socket, err) {
 }
 
 export async function connection(socket) {
-  socket.isActive = true;
   socket.logger = logger;
   socket.logUser = logUser;
   socket.logError = logError;

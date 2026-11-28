@@ -7,18 +7,15 @@ import nock from "nock";
 
 async function load(t, remoteAuth = { enabled: true, host: "http://localhost:5550", path: "/session/authenticate/", remoteSecret: "XXX" }, { error = () => {} } = {}) {
   const configMock = t.mock.module("../../src/config/index.js", { defaultExport: { remoteAuth } });
-  const loggerMock = t.mock.module("../../src/logger.js", {
-    namedExports: {
-      named: () => ({ info() {}, error, warn() {}, debug() {} })
-    }
-  });
+  const named = t.mock.fn(() => ({ info() {}, error, warn() {}, debug() {} }));
+  const loggerMock = t.mock.module("../../src/logger.js", { namedExports: { named } });
   const [{ login }, { setupAuth }] = await Promise.all([
     import(`../../src/controllers/auth.js?c=${Date.now()}`),
     import("../helpers/auth.js")
   ]);
   configMock.restore();
   loggerMock.restore();
-  return { login, setupAuth };
+  return { login, setupAuth, named };
 }
 
 test("assigns session user on success", async t => {
@@ -360,11 +357,12 @@ test("automatic login with no eligible character returns home without a session 
 test("logs a transport error and provides a fallback if it has no message", async t => {
   const error = t.mock.fn();
   const failure = new Error();
-  const { login, setupAuth } = await load(t, undefined, { error });
+  const { login, setupAuth, named } = await load(t, undefined, { error });
   t.mock.method(globalThis, "fetch", async () => { throw failure; });
   const { req, res, redirect } = setupAuth();
 
   await login(req, res);
+  assert.deepEqual(named.mock.calls[0].arguments, ["controllers/auth"]);
   assert.equal(error.mock.calls[0].arguments[0], failure);
   assert.match(req.session.error, /^Unhandled exception thrown while authenticating/);
   assert.equal(redirect.url, "/");

@@ -9,6 +9,7 @@ function createServerConfig() {
       ip: "127.0.0.1"
     },
     ssl: null,
+    status: { serviceUrl: "" },
     autocomplete: {
       enabled: false,
       p: "data/autocomplete/player.txt"

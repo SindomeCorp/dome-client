@@ -50,6 +50,7 @@ async function loadRoute(options = {}) {
 
 test("error utility logs via stub logger", async (t) => {
   const messages = { error: [], debug: [] };
+  const debug = t.mock.method(logger, "debug", () => {});
   const childMock = t.mock.method(logger, "child", () => ({
     error: msg => messages.error.push(msg),
     debug: msg => messages.debug.push(msg),
@@ -60,6 +61,8 @@ test("error utility logs via stub logger", async (t) => {
   route.error(err);
   assert.deepEqual(messages.error, [err]);
   assert.ok(messages.debug.includes("args:"));
+  assert.deepEqual(childMock.mock.calls.at(-1).arguments, [{ namespace: "controllers/socket" }]);
+  assert.match(debug.mock.calls[0].arguments[0], /Error: boom/);
   childMock.mock.restore();
 });
 
@@ -414,11 +417,12 @@ test("network error codes remain visible for connections without device details"
   const failure = { code: "ENOTFOUND" };
 
   route.logError(socket, failure);
+  route.logError(socket, new Error(""));
 
   const { arguments: [message, detail] } = error.mock.calls[0];
-  assert.match(message, /^ERR 127\.0\.0\.1 .*ENOTFOUND$/);
-  assert.equal(message.match(/Other 0\.0\.0/g)?.length, 1);
+  assert.equal(message, "ERR 127.0.0.1 Other 0.0.0    ENOTFOUND");
   assert.equal(detail, failure);
+  assert.equal(error.mock.calls[1].arguments[0], "ERR 127.0.0.1 Other 0.0.0    ");
 });
 
 test("logUser handles error objects", async (t) => {
@@ -1456,10 +1460,7 @@ test("socket route connection lifecycle", async (t) => {
     const p = route.connection(socket);
     moo.emit("connect");
     await p;
-    const hiLog = infoLogs.find(m => m.startsWith("HI "));
-    assert.ok(hiLog);
-    const occurrences = (hiLog.match(/Other 0\.0\.0/g) || []).length;
-    assert.equal(occurrences, 1);
+    assert.ok(infoLogs.includes("HI  5.6.7.8 Other 0.0.0   "));
 
     net.connect = original.connect;
     dns.promises.reverse = original.reverse;

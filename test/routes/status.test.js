@@ -4,11 +4,8 @@ import assert from "node:assert/strict";
 
 async function loadStatus(t, { fetchImpl, logger, skipInitialCheck = false, serviceUrl = "status.example.com" } = {}) {
   const configMock = t.mock.module("../../src/config/index.js", { defaultExport: { status: { serviceUrl } } });
-  const loggerMock = t.mock.module("../../src/logger.js", {
-    namedExports: {
-      named: () => (logger || { debug() {}, info() {}, warn() {}, error() {} })
-    }
-  });
+  const named = t.mock.fn(() => (logger || { debug() {}, info() {}, warn() {}, error() {} }));
+  const loggerMock = t.mock.module("../../src/logger.js", { namedExports: { named } });
   let intervalFn;
   const intervalMock = t.mock.method(global, "setInterval", (fn) => {
     intervalFn = fn;
@@ -35,7 +32,7 @@ async function loadStatus(t, { fetchImpl, logger, skipInitialCheck = false, serv
     timeoutMock.mock.restore();
     fetchMock.mock.restore();
   });
-  return { mod, runHealthCheck: intervalFn, runInitialCheck: timeoutFn };
+  return { mod, runHealthCheck: intervalFn, runInitialCheck: timeoutFn, named };
 }
 
 function jsonResponse(body) {
@@ -62,7 +59,7 @@ test("healthCheck updates lastStatus", async (t) => {
     state: "OK"
   };
   const logger = { debug() {}, info: t.mock.fn(), warn() {}, error: t.mock.fn() };
-  const { mod } = await loadStatus(t, {
+  const { mod, named } = await loadStatus(t, {
     fetchImpl: t.mock.fn(async () => jsonResponse(expected)),
     logger
   });
@@ -71,6 +68,7 @@ test("healthCheck updates lastStatus", async (t) => {
   const status = get({}, res);
   assert.deepEqual(status, expected);
   assert.deepEqual(res.json.mock.calls[0].arguments[0], expected);
+  assert.deepEqual(named.mock.calls[0].arguments, ["controllers/status"]);
   assert.equal(logger.info.mock.callCount(), 0);
   assert.equal(logger.error.mock.callCount(), 0);
 });
