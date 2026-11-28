@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - Keep revised output filters working when a routing worker fails on older settings.
 - Keep the active context-menu profile when an older server request finishes after an Options reload.
 - Prevent canceled overlapping long presses from pausing output scrolling.
+- Match word alerts against visible output when ANSI styling splits a word.
 
 ## 2026-11-27
 

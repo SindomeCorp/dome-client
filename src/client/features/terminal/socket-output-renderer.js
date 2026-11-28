@@ -1,5 +1,5 @@
 import * as replacements from "./replacements.js";
-import { createAnsiRenderer } from "./ansi-renderer.js";
+import { createAnsiRenderer, renderAnsiRunHtml } from "./ansi-renderer.js";
 import { getPreviewMedia } from "./media-url.js";
 
 function defaultNowMs() {
@@ -80,8 +80,8 @@ export function createSocketOutputRenderer({
     });
   };
 
-  const renderOutputSegment = (rawSegment) => {
-    let outputSegment = ansiRenderer.renderChunk(rawSegment);
+  const renderOutputRuns = (runs) => {
+    let outputSegment = runs.map(renderAnsiRunHtml).join("");
 
     outputSegment = linkifyUrlsWithPreview(outputSegment);
     outputSegment = linkifyHosts(outputSegment);
@@ -172,17 +172,16 @@ export function createSocketOutputRenderer({
   };
 
   const appendOutputSegment = (rawSegment) => {
+    if (!client.outputWindows && !rawSegment) return client.buffer.childNodes.length;
+
+    const runs = ansiRenderer.renderRuns(rawSegment);
+    triggerAlertIfMatched(runs.map((run) => run.text).join(""));
     if (client.outputWindows) {
-      const runs = ansiRenderer.renderRuns(rawSegment);
-      triggerAlertIfMatched(runs.map((run) => run.text).join(""));
       client.outputWindows.appendRuns(runs);
       return client.outputWindows.history.length;
     }
-    if (!rawSegment) return client.buffer.childNodes.length;
 
-    const outputSegment = renderOutputSegment(rawSegment);
-    triggerAlertIfMatched(outputSegment);
-    getOutputTarget().insertAdjacentHTML("beforeend", wrapLinesToDivs(outputSegment));
+    getOutputTarget().insertAdjacentHTML("beforeend", wrapLinesToDivs(renderOutputRuns(runs)));
 
     return client.buffer.childNodes.length;
   };
@@ -208,7 +207,7 @@ export function createSocketOutputRenderer({
     appendOutputSegment,
     endSdwcNowrapBlock,
     pruneBuffer,
-    renderOutputSegment,
+    renderOutputSegment: (rawSegment) => renderOutputRuns(ansiRenderer.renderRuns(rawSegment)),
     resetAnsiRendererState: () => ansiRenderer.resetState(),
     resetSdwcNowrapState,
     startSdwcNowrapBlock

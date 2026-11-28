@@ -39,8 +39,7 @@ test("HTTPS short links preserve their scheme and opaque keys remain links", (t)
   client.urlPatterns = { images: /png|jpg|gif|jpeg$/, videos: /mp4|gifv$/ };
   const renderer = createSocketOutputRenderer({
     client,
-    logger: createLogger(t),
-    ansiRenderer: { renderChunk: (segment) => segment, resetState: () => {} }
+    logger: createLogger(t)
   });
   renderer.appendOutputSegment("https://sindo.me/abc123");
   assert.equal(client.buffer.querySelector("a").getAttribute("href"), "https://sindo.me/abc123");
@@ -53,8 +52,7 @@ test("preview controls use pathname extensions in both automatic and collapsed m
   setupDom(t, "<!doctype html><html><body><div id=\"buffer\"></div></body></html>");
   const client = createClient();
   const renderer = createSocketOutputRenderer({
-    client, logger: createLogger(t),
-    ansiRenderer: { renderChunk: (segment) => segment, resetState: () => {} }
+    client, logger: createLogger(t)
   });
   for (const expanded of [false, true]) {
     client.preferences.imagePreview = expanded;
@@ -78,8 +76,7 @@ test("socket output renderer linkifies hosts and wraps selectable references", (
   const client = createClient();
   const renderer = createSocketOutputRenderer({
     client,
-    logger: createLogger(t),
-    ansiRenderer: { renderChunk: (segment) => segment, resetState: () => {} }
+    logger: createLogger(t)
   });
 
   renderer.appendOutputSegment("[host=192.168.0.1] #42 $thing\n");
@@ -103,8 +100,7 @@ test("socket output renderer handles alert matching and scrollback pruning", (t)
 
   const renderer = createSocketOutputRenderer({
     client,
-    logger: createLogger(t),
-    ansiRenderer: { renderChunk: (segment) => segment, resetState: () => {} }
+    logger: createLogger(t)
   });
 
   renderer.appendOutputSegment("TARGET\n");
@@ -122,8 +118,7 @@ test("socket output renderer routes nowrap output into marker block", (t) => {
   const logger = createLogger(t);
   const renderer = createSocketOutputRenderer({
     client,
-    logger,
-    ansiRenderer: { renderChunk: (segment) => segment, resetState: () => {} }
+    logger
   });
 
   renderer.startSdwcNowrapBlock();
@@ -144,8 +139,7 @@ test("socket output renderer preserves spaces inside nowrap output", (t) => {
   client.preferences.sdwcNowrapBlocks = true;
   const renderer = createSocketOutputRenderer({
     client,
-    logger: createLogger(t),
-    ansiRenderer: { renderChunk: (segment) => segment, resetState: () => {} }
+    logger: createLogger(t)
   });
 
   renderer.startSdwcNowrapBlock();
@@ -170,7 +164,6 @@ test("socket output renderer renders image, video, and YouTube previews", (t) =>
   const renderer = createSocketOutputRenderer({
     client,
     logger: createLogger(t),
-    ansiRenderer: { renderChunk: (segment) => segment, resetState: () => {} },
     nowMs: () => now++
   });
 
@@ -196,8 +189,7 @@ test("socket output renderer handles alert strings, hostnames, nowrap warnings, 
   const logger = createLogger(t);
   const renderer = createSocketOutputRenderer({
     client,
-    logger,
-    ansiRenderer: { renderChunk: (segment) => segment, resetState: t.mock.fn() }
+    logger
   });
 
   assert.equal(renderer.appendOutputSegment(""), 0);
@@ -214,4 +206,24 @@ test("socket output renderer handles alert strings, hostnames, nowrap warnings, 
   assert.equal(client.alert.tone.play.mock.callCount(), 1);
   assert.equal(client.windowAlert.mock.callCount(), 1);
   assert.equal(logger.warn.mock.callCount(), 3);
+});
+
+test("word alerts match visible text split by ANSI and ignore generated styling", (t) => {
+  setupDom(t, "<!doctype html><html><body><div id=\"buffer\"></div></body></html>");
+  const client = createClient();
+  const play = t.mock.fn();
+  client.alert = { active: true, pattern: /target &/gi, tone: { play } };
+  client.windowAlert = t.mock.fn();
+  const renderer = createSocketOutputRenderer({ client, logger: createLogger(t) });
+
+  renderer.appendOutputSegment("TA\u001b[4mRGET\u001b[24m & other\n");
+  renderer.appendOutputSegment("TA\u001b[4mRGET\u001b[24m & again\n");
+  assert.equal(client.buffer.firstElementChild.textContent, "TARGET & other");
+  assert.equal(play.mock.callCount(), 2);
+  assert.equal(client.windowAlert.mock.callCount(), 2);
+
+  client.alert.pattern = "ansi-underline";
+  renderer.appendOutputSegment("\u001b[4mordinary text\u001b[24m\n");
+  assert.equal(play.mock.callCount(), 2);
+  assert.equal(client.windowAlert.mock.callCount(), 2);
 });

@@ -74,6 +74,33 @@ test("ANSI extended xterm colors reach the real output stylesheet", async ({ pag
   await expect(plain).toHaveCSS("font-style", "normal");
 });
 
+for (const legacy of [true, false]) {
+  test("word alerts follow visible styled " + (legacy ? "legacy output" : "virtual output"), async ({ page }) => {
+    const counts = await page.evaluate(async (legacy) => {
+      const { client, manager } = window.outputTest;
+      if (legacy) {
+        manager.destroy();
+        delete client.outputWindows;
+      }
+      const calls = { tone: 0, attention: 0 };
+      client.alert = { active: true, pattern: /target &/gi, tone: { play() { calls.tone++; } } };
+      client.windowAlert = () => { calls.attention++; };
+      client.parseSocketData("TA\u001b[4mRGET\u001b[24m & text\n");
+      await client.outputWindows?.idle();
+      const matched = { ...calls };
+
+      client.alert.pattern = "ansi-underline";
+      client.parseSocketData("\u001b[4mordinary\u001b[24m\n");
+      await client.outputWindows?.idle();
+      return { matched, afterUnrelated: calls };
+    }, legacy);
+    await expect(page.locator("#lineBuffer")).toContainText("TARGET & text");
+    expect(counts).toEqual({
+      matched: { tone: 1, attention: 1 }, afterUnrelated: { tone: 1, attention: 1 }
+    });
+  });
+}
+
 test("docked and detached output keep named keyboard regions and list positions", async ({ page }) => {
   await page.evaluate(async () => {
     const { manager, feed } = window.outputTest;
