@@ -558,6 +558,47 @@ test("context menus: keyboard actions work in secondary and detached output", as
   expect(await page.evaluate(() => window.contextSent)).toEqual([["input", "@rewind Team-Chat"]]);
 });
 
+test("right-click copies a reverse selection and leaves unrelated plain text native", async ({ page }) => {
+  await start(page);
+  await feed(page, "picked #123 then #456\n");
+  const row = page.locator("#lineBuffer [data-output-id]").last();
+  await expect(row).toHaveText("picked #123 then #456");
+  await page.evaluate(() => {
+    window.selectionContextEvents = [];
+    document.addEventListener("contextmenu", (event) => {
+      window.setTimeout(() => window.selectionContextEvents.push(event.defaultPrevented), 0);
+    }, { capture: true });
+  });
+
+  const select = () => row.evaluate(async (element) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const first = walker.nextNode();
+    let last = first;
+    let end = "picked #123".length;
+    while (end > last.length) {
+      end -= last.length;
+      last = walker.nextNode();
+    }
+    document.getSelection().setBaseAndExtent(last, end, first, 0);
+    document.dispatchEvent(new Event("selectionchange"));
+    await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+  });
+  await select();
+  await rightText(page, row, 13);
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.selectionContextEvents)).toEqual([false]);
+  await page.keyboard.press("Escape");
+
+  await select();
+  await rightText(page, row, 8);
+  const menu = page.getByRole("menu", { name: "Selected output actions" });
+  await expect(menu).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.selectionContextEvents)).toEqual([false, true]);
+  await menu.getByRole("menuitem", { name: "Copy selected text" }).click();
+  await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("picked #123");
+  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+});
+
 test("context menus: selection Scratchpad opens unsaved, warns immediately, and writes only on Save", async ({ page }) => {
   await start(page);
   const first = "@quit\n;selected_text()\n.";
