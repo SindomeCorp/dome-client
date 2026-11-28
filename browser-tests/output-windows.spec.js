@@ -58,6 +58,36 @@ async function redockCompanion(popup) {
   });
 }
 
+test("docked and detached output keep named keyboard regions and list positions", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { manager, feed } = window.outputTest;
+    manager.updateSettings({ open: true, selected: ["team-chat"] });
+    await feed("main line\n[-][Team-Chat] first\n[-][Team-Chat] second\n");
+  });
+
+  const main = page.getByRole("region", { name: "Main output", exact: true });
+  await expect(main.getByRole("list").getByRole("listitem")).toHaveText("main line");
+  const verifySecondary = async (host) => {
+    const region = host.getByRole("region", { name: "Secondary output", exact: true });
+    const rows = region.getByRole("list").getByRole("listitem");
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toHaveAttribute("aria-posinset", "1");
+    await expect(rows.last()).toHaveAttribute("aria-posinset", "2");
+    await expect(rows.last()).toHaveAttribute("aria-setsize", "2");
+    await expect(region.locator(".output-spacer[aria-hidden=true]")).toHaveCount(2);
+    await expect(region).toHaveAttribute("tabindex", "0");
+    await rows.first().focus();
+    await rows.first().press("ArrowDown");
+    await expect(rows.last()).toBeFocused();
+  };
+
+  await verifySecondary(page);
+  const popup = await popOut(page);
+  await verifySecondary(popup);
+  await redockCompanion(popup);
+  await verifySecondary(page);
+});
+
 test("cross-origin navigation without a lifecycle notification redocks and retains incoming output", async ({ page }) => {
   const otherOrigin = createServer((_req, response) => response.end("Another origin"));
   await new Promise((resolve) => otherOrigin.listen(0, "127.0.0.1", resolve));

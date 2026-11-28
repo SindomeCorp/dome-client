@@ -108,6 +108,93 @@ test("redocking uses captured cleanup APIs after the previous host becomes inacc
   assert.equal(manager.history.length, 2);
 });
 
+test("redocking releases the companion measurements, pending frame and hold", async (t) => {
+  const { client, manager, popup, send, feed } = await companion(t);
+  const observers = [];
+  popup.ResizeObserver = class {
+    observed = new Set();
+    disconnected = false;
+    constructor(notify) {
+      this.notify = notify;
+      observers.push(this);
+    }
+    observe(element) { this.observed.add(element); }
+    unobserve(element) { this.observed.delete(element); }
+    disconnect() { this.disconnected = true; this.observed.clear(); }
+  };
+  const frames = new Map();
+  let frameId = 0;
+  t.mock.method(popup, "requestAnimationFrame", (render) => {
+    frames.set(++frameId, render);
+    return frameId;
+  });
+  const cancelFrame = t.mock.method(popup, "cancelAnimationFrame", (id) => frames.delete(id));
+  const flushFrame = (view) => {
+    const id = view.frame;
+    assert.ok(frames.has(id));
+    const render = frames.get(id);
+    frames.delete(id);
+    render();
+  };
+  const clearTimer = t.mock.method(popup, "clearTimeout");
+  client.preferences.autoScroll = "long";
+  manager.updateSettings({ open: true, selected: ["team-chat"] });
+  manager.popout.open();
+  send("output-popout-ready");
+  await feed("[-][Team-Chat] companion row\n");
+
+  const retired = manager.views.secondary;
+  const row = retired.element.querySelector(".output-row");
+  assert.ok(row);
+  const rowObserver = observers.find((observer) => observer.observed.has(row));
+  const scrollObserver = observers.find((observer) => observer.observed.has(retired.element));
+  assert.ok(rowObserver);
+  assert.ok(scrollObserver);
+  flushFrame(retired);
+
+  const measurement = { target: row, borderBoxSize: [{ blockSize: 52 }], contentRect: { height: 44 } };
+  rowObserver.notify([measurement]);
+  assert.equal(retired.index.prefix(1), 52, "the first current row uses its border box");
+  flushFrame(retired);
+
+  const measure = t.mock.method(retired.index, "measure");
+  const missing = popup.document.createElement("div");
+  missing.dataset.outputId = "999";
+  rowObserver.notify([
+    { target: row, borderBoxSize: [], contentRect: { height: 46 } },
+    { target: missing, contentRect: { height: 70 } }
+  ]);
+  rowObserver.notify([{ target: row, contentRect: { height: 47 } }]);
+  assert.deepEqual(measure.mock.calls.map(({ arguments: args }) => args), [[0, 46], [0, 47]]);
+  assert.equal(retired.index.prefix(1), 47);
+  assert.equal(frames.size, 1, "concurrent observer notifications share one frame");
+  flushFrame(retired);
+
+  scrollObserver.notify([]);
+  row.dispatchEvent(new popup.MouseEvent("pointerdown", { button: 0, bubbles: true }));
+  const { frame, longPress } = retired;
+  assert.notEqual(frame, null);
+  assert.ok(longPress);
+
+  manager.popout.redock({ focus: false });
+  assert.ok(cancelFrame.mock.calls.some(({ arguments: args }) => args[0] === frame));
+  assert.ok(clearTimer.mock.calls.some(({ arguments: args }) => args[0] === longPress));
+  for (const observer of [rowObserver, scrollObserver]) {
+    assert.ok(observer.disconnected);
+    assert.equal(observer.observed.size, 0);
+  }
+  assert.equal(retired.mounted.size, 0);
+  assert.equal(row.isConnected, false);
+  assert.equal(frames.size, 0);
+  rowObserver.notify([measurement]);
+  assert.equal(manager.views.secondary.index.prefix(1), 47, "the retired host cannot overwrite measurements");
+  const afterRetirement = retired.frame;
+  retired.element.dispatchEvent(new popup.Event("pointerdown", { bubbles: true }));
+  popup.document.dispatchEvent(new popup.Event("selectionchange"));
+  assert.equal(retired.frame, afterRetirement);
+  assert.equal(retired.longPress, longPress);
+});
+
 test("closed companions and incoming output restore the dock without dropping lines", async (t) => {
   const { manager, popup, feed, send, close } = await companion(t);
   manager.updateSettings({ open: true, selected: ["team-chat"] });
