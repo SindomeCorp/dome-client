@@ -186,7 +186,7 @@ export function setupContextMenus({ client, doc = document, win = window, matche
         refresh();
         await controller.ready;
         if (pendingUserReload) return;
-        const generation = reloadId;
+        let generation = reloadId;
         const selectedSession = session;
         const isCurrent = () => request === serverRequest && selectedSession === session;
         if (!isCurrent()) return;
@@ -204,13 +204,15 @@ export function setupContextMenus({ client, doc = document, win = window, matche
             return;
           }
           const documents = [...fileDocuments.filter((document) => document.id !== id), document];
-          const ok = await reload(JSON.stringify(config), { persist: false, documents, isCurrent });
-          if (!isCurrent()) return;
-          if (ok) return;
+          const application = reload(JSON.stringify(config), { persist: false, documents, isCurrent });
+          // Later reloads own the selection even if this worker completes afterward.
+          generation = reloadId;
+          const ok = await application;
+          if (!isCurrent() || generation !== reloadId || ok) return;
           server = null;
           fileProfiles.delete(id);
         } catch (error) {
-          if (!isCurrent()) return;
+          if (!isCurrent() || generation !== reloadId) return;
           server = null;
           fileProfiles.delete(id);
           report("Context profile unavailable; using Options selection. " + error.message);

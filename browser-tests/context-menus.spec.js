@@ -2173,3 +2173,51 @@ test("real Find navigates backward and wraps between repeated matches on one row
   await expect.poll(currentOffset).toBe(24);
   await expect(page.locator("#output-find-count")).toHaveText("3 of 3");
 });
+
+test("context menus: a late server profile worker cannot undo a newer Options reload", async ({ page }) => {
+  await page.addInitScript(() => {
+    const deferred = new WeakSet();
+    const post = window.Worker.prototype.postMessage;
+    const listen = window.Worker.prototype.addEventListener;
+    window.Worker.prototype.postMessage = function (message, ...args) {
+      if (message.type === "configure" && message.config.profiles.some(({ label }) => label === "Older GM")) {
+        deferred.add(this);
+      }
+      return post.call(this, message, ...args);
+    };
+    window.Worker.prototype.addEventListener = function (type, listener, options) {
+      if (type !== "message") return listen.call(this, type, listener, options);
+      return listen.call(this, type, (event) => {
+        if (deferred.has(this)) {
+          window.releaseObsoleteProfile = () => listener(event);
+        } else listener(event);
+      }, options);
+    };
+  });
+  const gm = JSON.parse(await readFile(new URL("../data/profiles/gm.json", import.meta.url), "utf8"));
+  await page.route("**/profiles/gm.json", (route) => route.fulfill({ json: gm }));
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await expect(page.locator("#context-menu-profile option")).toHaveCount(3);
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await setContextSection(page, "advanced");
+
+  gm.profiles[0].label = "Older GM";
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\r\n");
+  await page.waitForFunction(() => typeof window.releaseObsoleteProfile === "function");
+  gm.profiles[0].label = "New GM";
+  await page.locator("#context-menu-reload").click();
+  const active = page.locator("#context-menu-active");
+  await expect(active).toHaveText("Active Profile: New GM (selected by server)");
+
+  const finalProfile = await active.evaluate(async (element) => {
+    window.releaseObsoleteProfile();
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    return element.textContent;
+  });
+  expect(finalProfile).toBe("Active Profile: New GM (selected by server)");
+  await expect(page.locator("#context-menu-error")).toBeEmpty();
+  expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
+});

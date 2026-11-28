@@ -28,10 +28,10 @@ function matcher() {
   };
 }
 
-async function app(t, profileLoader) {
+async function app(t, profileLoader, matcherFactory = matcher) {
   const html = await ejs.renderFile("views/partials/context-menus-options.ejs", {});
   const { window } = new JSDOM("<div id='context-menu-notice'></div>" + html, { url: "https://example.com" });
-  const controller = setupContextMenus({ client: {}, win: window, doc: window.document, matcherFactory: matcher, profileLoader });
+  const controller = setupContextMenus({ client: {}, win: window, doc: window.document, matcherFactory, profileLoader });
   t.after(() => { controller.destroy(); window.close(); });
   return { controller, window };
 }
@@ -322,4 +322,46 @@ test("startup worker validation isolates broken files and never invents a bundle
   assert.equal(broken.controller.active().profile, null);
   assert.equal(broken.controller.snapshot.profiles.size, 0);
   assert.match(broken.window.document.querySelector("#context-menu-error").textContent, /zero-length/);
+});
+
+test("an obsolete server profile compilation cannot undo a newer Options reload", { timeout: 5000 }, async (t) => {
+  const documents = await files();
+  const gm = structuredClone(documents.find(({ id }) => id === "gm"));
+  gm.config.profiles[0].label = "Older GM";
+  const latest = structuredClone(documents);
+  latest.find(({ id }) => id === "gm").config.profiles[0].label = "New GM";
+  const entered = Promise.withResolvers();
+  const release = Promise.withResolvers();
+  let initialized = false;
+  const { controller } = await app(t, async (ids) => ({
+    errors: [],
+    documents: !initialized ? documents : ids ? [gm] : latest
+  }), () => {
+    const worker = matcher();
+    return {
+      ...worker,
+      async request(type, payload) {
+        if (type === "configure" && payload.config.profiles.some(({ label }) => label === "Older GM")) {
+          entered.resolve();
+          await release.promise;
+        }
+        return worker.request(type, payload);
+      }
+    };
+  });
+  t.after(() => release.resolve());
+  await controller.ready;
+  initialized = true;
+  const older = controller.setServerProfile("gm");
+  await entered.promise;
+  assert.equal(await controller.reload(JSON.stringify(controller.config)), true);
+  assert.equal(controller.active().profile.label, "New GM");
+  assert.equal(controller.active().source, "selected by server");
+  const revision = controller.revision;
+
+  release.resolve();
+  await older;
+  assert.equal(controller.revision, revision);
+  assert.equal(controller.active().profile.label, "New GM");
+  assert.equal(controller.active().source, "selected by server");
 });
