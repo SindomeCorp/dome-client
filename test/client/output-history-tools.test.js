@@ -622,13 +622,25 @@ test("clearing during selection preparation aborts it without offering obsolete 
   let signal;
   let resume;
   const gate = new Promise((resolve) => resume = resolve);
-  manager.snapshot = async (operationSignal, ...bounds) => {
+  t.after(resume);
+  const snapshots = t.mock.method(manager, "snapshot", async (operationSignal, ...bounds) => {
     signal = operationSignal;
     await gate;
     operationSignal.throwIfAborted();
     return snapshot(operationSignal, ...bounds);
+  });
+  const askCopy = (target, { preempted = false } = {}) => {
+    const event = new win.Event("copy", { bubbles: true, cancelable: true });
+    if (preempted) event.preventDefault();
+    target.dispatchEvent(event);
+    return event.defaultPrevented;
   };
-  doc.body.dispatchEvent(new win.Event("copy", { bubbles: true, cancelable: true }));
+  assert.equal(askCopy(doc.querySelector("#inputBuffer")), false, "the command field keeps native Copy");
+  assert.equal(askCopy(doc.body, { preempted: true }), true);
+  assert.equal(snapshots.mock.callCount(), 0, "a canceled Copy must not prepare history");
+  assert.equal(askCopy(doc.body), true);
+  assert.equal(askCopy(doc.body), true);
+  assert.equal(snapshots.mock.callCount(), 1, "repeating Copy must reuse the pending snapshot");
   assert.equal(signal.aborted, false);
   manager.clear();
   assert.equal(signal.aborted, true);

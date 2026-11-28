@@ -1887,6 +1887,9 @@ test("reverse selection survives at the retention boundary until the focused row
 });
 
 test("scrolling while text is selected renders old rows and copies the entire logical selection", async ({ page, browserName }) => {
+  // The context menu has its own preparation path. Count only native Copy here.
+  await page.goto("/?context=off");
+  await page.waitForFunction(() => window.outputTest);
   if (browserName === "chromium") {
     const cdp = await page.context().newCDPSession(page);
     await cdp.send("Browser.setPermission", { permission: { name: "clipboard-write" }, setting: "denied", origin: "http://127.0.0.1:4318" });
@@ -1914,6 +1917,16 @@ test("scrolling while text is selected renders old rows and copies the entire lo
     const view = window.outputTest.manager.views.main;
     const top = view.index.offsetIndex(view.logicalTop());
     const row = view.mounted.get(view.index.at(top).id);
+    const { manager } = window.outputTest;
+    const snapshot = manager.snapshot.bind(manager);
+    const pending = Promise.withResolvers();
+    window.releaseCopyPreparation = pending.resolve;
+    window.copySnapshotRequests = 0;
+    manager.snapshot = async (...args) => {
+      window.copySnapshotRequests++;
+      await pending.promise;
+      return snapshot(...args);
+    };
     document.getSelection().setBaseAndExtent(window.selectionAnchor, 8, row.firstChild, 2);
     const id = Number(row.dataset.outputId);
     const parts = [];
@@ -1922,6 +1935,11 @@ test("scrolling while text is selected renders old rows and copies the entire lo
     parts[parts.length - 1] = parts[parts.length - 1].slice(0, 8);
     return parts.join("\n");
   });
+  await page.keyboard.press("Control+c");
+  await page.keyboard.press("Control+c");
+  await expect(page.locator("#output-announcements")).toHaveText("Preparing selected output. Copy again when it is ready.");
+  expect(await page.evaluate(() => window.copySnapshotRequests)).toBe(1);
+  await page.evaluate(() => window.releaseCopyPreparation());
   await copyThroughNativeEvent(page, expected);
 });
 
