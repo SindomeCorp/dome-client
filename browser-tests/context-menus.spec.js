@@ -680,6 +680,41 @@ for (const [reason, clipboardUnavailable] of [
   });
 }
 
+test("a rejected context-menu Copy reports the error without sending input and remains retryable", async ({ page }) => {
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.addInitScript(() => {
+    window.contextCopyAttempts = [];
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { async writeText(text) {
+        window.contextCopyAttempts.push(text);
+        if (window.contextCopyAttempts.length === 1) throw new Error("Fixture denied clipboard access");
+      } }
+    });
+  });
+  await start(page, { clipboardStub: false });
+  await feed(page, "selected output copy fixture\n");
+  const row = page.locator("#lineBuffer [data-output-id]").last();
+  await row.evaluate((element) => {
+    element.focus();
+    document.getSelection().selectAllChildren(element);
+    document.dispatchEvent(new Event("selectionchange"));
+  });
+
+  const copy = page.getByRole("menuitem", { name: "Copy selected text" });
+  await openSelection(page);
+  await copy.click();
+  await expect(copy).toHaveCount(0);
+  await expect(page.locator("#context-menu-error")).toHaveText("Fixture denied clipboard access");
+  await openSelection(page);
+  await copy.click();
+  await expect(copy).toHaveCount(0);
+  expect(await page.evaluate(() => window.contextCopyAttempts)).toEqual(["selected output copy fixture", "selected output copy fixture"]);
+  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
 test("context menus: selection Scratchpad opens unsaved, warns immediately, and writes only on Save", async ({ page }) => {
   await start(page);
   const first = "@quit\n;selected_text()\n.";
