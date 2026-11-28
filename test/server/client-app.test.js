@@ -1,7 +1,6 @@
 /* eslint indent: ["error", 2], quotes: ["error", "double"], semi: ["error", "always"] */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import path from "node:path";
 import { EventEmitter } from "node:events";
 
 async function loadClientApp(t, config, options = {}) {
@@ -77,7 +76,6 @@ async function loadClientApp(t, config, options = {}) {
   };
 
   let middlewareFns = [];
-  let lessOptions;
   let morganStream;
   let morganSkip;
   let disable;
@@ -157,12 +155,6 @@ async function loadClientApp(t, config, options = {}) {
     defaultExport: (format, opts = {}) => {
       morganStream = opts.stream;
       morganSkip = opts.skip;
-      return () => {};
-    }
-  }));
-  mockCtxs.push(mock.module("../../src/middleware/less-middleware.js", {
-    defaultExport: (dir, opts) => {
-      lessOptions = opts;
       return () => {};
     }
   }));
@@ -249,9 +241,6 @@ async function loadClientApp(t, config, options = {}) {
   if (res.locals.showReporter) {
     res.locals.showReporter({ headers: {} });
     res.locals.showReporter({ headers: { "user-agent": "MSAppHost" } });
-  }
-  if (lessOptions && lessOptions.preprocess && lessOptions.preprocess.path) {
-    lessOptions.preprocess.path("a" + path.sep + "css" + path.sep + "b");
   }
   const handler = process.listeners("uncaughtException").at(-1);
   if (!options.startError && handler) {
