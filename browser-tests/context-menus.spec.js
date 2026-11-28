@@ -1225,7 +1225,7 @@ test("context menus: the keyboard chooser keeps adjacent custom matches in readi
       { id: "left", pattern: "Alpha", priority: 100, captures: {}, actions },
       { id: "right", pattern: "Beta", priority: 300, captures: {}, actions },
       { id: "overlap", pattern: "haBe|taAl", priority: 50, captures: {}, actions },
-      { id: "actionless", pattern: "Void", priority: 75, captures: {}, actions: [] }
+      { id: "actionless", pattern: "Void(?:Alpha)?", priority: 200, captures: {}, actions: [] }
     ];
     config.profiles[0].rules = config.rules.map(({ id }) => id);
   });
@@ -1245,6 +1245,56 @@ test("context menus: the keyboard chooser keeps adjacent custom matches in readi
     await page.keyboard.press("Enter");
     await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe(ordered[0]);
   }
+  await page.evaluate(() => { delete window.contextCopied; });
+  await feed(page, "VoidAlpha Beta\n");
+  const masked = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "VoidAlpha Beta" });
+  await masked.focus();
+  await expect.poll(async () => {
+    if (!await items.count()) await page.keyboard.press("Shift+F10");
+    return items.allTextContents();
+  }).toEqual(["Copy to Clipboard"]);
+  await page.keyboard.press("Enter");
+  await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("Beta");
+  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+});
+
+test("context menus: an overlong expanded heading reports once and leaves keyboard fallback", async ({ page }) => {
+  await start(page);
+  await editConfig(page, (config) => {
+    const rule = config.rules.find(({ id }) => id === "object");
+    rule.heading = "${object}".repeat(20);
+    config.rules = [rule];
+    config.profiles[0].rules = [rule.id];
+  });
+  await page.locator("#button-client-options-close").click();
+  const error = page.locator("#context-menu-error");
+  await error.evaluate((node) => {
+    window.contextHeadingReports = 0;
+    new window.MutationObserver(() => { window.contextHeadingReports++; }).observe(node, { childList: true });
+  });
+  const longRef = "#" + "1".repeat(119);
+  await feed(page, longRef + "\n#12\n");
+  const rows = page.locator("#lineBuffer [data-output-id]");
+  const longRow = rows.filter({ hasText: longRef });
+  await longRow.focus();
+  await expect.poll(async () => {
+    await page.keyboard.press("Shift+F10");
+    return error.textContent();
+  }).toBe("command: invalid single-line command");
+  const items = page.getByRole("menuitem");
+  await expect(items).toHaveCount(0);
+  await expect(longRow).toBeFocused();
+  const nativeDefault = await longRow.evaluate((row) =>
+    row.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ContextMenu", bubbles: true, cancelable: true })));
+  expect(nativeDefault).toBe(true);
+  expect(await page.evaluate(() => window.contextHeadingReports)).toBe(1);
+  await rows.filter({ hasText: /^#12$/ }).focus();
+  await expect.poll(async () => {
+    if (!await items.count()) await page.keyboard.press("Shift+F10");
+    return items.allTextContents();
+  }).toEqual(["Copy to Clipboard"]);
+  await page.keyboard.press("Enter");
+  await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#12");
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
 });
 
