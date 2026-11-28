@@ -234,6 +234,9 @@ test("useIdeMessages ignores malformed messages and unavailable opener postMessa
       data: { type: "ide-open-tab", editor: null }
     }));
     window.dispatchEvent(new window.MessageEvent("message", {
+      data: { type: "ide-open-tab", editor: "invalid" }
+    }));
+    window.dispatchEvent(new window.MessageEvent("message", {
       data: { type: "ide-set-font", font: 12 }
     }));
     window.dispatchEvent(new window.MessageEvent("message", {
@@ -246,6 +249,93 @@ test("useIdeMessages ignores malformed messages and unavailable opener postMessa
   await act(async () => {
     root.unmount();
   });
+});
+
+test("IDE scratchpad messages require the current same-origin opener", async (t) => {
+  const { window, cleanup } = setupDom();
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const root = createRoot(window.document.body.appendChild(window.document.createElement("div")));
+  t.after(async () => {
+    await act(async () => root.unmount());
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    cleanup();
+  });
+
+  const status = t.mock.fn();
+  const addTab = t.mock.fn();
+  const opener = window.document.body.appendChild(window.document.createElement("iframe")).contentWindow;
+  window.opener = opener;
+  t.mock.method(opener, "postMessage", status);
+  const origin = window.location.origin;
+
+  function ScratchpadHarness() {
+    useIdeMessages({ addTab });
+    return null;
+  }
+
+  await act(async () => root.render(React.createElement(ScratchpadHarness)));
+  assert.deepEqual(status.mock.calls[0].arguments, [{ type: "ide-ready" }, "*"]);
+
+  const editor = { contextScratch: true, buffer: "Selected output" };
+  const send = (source, origin) => {
+    window.dispatchEvent(new window.MessageEvent("message", {
+      data: { type: "ide-open-tab", editor },
+      source,
+      origin
+    }));
+  };
+
+  send(window, origin);
+  send(opener, "https://example.invalid");
+  window.opener = null;
+  send(null, origin);
+  assert.equal(addTab.mock.callCount(), 0);
+
+  window.opener = opener;
+  send(opener, origin);
+  assert.deepEqual(addTab.mock.calls.map(call => call.arguments), [[editor]]);
+});
+
+test("IDE messages use the latest handlers and are ignored after unmount", async (t) => {
+  const { window, cleanup } = setupDom();
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const root = createRoot(window.document.body.appendChild(window.document.createElement("div")));
+  t.after(() => {
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    cleanup();
+  });
+
+  const original = t.mock.fn();
+  const latest = t.mock.fn();
+  const errors = [];
+  const ready = t.mock.fn();
+  window.opener = { postMessage: ready };
+  window.addEventListener("error", (event) => {
+    errors.push(event.error);
+    event.preventDefault();
+  });
+
+  function FontHarness({ setEditorFont }) {
+    useIdeMessages({ setEditorFont });
+    return null;
+  }
+
+  const send = (data) => window.dispatchEvent(new window.MessageEvent("message", { data }));
+  await act(async () => root.render(React.createElement(FontHarness, { setEditorFont: original })));
+  send({ type: "set-editor-font", font: "small" });
+
+  await act(async () => root.render(React.createElement(FontHarness, { setEditorFont: latest })));
+  const invalidArray = Object.assign([], { type: "ide-set-font", font: "ignored array" });
+  for (const data of [false, "invalid", invalidArray, null, { type: "unknown", font: "ignored" }]) send(data);
+  send({ type: "ide-set-font", font: "large" });
+
+  await act(async () => root.unmount());
+  send({ type: "set-editor-font", font: "ignored after close" });
+
+  assert.deepEqual(errors, []);
+  assert.equal(ready.mock.callCount(), 1);
+  assert.deepEqual(original.mock.calls.map(call => call.arguments), [["small"]]);
+  assert.deepEqual(latest.mock.calls.map(call => call.arguments), [["large"]]);
 });
 
 test("useIdeSaveFlow prompts, submits, cancels, and preserves failed saves", async (t) => {
