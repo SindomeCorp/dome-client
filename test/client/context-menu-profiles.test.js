@@ -421,6 +421,52 @@ test("profile startup cannot recover over a newer successful reload", async (t) 
   assert.equal(window.document.querySelector("#context-menu-error").textContent, "");
 });
 
+test("Options reload stops superseded startup probes before another profile is compiled", { timeout: 5000 }, async (t) => {
+  const documents = await files();
+  const firstStarted = Promise.withResolvers();
+  const finishFirst = Promise.withResolvers();
+  const configured = [];
+  let firstDestroyed = false;
+  const { controller, window } = await app(t, async () => ({ documents, errors: [] }), () => {
+    const first = configured.length === 0;
+    const worker = matcher();
+    return {
+      async request(type, payload) {
+        configured.push(payload.config.profiles.map(({ id }) => id));
+        if (first) {
+          firstStarted.resolve();
+          await finishFirst.promise;
+        }
+        return worker.request(type, payload);
+      },
+      destroy() {
+        if (first) firstDestroyed = true;
+        worker.destroy();
+      }
+    };
+  });
+  await firstStarted.promise;
+  const doc = window.document;
+  const local = { version: 1, rules: [], profiles: [{
+    id: "player", label: "New Player", rules: [], selectionActions: []
+  }] };
+  const installed = Promise.withResolvers();
+  const unsubscribe = controller.subscribe(() => {
+    if (controller.active().profile?.label === "New Player") installed.resolve();
+  });
+  t.after(unsubscribe);
+  doc.querySelector("#context-menu-json").value = JSON.stringify(local);
+  doc.querySelector("#context-menu-reload").click();
+  await installed.promise;
+  finishFirst.resolve();
+  await controller.ready;
+  assert.deepEqual(configured, [["player"], ["player", "gm", "programmer"]]);
+  assert.equal(firstDestroyed, true);
+  assert.equal(controller.revision, 1);
+  assert.equal(doc.querySelector("#context-menu-active").textContent, "Active Profile: New Player (Fallback)");
+  assert.equal(doc.querySelector("#context-menu-error").textContent, "");
+});
+
 test("an obsolete server profile compilation cannot undo a newer Options reload", { timeout: 5000 }, async (t) => {
   const documents = await files();
   const gm = structuredClone(documents.find(({ id }) => id === "gm"));
