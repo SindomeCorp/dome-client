@@ -84,3 +84,39 @@ test("a numeric capture can widen to a related object-reference capture without 
   assert.equal(group.text, "#123");
   assert.equal(interpolateCommand(group.actions.find((action) => action.label === "Look"), snapshot.rules.get(group.match.rule), group.match.values), "look #123");
 });
+
+test("context menu validation accepts exact registry limits and rejects the next entry", () => {
+  const rules = Array.from({ length: 128 }, (_, index) => ({
+    id: "rule-" + index, priority: index ? -10000 : 10000,
+    pattern: index ? "x" : "y".repeat(2048), captures: {}, actions: []
+  }));
+  const profiles = Array.from({ length: 64 }, (_, index) => ({
+    id: "profile-" + index, label: "Profile " + index, rules: rules.map(({ id }) => id)
+  }));
+  const value = { version: 1, rules, profiles };
+  const valid = validateContextMenus(value);
+  assert.equal(valid.rules.size, 128);
+  assert.equal(valid.profiles.size, 64);
+  assert.equal(valid.rules.get("rule-0").priority, 10000);
+  assert.equal(valid.rules.get("rule-127").priority, -10000);
+  assert.equal(valid.profiles.get("profile-63").rules.length, 128);
+  assert.throws(() => validateContextMenus({ ...value, rules: [...rules, { ...rules[0], id: "extra" }] }), /^Error: rules:/);
+  assert.throws(() => validateContextMenus({ ...value, profiles: [...profiles, { ...profiles[0], id: "extra" }] }), /^Error: profiles:/);
+
+  const updateFirstRule = (patch) => validateContextMenus({ ...value, rules: [{ ...rules[0], ...patch }, ...rules.slice(1)] });
+  assert.throws(() => updateFirstRule({ pattern: "y".repeat(2049) }), /rules\[0\]\.pattern/);
+  for (const priority of [10001, -10001, 1.25]) assert.throws(() => updateFirstRule({ priority }), /rules\[0\]\.priority/);
+  for (const flags of ["g", "m", "ii"]) assert.throws(() => updateFirstRule({ flags }), /rules\[0\]\.flags/);
+});
+
+test("context rule matching bounds line and match counts, including reused compiled rules", () => {
+  const [rule] = compileContextRules([{ id: "marker", priority: 0, pattern: "x", captures: {} }]);
+  const line = "x".repeat(512).padEnd(32768, ".");
+  const matches = matchContextRules(line, [rule]);
+  assert.equal(matches.length, 512);
+  assert.deepEqual(matches.at(-1), { rule: "marker", start: 511, end: 512, values: {}, text: "x" });
+  assert.throws(() => matchContextRules(line + ".", [rule]), /line exceeds 32768/);
+  assert.throws(() => matchContextRules("x".repeat(513), [rule]), /too many matches/);
+  assert.equal(rule.regex.lastIndex, 0, "a rejected line leaves the compiled rule ready for reuse");
+  assert.deepEqual(matchContextRules(".x", [rule]), [{ rule: "marker", start: 1, end: 2, values: {}, text: "x" }]);
+});
