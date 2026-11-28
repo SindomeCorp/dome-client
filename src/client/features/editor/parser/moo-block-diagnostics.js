@@ -135,9 +135,8 @@ export function collectMooBlockDiagnostics(source) {
   const annotations = [];
 
   for (const token of readTokens(sourceText)) {
-    const expectedEnd = BLOCKS[token.text];
-    if (expectedEnd) {
-      stack.push({ ...token, end: expectedEnd });
+    if (Object.hasOwn(BLOCKS, token.text)) {
+      stack.push({ ...token, end: BLOCKS[token.text] });
       continue;
     }
 

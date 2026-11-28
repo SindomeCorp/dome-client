@@ -29,6 +29,7 @@ All notable changes to this project will be documented in this file.
 - Keep the selected character and password when Add Character is canceled.
 - Keep context menus working when the matching worker sends a malformed or late reply.
 - Keep newer context-menu imports and edits when an older JSON file finishes reading late.
+- Keep the local editor from flagging ordinary variable names such as `constructor` as MOO block keywords.
 
 ### Added
 - Add wildcard @rewind menus for `[+][channel]` and `[-][channel]` tags in Player, GM and Programmer profiles.

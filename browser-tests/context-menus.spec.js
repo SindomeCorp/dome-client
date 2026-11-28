@@ -1515,11 +1515,12 @@ test("the real IDE blocks invalid MOO source and saves corrected source after wo
     expect((await fixtureState(page)).commands).toEqual(before);
   }
 
-  await editor.evaluate((element) => element.env.editor.setValue("return 2;", -1));
+  const corrected = "constructor = 2;\nreturn constructor;";
+  await editor.evaluate((element, text) => element.env.editor.setValue(text, -1), corrected);
   await expect.poll(getAnnotations).toEqual([]);
   await save.click();
   await expect.poll(async () => (await fixtureState(page)).commands.slice(before.length))
-    .toEqual(["@program #12:preview", "return 2;\n."]);
+    .toEqual(["@program #12:preview", corrected + "\n."]);
 });
 
 test("the real IDE browses and edits object verbs and properties through the fixture transport", async ({ page }) => {

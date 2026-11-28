@@ -94,3 +94,45 @@ test("collectMooBlockDiagnostics reports mismatched closing block", () => {
     }
   ]);
 });
+
+test("collectMooBlockDiagnostics treats ordinary variable names as identifiers", () => {
+  assert.deepEqual(collectMooBlockDiagnostics("constructor = 1; return constructor;"), []);
+});
+
+test("collectMooBlockDiagnostics tracks columns after escaped quotes and embedded newlines", () => {
+  const lines = [
+    String.raw`value = "an escaped quote: \"endfork`,
+    "and an escaped newline\\",
+    "endif\";\t fork job (0)",
+    "    while (1)"
+  ];
+  assert.deepEqual(collectMooBlockDiagnostics(lines.join("\n")), [
+    { row: 3, column: 4, text: "Missing endwhile", type: "error" },
+    { row: 2, column: lines[2].indexOf("fork"), text: "Missing endfork", type: "error" },
+    { row: 3, column: lines[3].length, text: "Missing block terminators: endwhile, endfork", type: "error" }
+  ]);
+});
+
+test("collectMooBlockDiagnostics reports every orphaned branch and closer", () => {
+  const source = "  ENDTRY\n\tELSEIF (0)\nelse\nexcept err (ANY)\n finally";
+  assert.deepEqual(collectMooBlockDiagnostics(source), [
+    { row: 0, column: 2, text: "Unexpected endtry", type: "error" },
+    { row: 1, column: 1, text: "Unexpected elseif", type: "error" },
+    { row: 2, column: 0, text: "Unexpected else", type: "error" },
+    { row: 3, column: 0, text: "Unexpected except", type: "error" },
+    { row: 4, column: 1, text: "Unexpected finally", type: "error" }
+  ]);
+});
+
+test("collectMooBlockDiagnostics closes nested try, fork and while blocks", () => {
+  const source = "try\n  fork job (0)\n    while (1)\n    endwhile\n  endfork\nfinally\nendtry";
+  assert.deepEqual(collectMooBlockDiagnostics(source), []);
+});
+
+test("collectMooBlockDiagnostics keeps same-line columns after strings and other tokens", () => {
+  const source = String.raw`value = call("escaped \"quote\"");  while (1)`;
+  assert.deepEqual(collectMooBlockDiagnostics(source), [
+    { row: 0, column: source.indexOf("while"), text: "Missing endwhile", type: "error" },
+    { row: 0, column: source.length, text: "Missing block terminator: endwhile", type: "error" }
+  ]);
+});
