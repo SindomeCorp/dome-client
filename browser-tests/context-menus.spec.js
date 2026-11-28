@@ -2240,7 +2240,47 @@ test("the real IDE applies wrap, Vim and Options font changes to both mounted ta
   await ide.getByRole("button", { name: "Disable word wrap" }).click();
   await ide.keyboard.press("Control+0");
   await expectSettings(false, false, "Monaco");
+  await editors.evaluateAll((elements) => {
+    window.resizedIdeTabs = [];
+    for (const { env: { editor } } of elements) {
+      const resize = editor.resize.bind(editor);
+      editor.resize = (...args) => {
+        window.resizedIdeTabs.push(editor.getValue());
+        resize(...args);
+      };
+    }
+  });
+  const expectResized = async (width, height, text) => {
+    await ide.evaluate(async () => {
+      // Flush any resize scheduled by selecting the tab before resizing the window.
+      await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+      window.resizedIdeTabs = [];
+    });
+    await ide.setViewportSize({ width, height });
+    await expect.poll(() => ide.evaluate(() => [...new Set(window.resizedIdeTabs)])).toEqual([text]);
+  };
+  await expect(ide.getByRole("tab", { name: /Second settings tab/ })).toHaveAttribute("aria-selected", "true");
+  await expectResized(1100, 650, "return 13;");
+  await ide.getByRole("tab", { name: /First settings tab/ }).click();
+  await expectResized(760, 740, "return 12;");
+  await expectSettings(false, false, "Monaco");
   expect((await fixtureState(page)).commands).toEqual(connected.commands);
+});
+
+test("the real IDE can resize an empty window before it has an active editor", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/editor/ide/");
+  await expect(page.getByRole("tab")).toHaveCount(0);
+  await page.evaluate(() => {
+    window.emptyIdeResized = false;
+    window.addEventListener("resize", () => { window.emptyIdeResized = true; }, { once: true });
+  });
+  await page.setViewportSize({ width: 1100, height: 650 });
+  await page.waitForFunction(() => window.emptyIdeResized);
+  await page.evaluate(() => new Promise((resolve) =>
+    window.requestAnimationFrame(() => window.requestAnimationFrame(resolve))));
+  expect(errors).toEqual([]);
 });
 
 test("the real IDE keeps display preferences usable when storage rejects writes and reads", async ({ page }) => {

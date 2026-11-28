@@ -1499,8 +1499,28 @@ test("paused secondary keeps its first available row when early history is prune
   await expect.poll(() => secondary.evaluate((element) => element.scrollTop)).toBe(0);
   await expect(page.getByRole("button", { name: "Resume secondary scrolling", exact: true })).toBeVisible();
 
+  const anchorId = await page.evaluate(() => {
+    const { manager } = window.outputTest;
+    const view = manager.views.secondary;
+    const index = 6;
+    view.element.scrollTop = view.index.prefix(index) + 7;
+    return view.index.at(index).id;
+  });
+  await expect.poll(() => page.evaluate((id) => {
+    const anchor = window.outputTest.manager.views.secondary.anchor;
+    return anchor?.id === id && anchor.offset > 1;
+  }, anchorId)).toBe(true);
+  const anchoredRow = secondary.locator(`[data-output-id="${anchorId}"]`);
+  const rowOffset = () => anchoredRow.evaluate((row) =>
+    Math.round(row.getBoundingClientRect().top - row.closest("#secondaryBuffer").getBoundingClientRect().top));
+  const before = await rowOffset();
+  const evicted = anchorId - 6;
+  await page.evaluate((burst) => window.outputTest.feed(burst), text(66, evicted));
+  await expect(rows.first()).toHaveText("[-][OOC-Chat] retained row " + anchorId);
+  await expect.poll(rowOffset).toBe(before);
+
   await page.getByRole("button", { name: "Resume secondary scrolling", exact: true }).click();
-  await expect(rows.last()).toHaveText("[-][OOC-Chat] retained row 65");
+  await expect(rows.last()).toHaveText("[-][OOC-Chat] retained row " + (65 + evicted));
   await expect.poll(() => secondary.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
 });
 
