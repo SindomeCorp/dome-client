@@ -277,3 +277,52 @@ test("programmatic scroll does not trigger scroll up pause", async () => {
 
   assert.equal(clientLocal.pauseBuffer, false);
 });
+
+test("virtual autoscroll routes toolbar clicks to main and keyboard pauses to the active pane", (t) => {
+  const { window } = new JSDOM(html, { pretendToBeVisual: true });
+  t.after(() => window.close());
+  const togglePause = t.mock.fn();
+  const client = {
+    buffer: window.document.querySelector("#buffer"),
+    outputWindows: { togglePause }
+  };
+  setupAutoscroll({ client, win: window }, window);
+
+  client.onToggleAutoScroll(new window.MouseEvent("click"));
+  client.onToggleAutoScroll(new window.KeyboardEvent("keydown", { key: "Pause" }));
+  assert.deepEqual(togglePause.mock.calls.map(({ arguments: args }) => args), [["main"], [undefined]]);
+  client.buffer.scrollTop = 19;
+  client.scrollBuffer();
+  assert.equal(client.buffer.scrollTop, 19);
+});
+
+test("legacy autoscroll ignores a right press, cancels a rebound hold, and resumes at the boundary", (t) => {
+  const { window } = new JSDOM(html);
+  t.after(() => window.close());
+  const { document } = window;
+  const buffer = document.querySelector("#buffer");
+  const client = { buffer, preferences: { autoScroll: "long" } };
+  const scheduled = t.mock.method(window, "setTimeout", () => 17);
+  const canceled = t.mock.method(window, "clearTimeout", () => {});
+  setupAutoscroll(client, window);
+
+  buffer.dispatchEvent(new window.MouseEvent("mousedown", { button: 2 }));
+  assert.equal(scheduled.mock.callCount(), 0);
+  buffer.dispatchEvent(new window.MouseEvent("mousedown", { button: 0 }));
+  assert.deepEqual(scheduled.mock.calls[0].arguments, [client.onToggleAutoScroll, 2000]);
+  client.preferences.autoScroll = "none";
+  setupAutoscroll(client, window);
+  buffer.dispatchEvent(new window.MouseEvent("mousedown", { button: 0 }));
+  assert.equal(scheduled.mock.callCount(), 1);
+  assert.deepEqual(canceled.mock.calls.map(({ arguments: args }) => args), [[17]]);
+
+  Object.defineProperties(buffer, { clientHeight: { value: 100 }, scrollHeight: { value: 200 } });
+  buffer.scrollTop = 75;
+  buffer.dispatchEvent(new window.Event("scroll"));
+  assert.equal(client.pauseBuffer, true);
+  assert.equal(buffer.classList.contains("scroll-disabled"), true);
+  buffer.scrollTop = 76;
+  buffer.dispatchEvent(new window.Event("scroll"));
+  assert.equal(client.pauseBuffer, false);
+  assert.equal(buffer.classList.contains("scroll-disabled"), false);
+});
