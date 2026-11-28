@@ -1188,8 +1188,13 @@ test("the real client reports a browser log download failure and can retry", asy
 
   await page.evaluate(() => {
     const click = window.HTMLAnchorElement.prototype.click;
+    const create = window.URL.createObjectURL;
     const revoke = window.URL.revokeObjectURL;
-    window.fixtureLogDownloads = { clicked: [], revoked: [] };
+    window.fixtureLogDownloads = { clicked: [], revoked: [], types: [] };
+    window.URL.createObjectURL = function (blob) {
+      window.fixtureLogDownloads.types.push(blob.type);
+      return create.call(this, blob);
+    };
     window.HTMLAnchorElement.prototype.click = function () {
       if (this.href.startsWith("blob:") && this.download.endsWith(".html")) {
         window.fixtureLogDownloads.clicked.push(this.href);
@@ -1231,6 +1236,7 @@ test("the real client reports a browser log download failure and can retry", asy
   const { clicked: [, savedUrl] } = await downloadState();
   expect(savedUrl).toMatch(/^blob:/);
   await expect.poll(async () => (await downloadState()).revoked).toContain(savedUrl);
+  expect((await downloadState()).types).toEqual(["text/html;charset=utf-8", "text/html;charset=utf-8"]);
 });
 
 test("the real client reports a routing worker failure in Options and the pop-out", async ({ page }) => {

@@ -122,10 +122,13 @@ test("editing the Find query retires an in-flight snapshot before the next debou
     query.value = value;
     query.dispatchEvent(new win.Event("input"));
   };
+  update("need");
   update("needle");
+  await expectText(count, "Searching…");
   const oldSignal = await started.promise;
   manager.tools.changed();
   await settle();
+  manager.tools.changed();
   update("replacement");
   pending.resolve(manager.history.snapshot());
   await new Promise((resolve) => setImmediate(resolve));
@@ -135,6 +138,8 @@ test("editing the Find query retires an in-flight snapshot before the next debou
   await expectText(count, "1 of 1");
   manager.views.main.render();
   assert.equal(doc.querySelector("#lineBuffer mark").textContent, "replacement");
+  await settle();
+  assert.equal(readSnapshot.mock.callCount(), 2, "rapid input and arrivals must coalesce into one replacement search");
 });
 
 test("pruning selected native text clears the selection with an explanation", async (t) => {
