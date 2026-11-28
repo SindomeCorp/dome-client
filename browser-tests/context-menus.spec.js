@@ -1638,3 +1638,37 @@ test("the real MOO editor indents block code and leaves comment text aligned", a
   await expect.poll(contents).toBe(comment + "f");
   expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
 });
+
+test("context menus hit-test fresh text nodes before an output repaint is observed", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("dc-context-menus-preferences", JSON.stringify({ override: true, profile: "programmer", underline: true }));
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { async writeText(text) { window.contextCopied = text; } } });
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await socketFeed(page, "Rendered #123:look\n");
+  const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Rendered #123:look" }).last();
+  await expect.poll(() => underlinedText(row)).toBe("#123:look");
+
+  // Like Find, this wraps text in a mark without changing the row's text.
+  // Replace the hit-test node while the real right-click is traveling to the row,
+  // before a MutationObserver can refresh the match cache.
+  await row.evaluate((element) => {
+    document.addEventListener("contextmenu", (event) => {
+      const caret = document.caretPositionFromPoint?.(event.clientX, event.clientY);
+      const node = caret?.offsetNode || document.caretRangeFromPoint?.(event.clientX, event.clientY)?.startContainer;
+      if (!node || !element.contains(node) || node.nodeType !== 3) return;
+      const mark = document.createElement("mark");
+      mark.append(node.cloneNode());
+      node.replaceWith(mark);
+      window.replacedOutputText = true;
+    }, { capture: true, once: true });
+  });
+  await rightText(page, row, 15);
+  expect(await page.evaluate(() => window.replacedOutputText)).toBe(true);
+  const verb = page.getByRole("group", { name: "Verb #123:look" });
+  await expect(verb).toBeVisible();
+  await verb.getByRole("menuitem", { name: "Copy to Clipboard" }).click();
+  expect(await page.evaluate(() => window.contextCopied)).toBe("#123:look");
+});

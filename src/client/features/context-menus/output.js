@@ -271,8 +271,11 @@ export function bindContextOutput({ controller, client, element, win }) {
     }
     const row = rowFor(event.target) || (keyboard ? rows()[0] : null);
     const entry = row && cache.get(row);
-    if (!entry?.matches || entry.version !== stamp() || entry.projection.text !== projectOutputRow(row).text) { schedule(); return; }
-    const offset = keyboard ? null : characterAtPoint(doc, entry.projection, position.x, position.y);
+    if (!entry?.matches || entry.version !== stamp()) { schedule(); return; }
+    // Find can change text nodes before the observer refreshes the cache.
+    const projection = projectOutputRow(row);
+    if (entry.projection.text !== projection.text) { schedule(); return; }
+    const offset = keyboard ? null : characterAtPoint(doc, projection, position.x, position.y);
     const matches = entry.matches.filter((match) => keyboard || (offset !== null && offset >= match.start && offset < match.end));
     const winners = [];
     for (const match of matches) if (!winners.some((target) => match.start < target.end && match.end > target.start)) winners.push(match);

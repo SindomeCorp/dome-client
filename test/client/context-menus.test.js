@@ -399,7 +399,7 @@ test("real output parser and menu events target ANSI spans, execute one command,
   await feed("#$# SDWC%%CONTEXT-PROFILE%%\"staff\"\n#12\u001b[31m3:look\u001b[0m plain\n");
   assert.equal(controller.active().profile.id, "staff");
   const row = doc.querySelector("[data-output-id]");
-  const textNode = row.querySelector(".all-copy").firstChild;
+  let textNode = row.querySelector(".all-copy").firstChild;
   doc.caretPositionFromPoint = () => ({ offsetNode: textNode, offset: 0 });
   const originalRange = doc.createRange.bind(doc);
   doc.createRange = () => { const range = originalRange(); range.getClientRects = () => [{ left: 10, right: 20, top: 10, bottom: 20 }]; return range; };
@@ -419,6 +419,20 @@ test("real output parser and menu events target ANSI spans, execute one command,
   contextClick();
   [...doc.querySelectorAll("[role=menuitem]")].find((item) => item.textContent === "List verb").click();
   assert.deepEqual(sends, [["input", "@list #123:look"]]);
+
+  // Markup can replace a text node without changing the match offsets.
+  const replacement = textNode.cloneNode();
+  textNode.replaceWith(replacement);
+  textNode = replacement;
+  assert.equal(contextClick().defaultPrevented, true, "hit-test uses the live text nodes before the cache refresh");
+  doc.querySelector("[role=menuitem]").click();
+  assert.equal(copied, "#123:look");
+  const originalText = textNode.data;
+  textNode.data = "#98";
+  assert.equal(contextClick().defaultPrevented, false, "changed text must wait for a new match");
+  assert.equal(doc.querySelector("[role=menu]"), null);
+  textNode.data = originalText;
+
   const blank = new win.MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 100, clientY: 100 });
   row.dispatchEvent(blank);
   assert.equal(blank.defaultPrevented, false);
