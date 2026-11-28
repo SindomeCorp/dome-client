@@ -85,3 +85,13 @@ test("font fallbacks apply to compact, spaced, quoted and unquoted CSS", async (
 
   assert.equal(getLogExportCss(), rules.map(({ output }) => output).join("\n"));
 });
+
+test("standalone logs use legacy CSS when the compiled stylesheet is blank", async (t) => {
+  const read = t.mock.fn(file => file === path.resolve("public/css/client.css") ? "  \n" : "body{color:black}");
+  const { getLogExportCss, warn } = await loadStyle(t, read);
+
+  assert.equal(getLogExportCss(), "body{color:black}");
+  assert.equal(getLogExportCss(), "body{color:black}");
+  assert.equal(read.mock.callCount(), 2);
+  assert.equal(warn.mock.callCount(), 0);
+});

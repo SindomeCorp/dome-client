@@ -93,8 +93,10 @@ test("returns input when no URLs exist", async t => {
     .reply(200, { url: "x", key: "y" });
   t.after(() => nock.cleanAll());
   const text = "plain text without links";
+  const warn = t.mock.method(logger, "warn", () => {});
   const result = await shorten.urls(text);
   assert.equal(result, text);
+  assert.equal(warn.mock.callCount(), 0);
   assert.ok(!scope.isDone());
 });
 
@@ -181,6 +183,58 @@ test("does not cache invalid responses", async t => {
   const second = await shorten.urls(longUrl);
   assert.equal(second, `https://${config.shorten.domain}/fine`);
   assert.ok(scope.isDone());
+});
+
+test("retains the original link until the API returns a successful result with a key", async (t) => {
+  t.after(() => nock.cleanAll());
+  const { urls } = await loadShorten();
+  const url = "https://fixture.test/" + "p".repeat(85);
+  const invalid = [
+    [503, { url, key: "retry" }],
+    [200, "null"],
+    [200, { url }],
+    [200, { url, key: "" }],
+    [200, { url, key: "  " }],
+    [200, { url, key: {} }]
+  ];
+  const warn = t.mock.method(logger, "warn", () => {});
+  const api = nock(`http://${config.shorten.host}:${config.shorten.port}`);
+  for (const [status, body] of invalid) api.post(config.shorten.path).reply(status, body);
+  api.post(config.shorten.path).reply(200, { url, key: "fixed" });
+
+  for (const [status] of invalid) assert.equal(await urls(url), url, "upstream status " + status);
+  assert.equal(warn.mock.callCount(), 0);
+  assert.equal(await urls(url), `https://${config.shorten.domain}/fixed`);
+  api.done();
+});
+
+test("shortens complete URL matches in the original text when one is a prefix of another", async (t) => {
+  t.after(() => nock.cleanAll());
+  const { urls } = await loadShorten();
+  const parent = "https://fixture.test/" + "a".repeat(85);
+  const child = parent + "/child";
+  const api = nock(`http://${config.shorten.host}:${config.shorten.port}`)
+    .post(config.shorten.path, `url=${encodeURIComponent(parent)}`).reply(200, { url: parent, key: "parent" })
+    .post(config.shorten.path, `url=${encodeURIComponent(child)}`).reply(200, { url: child, key: "child" });
+
+  const domain = `https://${config.shorten.domain}`;
+  assert.equal(await urls(parent), `${domain}/parent`);
+  assert.equal(await urls(`${child}, ${parent}.`), `${domain}/child, ${domain}/parent.`);
+  api.done();
+});
+
+test("a completed request releases its deadline and logs the URL mapping", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { urls } = await loadShorten();
+  const url = "https://fixture.test/" + "b".repeat(85);
+  const link = `https://${config.shorten.domain}/123`;
+  const fetch = t.mock.method(globalThis, "fetch", async () => Response.json({ url, key: 123 }));
+  const debug = t.mock.method(logger, "debug", () => {});
+
+  assert.equal(await urls(url), link);
+  assert.deepEqual(debug.mock.calls[0].arguments, [url + " >> " + link]);
+  t.mock.timers.tick(3000);
+  assert.equal(fetch.mock.calls[0].arguments[1].signal.aborted, false);
 });
 
 test("logs and returns input when matching fails", async t => {

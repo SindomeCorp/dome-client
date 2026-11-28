@@ -22,4 +22,5 @@ test("the public router connects the landing, editor, output, autocomplete and l
   await http.post("/website-login/").type("form").send({ email: "fixture" }).expect(302).expect("Location", "/");
   const log = await http.post("/save/fixture.html").type("form").send({ buffer: "fixture text" }).expect(200);
   assert.match(log.text, /fixture text/);
+  assert.match(log.text, /Source Code Pro[^;]*Liberation Mono[^;]*DejaVu Sans Mono/);
 });

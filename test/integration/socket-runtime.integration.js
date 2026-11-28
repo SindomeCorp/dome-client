@@ -1,7 +1,7 @@
 /* eslint indent: ["error", 2], quotes: ["error", "double"], semi: ["error", "always"] */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
+import { EventEmitter, once } from "node:events";
 import { io as createSocketClient } from "socket.io-client";
 import nock from "nock";
 import { createSocket } from "../helpers/socket.js";
@@ -355,10 +355,14 @@ test("integration: shorten-on applies successful url shortening transform", asyn
     defaultExport: {
       node: { socketProxied: false, multiMud: false, poweredBy: "Dome Client" },
       moo: { host: "moo.test", port: 5555 },
-      shorten: { enabled: true },
+      shorten: {
+        enabled: true, host: "shortener.test", port: 80, path: "/shorten/",
+        domain: "short.test", minimum: 25, useHttps: true
+      },
     }
   });
   moduleMock("../../src/logger.js", {
+    defaultExport: { debug() {}, warn() {} },
     namedExports: {
       named: () => ({
         info() {},
@@ -369,20 +373,28 @@ test("integration: shorten-on applies successful url shortening transform", asyn
       inspect() {}
     }
   });
-  moduleMock("../../src/services/shorten.js", {
-    namedExports: {
-      urls: async (text) => text.replace("http://example.com", "https://sho.rt/x")
-    }
+  const { urls } = await import(`../../src/services/shorten.js?socket-fixture=${Date.now()}`);
+  moduleMock("../../src/services/shorten.js", { namedExports: { urls } });
+  nock.disableNetConnect();
+  t.after(() => {
+    nock.cleanAll();
+    nock.enableNetConnect();
   });
 
+  const parent = "https://example.test/long-fixture-link";
+  const child = parent + "/child";
+  const api = nock("http://shortener.test")
+    .post("/shorten/", `url=${encodeURIComponent(parent)}`).reply(200, { url: parent, key: "parent" })
+    .post("/shorten/", `url=${encodeURIComponent(child)}`).reply(200, { url: child, key: "child" });
   const socketController = await import(`../../src/controllers/socket.js?shorten-pass=${Date.now()}`);
-  const { socket, events } = createSocket();
+  const { socket } = createSocket();
   await socketController.connection(socket);
   socket.emit("shorten-on");
-  moo.emit("data", Buffer.from("hello http://example.com\r\n"));
-  await new Promise((resolve) => setImmediate(resolve));
+  const output = once(socket, "data", { signal: AbortSignal.timeout(2500) });
+  moo.emit("data", Buffer.from(`${child} ${parent}\r\n`));
 
-  assert.ok(events.some((entry) => entry[0] === "data" && String(entry[1]).includes("https://sho.rt/x")));
+  assert.deepEqual(await output, ["https://short.test/child https://short.test/parent\r\n"]);
+  api.done();
   t.mock.restoreAll();
 });
 
