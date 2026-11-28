@@ -189,6 +189,42 @@ Warm the incremental cache with a tiny mutated file (fast prep before a longer r
 npm run test:mutation:warm
 ```
 
+### Mutation tests by area
+
+The full profile above is the original server baseline. The named profiles
+cover the other application JavaScript and JSX without overlapping its targets.
+Run them after building the client, using the Node.js 26 runner described above.
+
+```bash
+npm run test:mutation:area -- --list
+npm run test:mutation:area -- context-menus --dry-run
+npm run test:mutation:area -- context-menus
+```
+
+| Area | Code under mutation |
+| --- | --- |
+| `server` | Startup, configuration, routes, middleware, builds, and HTTP services |
+| `protocol` | Socket lifecycle, game connections, Telnet, and client output protocol |
+| `context-menus` | Profiles, validation, matching worker, rendering, and client control |
+| `output-windows` | Scrollback, filtering, pop-outs, layout, and presentation |
+| `terminal` | Input, history, ANSI rendering, media, and logs |
+| `editor` | IDE, editor windows, Ace integration, and MOO parser |
+| `options` | Options UI, preference changes, import, and export |
+| `client-shell` | Bootstrap, connection UI, health, core state, and native bridge |
+
+The bundled Ace MOO mode is vendor code and is excluded from mutation.
+The preview handler embedded in downloaded logs is also excluded from
+instrumentation because those pages run without Stryker's helpers. Its
+standalone behavior is still exercised by the log-export tests.
+Each area runs its own Node test selection. Browser and visual behavior
+continues to be covered by the separate Playwright suite.
+Use `--dry-run` to instrument the area and verify that its tests run before
+scheduling a full pass. Use `--force` to recompute that area's results.
+Reports and incremental caches are stored separately as
+`reports/mutation/<area>.json` and `reports/mutation/<area>.incremental.json`.
+The profiles use the existing 60% break threshold. Stryker writes a report
+even when an area falls below it.
+
 Enforce coverage thresholds:
 
 ```bash

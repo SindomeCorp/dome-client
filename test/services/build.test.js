@@ -153,14 +153,7 @@ test("copyAce copies ace-builds assets to destination", async t => {
     await fs.writeFile(path.join(dest, "ace.js"), "// placeholder");
   });
   await buildModule.copyAce(outDir);
-  const aceSrcDir = path.join(
-    serviceDir,
-    "..",
-    "..",
-    "node_modules",
-    "ace-builds",
-    "src-min-noconflict"
-  );
+  const aceSrcDir = path.dirname(fileURLToPath(import.meta.resolve("ace-builds/src-min-noconflict/ace.js")));
   assert.deepStrictEqual(cp.mock.calls[0].arguments, [aceSrcDir, outDir, { recursive: true }]);
   const files = await fs.readdir(outDir);
   assert.deepStrictEqual(files, ["ace.js"]);
