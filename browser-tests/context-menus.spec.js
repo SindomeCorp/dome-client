@@ -2287,6 +2287,7 @@ test("the real individual verb editor keeps canceled edits and saves only on exp
   const editor = await popup;
   const holder = editor.locator("#verb-editor-holder");
   const text = () => holder.evaluate((element) => element.env?.editor.getValue());
+  const inVim = () => holder.evaluate((element) => element.env.editor.getKeyboardHandler()?.$id === "ace/keyboard/vim");
   const status = editor.locator("#verb-status-holder");
   await expect.poll(text).toBe("return 12;");
   await editor.bringToFront();
@@ -2295,13 +2296,22 @@ test("the real individual verb editor keeps canceled edits and saves only on exp
   await expect(editorInput).toBeFocused();
   await editorInput.press("Control+1");
   await expect(status).toHaveText("VIM MODE");
+  await expect.poll(inVim).toBe(true);
   await editorInput.press("Control+0");
   await expect(status).toHaveText("REGULAR MODE");
+  await expect.poll(inVim).toBe(false);
 
-  await editor.keyboard.press("Control+a");
-  await editor.keyboard.insertText("return 13;");
-  await expect.poll(text).toBe("return 13;");
+  const replaceWith = async (value) => {
+    await editor.keyboard.press("Control+a");
+    await editor.keyboard.insertText(value);
+    await expect.poll(text).toBe(value);
+  };
   const wouldWarnOnUnload = () => editor.evaluate(() => !window.dispatchEvent(new Event("beforeunload", { cancelable: true })));
+  await replaceWith("return 13;");
+  expect(await wouldWarnOnUnload()).toBe(true);
+  await replaceWith("return 12;");
+  expect(await wouldWarnOnUnload()).toBe(false);
+  await replaceWith("return 13;");
   expect(await wouldWarnOnUnload()).toBe(true);
   const close = editor.getByRole("button", { name: "CLOSE", exact: true });
   let warning;
