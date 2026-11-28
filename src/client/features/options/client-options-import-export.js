@@ -29,7 +29,7 @@ function normalizeImportedValue(name, value) {
 }
 
 function getImportSource(parsed) {
-  return parsed && typeof parsed === "object" && parsed.preferences && typeof parsed.preferences === "object"
+  return parsed && typeof parsed === "object" && Object.hasOwn(parsed, "preferences")
     ? parsed.preferences
     : parsed;
 }

@@ -26,6 +26,7 @@ All notable changes to this project will be documented in this file.
 - Show why Open in Scratchpad is unavailable when the IDE disables it, including when the game-status service is off.
 - Reject context menu imports with invalid selection actions and keep the previous configuration active.
 - Reject context menu rules that declare a capture type as a non-string value.
+- Reject malformed preference imports without applying settings from outside the preferences object.
 
 ## 2026-11-27
 

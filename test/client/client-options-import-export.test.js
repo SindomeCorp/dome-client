@@ -65,6 +65,23 @@ test("buildClientOptionsImportPlan rejects non-object payloads", () => {
   });
 });
 
+test("a declared preferences wrapper must contain an options object", () => {
+  const options = buildClientOptionState();
+  for (const preferences of [null, false, 0, "invalid", []]) {
+    assert.deepEqual(buildClientOptionsImportPlan({ parsed: { preferences, outfontsize: 18.5 }, options }), {
+      valid: false,
+      error: "JSON must be an object of option keys."
+    });
+  }
+  for (const parsed of [{ outfontsize: 18.5 }, { preferences: { outfontsize: 18.5 } }]) {
+    assert.deepEqual(buildClientOptionsImportPlan({ parsed, options }), {
+      valid: true,
+      applied: [{ name: "outfontsize", value: 18.5 }],
+      skipped: 0
+    });
+  }
+});
+
 test("normalizeImportedValue preserves legacy editor theme aliases", () => {
   assert.equal(normalizeImportedValue("edittheme", "ambiance"), "ambience");
   assert.equal(normalizeImportedValue("edittheme", "tomorrow"), "tomorrow_night");

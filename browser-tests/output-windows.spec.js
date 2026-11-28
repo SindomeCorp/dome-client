@@ -162,6 +162,67 @@ test("cross-origin navigation without a lifecycle notification redocks and retai
   } finally { await new Promise((resolve) => otherOrigin.close(resolve)); }
 });
 
+test("the real Options import distinguishes malformed files from a partial import", async ({ page }) => {
+  const connectionCount = async () => (await (await page.request.get("/fixture/state")).json()).connections;
+  const previous = await connectionCount();
+  await page.goto("/?entry=real");
+  await expect.poll(connectionCount).toBeGreaterThan(previous);
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-importexport").click();
+  const toast = page.locator("#client-options-import-export-indicator");
+  const file = page.locator("#client-options-import-file");
+  const output = page.locator("#lineBuffer");
+  const importText = (text) => file.setInputFiles({
+    name: "settings.json", mimeType: "application/json", buffer: Buffer.from(text)
+  });
+  const exportPreferences = async () => {
+    const downloading = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Export File", exact: true }).click();
+    const download = await downloading;
+    expect(download.suggestedFilename()).toMatch(/^dome-client-options-.*\.json$/);
+    let json = "";
+    for await (const part of await download.createReadStream()) json += part;
+    return JSON.parse(json);
+  };
+  const original = await exportPreferences();
+  await expect(toast).toHaveText("Preferences exported.");
+  for (const [text, message] of [
+    ["{broken", "Client options import error: invalid JSON file."],
+    ["[]", "Client options import error: JSON must be an object of option keys."]
+  ]) {
+    await importText(text);
+    await expect(toast).toHaveText("Import failed.");
+    await expect(toast).toHaveClass(/is-error/);
+    await expect(output.getByText(message, { exact: true })).toBeAttached();
+    await expect(file).toHaveValue("");
+  }
+  await importText(JSON.stringify({ preferences: false, outfontsize: 18.5 }));
+  await expect(output.getByText("Client options import error: JSON must be an object of option keys.", { exact: true })).toHaveCount(2);
+  await expect(toast).toHaveText("Import failed.");
+  await expect(toast).toHaveClass(/is-error/);
+  await expect(file).toHaveValue("");
+  const afterErrors = await exportPreferences();
+  expect(afterErrors.preferences).toEqual(original.preferences);
+  expect(afterErrors.outputWindows).toEqual(original.outputWindows);
+
+  await importText(JSON.stringify({
+    preferences: { outfontsize: 12.5, inputfontcolor: "invalid color" },
+    outputWindows: {
+      version: 1, open: true, position: "left",
+      custom: [{ id: "custom-missing-name", name: "", pattern: "fixture" }]
+    }
+  }));
+  await expect(toast).toHaveText("Preferences imported.");
+  await expect(toast).not.toHaveClass(/is-error/);
+  await expect(output.getByText("Imported 1 client option.", { exact: true })).toBeAttached();
+  await expect(output.getByText("Skipped 2 invalid imported option values.", { exact: true })).toBeAttached();
+  await expect(file).toHaveValue("");
+  const accepted = await exportPreferences();
+  expect(accepted.preferences.outfontsize).toBe(12.5);
+  expect(accepted.preferences.inputfontcolor).toBe(original.preferences.inputfontcolor);
+  expect(accepted.outputWindows).toMatchObject({ open: true, position: "left", custom: [] });
+});
+
 test("secondary presentation supplied by a URL agrees with controls, exported preferences and later visits", async ({ page }) => {
   await page.evaluate(() => window.localStorage.clear());
   await page.goto("/?of=menlo&cl=acid&oz=14&sof=courier&scl=snow&soz=18");
