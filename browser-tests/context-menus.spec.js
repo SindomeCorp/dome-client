@@ -599,6 +599,40 @@ test("right-click copies a reverse selection and leaves unrelated plain text nat
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
 });
 
+test("right-click leaves selected output native when the active profile has no Copy action", async ({ page }) => {
+  await start(page);
+  await editConfig(page, (config) => {
+    const player = config.profiles.find((profile) => profile.id === "player");
+    player.selectionActions = [{
+      id: "scratch-only",
+      label: "Open in Scratchpad",
+      type: "client-action",
+      action: "ide.open-scratch",
+      input: "selection"
+    }];
+  });
+  await page.locator("#button-client-options-close").click();
+  await feed(page, "selected plain output\n");
+  const row = page.locator("#lineBuffer [data-output-id]").last();
+  await expect(row).toHaveText("selected plain output");
+  await row.evaluate(async (element) => {
+    window.selectionContextEvents = [];
+    document.addEventListener("contextmenu", (event) => {
+      window.setTimeout(() => window.selectionContextEvents.push(event.defaultPrevented), 0);
+    }, { capture: true });
+    element.focus();
+    document.getSelection().selectAllChildren(element);
+    document.dispatchEvent(new Event("selectionchange"));
+    await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+  });
+  await rightText(page, row, 4);
+  await expect.poll(() => page.evaluate(() => window.selectionContextEvents)).toEqual([false]);
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  expect(await page.evaluate(() => document.getSelection().toString())).toBe("selected plain output");
+  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+});
+
 test("context menus: selection Scratchpad opens unsaved, warns immediately, and writes only on Save", async ({ page }) => {
   await start(page);
   const first = "@quit\n;selected_text()\n.";
