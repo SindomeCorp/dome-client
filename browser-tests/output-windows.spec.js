@@ -221,6 +221,23 @@ test("the real Options import distinguishes malformed files from a partial impor
   expect(accepted.preferences.outfontsize).toBe(12.5);
   expect(accepted.preferences.inputfontcolor).toBe(original.preferences.inputfontcolor);
   expect(accepted.outputWindows).toMatchObject({ open: true, position: "left", custom: [] });
+
+  await importText(JSON.stringify({
+    preferences: { outfontsize: 14.5, secondaryoutfontsize: 16, inputfontcolor: "invalid color" }
+  }));
+  await expect(output.getByText("Imported 2 client options.", { exact: true })).toBeAttached();
+  await expect(output.getByText("Skipped 1 invalid imported option value.", { exact: true })).toBeAttached();
+  await importText(JSON.stringify({ outfontsize: 17.5 }));
+  await expect(output.getByText("Imported 1 client option.", { exact: true })).toHaveCount(2);
+  await expect(output.getByText("Skipped 0 invalid imported option values.", { exact: true })).toHaveCount(0);
+  const latest = await exportPreferences();
+  expect(latest.preferences.outfontsize).toBe(17.5);
+  expect(latest.outputWindows).toEqual(accepted.outputWindows);
+
+  await page.getByRole("tab", { name: "Presentation", exact: true }).click();
+  await expect(page.locator("#outfontsize-option input")).toHaveValue("17.5");
+  await page.getByRole("tab", { name: "Secondary Window", exact: true }).click();
+  await expect(page.locator("#secondaryoutfontsize-option input")).toHaveValue("17.5");
 });
 
 test("the real Options import keeps newer imports and resets when an older file finishes late", async ({ page }) => {
@@ -248,39 +265,44 @@ test("the real Options import keeps newer imports and resets when an older file 
   // Hold just the fixture file read, while the real Options controls stay usable.
   await page.evaluate(() => {
     const read = File.prototype.text;
+    window.preferenceReads = new Map();
     File.prototype.text = async function () {
       const text = await read.call(this);
       if (this.name.startsWith("slow-")) {
-        await new Promise((resolve) => { window.releasePreferenceRead = resolve; });
+        await new Promise((resolve) => { window.preferenceReads.set(this.name, resolve); });
       }
       if (this.name === "slow-read-failure.json") throw new Error("Fixture file read failure");
       return text;
     };
   });
-  const release = () => page.evaluate(() => {
-    window.releasePreferenceRead();
-    delete window.releasePreferenceRead;
-  });
+  const waitForRead = (name) => expect.poll(() =>
+    page.evaluate((key) => window.preferenceReads.has(key), name)
+  ).toBe(true);
+  const release = (name) => page.evaluate((key) => {
+    window.preferenceReads.get(key)();
+    window.preferenceReads.delete(key);
+  }, name);
   await select("slow-first.json", 18.5);
-  await expect.poll(() => page.evaluate(() => typeof window.releasePreferenceRead)).toBe("function");
+  await waitForRead("slow-first.json");
   await select("newer.json", 12.5);
   await expect(imported).toHaveCount(1);
-  await release();
+  await release("slow-first.json");
   await expect(file).toHaveValue("");
   expect(await exportFontSize()).toBe(12.5);
   await expect(imported).toHaveCount(1);
 
-  for (const name of ["slow-before-reset.json", "slow-read-failure.json"]) {
+  const outstanding = ["slow-before-reset.json", "slow-read-failure.json"];
+  for (const name of outstanding) {
     await select(name, 18.5);
-    await expect.poll(() => page.evaluate(() => typeof window.releasePreferenceRead)).toBe("function");
-    await page.locator("#client-options-reset-defaults").click();
-    await expect(toast).toHaveText("Defaults restored.");
-    await release();
-    await expect(file).toHaveValue("");
-    expect(await exportFontSize()).toBe(defaultSize);
-    await expect(imported).toHaveCount(1);
-    await expect(output.getByText("Client options import error: invalid JSON file.", { exact: true })).toHaveCount(0);
+    await waitForRead(name);
   }
+  await page.locator("#client-options-reset-defaults").click();
+  await expect(toast).toHaveText("Defaults restored.");
+  for (const name of outstanding) await release(name);
+  await expect(file).toHaveValue("");
+  expect(await exportFontSize()).toBe(defaultSize);
+  await expect(imported).toHaveCount(1);
+  await expect(output.getByText("Client options import error: invalid JSON file.", { exact: true })).toHaveCount(0);
 });
 
 test("the real Options export reports a failed download and releases the abandoned URL", async ({ page }) => {
