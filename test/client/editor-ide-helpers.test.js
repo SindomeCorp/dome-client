@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   getDefinitionTargetAtPosition,
   getEditingObjectId,
+  getPrimaryAlias,
+  getPrimaryProperty,
   parseObjectPropertyTarget,
   resolveThisReference,
   splitReferenceTarget
@@ -88,6 +90,21 @@ test("editor IDE target helpers parse and resolve references", () => {
   assert.equal(getEditingObjectId("@set-note-text", "#12.name"), "#12");
   assert.equal(resolveThisReference("this:foo", "#12"), "#12:foo");
   assert.equal(resolveThisReference("this.name", "#12"), "#12.name");
+});
+
+test("editor IDE normalizes optional object, verb alias and property metadata", () => {
+  assert.equal(getPrimaryAlias("  inspect\tshow examine  "), "inspect");
+  assert.equal(getPrimaryProperty("\tname display_name "), "name");
+  assert.equal(getPrimaryAlias(undefined), "");
+  assert.equal(getPrimaryProperty(undefined), "");
+
+  assert.deepEqual(parseObjectPropertyTarget("  #17 . owner "), { objectId: "#17", propertyName: "owner" });
+  assert.equal(getEditingObjectId("@program", "#17"), "#17");
+  assert.equal(getEditingObjectId("@set-note-text", " $support .owner"), "$support");
+  assert.equal(getEditingObjectId("@view", "  #17 text "), "#17");
+  for (const target of ["note #17", "$support:display", "$support.owner"]) {
+    assert.equal(getEditingObjectId("@view", target), "");
+  }
 });
 
 test("editor IDE locates each numeric, symbolic and this reference on the same line", () => {
