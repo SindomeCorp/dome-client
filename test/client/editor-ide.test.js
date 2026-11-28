@@ -604,6 +604,16 @@ test("EditorIDE prompts for VMS notes before saving program tabs when enabled", 
   ]);
 });
 
+test("EditorIDE toolbar switches between horizontal and vertical tabs", async (t) => {
+  const { window } = await renderEditorIde(t);
+  const horizontal = window.document.querySelector("button[aria-label='Horizontal tabs (top)']");
+  const vertical = window.document.querySelector("button[aria-label='Vertical tabs (left)']");
+  await click(window, vertical);
+  assert.deepEqual([horizontal.getAttribute("aria-pressed"), vertical.getAttribute("aria-pressed")], ["false", "true"]);
+  await click(window, horizontal);
+  assert.deepEqual([horizontal.getAttribute("aria-pressed"), vertical.getAttribute("aria-pressed")], ["true", "false"]);
+});
+
 test("EditorIDE hides scratch actions when scratch support is disabled", async (t) => {
   const { window } = await renderEditorIde(t, { "data-ide-scratch-enabled": "false" });
 

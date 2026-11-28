@@ -1588,6 +1588,24 @@ test("real player drops pre-ready output and profile markers during a transport 
   }
 });
 
+test("the real IDE toolbar switches tab orientation and hides disabled Scratch controls", async ({ page }) => {
+  await page.goto("/editor/ide/?scratch=off");
+  const horizontal = page.getByRole("button", { name: "Horizontal tabs (top)" });
+  const vertical = page.getByRole("button", { name: "Vertical tabs (left)" });
+  await vertical.click();
+  await expect(vertical).toHaveAttribute("aria-pressed", "true");
+  await expect(horizontal).toHaveAttribute("aria-pressed", "false");
+  await horizontal.click();
+  await expect(horizontal).toHaveAttribute("aria-pressed", "true");
+  await expect(vertical).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("button", { name: "Add Scratch", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "View Scratch", exact: true })).toHaveCount(0);
+
+  await page.goto("/editor/ide/");
+  await expect(page.getByRole("button", { name: "Add Scratch", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "View Scratch", exact: true })).toBeVisible();
+});
+
 test("the real IDE keeps display preferences usable when storage rejects writes and reads", async ({ page }) => {
   await page.addInitScript(() => {
     const keys = new Set(["ide-dark", "ide-orientation"]);
