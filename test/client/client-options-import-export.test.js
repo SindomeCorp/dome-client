@@ -59,10 +59,19 @@ test("buildClientOptionsImportPlan applies valid preferences and counts invalid 
 });
 
 test("buildClientOptionsImportPlan rejects non-object payloads", () => {
-  assert.deepEqual(buildClientOptionsImportPlan({ parsed: [], options: buildClientOptionState() }), {
-    valid: false,
-    error: "JSON must be an object of option keys."
-  });
+  const options = buildClientOptionState();
+  for (const parsed of [null, false, 17, "", []]) {
+    assert.deepEqual(buildClientOptionsImportPlan({ parsed, options }), {
+      valid: false,
+      error: "JSON must be an object of option keys."
+    });
+  }
+});
+
+test("an empty string does not turn off a boolean preference on import", () => {
+  assert.deepEqual(buildClientOptionsImportPlan({
+    parsed: { preferences: { commands: "" } }, options: buildClientOptionState()
+  }), { valid: true, applied: [], skipped: 1 });
 });
 
 test("a declared preferences wrapper must contain an options object", () => {
