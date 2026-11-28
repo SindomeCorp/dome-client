@@ -3335,8 +3335,29 @@ test("the real IDE ignores an older Wasm result as soon as the editor changes", 
   expect(annotations.previousReply).toContainEqual(expect.objectContaining({ type: "error", text: "Missing endif" }));
   expect(annotations.displayed).toEqual([]);
   await ide.waitForFunction(() => Boolean(window.fixtureParserReply));
-  expect(await ide.evaluate(() => window.fixtureParserReply())).toEqual([]);
-  await expect.poll(() => editor.evaluate((element) => element.env.editor.getSession().getAnnotations())).toEqual([]);
+  const deliverReply = () => ide.evaluate(() => {
+    const annotations = window.fixtureParserReply();
+    delete window.fixtureParserReply;
+    return annotations;
+  });
+  const displayed = () => editor.evaluate((element) => element.env.editor.getSession().getAnnotations());
+  const setSource = (source) => editor.evaluate((element, text) => element.env.editor.setValue(text, -1), source);
+  expect(await deliverReply()).toEqual([]);
+  await expect.poll(displayed).toEqual([]);
+
+  await setSource("return 3 4;");
+  await ide.waitForFunction(() => Boolean(window.fixtureParserReply));
+  const reported = await deliverReply();
+  expect(reported).toContainEqual(expect.objectContaining({ type: "error", text: "MOO syntax error" }));
+  expect(await displayed()).toEqual(reported);
+
+  // The worker's next result is held, so this can only clear on the edit itself.
+  await setSource("return 5;");
+  expect(await displayed()).toEqual([]);
+  const before = (await fixtureState(page)).commands.length;
+  await ide.getByRole("button", { name: "Save", exact: true }).click();
+  await expect.poll(async () => (await fixtureState(page)).commands.slice(before))
+    .toEqual(["@program #12:preview", "return 5;\n."]);
 });
 
 test("the real IDE recovers after a temporary parser grammar load failure", async ({ page }) => {

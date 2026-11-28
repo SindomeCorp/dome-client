@@ -18,6 +18,13 @@ export function attachMooParserDiagnostics(editor, parser, options = {}) {
   let timer = null;
   let sequence = 0;
   let active = true;
+  let hasAnnotations = false;
+
+  const applyAnnotations = (annotations) => {
+    hasAnnotations = annotations.length > 0;
+    session.setAnnotations(annotations);
+    options.onAnnotations?.(annotations);
+  };
 
   const requestParse = (id) => {
     if (!active) return;
@@ -37,12 +44,14 @@ export function attachMooParserDiagnostics(editor, parser, options = {}) {
   worker.addEventListener("message", (event) => {
     const { id, annotations } = event.data || {};
     if (!active || id !== sequence) return;
-    const nextAnnotations = Array.isArray(annotations) ? annotations : [];
-    session.setAnnotations(nextAnnotations);
-    options.onAnnotations?.(nextAnnotations);
+    applyAnnotations(Array.isArray(annotations) ? annotations : []);
   });
 
-  const handleChange = () => scheduleParse();
+  const handleChange = () => {
+    scheduleParse();
+    // Display and Save checks must stop using diagnostics for the previous text.
+    if (hasAnnotations) applyAnnotations([]);
+  };
   editor.on("change", handleChange);
   scheduleParse();
 
@@ -52,8 +61,7 @@ export function attachMooParserDiagnostics(editor, parser, options = {}) {
     if (typeof editor.off === "function") {
       editor.off("change", handleChange);
     }
-    session.setAnnotations([]);
-    options.onAnnotations?.([]);
+    applyAnnotations([]);
     worker.terminate();
   };
 }

@@ -124,14 +124,25 @@ test("attachMooParserDiagnostics posts editor content and applies current annota
     assert.deepEqual(editor.session.annotations, annotations);
     assert.deepEqual(annotationUpdates, [annotations]);
 
+    editor.value = "return 4;";
+    editor.handlers.change();
+    workers[0].handlers.message({ data: { id: 3, annotations } });
+    assert.deepEqual(editor.session.annotations, []);
+    assert.deepEqual(annotationUpdates, [annotations, []]);
+    t.mock.timers.tick(300);
+    assert.deepEqual(workers[0].messages[2], { type: "parse", id: 4, source: "return 4;" });
+    workers[0].handlers.message({ data: { id: 4, annotations: { type: "error" } } });
+    assert.deepEqual(editor.session.annotations, []);
+    assert.deepEqual(annotationUpdates, [annotations, [], []]);
+
     editor.handlers.change();
     cleanup();
     t.mock.timers.tick(300);
-    workers[0].handlers.message({ data: { id: 4, annotations } });
-    assert.equal(workers[0].messages.length, 2);
+    workers[0].handlers.message({ data: { id: 5, annotations } });
+    assert.equal(workers[0].messages.length, 3);
     assert.equal(workers[0].terminated, true);
     assert.deepEqual(editor.session.annotations, []);
-    assert.deepEqual(annotationUpdates, [annotations, []]);
+    assert.deepEqual(annotationUpdates, [annotations, [], [], []]);
     assert.equal(editor.offCalls[0][0], "change");
   } finally {
     globalThis.Worker = previousWorker;
