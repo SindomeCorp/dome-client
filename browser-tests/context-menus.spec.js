@@ -490,6 +490,41 @@ test("context menus: Options commands, global override, session reset and failed
   expect(await page.evaluate(() => window.outputTest.client.contextMenus.active().source)).toBe("Fallback");
 });
 
+test("legacy output keyboard navigation clamps to its rows and opens each reference", async ({ page }) => {
+  await start(page);
+  await page.evaluate(() => {
+    const { client, manager } = window.outputTest;
+    manager.destroy();
+    delete client.outputWindows;
+    client.buffer.replaceChildren();
+    client.contextMenus.bindOutput(client.buffer, window);
+    client.parseSocketData("References #123 then #456\nSecond row #789\n");
+  });
+  const first = page.locator("#lineBuffer > div").filter({ hasText: "References #123 then #456" });
+  const second = page.locator("#lineBuffer > div").filter({ hasText: "Second row #789" });
+  await expect(first).toHaveAttribute("tabindex", "-1");
+  await first.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(first).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(second).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(second).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(first).toBeFocused();
+
+  await expect.poll(async () => {
+    await page.keyboard.press("Shift+F10");
+    return page.getByRole("menuitem").allTextContents();
+  }).toEqual(["#123", "#456"]);
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true })).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#456");
+  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+});
+
 test("context menus: keyboard actions work in secondary and detached output", async ({ page }) => {
   await start(page);
   await page.evaluate(() => window.outputTest.manager.updateSettings({ open: true, selected: ["team-chat"] }));
@@ -599,39 +634,51 @@ test("right-click copies a reverse selection and leaves unrelated plain text nat
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
 });
 
-test("right-click leaves selected output native when the active profile has no Copy action", async ({ page }) => {
-  await start(page);
-  await editConfig(page, (config) => {
-    const player = config.profiles.find((profile) => profile.id === "player");
-    player.selectionActions = [{
-      id: "scratch-only",
-      label: "Open in Scratchpad",
-      type: "client-action",
-      action: "ide.open-scratch",
-      input: "selection"
-    }];
+for (const [reason, clipboardUnavailable] of [
+  ["the active profile has no Copy action", false],
+  ["the Clipboard API is unavailable", true]
+]) {
+  test("right-click leaves selected output native when " + reason, async ({ page }) => {
+    if (clipboardUnavailable) {
+      await page.addInitScript(() => {
+        Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+      });
+    }
+    await start(page, { clipboardStub: !clipboardUnavailable });
+    if (!clipboardUnavailable) {
+      await editConfig(page, (config) => {
+        const player = config.profiles.find((profile) => profile.id === "player");
+        player.selectionActions = [{
+          id: "scratch-only",
+          label: "Open in Scratchpad",
+          type: "client-action",
+          action: "ide.open-scratch",
+          input: "selection"
+        }];
+      });
+      await page.locator("#button-client-options-close").click();
+    }
+    await feed(page, "selected plain output\n");
+    const row = page.locator("#lineBuffer [data-output-id]").last();
+    await expect(row).toHaveText("selected plain output");
+    await row.evaluate(async (element) => {
+      window.selectionContextEvents = [];
+      document.addEventListener("contextmenu", (event) => {
+        window.setTimeout(() => window.selectionContextEvents.push(event.defaultPrevented), 0);
+      }, { capture: true });
+      element.focus();
+      document.getSelection().selectAllChildren(element);
+      document.dispatchEvent(new Event("selectionchange"));
+      await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+    });
+    await rightText(page, row, 4);
+    await expect.poll(() => page.evaluate(() => window.selectionContextEvents)).toEqual([false]);
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    expect(await page.evaluate(() => document.getSelection().toString())).toBe("selected plain output");
+    expect(await page.evaluate(() => window.contextSent)).toEqual([]);
   });
-  await page.locator("#button-client-options-close").click();
-  await feed(page, "selected plain output\n");
-  const row = page.locator("#lineBuffer [data-output-id]").last();
-  await expect(row).toHaveText("selected plain output");
-  await row.evaluate(async (element) => {
-    window.selectionContextEvents = [];
-    document.addEventListener("contextmenu", (event) => {
-      window.setTimeout(() => window.selectionContextEvents.push(event.defaultPrevented), 0);
-    }, { capture: true });
-    element.focus();
-    document.getSelection().selectAllChildren(element);
-    document.dispatchEvent(new Event("selectionchange"));
-    await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
-  });
-  await rightText(page, row, 4);
-  await expect.poll(() => page.evaluate(() => window.selectionContextEvents)).toEqual([false]);
-  await expect(page.getByRole("menu")).toHaveCount(0);
-  await page.keyboard.press("Escape");
-  expect(await page.evaluate(() => document.getSelection().toString())).toBe("selected plain output");
-  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
-});
+}
 
 test("context menus: selection Scratchpad opens unsaved, warns immediately, and writes only on Save", async ({ page }) => {
   await start(page);
