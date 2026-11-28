@@ -2326,6 +2326,28 @@ test("the real IDE applies wrap, Vim and Options font changes to both mounted ta
   await ide.getByRole("tab", { name: /First settings tab/ }).click();
   await expectResized(760, 740, "return 12;");
   await expectSettings(false, false, "Monaco");
+
+  const firstTab = ide.getByRole("tab", { name: /First settings tab/ });
+  const secondTab = ide.getByRole("tab", { name: /Second settings tab/ });
+  await ide.bringToFront();
+  await ide.keyboard.press("Control+BracketLeft");
+  await expect(secondTab).toHaveAttribute("aria-selected", "true");
+  await ide.keyboard.press("Control+BracketRight");
+  await expect(firstTab).toHaveAttribute("aria-selected", "true");
+  await ide.keyboard.press("Control+BracketRight");
+  await expect(secondTab).toHaveAttribute("aria-selected", "true");
+  await ide.keyboard.press("Control+BracketLeft");
+  await expect(firstTab).toHaveAttribute("aria-selected", "true");
+
+  await ide.keyboard.press("Control+Shift+L");
+  await expectSettings(true, false, "Monaco");
+  await ide.keyboard.press("Control+Shift+L");
+  await expectSettings(false, false, "Monaco");
+  await ide.keyboard.press("Control+Shift+X");
+  await expect(ide.getByRole("tablist")).toHaveAttribute("aria-orientation", "vertical");
+  await ide.keyboard.press("Control+Shift+X");
+  await expect(ide.getByRole("tablist")).toHaveAttribute("aria-orientation", "horizontal");
+  await expect(firstTab).toHaveAttribute("aria-selected", "true");
   expect((await fixtureState(page)).commands).toEqual(connected.commands);
 });
 
