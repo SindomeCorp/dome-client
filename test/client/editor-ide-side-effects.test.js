@@ -10,6 +10,7 @@ import { useIdeSaveFlow } from "../../src/client/features/editor/react/editor-id
 import { useIdeKeyboardShortcuts } from "../../src/client/features/editor/react/editor-ide/useIdeKeyboardShortcuts.js";
 import { useIdeBrowserCommands } from "../../src/client/features/editor/react/editor-ide/useIdeBrowserCommands.js";
 import { usePersistentPreference } from "../../src/client/features/editor/react/editor-ide/usePersistentPreference.js";
+import { useRecentTabs } from "../../src/client/features/editor/react/editor-ide/useRecentTabs.js";
 
 test("useIdeConfig reads root data attributes with defaults", () => {
   const { cleanup } = setupDom(null, `<!doctype html><html><body><div
@@ -447,6 +448,57 @@ test("useIdeKeyboardShortcuts routes keydown commands", async (t) => {
   await act(async () => {
     root.unmount();
   });
+});
+
+test("recent IDE tabs restore the most recently visited editor after removal", async (t) => {
+  const { window, cleanup } = setupDom();
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const root = createRoot(window.document.body.appendChild(window.document.createElement("div")));
+  t.after(async () => {
+    await act(async () => root.unmount());
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    cleanup();
+  });
+
+  const dispatchIde = t.mock.fn();
+  const first = { id: 1 };
+  const second = { id: 2 };
+  const third = { id: 3 };
+  const all = [first, second, third];
+  let getCloseState;
+  function RecentTabsHarness({ active, tabs }) {
+    ({ getCloseState } = useRecentTabs({ active, tabs, dispatchIde }));
+    return null;
+  }
+
+  const render = async (active, tabs) => {
+    await act(async () => root.render(React.createElement(RecentTabsHarness, { active, tabs })));
+  };
+
+  await render(null, all);
+  await render(2, all);
+  await render(1, all);
+  await render(2, all);
+  assert.equal(dispatchIde.mock.callCount(), 0);
+
+  assert.deepEqual(getCloseState(3), {
+    nextActiveId: 2,
+    nextRecentTabIds: [1, 2],
+    nextTabs: [first, second]
+  });
+
+  await render(2, [first, third]);
+  assert.deepEqual(dispatchIde.mock.calls[0].arguments[0], { type: "activateTab", id: 1 });
+
+  await render(1, [first, third]);
+  assert.deepEqual(getCloseState(1), {
+    nextActiveId: 3,
+    nextRecentTabIds: [2],
+    nextTabs: [third]
+  });
+
+  await render(3, [third]);
+  assert.deepEqual(getCloseState(3), { nextActiveId: null, nextRecentTabIds: [2], nextTabs: [] });
 });
 
 test("useIdeBrowserCommands dispatches browser state and emits protocol commands", async (t) => {

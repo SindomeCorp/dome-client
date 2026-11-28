@@ -90,6 +90,49 @@ test("editor IDE target helpers parse and resolve references", () => {
   assert.equal(resolveThisReference("this.name", "#12"), "#12.name");
 });
 
+test("editor IDE locates each numeric, symbolic and this reference on the same line", () => {
+  const line = "return {#12:look*(), $tools_2.object_name, $tools_2:display(), #3.name, this.owner};";
+  for (const [text, target] of [
+    ["#12:look*()", "#12:look*"],
+    ["$tools_2.object_name", "$tools_2.object_name"],
+    ["$tools_2:display()", "$tools_2:display"],
+    ["#3.name", "#3.name"],
+    ["this.owner", "this.owner"]
+  ]) {
+    const start = line.indexOf(text);
+    assert.equal(getDefinitionTargetAtPosition(line, start), target);
+    assert.equal(getDefinitionTargetAtPosition(line, start + text.length - 1), target);
+  }
+  for (const index of [0, line.indexOf(",") + 1, line.length]) {
+    assert.equal(getDefinitionTargetAtPosition(line, index), "");
+  }
+  assert.equal(getDefinitionTargetAtPosition(undefined, 0), "");
+  assert.equal(getDefinitionTargetAtPosition("return #123;", 8), "");
+});
+
+test("editor IDE resolves this against the object being edited and ignores incomplete references", () => {
+  assert.deepEqual(parseObjectPropertyTarget(" $tools_2. object_name "), {
+    objectId: "$tools_2",
+    propertyName: "object_name"
+  });
+  for (const target of ["", ".name", "#12.", "#12:"]) {
+    assert.equal(parseObjectPropertyTarget(target), null);
+    assert.equal(splitReferenceTarget(target), null);
+  }
+  assert.deepEqual(splitReferenceTarget(" $tools_2:verb.name "), {
+    kind: "verb",
+    objectId: "$tools_2",
+    itemName: "verb.name"
+  });
+  assert.equal(getEditingObjectId("@program", " $tools_2 :display "), "$tools_2");
+  assert.equal(getEditingObjectId("@set-note-string", "$tools_2.object_name"), "$tools_2");
+  assert.equal(getEditingObjectId("@other", "#42:"), "#42");
+  assert.equal(getEditingObjectId("@program", ":display"), "");
+  assert.equal(resolveThisReference(" $tools_2:display ", "#42"), "$tools_2:display");
+  assert.equal(resolveThisReference("this.owner", ""), "");
+  assert.equal(resolveThisReference("", "#42"), "");
+});
+
 test("editor IDE protocol helpers preserve command strings", () => {
   assert.equal(formatVerbListCommand("#12"), "#$# SDWC%%VERBS%%#12");
   assert.equal(formatPropertyListCommand("#12"), "#$# SDWC%%PROPS%%#12");
