@@ -364,6 +364,13 @@ test("compiled rules reset row state after repeated matches, caps and zero-lengt
   assert.throws(() => matchContextRules("a", empty), /zero-length/);
   assert.equal(empty[0].regex.lastIndex, 0);
   assert.deepEqual(matchContextRules("b", empty), []);
+
+  const optionalCapture = compileContextRules([{
+    id: "brackets", priority: 1, pattern: "\\[(?<object>[^\\]]+)?\\]", captures: { object: "object-id" }
+  }]);
+  assert.deepEqual(matchContextRules("[label] [] [#17]", optionalCapture).map(({ text, values }) => ({ text, values })), [
+    { text: "[#17]", values: { object: "#17" } }
+  ]);
 });
 
 test("the shipped worker reuses compiled rules across rows and profiles and replaces them only on valid reload", async (t) => {
@@ -403,6 +410,11 @@ test("the shipped worker reuses compiled rules across rows and profiles and repl
   assert.deepEqual(send("match", { profile: "player", text: "#123:look" }).result, result.result);
   assert.equal(compiled.length, 3, "matching and profile switching must not construct RegExp instances");
   assert.ok(compiled.every((regex) => regex.lastIndex === 0));
+  for (const text of [["#123:look"], undefined]) {
+    assert.equal(send("match", { profile: "player", text }).error, "text: line exceeds 32768 characters");
+  }
+  assert.deepEqual(send("match", { profile: "player", text: "#123:look" }).result, result.result);
+  assert.equal(compiled.length, 3, "invalid rows must leave the compiled registry intact");
   assert.match(send("match", { profile: "unknown", text: "#123" }).error, /rules/);
   const invalid = structuredClone(config);
   invalid.rules.push({ ...invalid.rules[0], id: "empty", pattern: "^", captures: {} });
