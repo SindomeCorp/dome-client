@@ -161,11 +161,15 @@ test("a worker failure from old settings does not disable newer routing", async 
   });
   t.after(() => runner.cancel());
 
-  const oldBatch = runner.match(["old settings"], rules);
+  let oldBatch;
+  runner.match(["old settings"], rules).then((matches) => { oldBatch = matches; });
+  assert.deepEqual(workers[0]?.sent.lines, ["old settings"]);
   runner.reset();
   const newBatch = runner.match(["new settings"], rules);
   workers[0].error();
-  assert.deepEqual(await oldBatch, [false]);
+  assert.equal(runner.pendingLines, 1);
+  await Promise.resolve();
+  assert.deepEqual(oldBatch, [false]);
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(workers[0].terminated, true);
   assert.equal(workers.length, 2);

@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { JSDOM } from "jsdom";
 import { createOutputApp } from "../../test-support/output-app.js";
+import { setupOutputToolbar } from "../../src/client/features/output-windows/toolbar.js";
 import { recordText } from "../../src/client/features/output-windows/history.js";
 import { exportSnapshot } from "../../src/client/features/output-windows/history-tools.js";
 import { clearClientBuffer } from "../../src/client/features/terminal/button-workflows.js";
@@ -664,4 +666,100 @@ test("Television routes complete ANSI-formatted screen broadcasts and preserves 
   assert.equal(manager.views.secondary.index.length, 5);
   assert.equal(manager.views.main.index.length, 2);
   assert.equal(recordText(manager.views.secondary.index.at(0)), "On the large wall screen: a broadcast");
+});
+
+test("the toolbar cancels pending layout work when its output panel is destroyed", async (t) => {
+  for (const fontsReady of [false, true]) {
+    await t.test(fontsReady ? "fonts ready before teardown" : "fonts ready after teardown", async (t) => {
+      const { window: win } = new JSDOM(`
+        <div class="output-shell">
+          <div id="workspace">
+            <div id="output-main-panel">
+              <nav class="mini-controls">
+                  <button id="button-output-split">Split</button>
+                  <button id="button-auto-scroll"><span class="hidden-xs">Pause</span></button>
+                </nav>
+            </div>
+            <div id="output-secondary-panel"><header></header></div>
+          </div>
+          <div class="input-buffer-row"></div>
+        </div>`, { pretendToBeVisual: true });
+      t.after(() => win.close());
+      const doc = win.document;
+      const workspace = doc.querySelector("#workspace");
+      const main = doc.querySelector("#output-main-panel");
+      const secondaryHeader = doc.querySelector("#output-secondary-panel header");
+      const controls = doc.querySelector(".mini-controls");
+      Object.defineProperty(main, "clientWidth", { value: 200 });
+      const fonts = Promise.withResolvers();
+      Object.defineProperty(doc, "fonts", { value: { ready: fonts.promise } });
+      let measuredWidth = 120;
+      const measurements = [];
+      t.mock.method(win.HTMLElement.prototype, "getBoundingClientRect", function () {
+        if (this.classList.contains("output-toolbar-measure")) {
+          assert.equal(this.getAttribute("aria-hidden"), "true");
+          assert.equal(this.querySelector("[id]"), null);
+          assert.deepEqual([...this.querySelectorAll("button")].map((button) => button.textContent), ["CLOSE SPLIT", "RESUME SCROLL"]);
+          measurements.push(measuredWidth);
+          return { width: measuredWidth };
+        }
+        return { height: 44 };
+      });
+
+      let notify;
+      const observed = [];
+      const disconnect = t.mock.fn();
+      win.ResizeObserver = class {
+        constructor(callback) { notify = callback; }
+        observe(element) { observed.push(element); }
+        disconnect() { disconnect(); }
+      };
+      const frames = new Map();
+      let nextFrame = 0;
+      const schedule = t.mock.method(win, "requestAnimationFrame", (callback) => {
+        frames.set(++nextFrame, callback);
+        return nextFrame;
+      });
+      const cancel = t.mock.method(win, "cancelAnimationFrame", (id) => frames.delete(id));
+      const unlisten = t.mock.method(win, "removeEventListener");
+      const toolbar = setupOutputToolbar({ doc, win, workspace });
+
+      assert.deepEqual(observed, [main, secondaryHeader]);
+      assert.equal(controls.parentElement, main);
+      assert.equal(workspace.style.getPropertyValue("--secondary-header-height"), "44px");
+      assert.deepEqual(measurements, [120]);
+
+      measuredWidth = 200;
+      toolbar.resize();
+      notify();
+      win.dispatchEvent(new win.Event("resize"));
+      const expectedWidths = [120, 200];
+      if (fontsReady) {
+        fonts.resolve();
+        await Promise.resolve();
+        expectedWidths.push(200);
+      }
+      assert.deepEqual(measurements, expectedWidths);
+      assert.equal(schedule.mock.callCount(), 1);
+      const frame = frames.get(1);
+      frames.delete(1);
+      frame();
+      assert.equal(controls.classList.contains("compact-controls"), true);
+      assert.equal(controls.nextElementSibling, doc.querySelector(".input-buffer-row"));
+
+      win.dispatchEvent(new win.Event("resize"));
+      assert.equal(frames.size, 1);
+      toolbar.destroy();
+      assert.equal(disconnect.mock.callCount(), 1);
+      assert.equal(unlisten.mock.calls.some(({ arguments: args }) => args[0] === "resize"), true);
+      assert.deepEqual(cancel.mock.calls.map(({ arguments: args }) => args), [[2]]);
+      assert.equal(frames.size, 0);
+
+      fonts.resolve();
+      await Promise.resolve();
+      win.dispatchEvent(new win.Event("resize"));
+      assert.equal(schedule.mock.callCount(), 2);
+      assert.deepEqual(measurements, expectedWidths);
+    });
+  }
 });
