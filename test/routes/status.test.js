@@ -67,7 +67,8 @@ test("healthCheck updates lastStatus", async (t) => {
   const res = { json: t.mock.fn() };
   const status = get({}, res);
   assert.deepEqual(status, expected);
-  assert.deepEqual(res.json.mock.calls[0].arguments[0], expected);
+  assert.equal(res.json.mock.callCount(), 1);
+  assert.deepEqual(res.json.mock.calls[0].arguments, [expected]);
   assert.deepEqual(named.mock.calls[0].arguments, ["controllers/status"]);
   assert.equal(logger.info.mock.callCount(), 0);
   assert.equal(logger.error.mock.callCount(), 0);
