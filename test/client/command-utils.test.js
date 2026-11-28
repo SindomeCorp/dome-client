@@ -84,3 +84,18 @@ test("getCommandLabel returns empty string when both command string and editorNa
 test("getCommandLabel returns title for @scratch", () => {
   assert.equal(getCommandLabel("@scratch foo", ""), "foo");
 });
+
+test("editor command parsing normalizes whitespace while retaining all target words", () => {
+  assert.deepEqual(parseCommand(), { command: "", commandTarget: "" });
+  assert.deepEqual(parseCommand("  @scratch\tTemporary    Scratch Pad  "), {
+    command: "@scratch",
+    commandTarget: "Temporary Scratch Pad"
+  });
+  assert.equal(getCommandLabel(), "");
+  assert.equal(getCommandLabel("  "), "");
+  assert.equal(getCommandLabel("@scratch Temporary Scratch Pad"), "Temporary Scratch Pad");
+  assert.equal(getCommandLabel("@grep"), "@grep");
+  assert.equal(getCommandLabel("@grep   preview now  "), "@grep preview now");
+  assert.equal(getCommandLabel("@other"), "@other");
+  assert.equal(getCommandLabel("@@set_note"), "Editing Note:");
+});
