@@ -215,14 +215,15 @@ test("the routing worker sees only eligible output and one line per block", asyn
   const { manager, feed } = await createOutputApp(t, { workerFactory: () => new RecordingWorker() });
 
   manager.updateSettings({ selected: ["grid-output"] });
-  await feed("[g] while split is closed\n");
+  await feed("[g] while split is closed\n" + start + "[g] closed block\n" + end);
+  assert.deepEqual(requests, []);
   manager.updateSettings({ open: true });
   await feed(start);
   manager.appendLocal("[g] matching local echo\n", { echo: true });
   await feed("[g] block first\n[g] block tail\n" + end + "[g] standalone\n");
 
   assert.deepEqual(requests, [["[g] block first"], ["[g] standalone"]]);
-  assert.deepEqual(lines(manager.views.main), ["[g] while split is closed", "[g] matching local echo"]);
+  assert.deepEqual(lines(manager.views.main), ["[g] while split is closed", "[g] closed block", "[g] matching local echo"]);
   assert.deepEqual(lines(manager.views.secondary), ["[g] block first", "[g] block tail", "[g] standalone"]);
 });
 
