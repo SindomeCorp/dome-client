@@ -69,10 +69,13 @@ export function useIdeKeyboardShortcuts({
         event.preventDefault();
         cancelVmsPrompt();
       } else if (command === "hide-shortcuts") {
+        event.preventDefault();
         setShowShortcuts(false);
       } else if (command === "toggle-shortcuts") {
         event.preventDefault();
         setShowShortcuts((currentValue) => !currentValue);
+      } else if (showShortcuts) {
+        event.preventDefault();
       } else if (command === "save") {
         event.preventDefault();
         const tab = tabs.find((entry) => entry.id === active);

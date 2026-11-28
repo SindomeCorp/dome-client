@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - Prevent delayed Find jumps from restoring an old highlight after closing Find, changing the query, or jumping again.
 - Keep MOO block indentation correct when earlier multiline comments or strings contain block keywords.
 - Hide IDE reference previews when the pointer leaves the editor and keep nearby references reachable.
+- Keep editing shortcuts from acting on documents while the IDE shortcut guide is open, and restore focus when it closes.
 
 ## 2026-11-27
 

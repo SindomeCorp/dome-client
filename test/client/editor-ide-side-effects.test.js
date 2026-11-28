@@ -520,6 +520,9 @@ test("useIdeKeyboardShortcuts routes keydown commands", async (t) => {
     root.render(React.createElement(ShortcutHarness, { showShortcuts: true }));
   });
   await act(async () => {
+    const save = new window.KeyboardEvent("keydown", { key: "s", ctrlKey: true, cancelable: true });
+    window.dispatchEvent(save);
+    assert.equal(save.defaultPrevented, true);
     window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape" }));
   });
   assert.deepEqual(calls, [["shortcuts", false]]);

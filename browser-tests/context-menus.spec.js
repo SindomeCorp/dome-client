@@ -1960,3 +1960,53 @@ test("the real IDE requests and caches verb and property hover previews", async 
   await expect(overlay).toHaveCount(0);
   expect(await commands()).toEqual([verbRequest, propertyRequest]);
 });
+
+test("the real IDE shortcut guide keeps editing shortcuts from reaching the document", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const before = (await fixtureState(page)).commands.length;
+  const opened = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: shortcuts fixture upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
+  const ide = await opened;
+  const editor = ide.locator(".ace_editor");
+  await expect(editor).toBeVisible();
+  await editor.evaluate((element) => element.env.editor.setValue("return 2;", -1));
+  const unsaved = ide.getByText("Unsaved", { exact: true });
+  await expect(unsaved).toBeVisible();
+  const opener = ide.getByRole("button", { name: "Show editor shortcuts" });
+  await opener.click();
+  const dialog = ide.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await ide.keyboard.press("Control+s");
+  await ide.keyboard.press("Control+e");
+  await expect(dialog).toBeVisible();
+  await expect(unsaved).toBeVisible();
+  expect((await fixtureState(page)).commands.slice(before)).toEqual([]);
+  await expect(dialog).toHaveAccessibleName("Editor Shortcuts");
+  const close = dialog.getByRole("button", { name: "Close shortcuts" });
+  await expect(close).toBeFocused();
+  await ide.keyboard.press("Tab");
+  expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  await dialog.getByRole("heading", { name: "Editor Shortcuts" }).click();
+  await expect(dialog).toBeVisible();
+  await ide.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(opener).toBeFocused();
+
+  await ide.keyboard.press("Control+Slash");
+  await expect(close).toBeFocused();
+  await close.click();
+  await expect(dialog).toHaveCount(0);
+  await expect(opener).toBeFocused();
+
+  await opener.click();
+  await expect(dialog).toBeVisible();
+  await ide.mouse.click(2, 2);
+  await expect(dialog).toHaveCount(0);
+  await expect(opener).toBeFocused();
+
+  await ide.keyboard.press("Control+s");
+  await expect.poll(async () => (await fixtureState(page)).commands.slice(before))
+    .toEqual(["@program #12:preview", "return 2;\n."]);
+});

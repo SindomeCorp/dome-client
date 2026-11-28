@@ -1,19 +1,43 @@
-import React from "react";
+import React, { useEffect, useId, useRef } from "react";
 
 export function ShortcutDialog({ onClose, referenceNavigationEnabled = true }) {
+  const dialogRef = useRef(null);
+  const titleId = useId();
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const opener = dialog.ownerDocument.activeElement;
+    dialog.showModal?.();
+    return () => {
+      dialog.close?.();
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, []);
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50"
-      onClick={onClose}
+    <dialog
+      ref={dialogRef}
+      aria-labelledby={titleId}
+      className="fixed inset-0 m-auto max-h-[88vh] w-[min(96vw,56rem)] overflow-auto rounded-lg bg-bg-surface text-ink shadow-card backdrop:bg-ink/50"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="bg-bg-surface text-ink rounded-lg shadow-card p-3 sm:p-6 w-[min(96vw,56rem)] max-h-[88vh] overflow-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-lg sm:text-2xl font-semibold mb-3 sm:mb-4">Editor Shortcuts</h2>
-        <div className="overflow-x-auto">
+      <div className="p-3 sm:p-6">
+        <header className="mb-3 flex items-center justify-between gap-3 sm:mb-4">
+          <h2 id={titleId} className="text-lg font-semibold sm:text-2xl">Editor Shortcuts</h2>
+          <button
+            type="button"
+            className="rounded-md border border-line-subtle bg-bg-sunken px-3 py-1 hover:bg-bg-surface focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500/40"
+            onClick={onClose}
+          >
+            Close shortcuts
+          </button>
+        </header>
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-labelledby={titleId}>
           <table className="w-full min-w-[34rem] text-left border-collapse table-auto whitespace-nowrap">
             <thead>
               <tr className="text-sm sm:text-base text-ink-muted">
@@ -79,6 +103,6 @@ export function ShortcutDialog({ onClose, referenceNavigationEnabled = true }) {
           </table>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
