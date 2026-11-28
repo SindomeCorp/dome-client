@@ -39,13 +39,7 @@ async function compileLess(outDir = path.join(publicDir, "css")) {
     const full = path.join(srcDir, file);
     const data = await fs.readFile(full, "utf8");
     const output = await less.render(data, { filename: full });
-    let plugins;
-    if (typeof postcss.loadConfig === "function") {
-      ({ plugins } = await postcss.loadConfig());
-    } else {
-      const configModule = await import(new URL("../../postcss.config.js", import.meta.url));
-      plugins = configModule.default?.plugins ?? [];
-    }
+    const { default: { plugins } } = await import("../../postcss.config.js");
     const prefixed = await postcss(plugins).process(output.css, { from: undefined });
     const cssName = file.replace(/\.less$/, ".css");
     await fs.writeFile(path.join(outDir, cssName), prefixed.css, "utf8");

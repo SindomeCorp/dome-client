@@ -171,3 +171,31 @@ test("editor resolves note-viewer template", () => {
   assert.deepEqual(result.locals.editor, expectedEditor(false));
   assert.deepEqual(result.locals.meta, expectedEditorMeta());
 });
+
+test("single-game connect omits TLS and reports empty multi-game statistics", (t) => {
+  const { multiMud } = config.node;
+  const { tlsEnabled } = config.moo;
+  config.node.multiMud = false;
+  config.moo.tlsEnabled = false;
+  t.after(() => {
+    config.node.multiMud = multiMud;
+    config.moo.tlsEnabled = tlsEnabled;
+  });
+
+  const { res, result } = createRes();
+  screens.connect({}, res);
+  assert.equal(result.locals.mudTlsEnabled, false);
+  assert.deepEqual(result.locals.connected(), { count: 0, games: [] });
+});
+
+test("output and IDE windows render standalone templates", () => {
+  const output = createRes();
+  screens.outputWindow({}, output.res);
+  assert.deepEqual(output.result, { template: "output-window", locals: { layout: false } });
+
+  const ide = createRes();
+  screens.editor({ params: { type: "ide" } }, ide.res);
+  assert.equal(ide.result.template, "editors/ide");
+  assert.equal(ide.result.locals.layout, false);
+  assert.deepEqual(ide.result.locals.editor, expectedEditor(false));
+});

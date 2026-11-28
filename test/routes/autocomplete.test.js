@@ -3,6 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import config from "../../src/config/index.js";
+import logger from "../../src/logger.js";
 import { ac, basic, clearCache } from "../../src/controllers/autocomplete.js";
 
 test("ac caches results across calls", async (t) => {
@@ -162,4 +163,27 @@ test("basic route returns empty array when autocomplete is disabled", async () =
   } finally {
     config.autocomplete = originalAutocomplete;
   }
+});
+
+test("autocomplete logs its file lookup and read failure under its own namespace", async (t) => {
+  const debug = t.mock.fn();
+  const error = t.mock.fn();
+  const child = t.mock.method(logger, "child", () => ({ debug, error }));
+  const route = await import("../../src/controllers/autocomplete.js?file-logging");
+  const original = config.autocomplete;
+  const source = "/unused/fixture-autocomplete.txt";
+  const failure = new Error("fixture read failed");
+  config.autocomplete = { enabled: true, fixture: source };
+  t.after(() => { config.autocomplete = original; });
+  t.mock.method(fs.promises, "readFile", async () => { throw failure; });
+
+  await assert.rejects(route.ac("fixture"), (err) => err === failure);
+  assert.deepEqual(child.mock.calls[0].arguments, [{ namespace: "controllers/autocomplete" }]);
+  assert.deepEqual(debug.mock.calls[0].arguments, [source]);
+  assert.deepEqual(error.mock.calls[0].arguments, [failure]);
+
+  const response = { status: t.mock.fn(() => response), json: t.mock.fn() };
+  await route.basic({ params: { type: "fixture" } }, response);
+  assert.deepEqual(response.status.mock.calls[0].arguments, [500]);
+  assert.equal(error.mock.callCount(), 3);
 });

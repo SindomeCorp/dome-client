@@ -55,7 +55,7 @@ function createMatcher(list, size) {
     has(ip) {
       const normalized = normalizeClientIp(ip);
       const family = net.isIP(normalized);
-      return Boolean(list && normalized && family !== 0 && list.check(normalized, family === 6 ? "ipv6" : "ipv4"));
+      return family !== 0 && list.check(normalized, family === 6 ? "ipv6" : "ipv4");
     }
   };
 }

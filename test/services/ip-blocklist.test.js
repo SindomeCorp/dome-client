@@ -84,3 +84,31 @@ test("resolveClientIpFromRequest follows NODE_SOCKET_PROXIED-style forwarded han
   assert.equal(resolveClientIpFromRequest(req, { proxied: false }), "10.0.0.2");
   assert.equal(normalizeClientIp("::ffff:198.51.100.7"), "198.51.100.7");
 });
+
+test("default IP resolution tolerates incomplete requests and prioritizes direct addresses", () => {
+  assert.equal(resolveClientIpFromRequest(undefined), "");
+  assert.equal(resolveClientIpFromRequest({}), "");
+  assert.equal(resolveClientIpFromRequest({ connection: { remoteAddress: "192.0.2.2" } }), "192.0.2.2");
+  assert.equal(resolveClientIpFromRequest({
+    headers: { "x-forwarded-for": "198.51.100.2" },
+    socket: { remoteAddress: "192.0.2.3" }
+  }), "192.0.2.3");
+  assert.equal(normalizeClientIp(123), "");
+});
+
+test("matches IPv6 exactly and treats unusable lookup values as absent", () => {
+  const list = loadIpBlocklist({
+    filePath: "fixture-ip-list",
+    fs: {
+      readFileSync(_file, encoding) {
+        assert.equal(encoding, "utf8");
+        return "2001:db8::7";
+      }
+    },
+    logger: { info() {}, warn() {} }
+  });
+  assert.equal(list.has("2001:db8::7"), true);
+  assert.equal(list.has("2001:db8::8"), false);
+  assert.equal(list.has("not-an-ip"), false);
+  assert.equal(list.has(null), false);
+});

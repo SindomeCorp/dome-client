@@ -130,9 +130,22 @@ test("browser entry manifest declares expected output files once", () => {
   ];
 
   assert.deepStrictEqual(browserOutputFiles, expected);
-  assert.deepStrictEqual(playerClientEntries.map(({ file }) => file), expected.slice(0, 2));
+  assert.deepEqual(playerClientEntries, [
+    { entry: "index.js", file: "player-client.js", format: "iife", minify: false },
+    { entry: "index.js", file: "player-client.min.js", format: "iife", minify: true }
+  ]);
   assert.deepStrictEqual(pageEntries.map(({ file }) => file), expected.slice(2));
-  assert.equal(pageEntries.find(({ file }) => file === "ide-editor-window.js").entry, "ide-editor-window.jsx");
+  const externalByPage = {
+    "client-connect.js": ["./logger.js"],
+    "client-options.js": ["./logger.js"],
+    "editor-window.js": ["./logger.js"],
+    "ide-editor-window.js": ["./logger.js"],
+    "moo-parser-worker.js": ["/js/parsers/web-tree-sitter.js"]
+  };
+  for (const { file, entry, external } of pageEntries) {
+    assert.equal(entry, file === "ide-editor-window.js" ? "ide-editor-window.jsx" : file);
+    assert.deepEqual(external, externalByPage[file] ?? []);
+  }
 });
 
 test("compileJs rejects when cleanup fails", async t => {
@@ -179,4 +192,69 @@ test("copyMooParserWasm copies packaged tree-sitter-moo wasm", async () => {
     "utf8"
   );
   assert.deepStrictEqual(copiedRuntimeJs, sourceRuntimeJs);
+});
+
+test("IDE CSS errors preserve the original cause", async (t) => {
+  const failure = new Error("fixture stylesheet read failure");
+  t.mock.method(fs, "mkdir", async () => {});
+  t.mock.method(fs, "readFile", async () => { throw failure; });
+
+  await assert.rejects(buildModule.compileReactCss("/unused/css"), (error) => {
+    assert.equal(error.message, "Could not compile IDE CSS");
+    assert.equal(error.cause, failure);
+    return true;
+  });
+});
+
+test("build shares a pending default build and permits retry after failure", async (t) => {
+  const failure = new Error("fixture asset directory failure");
+  const mkdir = t.mock.method(fs, "mkdir", async () => { throw failure; });
+  const { default: build } = buildModule;
+  const first = build();
+  const same = build();
+  const results = await Promise.allSettled([first, same]);
+
+  assert.equal(first, same);
+  assert.equal(mkdir.mock.callCount(), 1);
+  assert.deepEqual(results, [
+    { status: "rejected", reason: failure },
+    { status: "rejected", reason: failure }
+  ]);
+  const retry = build();
+  await assert.rejects(retry, (error) => error === failure);
+  assert.notEqual(retry, first);
+  assert.equal(mkdir.mock.callCount(), 2);
+});
+
+test("EJS entries compile as modules, preserve the options import, and ignore other files", async (t) => {
+  t.mock.method(fs, "mkdir", async () => {});
+  t.mock.method(fs, "readdir", async () => ["master-header.js", "guide.txt"]);
+  const rm = t.mock.method(fs, "rm", async () => {});
+  const build = t.mock.fn(async () => {});
+  const esbuild = t.mock.module("esbuild", { defaultExport: { build } });
+  const { compileEjsScripts } = await import("../../src/services/build.js?ejs-options-fixture");
+  esbuild.restore();
+
+  const output = path.resolve("unused-ejs");
+  await compileEjsScripts(output);
+
+  assert.deepEqual(rm.mock.calls.map(c => c.arguments[0]), [path.join(output, "master-header.js")]);
+  assert.equal(build.mock.callCount(), 1);
+  const [options] = build.mock.calls[0].arguments;
+  assert.equal(path.basename(options.entryPoints[0]), "master-header.js");
+  assert.equal(options.outfile, path.join(output, "master-header.js"));
+  assert.equal(options.format, "esm");
+  assert.deepEqual(options.external, ["./client-options.js"]);
+});
+
+test("EJS compilation tolerates a missing optional source directory and reports other read errors", async (t) => {
+  t.mock.method(fs, "mkdir", async () => {});
+  const missing = Object.assign(new Error("fixture source absent"), { code: "ENOENT" });
+  const denied = Object.assign(new Error("fixture source unreadable"), { code: "EACCES" });
+  let failure = missing;
+  t.mock.method(fs, "readdir", async () => { throw failure; });
+
+  await buildModule.compileEjsScripts("/unused/js");
+  failure = denied;
+  await assert.rejects(buildModule.compileEjsScripts("/unused/js"), (error) => error === denied);
 });

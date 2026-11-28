@@ -1,7 +1,7 @@
 import env from "../env.js";
 
 function normalizeEditorParser(value) {
-  const parser = String(value || "").trim().toLowerCase();
+  const parser = value.trim().toLowerCase();
   return parser === "moo" ? "moo" : "";
 }
 

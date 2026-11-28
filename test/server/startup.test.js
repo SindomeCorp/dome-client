@@ -1,6 +1,7 @@
 /* eslint indent: ["error", 2], quotes: ["error", "double"], semi: ["error", "always"] */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 function createServerConfig() {
   return {
@@ -22,6 +23,19 @@ test("importing server does not bind sockets or process exception listeners", as
     ? t.mock.module.bind(t.mock)
     : t.mock.import.bind(t.mock);
   let bindCalls = 0;
+  const startPolling = t.mock.fn();
+  const stopPolling = t.mock.fn();
+  const appVersion = process.env.APP_VERSION;
+  delete process.env.APP_VERSION;
+  t.after(() => {
+    if (appVersion === undefined) delete process.env.APP_VERSION;
+    else process.env.APP_VERSION = appVersion;
+  });
+  const readVersion = () => JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
+  const createApp = t.mock.fn(() => ({ get: () => "test" }));
+  const build = t.mock.fn(async () => {});
+  const readAutocomplete = t.mock.method(fs.promises, "readFile");
+  const named = t.mock.fn(() => ({ info() {}, warn() {}, error() {}, debug() {} }));
   const initialListeners = process.listenerCount("uncaughtException");
 
   moduleMock("../../src/config/index.js", { defaultExport: createServerConfig() });
@@ -29,11 +43,14 @@ test("importing server does not bind sockets or process exception listeners", as
     defaultExport: { info() {}, warn() {}, error() {}, debug() {} },
     namedExports: {
       inspect() {},
-      named: () => ({ info() {}, warn() {}, error() {}, debug() {} })
+      named
     }
   });
-  moduleMock("../../src/services/build.js", { defaultExport: async () => {} });
+  moduleMock("../../src/services/build.js", { defaultExport: build });
   moduleMock("../../src/routes/index.js", { defaultExport: {} });
+  moduleMock("../../src/controllers/status.js", {
+    namedExports: { startStatusPolling: startPolling, stopStatusPolling: stopPolling }
+  });
   moduleMock("../../src/controllers/socket.js", {
     namedExports: {
       connection() {},
@@ -42,9 +59,7 @@ test("importing server does not bind sockets or process exception listeners", as
   });
   moduleMock("../../src/server/app.js", {
     namedExports: {
-      createApp: () => ({
-        get: () => "test"
-      })
+      createApp
     }
   });
   moduleMock("../../src/server/servers.js", {
@@ -75,16 +90,32 @@ test("importing server does not bind sockets or process exception listeners", as
   const serverModule = await import(`../../src/server.js?startup=${Date.now()}`);
 
   assert.equal(bindCalls, 0);
+  assert.equal(startPolling.mock.callCount(), 0);
+  const [appOptions] = createApp.mock.calls[0].arguments;
+  assert.equal(appOptions.appVersion, readVersion());
+  assert.equal(appOptions.versionHash, process.env.GIT_HASH);
+  assert.ok(appOptions.appStartTime instanceof Date);
+  assert.ok(named.mock.calls.some(({ arguments: [namespace] }) => namespace === "client-app"));
   assert.equal(process.listenerCount("uncaughtException"), initialListeners);
 
   await serverModule.start({ skipBuild: true });
   assert.equal(bindCalls, 1);
+  assert.equal(startPolling.mock.callCount(), 1);
+  assert.equal(build.mock.callCount(), 0);
+  assert.ok(!readAutocomplete.mock.calls.some(({ arguments: [file] }) => file === "data/autocomplete/player.txt"));
   assert.equal(process.listenerCount("uncaughtException"), initialListeners + 1);
 
   await serverModule.start({ skipBuild: true });
   assert.equal(bindCalls, 1);
   assert.equal(process.listenerCount("uncaughtException"), initialListeners + 1);
 
+  await serverModule.stop();
+  assert.equal(stopPolling.mock.callCount(), 1);
+  assert.equal(process.listenerCount("uncaughtException"), initialListeners);
+
+  await serverModule.start();
+  assert.equal(build.mock.callCount(), 1);
+  assert.equal(process.listenerCount("uncaughtException"), initialListeners + 1);
   await serverModule.stop();
   assert.equal(process.listenerCount("uncaughtException"), initialListeners);
 });

@@ -13,7 +13,8 @@ const areas = {
       "test/server/client-app*.test.js", "test/server/logger.test.js", "test/server/startup.test.js",
       "test/routes/autocomplete.test.js", "test/routes/health.test.js", "test/routes/screens.test.js",
       "test/routes/session-error.test.js", "test/routes/status.test.js", "test/services/build*.test.js",
-      "test/services/ip-blocklist.test.js", "test/services/shorten.test.js", "test/services/status-poller.test.js",
+      "test/services/ip-blocklist.test.js", "test/services/log-export-style.test.js", "test/services/shorten.test.js",
+      "test/services/status-poller.test.js",
       "test/services/ua.test.js", "test/integration/server-*.integration.js", "test/integration/status-host-normalization.integration.js"
     ]
   },

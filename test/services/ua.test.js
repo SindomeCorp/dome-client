@@ -71,3 +71,26 @@ test("deviceCapture defaults to desktop without user-agent", () => {
   assert.equal(req.device, "desktop");
   assert.ok(called);
 });
+
+test("device labels display a known vendor or model on its own", async (t) => {
+  const module = t.mock.module("ua-parser-js", {
+    defaultExport: class {
+      constructor(ua) {
+        this.ua = ua;
+      }
+
+      getResult() {
+        return {
+          browser: {},
+          os: {},
+          device: this.ua === "vendor" ? { vendor: "Fixture Vendor" } : { model: "Fixture Model" }
+        };
+      }
+    }
+  });
+  const agent = await import("../../src/services/ua.js?device-label-fixture");
+  module.restore();
+
+  assert.equal(agent.parse("vendor").device.toString(), "Fixture Vendor");
+  assert.equal(agent.parse("model").device.toString(), "Fixture Model");
+});

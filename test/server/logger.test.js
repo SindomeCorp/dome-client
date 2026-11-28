@@ -36,7 +36,7 @@ test("inspect logs formatted object at debug level", async (t) => {
   const prevLevel = logger.default.level;
   logger.default.level = "debug";
 
-  const obj = { a: 1, b: { c: [2, 3] } };
+  const obj = { a: { b: { c: { d: { e: "deeply nested" } } } } };
   const inspected = util.inspect(obj, { depth: null });
   logger.inspect(obj);
 
@@ -134,3 +134,14 @@ test("silent mode suppresses logging", async (t) => {
   t.mock.restoreAll();
 });
 
+
+test("plain log lines omit namespace and metadata fields", async (t) => {
+  t.mock.method(dotenv, "config", () => ({}));
+  const logger = await loadLogger();
+  const log = t.mock.method(logger.default.transports[0], "log");
+
+  logger.default.info("fixture message");
+
+  const info = log.mock.calls[0].arguments[0];
+  assert.match(info[Symbol.for("message")], /^\S+ \[info\] fixture message$/);
+});

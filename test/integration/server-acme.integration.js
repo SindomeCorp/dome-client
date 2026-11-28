@@ -29,6 +29,7 @@ test("integration: acme challenge route serves token file from configured webroo
   const challengeDir = path.join(webroot, ".well-known", "acme-challenge");
   await fs.mkdir(challengeDir, { recursive: true });
   await fs.writeFile(path.join(challengeDir, "token-abc"), "token-value-abc\n", "utf8");
+  await fs.writeFile(path.join(challengeDir, "index.html"), "fixture index", "utf8");
   t.after(async () => {
     await fs.rm(webroot, { recursive: true, force: true });
   });
@@ -40,6 +41,8 @@ test("integration: acme challenge route serves token file from configured webroo
     .expect(200);
   const tokenBody = typeof found.text === "string" ? found.text : Buffer.from(found.body || "").toString("utf8");
   assert.equal(tokenBody.trim(), "token-value-abc");
+  assert.equal(found.headers.etag, undefined);
+  await request(baseUrl).get("/.well-known/acme-challenge/").expect(404);
 
   await request(baseUrl)
     .get("/.well-known/acme-challenge/not-there")

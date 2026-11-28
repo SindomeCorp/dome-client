@@ -89,7 +89,7 @@ test("middleware resolves nested paths and compiles", async () => {
   await mw(req, res, () => {});
   assert.equal(readFile.mock.calls[0].arguments[0], path.join(src, "nested", "style.less"));
   assert.equal(writeFile.mock.calls[0].arguments[0], path.join(dest, "nested", "style.css"));
-  assert.equal(mkdir.mock.calls[0].arguments[0], path.join(dest, "nested"));
+  assert.deepEqual(mkdir.mock.calls[0].arguments, [path.join(dest, "nested"), { recursive: true }]);
   assert.equal(headers["Content-Type"], "text/css");
   assert.match(res.end.mock.calls[0].arguments[0], /width: 2/);
 });
@@ -110,4 +110,28 @@ test("calls next with render error", async () => {
   });
   less.render.mock.restore();
   assert.strictEqual(nextErr, err);
+});
+
+test("lets non-stylesheet requests continue without touching the file system", async (t) => {
+  const readFile = t.mock.fn();
+  const next = t.mock.fn();
+  const middleware = lessMiddleware("/less", {}, { readFile });
+
+  await middleware({ url: "/notes.txt" }, {}, next);
+
+  assert.equal(next.mock.callCount(), 1);
+  assert.equal(readFile.mock.callCount(), 0);
+});
+
+test("replaces only the final CSS suffix and supplies the source filename to Less", async (t) => {
+  const source = "body { color: red; }";
+  const readFile = t.mock.fn(async () => source);
+  const render = t.mock.method(less, "render", async () => ({ css: source }));
+  const middleware = lessMiddleware("/less", {}, { readFile, mkdir: async () => {}, writeFile: async () => {} });
+
+  await middleware({ url: "/themes.css/nested.css" }, { setHeader() {}, end() {} }, t.mock.fn());
+
+  const filename = path.join("/less", "themes.css", "nested.less");
+  assert.deepEqual(readFile.mock.calls[0].arguments, [filename, "utf8"]);
+  assert.deepEqual(render.mock.calls[0].arguments, [source, { filename }]);
 });

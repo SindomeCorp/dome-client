@@ -65,3 +65,25 @@ test("ip blocklist middleware passes allowed clients", () => {
 
   assert.equal(nextCalled, true);
 });
+
+test("an absent blocklist allows requests", (t) => {
+  const next = t.mock.fn();
+  const middleware = createIpBlocklistMiddleware({ logger: { warn: t.mock.fn() } });
+  middleware({ headers: {}, socket: { remoteAddress: "192.0.2.8" } }, {}, next);
+  assert.equal(next.mock.callCount(), 1);
+});
+
+test("direct connections use the socket address and log a missing URL as empty", (t) => {
+  const warn = t.mock.fn();
+  const status = t.mock.fn(() => ({ send() {} }));
+  const middleware = createIpBlocklistMiddleware({
+    blocklist: new Set(["192.0.2.8"]),
+    logger: { warn }
+  });
+  const req = { headers: { "x-forwarded-for": "198.51.100.9" }, socket: { remoteAddress: "192.0.2.8" } };
+
+  middleware(req, { status }, t.mock.fn());
+
+  assert.deepEqual(status.mock.calls[0].arguments, [403]);
+  assert.deepEqual(warn.mock.calls[0].arguments, ["Blocked request from 192.0.2.8 to "]);
+});

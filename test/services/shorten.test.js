@@ -217,3 +217,46 @@ test("returns input and logs when data is invalid", async t => {
   assert.equal(result, input);
   assert.equal(warn.mock.calls[0].arguments[0], "shortening urls failed");
 });
+
+test("the configured minimum is inclusive and requests use a form content type", async (t) => {
+  const original = config.shorten.minimum;
+  config.shorten.minimum = 45;
+  t.after(() => { config.shorten.minimum = original; nock.cleanAll(); });
+  const { urls } = await loadShorten();
+  const root = "https://fixture.test/";
+  const boundary = root.padEnd(45, "a");
+  const below = root.padEnd(44, "b");
+  const origin = `http://${config.shorten.host}:${config.shorten.port}`;
+  const short = nock(origin).post(config.shorten.path, `url=${encodeURIComponent(below)}`)
+    .reply(200, { url: below, key: "below" });
+  const accepted = nock(origin).post(config.shorten.path, `url=${encodeURIComponent(boundary)}`)
+    .matchHeader("Content-Type", "application/x-www-form-urlencoded")
+    .reply(200, { url: boundary, key: "boundary" });
+
+  assert.equal(await urls(below), below);
+  assert.equal(short.isDone(), false);
+  assert.equal(await urls(boundary), `https://${config.shorten.domain}/boundary`);
+  accepted.done();
+});
+
+test("a cache hit refreshes recency without evicting at the configured capacity", async (t) => {
+  const original = config.shorten.cacheLimit;
+  config.shorten.cacheLimit = 2;
+  t.after(() => { config.shorten.cacheLimit = original; nock.cleanAll(); });
+  const { urls } = await loadShorten();
+  const origin = `http://${config.shorten.host}:${config.shorten.port}`;
+  const [a, b, c] = ["a", "b", "c"].map(label => "https://fixture.test/" + label.repeat(85));
+  const requested = nock(origin);
+  for (const [url, key] of [[a, "first"], [b, "second"], [c, "third"], [b, "second-again"]]) {
+    requested.post(config.shorten.path, `url=${encodeURIComponent(url)}`).reply(200, { url, key });
+  }
+  const link = (key) => `https://${config.shorten.domain}/${key}`;
+
+  assert.equal(await urls(a), link("first"));
+  assert.equal(await urls(b), link("second"));
+  assert.equal(await urls(a), link("first"));
+  assert.equal(await urls(c), link("third"));
+  assert.equal(await urls(a), link("first"));
+  assert.equal(await urls(b), link("second-again"));
+  requested.done();
+});
