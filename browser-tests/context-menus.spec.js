@@ -2292,8 +2292,10 @@ test("real Find navigates backward and wraps between repeated matches on one row
   await socketFeed(page, line + "\n");
   const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: line });
   await expect(row).toBeVisible();
-  await page.locator("#button-output-find").click();
+  const input = page.locator("#inputBuffer");
+  await input.press("Control+f");
   const search = page.locator("#output-find-query");
+  await expect(search).toBeFocused();
   await search.fill("[X]+");
   const currentOffset = () => row.evaluate((element) => {
     const mark = element.querySelector("mark");
@@ -2312,6 +2314,14 @@ test("real Find navigates backward and wraps between repeated matches on one row
   await previous.click();
   await expect.poll(currentOffset).toBe(24);
   await expect(page.locator("#output-find-count")).toHaveText("3 of 3");
+  await search.press("F3");
+  await expect.poll(currentOffset).toBe(3);
+  await search.press("Shift+F3");
+  await expect.poll(currentOffset).toBe(24);
+  await search.press("Escape");
+  await expect(page.locator("#output-find")).toBeHidden();
+  await expect(input).toBeFocused();
+  await expect(row.locator("mark")).toHaveCount(0);
 });
 
 test("context menus: a late server profile worker cannot undo a newer Options reload", async ({ page }) => {
