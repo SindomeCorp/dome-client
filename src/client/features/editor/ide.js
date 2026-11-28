@@ -1,5 +1,6 @@
 import { logger } from "../../core/constants.js";
 import { parseCommand } from "../../core/command-utils.js";
+import { CLIENT_OPTION_BY_PREFERENCE } from "../../../shared/client-options.js";
 
 const IDE_WINDOW_URL = "/editor/ide/";
 const IDE_WINDOW_FEATURES = "width=640,height=480,resizable,scrollbars=yes";
@@ -73,6 +74,9 @@ export function setupIdeLauncher({
 
     if (!reuse) {
       rememberPendingState(editor);
+      const theme = client.preferences?.edittheme;
+      const editorUrl = theme && theme !== CLIENT_OPTION_BY_PREFERENCE.edittheme.def
+        ? `${IDE_WINDOW_URL}?et=${encodeURIComponent(theme)}` : IDE_WINDOW_URL;
 
       if (!blankHandle) {
         try { existing && existing.close(); } catch {}
@@ -80,14 +84,14 @@ export function setupIdeLauncher({
 
       let opened;
       try {
-        opened = win.open(IDE_WINDOW_URL, "dome-ide", IDE_WINDOW_FEATURES);
+        opened = win.open(editorUrl, "dome-ide", IDE_WINDOW_FEATURES);
       } catch {
         opened = null;
       }
 
       if (!opened && blankHandle && existing) {
         try {
-          existing.location.href = IDE_WINDOW_URL;
+          existing.location.href = editorUrl;
           opened = existing;
         } catch {
           opened = existing;

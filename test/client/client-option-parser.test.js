@@ -152,11 +152,19 @@ test("client option schema maps rendered option keys to preference names", () =>
 test("client option schema exposes view choices for rendered select controls", () => {
   const optionState = buildClientOptionState();
 
-  ["scroll", "edittheme", "edittype", "colorset", "outfont", "inputfont", "editorfont"].forEach((key) => {
-    assert.ok(Array.isArray(CLIENT_OPTION_VIEW[key].choices));
-    assert.ok(CLIENT_OPTION_VIEW[key].choices.length > 0);
-    assert.deepEqual(optionState[key].choices, CLIENT_OPTION_VIEW[key].choices);
-  });
+  for (const option of CLIENT_OPTION_DEFINITIONS.filter(({ control }) => control === "select")) {
+    const { key, preferenceName } = option;
+    const { choices } = CLIENT_OPTION_VIEW[key];
+    assert.ok(Array.isArray(choices) && choices.length > 0, key);
+    assert.deepEqual(optionState[key].choices, choices, key);
+    const values = choices.map(({ value }) => value);
+    assert.deepEqual(values, option.ok, key);
+    assert.equal(new Set(values).size, values.length, key);
+    for (const { value, label } of choices) {
+      assert.ok(value.trim() && label.trim(), `${key} has a blank choice`);
+      assert.equal(validateClientOptionValue(preferenceName, value).valid, true, `${key}: ${value}`);
+    }
+  }
 });
 
 test("output presentation preserves independent styles and includes both size boundaries", () => {

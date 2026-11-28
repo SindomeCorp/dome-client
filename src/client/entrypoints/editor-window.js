@@ -3,7 +3,7 @@ import "ace-builds/src-noconflict/theme-tomorrow_night_blue.js";
 import "../features/editor/ace/keybinding-vim.js";
 import "../features/editor/ace/mode-moo.js";
 import { getFontFamily } from "../features/editor/ace/fonts.js";
-import { configureEditorParser } from "../features/editor/ace/editor-options.js";
+import { configureEditorParser, configureEditorTheme } from "../features/editor/ace/editor-options.js";
 import { attachMooParserDiagnostics } from "../features/editor/parser/moo-parser-diagnostics.js";
 
 ace.config.set("basePath", "/js/ace");
@@ -32,10 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const editorEl = document.querySelector("#verb-editor-holder");
   if (editorEl) {
     verbEditor = ace.edit("verb-editor-holder");
-    const theme = editorEl.getAttribute("data-editor-theme");
-    if (theme) {
-      verbEditor.setTheme(`ace/theme/${theme}`);
-    }
+    configureEditorTheme(verbEditor, editorEl.getAttribute("data-editor-theme"));
     const editorParser = editorEl.getAttribute("data-editor-parser");
     configureEditorParser(verbEditor, editorParser);
     attachMooParserDiagnostics(verbEditor, editorParser);

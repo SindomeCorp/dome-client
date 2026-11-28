@@ -13,7 +13,7 @@ test("openIDE reuses existing window after beforeunload", async (t) => {
   const { window } = dom;
   globalThis.window = window;
   globalThis.document = window.document;
-  dome.preferences = { edittheme: "dark" };
+  dome.preferences = { edittheme: "ambience" };
   const fakeSocket = { id: "fake-socket" };
   dome.socket = fakeSocket;
 
@@ -103,7 +103,7 @@ test("openIDE reuses existing window after beforeunload", async (t) => {
   setupIdeLauncher({ client: dome, win: window, getSocket: () => dome.socket });
 
   dome.openIDE({ editorName: "one" });
-  assert.deepEqual(openLog.map((entry) => entry.url), ["", "/editor/ide/"]);
+  assert.deepEqual(openLog.map((entry) => entry.url), ["", "/editor/ide/?et=ambience"]);
   assert.deepEqual(openLog.map((entry) => entry.features), [windowFeatures, windowFeatures]);
   assert.equal(openCount, 1);
   assert.equal(win.closeCalls, 0);

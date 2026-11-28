@@ -67,6 +67,13 @@ app.get("/editor/:type/", async (req, res) => {
     });
     return res.type("html").send(html.replace(/<link[^>]+fonts\.googleapis[^>]+>/g, ""));
   }
+  if (req.params.type === "verb") {
+    const html = await ejs.renderFile(root + "views/editors/verb.ejs", {
+      req, meta: { title: "Verb fixture", description: "Local test", keywords: "test" }, decache: (value) => value,
+      editor: { readonly: false, parser: "" }
+    });
+    return res.type("html").send(html.replace(/<link[^>]+fonts\.googleapis[^>]+>/g, ""));
+  }
   if (req.params.type !== "ide") return res.type("html").send("<!doctype html><title>Editor fixture</title>");
   const html = await ejs.renderFile(root + "views/editors/ide.ejs", {
     req, meta: { title: "IDE fixture", description: "Local test", keywords: "test" }, decache: (value) => value,

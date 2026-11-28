@@ -1770,6 +1770,20 @@ test("streamed editor protocol passes complete text to the editor in the real pl
   expect((await fixtureState(page)).commands).toEqual(connected.commands);
 });
 
+for (const [mode, name] of [["ide", "IDE"], ["windows", "individual editor"]]) {
+  test(`the real ${name} loads the saved Ambience Ace theme`, async ({ page }) => {
+    const initial = await fixtureState(page);
+    await page.goto(`/?entry=real&ed=${mode}&et=ambience`);
+    await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+    const connected = await fixtureState(page);
+    const popup = page.waitForEvent("popup");
+    await socketFeed(page, "#$# edit name: Theme fixture upload: @program #12:preview\r\nreturn 12;\r\n.\r\n");
+    const editor = await popup;
+    await expect(editor.locator(".ace_editor")).toHaveClass(/\bace-ambiance\b/, { timeout: 4000 });
+    expect((await fixtureState(page)).commands).toEqual(connected.commands);
+  });
+}
+
 test("real player drops pre-ready output and profile markers during a transport reconnect", async ({ page }) => {
   const initial = await fixtureState(page);
   await page.goto("/?entry=real");

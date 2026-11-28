@@ -22,6 +22,7 @@ All notable changes to this project will be documented in this file.
 - Prevent canceled overlapping long presses from pausing output scrolling.
 - Match word alerts against visible output when ANSI styling splits a word.
 - Keep wider rows in a nowrap output block from jumping back when a narrower row reaches its horizontal scroll limit or arrives while the block is scrolled.
+- Apply the selected theme when opening the IDE and load Ambience in both editor modes.
 
 ## 2026-11-27
 

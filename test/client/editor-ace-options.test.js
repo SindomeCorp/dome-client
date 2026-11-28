@@ -2,10 +2,20 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   configureEditorParser,
+  configureEditorTheme,
   configureMooEditor,
   MOO_TAB_SIZE,
   normalizeEditorParser
 } from "../../src/client/features/editor/ace/editor-options.js";
+
+test("editor theme configuration preserves the saved Ambience spelling and loads the Ace alias", () => {
+  const themes = [];
+  const editor = { setTheme(theme) { themes.push(theme); } };
+  configureEditorTheme(editor);
+  configureEditorTheme(editor, "ambience");
+  configureEditorTheme(editor, "twilight");
+  assert.deepEqual(themes, ["ace/theme/ambiance", "ace/theme/twilight"]);
+});
 
 test("configureMooEditor uses two-space soft tabs", () => {
   const options = {};

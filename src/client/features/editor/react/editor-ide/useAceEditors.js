@@ -5,7 +5,7 @@ import "../../ace/keybinding-vim.js";
 import "../../ace/mode-moo.js";
 import "ace-builds/src-noconflict/mode-text.js";
 import { getFontFamily } from "../../ace/fonts.js";
-import { configureEditorParser } from "../../ace/editor-options.js";
+import { configureEditorParser, configureEditorTheme } from "../../ace/editor-options.js";
 import { attachMooParserDiagnostics } from "../../parser/moo-parser-diagnostics.js";
 import {
   getDefinitionTargetAtPosition,
@@ -93,7 +93,7 @@ export function useAceEditors({
     const editingObjectId = getEditingObjectId(command, commandTarget);
     const lineLimit = getLineLimit(command, lineLimits);
 
-    if (editorTheme) ed.setTheme(`ace/theme/${editorTheme}`);
+    configureEditorTheme(ed, editorTheme);
     if (isProgram) {
       configureEditorParser(ed, editorParser);
     } else {
