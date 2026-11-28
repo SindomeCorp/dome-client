@@ -1151,6 +1151,34 @@ test("closing a split confirms before merging history", async ({ page }) => {
   await expect(page.locator("#lineBuffer")).toContainText("preserve me");
 });
 
+test("reverse selection survives at the retention boundary until the focused row is pruned", async ({ page }) => {
+  await page.goto("/?pb=3");
+  await page.waitForFunction(() => window.outputTest);
+  await page.evaluate(() => window.outputTest.feed("first\nretained focus\nretained anchor\n"));
+  const buffer = page.locator("#lineBuffer");
+  await expect(buffer).toContainText("retained anchor");
+
+  await page.evaluate(() => {
+    const { mounted } = window.outputTest.manager.views.main;
+    document.getSelection().setBaseAndExtent(mounted.get(3).firstChild, 3, mounted.get(2).firstChild, 2);
+    return window.outputTest.feed("retention step\n");
+  });
+  await expect(buffer).toContainText("retention step");
+  await expect(buffer).not.toContainText("first");
+  expect(await page.evaluate(() => {
+    const { anchorNode, anchorOffset, focusNode, focusOffset } = document.getSelection();
+    return [anchorNode?.textContent, anchorOffset, focusNode?.textContent, focusOffset];
+  })).toEqual(["retained anchor", 3, "retained focus", 2]);
+
+  await page.evaluate(() => window.outputTest.feed("next output\n"));
+  await expect(buffer).toContainText("next output");
+  await expect(buffer).not.toContainText("retained focus");
+  await expect(buffer).toContainText("retained anchor");
+  await expect.poll(() => page.evaluate(() => document.getSelection().isCollapsed)).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.lastOutputStatus))
+    .toBe("The text selection was cleared because some of its history was removed.");
+});
+
 test("scrolling while text is selected renders old rows and copies the entire logical selection", async ({ page, browserName }) => {
   if (browserName === "chromium") {
     const cdp = await page.context().newCDPSession(page);

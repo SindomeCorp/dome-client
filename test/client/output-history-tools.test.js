@@ -109,6 +109,33 @@ test("pruning selected native text clears the selection with an explanation", as
   assert.ok(messages.some((message) => message.includes("text selection was cleared")));
 });
 
+test("output selection survives at the pruning boundary until an endpoint is evicted", async (t) => {
+  for (const [direction, anchorId, focusId] of [["forward", 4, 5], ["reverse", 5, 4]]) {
+    await t.test(direction, async (t) => {
+      const { manager, client, doc, feed, messages } = await createOutputApp(t);
+      await feed("one\ntwo\nthree\nfour\nfive\n");
+      const { mounted } = manager.views.main;
+      const anchor = mounted.get(anchorId).firstChild;
+      const focus = mounted.get(focusId).firstChild;
+      const selection = doc.getSelection();
+      selection.setBaseAndExtent(anchor, 2, focus, 1);
+
+      client.preferences.performanceBuffer = 2;
+      manager.prune();
+      assert.equal(manager.history.first, 4);
+      assert.equal(selection.anchorNode, anchor);
+      assert.equal(selection.focusNode, focus);
+      assert.equal(selection.isCollapsed, false);
+      assert.deepEqual(messages, []);
+
+      await feed("six\n");
+      assert.equal(manager.history.first, 5);
+      assert.equal(selection.isCollapsed, true);
+      assert.deepEqual(messages, ["The text selection was cleared because some of its history was removed."]);
+    });
+  }
+});
+
 test("native log export uses history and clear cancels a pending export", async (t) => {
   const { manager, client, win, feed, doc } = await createOutputApp(t);
   await feed("first\nsecond\n");
