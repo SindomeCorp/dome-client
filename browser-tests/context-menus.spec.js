@@ -1653,6 +1653,41 @@ test("the real IDE toolbar switches tab orientation and hides disabled Scratch c
   await expect(page.getByRole("button", { name: "View Scratch", exact: true })).toBeVisible();
 });
 
+test("the real IDE adds a blank Scratch tab and explicitly requests the saved Scratchpad", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const before = (await fixtureState(page)).commands.length;
+  const commands = () => fixtureState(page).then((state) => state.commands.slice(before));
+
+  const opened = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: scratch toolbar fixture upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
+  const ide = await opened;
+  const original = ide.getByRole("tab", { name: /scratch toolbar fixture/i });
+  await expect(original).toHaveAttribute("aria-selected", "true");
+
+  await ide.getByRole("button", { name: "Add Scratch", exact: true }).click();
+  const scratch = ide.getByRole("tab", { name: /Temporary Scratch Pad/ });
+  await expect(scratch).toHaveAttribute("aria-selected", "true");
+  const scratchEditor = ide.locator(".ace_editor:visible");
+  await expect.poll(() => scratchEditor.evaluate((element) => element.env.editor.getValue())).toBe("");
+  expect(await commands()).toEqual([]);
+
+  await scratchEditor.evaluate((element) => element.env.editor.focus());
+  await ide.keyboard.insertText("toolbar scratch fixture");
+  await expect.poll(() => scratchEditor.evaluate((element) => element.env.editor.getValue())).toBe("toolbar scratch fixture");
+  expect(await commands()).toEqual([]);
+  await ide.getByRole("button", { name: "Save", exact: true }).click();
+  const saved = ["@scratch Temporary Scratch Pad", "toolbar scratch fixture\n."];
+  await expect.poll(commands).toEqual(saved);
+
+  await original.click();
+  await expect(original).toHaveAttribute("aria-selected", "true");
+  await expect.poll(() => scratchEditor.evaluate((element) => element.env.editor.getValue())).toBe("return 1;");
+  await ide.getByRole("button", { name: "View Scratch", exact: true }).click();
+  await expect.poll(commands).toEqual([...saved, "@edit me.scratch"]);
+});
+
 test("the real IDE keeps display preferences usable when storage rejects writes and reads", async ({ page }) => {
   await page.addInitScript(() => {
     const keys = new Set(["ide-dark", "ide-orientation"]);
