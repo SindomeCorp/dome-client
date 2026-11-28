@@ -913,23 +913,31 @@ test("context menus: shipped role files expose exact actions and copy only match
   expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([";$string_utils:nn(#123)", "@kids #123 -lcd", "@args #123:look", "@show #123.name", "@kids #123"]);
 });
 
-test("context menus: real bundle numeric and symbolic commands, Look and traceback Copy Frame stay explicit", async ({ page, browserName }) => {
-  const frameFixture = JSON.parse(await readFile(new URL("../test-support/fixtures/context-menu-frames.json", import.meta.url), "utf8"));
+async function startShippedReferenceProfile(page, browserName, id, label) {
   const initial = await fixtureState(page);
   if (browserName === "chromium") await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/?entry=real");
   await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
-  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
-  const sent = [];
-  const open = async (row, index, labels) => {
-    await expect.poll(async () => { await rightText(page, row, index); return page.getByRole("menuitem").allTextContents(); }).toEqual(labels);
-  };
-  const objectLabels = ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"];
-  for (const object of ["#123", "$object"]) {
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%" + JSON.stringify(id) + "\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: " + label + " (selected by server)");
+  return async () => (await fixtureState(page)).commands.slice(initial.commands.length);
+}
+
+async function openShippedReferenceMenu(page, row, offset, labels) {
+  await expect.poll(async () => {
+    await rightText(page, row, offset);
+    return page.getByRole("menuitem").allTextContents();
+  }).toEqual(labels);
+}
+
+for (const object of ["#123", "$object"]) {
+  test("context menus: real bundle sends explicit Programmer commands for " + object, async ({ page, browserName }) => {
+    const readSent = await startShippedReferenceProfile(page, browserName, "programmer", "Programmer");
+    const sent = [];
+    const objectLabels = ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"];
     const objectCommands = ["@show " + object, ";$string_utils:nn(" + object + ")", "@verbs " + object, "@props " + object, "@parents " + object, "@kids " + object + " -lcd", "@siblings " + object, "@tree " + object, "look " + object];
     for (const [suffix, labels, commands] of [
-      ["", ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"], ["@show " + object, ";$string_utils:nn(" + object + ")", "@verbs " + object, "@props " + object, "@parents " + object, "@kids " + object + " -lcd", "@siblings " + object, "@tree " + object, "look " + object]],
+      ["", objectLabels, objectCommands],
       [":inspect", ["@edit", "@list", "@show", "@args", "help"], ["@edit " + object + ":inspect", "@list " + object + ":inspect", "@show " + object + ":inspect", "@args " + object + ":inspect", "help " + object + ":inspect"]],
       [".name", ["@edit", "@show"], ["@edit " + object + ".name", "@show " + object + ".name"]]
     ]) {
@@ -940,55 +948,63 @@ test("context menus: real bundle numeric and symbolic commands, Look and traceba
       await socketFeed(page, "Reference " + object.slice(0, 2) + "\u001b[32m" + object.slice(2) + suffix + "\u001b[0m\n");
       const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Reference " + reference }).last();
       for (let index = 0; index < labels.length; index++) {
-        await open(row, offset, expected);
-        expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+        await openShippedReferenceMenu(page, row, offset, expected);
+        expect(await readSent()).toEqual(sent);
         await primary.getByRole("menuitem", { name: labels[index], exact: true }).click();
         sent.push(commands[index]);
-        await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+        await expect.poll(readSent).toEqual(sent);
       }
-      await open(row, offset, expected);
+      await openShippedReferenceMenu(page, row, offset, expected);
       await primary.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
       await expectClipboard(page, reference);
       if (suffix) {
         const owner = page.getByRole("group", { name: "Object " + object, exact: true });
         for (let index = 0; index < objectLabels.length; index++) {
-          await open(row, offset, expected);
+          await openShippedReferenceMenu(page, row, offset, expected);
           await expect(page.getByRole("group")).toHaveCount(2);
           await expect(owner.getByRole("menuitem")).toHaveText(["Copy to Clipboard", ...objectLabels]);
-          expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+          expect(await readSent()).toEqual(sent);
           await owner.getByRole("menuitem", { name: objectLabels[index], exact: true }).click();
           sent.push(objectCommands[index]);
-          await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+          await expect.poll(readSent).toEqual(sent);
         }
-        await open(row, offset, expected);
+        await openShippedReferenceMenu(page, row, offset, expected);
         await owner.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
         await expectClipboard(page, object);
       }
     }
-  }
+  });
+}
+
+test("context menus: real bundle copies traceback frames without sending a command", async ({ page, browserName }) => {
+  const readSent = await startShippedReferenceProfile(page, browserName, "programmer", "Programmer");
+  const frameFixture = JSON.parse(await readFile(new URL("../test-support/fixtures/context-menu-frames.json", import.meta.url), "utf8"));
   for (const frame of frameFixture.frames) {
     await socketFeed(page, frame.replace(":", "\u001b[31m:\u001b[0m") + "\n");
     const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: frame }).last();
-    await open(row, frame.indexOf(":") + 2, ["Copy Frame"]);
+    await openShippedReferenceMenu(page, row, frame.indexOf(":") + 2, ["Copy Frame"]);
     await page.keyboard.press("Escape");
     await row.evaluate((element) => { document.getSelection().removeAllRanges(); element.focus(); });
     await expect.poll(async () => { await page.keyboard.press("Shift+F10"); return page.getByRole("menuitem").allTextContents(); }).toEqual(["Copy Frame"]);
     await page.keyboard.press("Enter");
     await expectClipboard(page, frame);
-    expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+    expect(await readSent()).toEqual([]);
     await row.evaluate((element) => { element.focus(); document.getSelection().selectAllChildren(element); document.dispatchEvent(new Event("selectionchange")); });
     await openSelection(page);
     await expect(page.getByRole("menuitem")).toHaveText(["Copy selected text", "Open in Scratchpad"]);
     await page.keyboard.press("Escape");
     await page.evaluate(() => document.getSelection().removeAllRanges());
   }
-  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\nGM #123\n");
-  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: GM (selected by server)");
+});
+
+test("context menus: real bundle sends GM Look only on explicit activation", async ({ page, browserName }) => {
+  const readSent = await startShippedReferenceProfile(page, browserName, "gm", "GM");
+  await socketFeed(page, "GM #123\n");
   const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "GM #123" }).last();
-  await open(row, 5, ["Copy to Clipboard", "@parents", "@kids", "@notes", "Look"]);
+  await openShippedReferenceMenu(page, row, 5, ["Copy to Clipboard", "@parents", "@kids", "@notes", "Look"]);
+  expect(await readSent()).toEqual([]);
   await page.getByRole("menuitem", { name: "Look", exact: true }).click();
-  sent.push("look #123");
-  await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(sent);
+  await expect.poll(readSent).toEqual(["look #123"]);
 });
 
 test("context menus: grouped targets support keyboard, bounded positioning, atomic reload and selection precedence", async ({ page }) => {
