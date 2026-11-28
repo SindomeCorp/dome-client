@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Leave missing note metadata blank and show save and validation feedback in the note viewer.
 - Keep rejected pastes and newlines out of undo history when a local IDE editor reaches its line limit.
 - Keep keyboard focus inside the VMS save dialog, restore it on close, and let Enter activate Cancel without saving.
+- Open the correct IDE reference on modifier-click when a variable or property name includes `this`.
 
 ## 2026-11-27
 

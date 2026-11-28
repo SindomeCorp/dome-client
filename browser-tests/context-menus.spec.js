@@ -1786,3 +1786,43 @@ test("the real VMS save dialog keeps keyboard focus and uploads only on submit",
   await expect.poll(async () => (await fixtureState(page)).commands.slice(before.length))
     .toEqual(["@program #12:preview", "return 1;\n.", "Fixture VMS note"]);
 });
+
+test("the real IDE modifier click resolves this without opening lookalike variables", async ({ page }) => {
+  await page.context().route("**/editor/ide/", async (route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("navigation", "on");
+    url.searchParams.set("hover", "off");
+    await route.fulfill({ response: await route.fetch({ url: url.href }) });
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const before = (await fixtureState(page)).commands.length;
+  const opened = page.waitForEvent("popup");
+  const source = ["this:preview();", "unrelatedthis:other();", "$tools.label;", "return 1;"].join("\r\n");
+  await socketFeed(page, "#$# edit name: navigation fixture upload: @program #12:look\r\n" + source + "\r\n.\r\n");
+  const ide = await opened;
+  const editor = ide.locator(".ace_editor");
+  await expect(editor).toBeVisible();
+  const clickCode = async (row, column, modified = false) => {
+    const point = await editor.evaluate((element, position) => {
+      const renderer = element.env.editor.renderer;
+      const { pageX, pageY } = renderer.textToScreenCoordinates(position.row, position.column);
+      return { x: pageX + 2, y: pageY + renderer.lineHeight / 2 };
+    }, { row, column });
+    if (modified) await ide.keyboard.down("Control");
+    try {
+      await ide.mouse.click(point.x, point.y);
+    } finally {
+      if (modified) await ide.keyboard.up("Control");
+    }
+  };
+  const commands = async () => (await fixtureState(page)).commands.slice(before);
+  await clickCode(0, 7);
+  expect(await commands()).toEqual([]);
+  await clickCode(0, 7, true);
+  await expect.poll(commands).toEqual(["@edit #12:preview"]);
+  await clickCode(1, 16, true);
+  await clickCode(2, 9, true);
+  await expect.poll(commands).toEqual(["@edit #12:preview", "@edit $tools.label"]);
+});

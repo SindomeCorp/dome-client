@@ -20,7 +20,7 @@ export function parseObjectPropertyTarget(target) {
 
 export function getDefinitionTargetAtPosition(line, column) {
   if (typeof line !== "string") return "";
-  const pattern = /(#\d+(?::[A-Za-z0-9_@*.-]+|\.[A-Za-z0-9_]+)|\$[A-Za-z0-9_]+(?::[A-Za-z0-9_@*.-]+|\.[A-Za-z0-9_]+)|this(?::[A-Za-z0-9_@*.-]+|\.[A-Za-z0-9_]+))(?:\(\))?/g;
+  const pattern = /(#\d+(?::[A-Za-z0-9_@*.-]+|\.[A-Za-z0-9_]+)|\$[A-Za-z0-9_]+(?::[A-Za-z0-9_@*.-]+|\.[A-Za-z0-9_]+)|(?<![\w.])this(?::[A-Za-z0-9_@*.-]+|\.[A-Za-z0-9_]+))(?:\(\))?/g;
   let match;
   while ((match = pattern.exec(line)) !== null) {
     const full = match[0];

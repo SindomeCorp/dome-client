@@ -108,6 +108,10 @@ test("editor IDE locates each numeric, symbolic and this reference on the same l
   }
   assert.equal(getDefinitionTargetAtPosition(undefined, 0), "");
   assert.equal(getDefinitionTargetAtPosition("return #123;", 8), "");
+  for (const line of ["other_this:lookup();", "owner.this:lookup();", "unrelatedthis.name;"]) {
+    assert.equal(getDefinitionTargetAtPosition(line, line.indexOf("this") + 2), "");
+  }
+  assert.equal(getDefinitionTargetAtPosition("(this.name)", 7), "this.name");
 });
 
 test("editor IDE resolves this against the object being edited and ignores incomplete references", () => {

@@ -78,10 +78,10 @@ app.get("/editor/:type/", async (req, res) => {
       } : {}),
       ideScratchEnabled: req.query.scratch !== "off",
       ideVmsNoteEnabled: req.query.vms === "on",
-      ideHoverOverlaysEnabled: true,
+      ideHoverOverlaysEnabled: req.query.hover !== "off",
       ideObjectBrowserEnabled: req.query.browsers === "on",
       idePropertyBrowserEnabled: req.query.browsers === "on",
-      ideReferenceNavigationEnabled: false,
+      ideReferenceNavigationEnabled: req.query.navigation === "on",
       parser: req.query.parser === "moo" ? "moo" : "",
       parserBlockSave: req.query.parser === "moo"
     }
