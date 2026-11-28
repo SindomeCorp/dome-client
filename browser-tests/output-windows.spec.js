@@ -576,12 +576,36 @@ test("closing Find clears the highlight even when the next result waits for inde
 test("main Find locates popped-out output and reload closes the companion without restoring a popup", async ({ page }) => {
   await page.evaluate(async () => {
     window.outputTest.manager.updateSettings({ open: true, selected: ["team-chat"] });
-    await window.outputTest.feed("main\n[-][Team-Chat] needle in companion\n");
+    await window.outputTest.feed("first needle in main\n[-][Team-Chat] needle in companion\nlast needle in main\n");
   });
   const popup = await popOut(page);
   await page.locator("#button-output-find").click();
-  await page.locator("#output-find-query").fill("needle in companion");
-  await expect(popup.locator("mark")).toHaveText("needle in companion");
+  await page.locator("#output-find-query").fill("needle");
+  const count = page.locator("#output-find-count");
+  const previous = page.getByRole("button", { name: "Previous match" });
+  const main = page.locator("#lineBuffer");
+  await expect(count).toHaveText("1 of 3");
+  await expect(main.getByText("first needle in main", { exact: true }).locator("mark")).toHaveText("needle");
+
+  await previous.click();
+  await expect(count).toHaveText("3 of 3");
+  await expect(main.getByText("last needle in main", { exact: true }).locator("mark")).toHaveText("needle");
+
+  // Desktop window activation varies with the browser's window manager.
+  // Observe the cross-window request while leaving its native behavior intact.
+  await popup.evaluate(() => {
+    const focus = window.focus.bind(window);
+    window.findFocusRequests = 0;
+    window.focus = () => {
+      window.findFocusRequests++;
+      focus();
+    };
+  });
+  await previous.click();
+  await expect(count).toHaveText("2 of 3");
+  await expect(popup.locator("#secondaryBuffer mark")).toHaveText("needle");
+  await expect(main.locator("mark")).toHaveCount(0);
+  expect(await popup.evaluate(() => window.findFocusRequests)).toBe(1);
   await page.reload();
   await page.waitForFunction(() => window.outputTest);
   await expect.poll(() => popup.isClosed()).toBe(true);
