@@ -205,6 +205,12 @@ test("media mounts once and remounting historical rows does not retrigger alerts
 });
 
 test("slow routing cannot retain a pruned backlog or delay current output behind discarded batches", async (t) => {
+  const realSetTimeout = globalThis.setTimeout;
+  // This worker only responds manually. Keep its watchdog from racing a slow test host.
+  t.mock.method(globalThis, "setTimeout", (callback, delay, ...args) => {
+    if (delay === 1000) return {};
+    return realSetTimeout(callback, delay, ...args);
+  });
   const sent = [];
   let worker;
   const { manager, client } = await createOutputApp(t, { workerFactory: () => worker = {

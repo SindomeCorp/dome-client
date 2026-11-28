@@ -482,6 +482,8 @@ test("useIdeBrowserCommands dispatches browser state and emits protocol commands
     commands.onLoadProps("#12");
     commands.onEditVerb("#12", "look* tell");
     commands.onEditProperty("#12", "name aliases");
+    commands.onEditVerb("#12", " ");
+    commands.onEditProperty("#12", " ");
     commands.toggleObjectCollapsed("#12");
     commands.togglePropertyCollapsed("#12");
   });
