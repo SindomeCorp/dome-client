@@ -37,6 +37,33 @@ async function app(t, profileLoader, matcherFactory = matcher, savedRules = null
   return { controller, window };
 }
 
+test("named captures distinguish escaped literals, character classes, and lookbehind", () => {
+  for (const [pattern, text] of [
+    ["\\[(?<object>#[0-9]+)\\]", "[#17]"],
+    ["[(?<ghost>)](?<object>#[0-9]+)", "(#17"],
+    ["[\\]x(?<ghost>)](?<object>#[0-9]+)", "]#17"],
+    ["\\(\\?<ghost>(?<object>#[0-9]+)", "(?<ghost>#17"],
+    ["(?<=tag:)(?<object>#[0-9]+)", "tag:#17"]
+  ]) {
+    const document = {
+      version: 1,
+      rules: [{
+        id: "tag", priority: 1, pattern, captures: { object: "object-id" },
+        actions: [{ id: "show", label: "Show fixture", type: "game-command", template: "@show ${object}" }]
+      }],
+      profiles: [{ id: "local", label: "Local fixture", rules: ["tag"] }]
+    };
+    const validated = validateContextMenus(document);
+    const rule = validated.rules.get("tag");
+    const matches = matchContextRules(text, compileContextRules([rule]));
+    assert.equal(matches.length, 1, pattern);
+    assert.equal(interpolateCommand(rule.actions[0], rule, matches[0].values), "@show #17", pattern);
+
+    document.rules[0].captures.ghost = "object-id";
+    assert.throws(() => validateContextMenus(document), /rules\[0\]\.captures\.ghost: expected a declared named group/, pattern);
+  }
+});
+
 test("separate role files have exact action ordering, delimiters and safe typed interpolation", async () => {
   const expected = {
     player: { object: [], verb: [], property: [] },

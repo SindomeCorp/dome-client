@@ -1999,6 +1999,63 @@ test("context menus: a slow JSON import cannot overwrite the latest Options rule
   await expect.poll(() => page.evaluate(() => JSON.parse(window.localStorage.getItem("dc-context-menus")).profiles[0].label)).toBe("Latest rules");
 });
 
+test("context menus: real Options reload rejects capture names inside a character class", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  const config = {
+    version: 1,
+    rules: [{
+      id: "bracketed-object", priority: 1, pattern: "\\[(?<object>#[0-9]+)\\]",
+      captures: { object: "object-id" },
+      actions: [{ id: "copy", label: "Copy bracketed reference", type: "client-action", action: "clipboard.copy", input: "target" }]
+    }],
+    profiles: [{ id: "local-brackets", label: "Local brackets", rules: ["bracketed-object"] }]
+  };
+  const openOptions = async () => {
+    await page.locator("#button-client-options").click();
+    await page.locator("#client-options-tab-context").click();
+  };
+  const closeOptions = () => page.locator("#button-client-options-close").click();
+  const reload = async () => {
+    await setContextSection(page, "advanced");
+    await page.locator("#context-menu-json").fill(JSON.stringify(config));
+    await page.locator("#context-menu-reload").click();
+  };
+  const error = page.locator("#context-menu-error");
+  const active = page.locator("#context-menu-active");
+  await openOptions();
+  await reload();
+  await setContextSection(page, "basic");
+  await page.locator("#context-menu-override").check();
+  await page.locator("#context-menu-profile").selectOption("local-brackets");
+  await expect(active).toHaveText("Active Profile: Local brackets (Override)");
+  await closeOptions();
+
+  await socketFeed(page, "[#17]\n");
+  const row = page.locator("#lineBuffer [data-output-id]").getByText("[#17]", { exact: true });
+  const item = page.getByRole("menuitem", { name: "Copy bracketed reference" });
+  await expect.poll(async () => {
+    if (!await item.count()) await rightText(page, row);
+    return item.count();
+  }).toBe(1);
+  await page.keyboard.press("Escape");
+
+  await openOptions();
+  config.rules[0].pattern = "[\\]x(?<ghost>)](?<object>#[0-9]+)";
+  config.rules[0].captures.ghost = "object-id";
+  await reload();
+  await expect(error).toContainText("rules[0].captures.ghost: expected a declared named group");
+  await expect(active).toHaveText("Active Profile: Local brackets (Override)");
+  await closeOptions();
+  await expect.poll(async () => {
+    if (!await item.count()) await rightText(page, row);
+    return item.count();
+  }).toBe(1);
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
+});
+
 test("context menus: failed Options reload applies intervening OOB and cannot restore a reset session", async ({ page }) => {
   let paused = false;
   let release;
