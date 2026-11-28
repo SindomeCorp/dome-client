@@ -390,6 +390,8 @@ test("grid nowrap blocks route intact through docked and popped-out views and un
 });
 
 test("nowrap grids keep their horizontal scroll positions independent", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
   await page.evaluate(async () => {
     const { manager, client, feed } = window.outputTest;
     client.preferences.sdwcNowrapBlocks = true;
@@ -408,6 +410,23 @@ test("nowrap grids keep their horizontal scroll positions independent", async ({
   await expect.poll(positions).toEqual([0, 0, 220, 220]);
   await rows.filter({ hasText: "Alpha second" }).evaluate((element) => { element.scrollLeft = 80; });
   await expect.poll(positions).toEqual([80, 80, 220, 220]);
+
+  const afterPrune = await rows.filter({ hasText: "Beta first" }).evaluate((row) => {
+    const { manager, client } = window.outputTest;
+    const alpha = row.parentElement.firstElementChild;
+    client.preferences.performanceBuffer = 2;
+    manager.prune();
+    const indexed = manager.views.secondary.index.length;
+    const oldRowStillMounted = alpha.isConnected && alpha.textContent.includes("Alpha first");
+    // Deliver the scroll event before the scheduled repaint removes Alpha.
+    row.scrollLeft = 150;
+    row.dispatchEvent(new window.Event("scroll"));
+    return { indexed, oldRowStillMounted };
+  });
+  expect(afterPrune).toEqual({ indexed: 2, oldRowStillMounted: true });
+  await expect(rows).toHaveCount(2);
+  await expect.poll(positions).toEqual([150, 150]);
+  expect(errors).toEqual([]);
 });
 
 test("pop-out transfers one secondary index and preserves paused history through repeated redocking", async ({ page, browserName }) => {
