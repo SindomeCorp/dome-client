@@ -15,7 +15,7 @@ test.afterEach(() => {
   delete globalThis.localStorage;
 });
 
-test("window handlers parse IDs, set titles, and flash alerts", async () => {
+test("window handlers parse IDs, set titles, and flash alerts", (t) => {
   const dom = new JSDOM(`<!doctype html><html><head><title></title></head><body>
     <div id="client"></div>
     <div id="buffer"></div>
@@ -44,27 +44,22 @@ test("window handlers parse IDs, set titles, and flash alerts", async () => {
   assert.equal(window.document.title, "My Title");
   assert.equal(dome.titleBarText, "My Title");
 
-  const originalInterval = window.setInterval;
-  let intervalCallback;
-  window.setInterval = cb => {
-    intervalCallback = cb;
-    return 1;
-  };
-
+  t.after(() => window.close());
+  const interval = t.mock.method(window, "setInterval", () => 23);
   dome.windowAlert();
-  const firstProc = dome.alert.titleProc;
   dome.windowAlert();
-  assert.equal(dome.alert.titleProc, firstProc);
+  assert.equal(dome.alert.titleProc, 23);
+  assert.equal(interval.mock.callCount(), 1);
+  const [flash, delay] = interval.mock.calls[0].arguments;
+  assert.equal(delay, 500);
 
-  intervalCallback();
+  flash();
   assert.equal(window.document.title, "!! My Title");
-  intervalCallback();
+  flash();
   assert.equal(window.document.title, "My Title");
-  window.clearInterval(dome.alert.titleProc);
-  window.setInterval = originalInterval;
 });
 
-test("onFocusHandler clears alerts and focuses input", async () => {
+test("onFocusHandler clears alerts and focuses input", (t) => {
   const dom = new JSDOM(`<!doctype html><html><head><title></title></head><body>
     <div id="client"></div>
     <div id="buffer"></div>
@@ -87,23 +82,19 @@ test("onFocusHandler clears alerts and focuses input", async () => {
   dome.setWindowTitle("Title");
   window.document.title = "!! Title";
 
-  const intervalId = window.setInterval(() => {}, 1000);
-  let clearedId = null;
-  const originalClear = window.clearInterval;
-  window.clearInterval = id => { clearedId = id; originalClear(id); };
-  dome.alert.titleProc = intervalId;
+  t.after(() => window.close());
+  const clear = t.mock.method(window, "clearInterval", () => {});
+  dome.alert.titleProc = 23;
 
   let focused = false;
   dome.inputReader = { focus: () => { focused = true; } };
 
   window.dispatchEvent(new window.Event("focus"));
 
-  assert.equal(clearedId, intervalId);
+  assert.deepEqual(clear.mock.calls.map(({ arguments: args }) => args), [[23]]);
   assert.equal(dome.alert.titleProc, null);
   assert.equal(window.document.title, "Title");
   assert.ok(focused);
-
-  window.clearInterval = originalClear;
 });
 
 test("onScrollHandler hides offscreen images", async () => {
@@ -361,4 +352,29 @@ test("the first user gesture primes alert audio silently and restores its state"
       assert.equal(tone.currentTime, outcome === "resolved" ? 0 : 3);
     });
   }
+});
+
+test("iOS window handlers resize output on orientation changes only", (t) => {
+  const { window } = new JSDOM("<div id=client><div id=buffer></div></div>");
+  const { document } = window;
+  t.after(() => window.close());
+  const client = createClientState();
+  Object.assign(client, {
+    client: document.querySelector("#client"),
+    buffer: document.querySelector("#buffer")
+  });
+  window.innerHeight = 640;
+  setupWindowHandlers({
+    client, win: window, doc: document, AudioCtor: class {},
+    navigatorRef: { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)" }
+  });
+  assert.equal(client.client.style.height, "640px");
+
+  window.innerHeight = 480;
+  window.dispatchEvent(new window.Event("resize"));
+  assert.equal(client.client.style.height, "640px");
+
+  window.dispatchEvent(new window.Event("orientationchange"));
+  assert.equal(client.client.style.height, "480px");
+  assert.equal(client.buffer.style.height, (480 - defaultHeightOffset) + "px");
 });

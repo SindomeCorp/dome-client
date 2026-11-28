@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { OutputHistory, recordText, splitRunsIntoLines } from "../../src/client/features/output-windows/history.js";
 import { copyOutputSelection } from "../../src/client/features/output-windows/selection.js";
 import { HeightIndex } from "../../src/client/features/output-windows/height-index.js";
+import { SearchResults } from "../../src/client/features/output-windows/search-results.js";
 import { createAnsiRenderer } from "../../src/client/features/terminal/ansi-renderer.js";
 import { exportSnapshot, searchSnapshot } from "../../src/client/features/output-windows/history-tools.js";
 import { normalizeOutputWindows, outputWindowDefaults, validateOutputRule } from "../../src/shared/output-windows.js";
@@ -289,4 +290,32 @@ test("common-term Find stores counts per row and resolves navigation offsets on 
   const newest = history.append(runs("e"));
   await matches.append(await searchSnapshot(history.snapshot(undefined, newest.id), "e"));
   assert.deepEqual(matches.at(0), { id: newest.id, start: 0, length: 1 });
+});
+
+test("output search finds literal occurrences in either direction after pruning", async () => {
+  const history = new OutputHistory();
+  const text = "go [X]+ then [x]+ after [X]+";
+  const original = history.append(runs(text));
+  const first = new SearchResults("[X]+", true, (id) => history.get(id));
+  const options = { matchCase: true, getRecord: (id) => history.get(id) };
+
+  // matchAll also verifies that the counting expression can advance globally.
+  assert.deepEqual([...text.matchAll(first.expression())].map((match) => match.index), [3, 24]);
+  const insensitive = new SearchResults("[X]+", false, options.getRecord);
+  assert.deepEqual([...text.matchAll(insensitive.expression())].map((match) => match.index), [3, 13, 24]);
+  first.add(original.id, 2);
+  assert.equal(first.byteLength, 1024 * 2 * Float64Array.BYTES_PER_ELEMENT);
+  assert.equal(first.at(-1), undefined);
+  assert.equal(first.at(2), undefined);
+  assert.deepEqual(first.at(1), { id: original.id, start: 24, length: 4 });
+  assert.deepEqual(first.at(0), { id: original.id, start: 3, length: 4 });
+  assert.deepEqual(first.at(0), { id: original.id, start: 3, length: 4 });
+
+  const next = history.append(runs(text));
+  await first.append(await searchSnapshot(history.snapshot(undefined, next.id), "[X]+", options));
+  history.prune(1);
+  assert.equal(first.at(0), undefined, "a result whose text is no longer retained is skipped");
+  first.prune(next.id);
+  assert.equal(first.length, 2);
+  assert.deepEqual(first.at(0), { id: next.id, start: 3, length: 4 });
 });

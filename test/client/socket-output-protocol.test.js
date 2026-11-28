@@ -279,3 +279,23 @@ test("profile payloads honor the size boundary before decoding", () => {
   assert.deepEqual(parser.parse(prefix + boundary.slice(0, -1) + "a\"\n"), [{ type: "context-profile", id: null }]);
   assert.deepEqual(parser.parse(prefix + "{\n"), [{ type: "context-profile", id: null }]);
 });
+
+test("empty or dotted editor buffers retain their source and the following output at every packet split", () => {
+  for (const buffer of ["", "single.\n..\n. leading text\nlast."]) {
+    const header = "#$# edit name: fixture upload: @program #12:preview\n";
+    const body = buffer ? buffer + "\n" : "";
+    const next = "normal output\n";
+    const wire = header + body + ".\n" + next;
+
+    for (let split = 0; split <= wire.length; split++) {
+      const parser = createSocketOutputProtocolParser();
+      const events = [...parser.parse(wire.slice(0, split)), ...parser.parse(wire.slice(split))]
+        .filter(({ type }) => type !== "fade");
+      assert.deepEqual(events, [{
+        type: "editor-content",
+        updateEditorList: true,
+        editor: { editorName: "fixture", uploadCommand: "@program #12:preview", buffer }
+      }, { type: "text", text: next }], "packet split at " + split + " for " + JSON.stringify(buffer));
+    }
+  }
+});
