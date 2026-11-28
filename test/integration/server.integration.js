@@ -193,10 +193,12 @@ test("integration: editor route resolves known types and falls back unknown to b
 
   const note = await http.get("/editor/note-viewer/").expect(200);
   assert.match(note.text, /class="editor note-popup"/);
+  assert.match(note.text, /<meta name="viewport" content="width=device-width, initial-scale=1">/);
 
   const fallback = await http.get("/editor/not-a-real-editor/").expect(200);
   assert.match(fallback.text, /class="basic-textarea"/);
   assert.doesNotMatch(fallback.text, /id="verb-editor-holder"/);
+  assert.doesNotMatch(fallback.text, /<meta name="viewport"/);
 
   const readonly = await http.get("/editor/basic-readonly/").expect(200);
   assert.match(readonly.text, /READ-ONLY/);
