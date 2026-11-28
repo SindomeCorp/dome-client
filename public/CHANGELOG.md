@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-28
 
 ### Fixed
+- Prevent a pending Find result from jumping to the old query while typing a new one.
+- Clean up the temporary link and file URL when a browser log download fails to start.
 - Highlight the correct Find match in output containing host tags.
 - Copy the highlighted output accurately when ANSI styling splits a host tag.
 - Clear displayed MOO syntax errors as soon as the editor text changes, so old errors cannot block a save.

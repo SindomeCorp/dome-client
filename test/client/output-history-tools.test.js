@@ -99,6 +99,44 @@ test("Find keeps pending jumps scoped to the active search and route", async (t)
   }
 });
 
+test("editing the Find query retires an in-flight snapshot before the next debounce", async (t) => {
+  const { manager, feed, doc, win } = await createOutputApp(t);
+  await feed("old needle\nnew replacement\n");
+  manager.tools.open();
+  const query = doc.querySelector("#output-find-query");
+  const count = doc.querySelector("#output-find-count");
+  await expectText(count, "");
+  const pending = Promise.withResolvers();
+  const started = Promise.withResolvers();
+  const snapshot = manager.snapshot.bind(manager);
+  let hold = true;
+  const readSnapshot = t.mock.method(manager, "snapshot", (signal, ...args) => {
+    if (hold) {
+      hold = false;
+      started.resolve(signal);
+      return pending.promise;
+    }
+    return snapshot(signal, ...args);
+  });
+  const update = (value) => {
+    query.value = value;
+    query.dispatchEvent(new win.Event("input"));
+  };
+  update("needle");
+  const oldSignal = await started.promise;
+  manager.tools.changed();
+  await settle();
+  update("replacement");
+  pending.resolve(manager.history.snapshot());
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(manager.views.main.highlight, null);
+  assert.equal(oldSignal.aborted, true);
+  assert.equal(readSnapshot.mock.callCount(), 1, "the queued refresh must not bypass the replacement debounce");
+  await expectText(count, "1 of 1");
+  manager.views.main.render();
+  assert.equal(doc.querySelector("#lineBuffer mark").textContent, "replacement");
+});
+
 test("pruning selected native text clears the selection with an explanation", async (t) => {
   const { manager, client, doc, feed, messages } = await createOutputApp(t);
   await feed("one\ntwo\nthree\nfour\nfive\n");

@@ -789,6 +789,41 @@ test("the real Find highlights displayed text after complete and ANSI-split host
   await expect(second.locator("mark")).toHaveText(["[ho", "st="]);
 });
 
+test("Find ignores an older snapshot while the next query debounces", async ({ page }) => {
+  await page.evaluate(() => window.outputTest.feed("old needle\nnew replacement\n"));
+  await page.locator("#button-output-find").click();
+  const query = page.locator("#output-find-query");
+  await expect(page.locator("#output-find-count")).toBeEmpty();
+  await page.evaluate(() => {
+    const { manager } = window.outputTest;
+    const snapshot = manager.snapshot.bind(manager);
+    manager.snapshot = () => {
+      manager.snapshot = snapshot;
+      const pending = Promise.withResolvers();
+      window.releaseFindSnapshot = () => pending.resolve(manager.history.snapshot());
+      return pending.promise;
+    };
+    const view = manager.views.main;
+    const jump = view.jump.bind(view);
+    window.fixtureFindJumps = [];
+    view.jump = (id, ...args) => {
+      window.fixtureFindJumps.push(id);
+      return jump(id, ...args);
+    };
+  });
+  await query.fill("needle");
+  await page.waitForFunction(() => Boolean(window.releaseFindSnapshot));
+  await query.evaluate((input) => {
+    input.value = "replacement";
+    input.dispatchEvent(new Event("input"));
+    window.releaseFindSnapshot();
+  });
+  const match = page.locator("#lineBuffer mark");
+  await expect(match).toHaveText("replacement");
+  const current = await match.evaluate((mark) => Number(mark.closest("[data-output-id]").dataset.outputId));
+  expect(await page.evaluate(() => window.fixtureFindJumps)).toEqual([current]);
+});
+
 test("closing Find clears the highlight even when the next result waits for indexing", async ({ page }) => {
   await page.evaluate(() => window.outputTest.feed("first needle\nsecond needle\n"));
   await page.locator("#button-output-find").click();
@@ -1151,6 +1186,35 @@ test("the real client reports a browser log download failure and can retry", asy
   await expect(page.locator("#output-operation")).toBeHidden();
   expect(downloads).toHaveLength(0);
 
+  await page.evaluate(() => {
+    const click = window.HTMLAnchorElement.prototype.click;
+    const revoke = window.URL.revokeObjectURL;
+    window.fixtureLogDownloads = { clicked: [], revoked: [] };
+    window.HTMLAnchorElement.prototype.click = function () {
+      if (this.href.startsWith("blob:") && this.download.endsWith(".html")) {
+        window.fixtureLogDownloads.clicked.push(this.href);
+        if (window.fixtureLogDownloads.clicked.length === 1) throw new Error("Fixture log download click failure");
+      }
+      return click.call(this);
+    };
+    window.URL.revokeObjectURL = function (url) {
+      window.fixtureLogDownloads.revoked.push(url);
+      return revoke.call(this, url);
+    };
+  });
+  await save.click();
+  const clickFailure = "Preparing log… failed: Fixture log download click failure";
+  await expect(status).toHaveText(clickFailure);
+  await expect(companionStatus).toHaveText(clickFailure);
+  await expect(page.locator("#output-operation")).toBeHidden();
+  expect(downloads).toHaveLength(0);
+  const downloadAnchors = page.locator("a[download][href^=\"blob:\"]");
+  const downloadState = () => page.evaluate(() => window.fixtureLogDownloads);
+  await expect(downloadAnchors).toHaveCount(0);
+  const { clicked: [failedUrl] } = await downloadState();
+  expect(failedUrl).toMatch(/^blob:/);
+  await expect.poll(async () => (await downloadState()).revoked).toContain(failedUrl);
+
   await feed("Log line after failed export");
   await expect(output).toContainText("Log line after failed export");
   const downloading = page.waitForEvent("download");
@@ -1163,6 +1227,10 @@ test("the real client reports a browser log download failure and can retry", asy
   await expect(companionStatus).toHaveText("Log saved.");
   await expect(page.locator("#output-operation")).toBeHidden();
   expect(downloads).toHaveLength(1);
+  await expect(downloadAnchors).toHaveCount(0);
+  const { clicked: [, savedUrl] } = await downloadState();
+  expect(savedUrl).toMatch(/^blob:/);
+  await expect.poll(async () => (await downloadState()).revoked).toContain(savedUrl);
 });
 
 test("the real client reports a routing worker failure in Options and the pop-out", async ({ page }) => {

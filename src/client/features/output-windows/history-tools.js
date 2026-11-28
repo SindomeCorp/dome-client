@@ -189,6 +189,8 @@ export function setupHistoryTools(manager) {
   for (const input of [query, scope, matchCase]) {
     bind(input, "input", () => {
       pendingJump = null;
+      searchPending = false;
+      searchController?.abort();
       clearTimeout(refreshTimer);
       refreshTimer = null;
       clearTimeout(debounce);
@@ -246,14 +248,17 @@ export function setupHistoryTools(manager) {
         catch (error) { manager.logger.warn("Native log download failed; using browser download.", error); }
       }
       const blob = new win.Blob(parts, { type: "text/html;charset=utf-8" });
-      const url = win.URL.createObjectURL(blob);
       const anchor = doc.createElement("a");
-      anchor.href = url;
-      anchor.download = filename;
-      doc.body.append(anchor);
-      anchor.click();
-      anchor.remove();
-      win.setTimeout(() => win.URL.revokeObjectURL(url), 1000);
+      const url = win.URL.createObjectURL(blob);
+      try {
+        anchor.href = url;
+        anchor.download = filename;
+        doc.body.append(anchor);
+        anchor.click();
+      } finally {
+        anchor.remove();
+        win.setTimeout(() => win.URL.revokeObjectURL(url), 1000);
+      }
       report("Log saved.");
     });
   }
