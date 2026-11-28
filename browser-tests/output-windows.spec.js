@@ -521,8 +521,8 @@ test("companion Find, filters, themes, media, pruning and clearing use the share
 
 test("Find highlights only the matching text across styled output spans", async ({ page }) => {
   await page.evaluate(() => window.outputTest.feed(
-    "first \u001b[32mstyled prefix\u001b[0m before \u001b[31mneedle\u001b[34mwork\u001b[0m after\n" +
-    "second \u001b[35mshorter prefix\u001b[0m \u001b[33mneed\u001b[0mlework at the end\n"
+    "first \u001b[32mstyled prefix\u001b[0m https://example.invalid/sample.png before \u001b[31mneedle\u001b[34mwork\u001b[0m after\n" +
+    "second \u001b[35mshorter prefix\u001b[0m \u001b[33ma few words before need\u001b[0mlework at the end\n"
   ));
   await page.locator("#button-output-find").click();
   const query = page.locator("#output-find-query");
@@ -532,6 +532,7 @@ test("Find highlights only the matching text across styled output spans", async 
   const second = buffer.getByRole("listitem").filter({ hasText: "second shorter prefix" });
   const count = page.locator("#output-find-count");
 
+  await expect(first.getByRole("button", { name: "Toggle media preview" })).toHaveAttribute("aria-expanded", "false");
   await expect(count).toHaveText("1 of 2");
   await expect(first.locator("mark")).toHaveText(["needle", "work"]);
   await expect(second.locator("mark")).toHaveCount(0);
@@ -541,7 +542,7 @@ test("Find highlights only the matching text across styled output spans", async 
   await expect(second.locator("mark")).toHaveText(["need", "lework"]);
   await query.press("Escape");
   await expect(buffer.locator("mark")).toHaveCount(0);
-  await expect(second).toHaveText("second shorter prefix needlework at the end");
+  await expect(second).toHaveText("second shorter prefix a few words before needlework at the end");
 });
 
 test("closing Find clears the highlight even when the next result waits for indexing", async ({ page }) => {
