@@ -331,16 +331,23 @@ test("grid nowrap blocks route intact through docked and popped-out views and un
   const requested = shortLimit + 100;
   expect(Math.min(headerLimit, bodyLimit)).toBeGreaterThan(requested);
   await rows.nth(1).evaluate((row, position) => { row.scrollLeft = position; }, requested);
-  await expect.poll(() => rows.evaluateAll(async (elements) => {
+  const positions = () => rows.evaluateAll(async (elements) => {
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     return elements.map((row) => Math.round(row.scrollLeft));
-  })).toEqual([0, requested, requested, shortLimit]);
+  });
+  await expect.poll(positions).toEqual([0, requested, requested, shortLimit]);
+  await page.evaluate(() => window.outputTest.feed("[g] GRID_LATER " + "column ".repeat(22) + "\n"));
+  await expect(rows).toHaveCount(5);
+  const lateLimit = await rows.last().evaluate((row) => row.scrollWidth - row.clientWidth);
+  expect(requested).toBeGreaterThan(lateLimit);
+  await expect.poll(positions).toEqual([0, requested, requested, shortLimit, lateLimit]);
+
   const popup = await popOut(page);
   await expect(popup.locator("#secondaryBuffer")).toContainText("GRID_BODY");
   await page.evaluate(() => window.outputTest.feed("[g] GRID_TAIL\n#$# SDWC-END-NOWRAP\nafter grid\n"));
   await expect(popup.locator("#secondaryBuffer")).toContainText("GRID_TAIL");
   await redockCompanion(popup);
-  await expect(page.locator("#secondaryBuffer .output-nowrap-row")).toHaveCount(5);
+  await expect(page.locator("#secondaryBuffer .output-nowrap-row")).toHaveCount(6);
   const downloading = page.waitForEvent("download");
   await page.locator("#button-save-mini").click();
   const stream = await (await downloading).createReadStream();
@@ -348,11 +355,32 @@ test("grid nowrap blocks route intact through docked and popped-out views and un
   for await (const chunk of stream) html += chunk;
   expect(html).toContain("sdwc-nowrap-block");
   expect(html).toContain("xterm256-Green");
-  const labels = ["before grid", "GRID_HEADER", "GRID_BODY", "GRID_SHORT", "GRID_TAIL", "after grid"];
+  const labels = ["before grid", "GRID_HEADER", "GRID_BODY", "GRID_SHORT", "GRID_LATER", "GRID_TAIL", "after grid"];
   for (let i = 1; i < labels.length; i++) expect(html.indexOf(labels[i])).toBeGreaterThan(html.indexOf(labels[i - 1]));
   for (const label of labels) expect(html.split(label)).toHaveLength(2);
   await page.locator("#button-output-split").click();
   await expect(page.locator("#lineBuffer")).toContainText("GRID_TAIL");
+});
+
+test("nowrap grids keep their horizontal scroll positions independent", async ({ page }) => {
+  await page.evaluate(async () => {
+    const { manager, client, feed } = window.outputTest;
+    client.preferences.sdwcNowrapBlocks = true;
+    manager.updateSettings({ open: true, selected: ["grid-output"] });
+    const grid = (label) => "#$# SDWC-START-NOWRAP\n[g] " + label + " first " + "column ".repeat(100)
+      + "\n[g] " + label + " second " + "column ".repeat(100) + "\n#$# SDWC-END-NOWRAP\n";
+    await feed(grid("Alpha") + grid("Beta"));
+  });
+  const rows = page.locator("#secondaryBuffer .output-nowrap-row");
+  await expect(rows).toHaveCount(4);
+  const positions = () => rows.evaluateAll(async (elements) => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return elements.map((element) => Math.round(element.scrollLeft));
+  });
+  await rows.filter({ hasText: "Beta first" }).evaluate((element) => { element.scrollLeft = 220; });
+  await expect.poll(positions).toEqual([0, 0, 220, 220]);
+  await rows.filter({ hasText: "Alpha second" }).evaluate((element) => { element.scrollLeft = 80; });
+  await expect.poll(positions).toEqual([80, 80, 220, 220]);
 });
 
 test("pop-out transfers one secondary index and preserves paused history through repeated redocking", async ({ page, browserName }) => {

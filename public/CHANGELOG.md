@@ -21,7 +21,7 @@ All notable changes to this project will be documented in this file.
 - Keep the active context-menu profile when an older server request finishes after an Options reload.
 - Prevent canceled overlapping long presses from pausing output scrolling.
 - Match word alerts against visible output when ANSI styling splits a word.
-- Keep wider rows in the same nowrap output block from jumping back when a narrower row reaches its horizontal scroll limit.
+- Keep wider rows in a nowrap output block from jumping back when a narrower row reaches its horizontal scroll limit or arrives while the block is scrolled.
 
 ## 2026-11-27
 

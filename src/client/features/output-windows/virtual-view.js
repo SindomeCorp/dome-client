@@ -4,6 +4,12 @@ import { renderRecordHtml, toggleRecordPreview } from "./record-renderer.js";
 const MAX_SCROLL_HEIGHT = 8_000_000;
 const SCROLL_EPSILON = 0.01; // Ignore rounding noise without swallowing subpixel gestures.
 
+function syncRowScroll(row, offset) {
+  row.scrollLeft = offset;
+  // The browser can clamp the requested position to a fractional offset.
+  row.dataset.syncedScroll = String(row.scrollLeft);
+}
+
 export class VirtualOutputView {
   constructor({ element, client, win, name, onActive = () => {}, onState = () => {}, onMessage = () => {} }) {
     Object.assign(this, { element, client, win, name, onActive, onState, onMessage });
@@ -262,7 +268,6 @@ export class VirtualOutputView {
       state: { collapsed: record.collapsed || record.id <= (this.collapsePreviewsThrough || 0) }
     });
     if (record.group && this.client.preferences.sdwcNowrapBlocks) {
-      row.scrollLeft = record.group.scrollLeft || 0;
       row.addEventListener("scroll", () => {
         if (row.dataset.syncedScroll === String(row.scrollLeft)) {
           delete row.dataset.syncedScroll;
@@ -273,9 +278,7 @@ export class VirtualOutputView {
         record.group.scrollLeft = row.scrollLeft;
         for (const [id, mounted] of this.mounted) {
           if (id !== record.id && this.index.at(this.index.indexOfId(id))?.group === record.group) {
-            mounted.scrollLeft = row.scrollLeft;
-            // The browser can clamp the requested position to a fractional offset.
-            mounted.dataset.syncedScroll = String(mounted.scrollLeft);
+            syncRowScroll(mounted, row.scrollLeft);
           }
         }
       }, { passive: true });
@@ -390,8 +393,7 @@ export class VirtualOutputView {
       row.setAttribute("aria-posinset", i + 1);
       row.setAttribute("aria-setsize", this.index.length);
       if (record.group && this.client.preferences.sdwcNowrapBlocks && row.scrollLeft !== record.group.scrollLeft) {
-        row.dataset.syncedScroll = String(Math.min(record.group.scrollLeft, row.scrollWidth - row.clientWidth));
-        row.scrollLeft = record.group.scrollLeft;
+        syncRowScroll(row, record.group.scrollLeft);
       }
       this.applyHighlight(row, record);
     }
