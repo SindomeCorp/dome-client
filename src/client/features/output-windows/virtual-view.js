@@ -273,8 +273,9 @@ export class VirtualOutputView {
         record.group.scrollLeft = row.scrollLeft;
         for (const [id, mounted] of this.mounted) {
           if (id !== record.id && this.index.at(this.index.indexOfId(id))?.group === record.group) {
-            mounted.dataset.syncedScroll = String(Math.min(row.scrollLeft, mounted.scrollWidth - mounted.clientWidth));
             mounted.scrollLeft = row.scrollLeft;
+            // The browser can clamp the requested position to a fractional offset.
+            mounted.dataset.syncedScroll = String(mounted.scrollLeft);
           }
         }
       }, { passive: true });

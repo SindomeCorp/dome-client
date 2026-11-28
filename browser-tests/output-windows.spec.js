@@ -320,20 +320,27 @@ test("grid nowrap blocks route intact through docked and popped-out views and un
     const { manager, client, feed } = window.outputTest;
     client.preferences.sdwcNowrapBlocks = true;
     manager.updateSettings({ open: true, selected: ["grid-output"] });
-    await feed("before grid\n#$# SDWC-START-NOWRAP\n\n\u001b[32m[g] GRID_HEADER " + "column ".repeat(100) + "\u001b[0m\n[g] GRID_BODY " + "column ".repeat(100) + "\n");
+    await feed("before grid\n#$# SDWC-START-NOWRAP\n\n\u001b[32m[g] GRID_HEADER " + "column ".repeat(100) + "\u001b[0m\n[g] GRID_BODY " + "column ".repeat(100) + "\n[g] GRID_SHORT " + "column ".repeat(22) + "\n");
   });
   await expect(page.locator("#secondaryBuffer")).toContainText("GRID_HEADER");
   await expect(page.locator("#lineBuffer")).not.toContainText("GRID_HEADER");
   const rows = page.locator("#secondaryBuffer .output-nowrap-row");
-  await expect(rows).toHaveCount(3);
-  await rows.nth(1).evaluate((row) => { row.scrollLeft = 80; });
-  await expect.poll(() => rows.nth(2).evaluate((row) => row.scrollLeft)).toBe(80);
+  await expect(rows).toHaveCount(4);
+  const [headerLimit, bodyLimit, shortLimit] = await rows.evaluateAll((elements) =>
+    elements.slice(1).map((row) => row.scrollWidth - row.clientWidth));
+  const requested = shortLimit + 100;
+  expect(Math.min(headerLimit, bodyLimit)).toBeGreaterThan(requested);
+  await rows.nth(1).evaluate((row, position) => { row.scrollLeft = position; }, requested);
+  await expect.poll(() => rows.evaluateAll(async (elements) => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return elements.map((row) => Math.round(row.scrollLeft));
+  })).toEqual([0, requested, requested, shortLimit]);
   const popup = await popOut(page);
   await expect(popup.locator("#secondaryBuffer")).toContainText("GRID_BODY");
   await page.evaluate(() => window.outputTest.feed("[g] GRID_TAIL\n#$# SDWC-END-NOWRAP\nafter grid\n"));
   await expect(popup.locator("#secondaryBuffer")).toContainText("GRID_TAIL");
   await redockCompanion(popup);
-  await expect(page.locator("#secondaryBuffer .output-nowrap-row")).toHaveCount(4);
+  await expect(page.locator("#secondaryBuffer .output-nowrap-row")).toHaveCount(5);
   const downloading = page.waitForEvent("download");
   await page.locator("#button-save-mini").click();
   const stream = await (await downloading).createReadStream();
@@ -341,7 +348,7 @@ test("grid nowrap blocks route intact through docked and popped-out views and un
   for await (const chunk of stream) html += chunk;
   expect(html).toContain("sdwc-nowrap-block");
   expect(html).toContain("xterm256-Green");
-  const labels = ["before grid", "GRID_HEADER", "GRID_BODY", "GRID_TAIL", "after grid"];
+  const labels = ["before grid", "GRID_HEADER", "GRID_BODY", "GRID_SHORT", "GRID_TAIL", "after grid"];
   for (let i = 1; i < labels.length; i++) expect(html.indexOf(labels[i])).toBeGreaterThan(html.indexOf(labels[i - 1]));
   for (const label of labels) expect(html.split(label)).toHaveLength(2);
   await page.locator("#button-output-split").click();
