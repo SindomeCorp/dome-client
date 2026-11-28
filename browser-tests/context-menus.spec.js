@@ -1770,16 +1770,29 @@ test("streamed editor protocol passes complete text to the editor in the real pl
   expect((await fixtureState(page)).commands).toEqual(connected.commands);
 });
 
-for (const [mode, name] of [["ide", "IDE"], ["windows", "individual editor"]]) {
+for (const [mode, name, useBlankPopup] of [
+  ["ide", "IDE", false], ["windows", "individual editor", false], ["ide", "IDE popup fallback", true]
+]) {
   test(`the real ${name} loads the saved Ambience Ace theme`, async ({ page }) => {
+    if (useBlankPopup) await page.addInitScript(() => {
+      const open = window.open.bind(window);
+      window.open = (url, ...args) => {
+        if (String(url).startsWith("/editor/ide/")) {
+          window.fixtureBlockedIdeNavigation = true;
+          return null;
+        }
+        return open(url, ...args);
+      };
+    });
     const initial = await fixtureState(page);
     await page.goto(`/?entry=real&ed=${mode}&et=ambience`);
     await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
     const connected = await fixtureState(page);
-    const popup = page.waitForEvent("popup");
+    const popup = page.waitForEvent("popup", { timeout: 8000 });
     await socketFeed(page, "#$# edit name: Theme fixture upload: @program #12:preview\r\nreturn 12;\r\n.\r\n");
     const editor = await popup;
     await expect(editor.locator(".ace_editor")).toHaveClass(/\bace-ambiance\b/, { timeout: 4000 });
+    if (useBlankPopup) expect(await page.evaluate(() => window.fixtureBlockedIdeNavigation)).toBe(true);
     expect((await fixtureState(page)).commands).toEqual(connected.commands);
   });
 }

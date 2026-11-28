@@ -28,6 +28,7 @@ test("openIDE reuses existing window after beforeunload", async (t) => {
       messages: [],
       focused: false,
       propertyDrops: 0,
+      navigations: [],
       close() {
         this.closeCalls++;
         this.closed = true;
@@ -58,6 +59,7 @@ test("openIDE reuses existing window after beforeunload", async (t) => {
         pathnameValue = "";
       } else {
         const resolved = new URL(value, window.location.origin);
+        created.navigations.push(resolved.pathname + resolved.search);
         hrefValue = resolved.href;
         pathnameValue = resolved.pathname;
       }
@@ -105,6 +107,8 @@ test("openIDE reuses existing window after beforeunload", async (t) => {
   dome.openIDE({ editorName: "one" });
   assert.deepEqual(openLog.map((entry) => entry.url), ["", "/editor/ide/?et=ambience"]);
   assert.deepEqual(openLog.map((entry) => entry.features), [windowFeatures, windowFeatures]);
+  assert.deepEqual(openLog.map((entry) => entry.name), ["dome-ide", "dome-ide"]);
+  assert.deepEqual(win.navigations, ["/editor/ide/?et=ambience"]);
   assert.equal(openCount, 1);
   assert.equal(win.closeCalls, 0);
   assert.equal(win.propertyDrops >= 1, true);
@@ -145,4 +149,43 @@ test("openIDE reuses existing window after beforeunload", async (t) => {
     globalThis.window = orig.window;
     globalThis.document = orig.document;
   });
+});
+
+for (const [theme, preferences] of [["default", { edittheme: "twilight" }], ["unset", undefined]]) {
+  test(`openIDE keeps the usual route with the ${theme} theme`, () => {
+    const blank = { location: { href: "about:blank" } };
+    const requests = [];
+    const win = {
+      open(url) {
+        requests.push(url);
+        return url === "" ? blank : null;
+      },
+      addEventListener() {}
+    };
+    const client = { preferences };
+    setupIdeLauncher({ client, win });
+    const editor = { editorName: "Local theme fixture" };
+    client.openIDE(editor);
+    assert.deepEqual(requests, ["", "/editor/ide/"]);
+    assert.equal(blank.location.href, "/editor/ide/");
+    assert.equal(client.ideWindow, blank);
+    assert.equal(blank.initialEditor, editor);
+  });
+}
+
+test("openIDE closes a stale popup and reports when the replacement is blocked", () => {
+  let closed = 0;
+  const previous = {
+    location: { href: "https://other.example/", pathname: "/" },
+    close() { closed++; }
+  };
+  const client = { ideWindow: previous };
+  const win = {
+    open() { throw new Error("Popup denied by fixture"); },
+    addEventListener() {}
+  };
+  setupIdeLauncher({ client, win });
+  assert.throws(() => client.openIDE({ editorName: "Local fixture" }), /browser blocked the IDE/);
+  assert.equal(client.ideWindow, null);
+  assert.equal(closed, 1);
 });
