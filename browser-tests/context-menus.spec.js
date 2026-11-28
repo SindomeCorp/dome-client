@@ -2570,6 +2570,9 @@ for (const [command, limit] of [["@local-save-note", 2], ["@local-save-node", 3]
     });
     const replaced = accepted.replace(/[^\n]+$/, "Replacement");
     await expect.poll(async () => (await contents()).replace(/\r\n/g, "\n")).toBe(replaced);
+    await paste(" inline text");
+    const withInlineEdit = replaced + " inline text";
+    await expect.poll(async () => (await contents()).replace(/\r\n/g, "\n")).toBe(withInlineEdit);
     await editor.evaluate((element) => {
       const aceEditor = element.env.editor;
       window.copiedLineCommands = 0;
@@ -2581,7 +2584,7 @@ for (const [command, limit] of [["@local-save-note", 2], ["@local-save-node", 3]
     });
     await ide.keyboard.press("Alt+Shift+ArrowDown");
     expect(await ide.evaluate(() => window.copiedLineCommands)).toBe(1);
-    await expect.poll(async () => (await contents()).replace(/\r\n/g, "\n")).toBe(replaced);
+    await expect.poll(async () => (await contents()).replace(/\r\n/g, "\n")).toBe(withInlineEdit);
     const saved = await contents();
 
     expect((await fixtureState(page)).commands).toEqual(before);
