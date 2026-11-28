@@ -7,6 +7,7 @@ import {
   buildClientOptionState,
   buildPreferenceDefaults,
   getClientOptionStorageKey,
+  getOutputPresentation,
   getPreferenceNameForOptionKey
 } from "../../src/shared/client-options.js";
 import {
@@ -136,4 +137,38 @@ test("client option schema exposes view choices for rendered select controls", (
     assert.ok(CLIENT_OPTION_VIEW[key].choices.length > 0);
     assert.deepEqual(optionState[key].choices, CLIENT_OPTION_VIEW[key].choices);
   });
+});
+
+test("output presentation preserves independent styles and includes both size boundaries", () => {
+  const preferences = {
+    lineBufferFont: "lucida", colorSet: "acid", lineBufferFontSizePt: "8",
+    secondaryLineBufferFont: "menlo", secondaryColorSet: "snow", secondaryLineBufferFontSizePt: 24
+  };
+  assert.deepEqual(getOutputPresentation(preferences), { font: "lucida", theme: "acid", size: 8 });
+  assert.deepEqual(getOutputPresentation(preferences, true), { font: "menlo", theme: "snow", size: 24 });
+  assert.deepEqual(getOutputPresentation(), { font: "standard", theme: "normal", size: 9.75 });
+  for (const size of [7.99, 24.01, Infinity, "not a size"]) {
+    assert.deepEqual(
+      getOutputPresentation({ ...preferences, secondaryLineBufferFont: "invalid", secondaryColorSet: "invalid", secondaryLineBufferFontSizePt: size }, true),
+      { font: "standard", theme: "normal", size: 9.75 }
+    );
+  }
+});
+
+test("typed option validation normalizes color and preserves exact numeric endpoint values", () => {
+  for (const spelling of ["abc123", "  #aBc123  "]) {
+    const color = validateClientOptionValue("inputFontColor", spelling);
+    assert.equal(color.valid, true);
+    assert.equal(color.value, "#ABC123");
+  }
+  for (const color of [null, 123456, "#ABC", "#ABC12300", "#ABC12Z"]) {
+    assert.equal(validateClientOptionValue("inputFontColor", color).valid, false);
+  }
+  for (const [input, expected] of [["8", 8], ["24", 24]]) {
+    const result = validateClientOptionValue("lineBufferFontSizePt", input);
+    assert.equal(result.valid, true);
+    assert.equal(result.value, expected);
+  }
+  assert.equal(validateClientOptionValue("lineBufferFontSizePt", "7.99").valid, false);
+  assert.equal(validateClientOptionValue("lineBufferFontSizePt", "24.01").valid, false);
 });
