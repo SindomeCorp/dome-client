@@ -781,6 +781,29 @@ test("Television routes complete ANSI-formatted screen broadcasts and preserves 
   assert.equal(recordText(manager.views.secondary.index.at(0)), "On the large wall screen: a broadcast");
 });
 
+test("a pruned virtual jump target leaves live output following and unhighlighted", async (t) => {
+  const { manager, client, feed } = await createOutputApp(t);
+  const view = manager.views.main;
+  await feed("expired target\n");
+  const expired = view.index.at(0).id;
+  client.preferences.performanceBuffer = 2;
+  await feed("retained target\nlive output\n");
+  assert.equal(view.index.indexOfId(expired), -1);
+  assert.equal(view.following, true);
+  assert.equal(view.jump(expired, { start: 0, length: 7 }), false);
+  view.render();
+  assert.equal(view.following, true);
+  assert.equal(view.paused, false);
+  assert.equal(view.element.classList.contains("scroll-disabled"), false);
+  assert.equal(view.element.querySelector("mark"), null);
+
+  const retained = view.index.at(0).id;
+  assert.equal(view.jump(retained, { start: 0, length: 8 }), true);
+  view.render();
+  assert.equal(view.element.querySelector("mark")?.textContent, "retained");
+  assert.equal(view.paused, true);
+});
+
 test("virtual output coalesces frames and ignores a late measurement after destruction", (t) => {
   const { window: win } = new JSDOM("<div id=\"output\"></div>", { pretendToBeVisual: true });
   t.after(() => win.close());
