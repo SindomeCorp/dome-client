@@ -963,6 +963,7 @@ test("temporary worker saturation retries unchanged output but terminal failures
   assert.equal(doc.querySelector("#context-menu-error").textContent, "");
   doc.querySelector("[role=menuitem]").dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   const originalRetryCount = retryCount();
+  assert.equal(originalRetryCount, 1, "worker saturation waits for one retry timer");
   const { promise: rejected, resolve: terminalMatch } = Promise.withResolvers();
   controller.match = () => {
     calls++;
@@ -1088,6 +1089,50 @@ test("output matching ignores a stale profile failure and reports identical curr
   await new Promise((resolve) => setImmediate(resolve));
   assert.deepEqual(calls, [texts[0], ...texts, fresh.textContent]);
   assert.equal(report.mock.callCount(), 1);
+});
+
+test("a match failure from a disposed output cannot report into its replacement", { timeout: 5000 }, async (t) => {
+  const { controller, doc, window } = await fixture(t);
+  Object.defineProperty(window.navigator, "clipboard", { value: { async writeText() {} } });
+  const host = (text) => {
+    const output = doc.createElement("div");
+    const row = doc.createElement("div");
+    row.textContent = text;
+    output.append(row);
+    doc.body.append(output);
+    return { output, row };
+  };
+  const oldHost = host("Old #123");
+  const started = Promise.withResolvers();
+  const pending = Promise.withResolvers();
+  const replacementMatched = Promise.withResolvers();
+  const match = controller.match.bind(controller);
+  const report = t.mock.method(controller, "report");
+  controller.match = async (text) => {
+    if (text === oldHost.row.textContent) { started.resolve(); return pending.promise; }
+    const result = await match(text);
+    replacementMatched.resolve();
+    return result;
+  };
+  const dispose = controller.bindOutput(oldHost.output, window);
+  await started.promise;
+  dispose();
+  oldHost.output.remove();
+  const replacement = host("New #456");
+  controller.bindOutput(replacement.output, window);
+  await replacementMatched.promise;
+  pending.reject(new Error("Disposed matcher failure"));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(report.mock.callCount(), 0);
+  assert.equal(doc.querySelector("#context-menu-error").textContent, "");
+
+  const menuKey = (row) => {
+    const event = new window.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true });
+    return row.dispatchEvent(event);
+  };
+  assert.equal(menuKey(oldHost.row), true);
+  assert.equal(menuKey(replacement.row), false);
+  assert.ok(doc.querySelector("[role=menuitem]"));
 });
 
 test("queued output removed and reattached before matching is not stranded in a pending cache entry", async (t) => {

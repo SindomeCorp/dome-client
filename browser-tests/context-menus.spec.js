@@ -1217,6 +1217,37 @@ test("context menus: pointer positioning, keyboard chooser and native bypass sta
   await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#456.name");
 });
 
+test("context menus: the keyboard chooser keeps adjacent custom matches in reading order", async ({ page }) => {
+  await start(page);
+  await editConfig(page, (config) => {
+    const actions = config.rules.find(({ id }) => id === "object").actions;
+    config.rules = [
+      { id: "left", pattern: "Alpha", priority: 100, captures: {}, actions },
+      { id: "right", pattern: "Beta", priority: 300, captures: {}, actions },
+      { id: "overlap", pattern: "haBe|taAl", priority: 50, captures: {}, actions },
+      { id: "actionless", pattern: "Void", priority: 75, captures: {}, actions: [] }
+    ];
+    config.profiles[0].rules = config.rules.map(({ id }) => id);
+  });
+  await page.locator("#button-client-options-close").click();
+  await feed(page, "AlphaBeta Void\nBetaAlpha Void\n");
+  const items = page.getByRole("menuitem");
+  for (const [text, ordered] of [["AlphaBeta Void", ["Alpha", "Beta"]], ["BetaAlpha Void", ["Beta", "Alpha"]]]) {
+    const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: text });
+    await row.focus();
+    await expect.poll(async () => {
+      if (!await items.count()) await page.keyboard.press("Shift+F10");
+      return items.allTextContents();
+    }).toEqual(ordered);
+    await page.keyboard.press("Home");
+    await page.keyboard.press("Enter");
+    await expect(items).toHaveText(["Copy to Clipboard"]);
+    await page.keyboard.press("Enter");
+    await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe(ordered[0]);
+  }
+  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+});
+
 test("context menus: shipped role files expose exact actions and copy only matched reference text", async ({ page, browserName }) => {
   const initial = await fixtureState(page);
   if (browserName === "chromium") await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
