@@ -789,6 +789,38 @@ test("the real Find highlights displayed text after complete and ANSI-split host
   await expect(second.locator("mark")).toHaveText(["[ho", "st="]);
 });
 
+test("the real Find Match case control reindexes matches and navigation wraps", async ({ page }) => {
+  const connections = async () => (await (await page.request.get("/fixture/state")).json()).connections;
+  const previous = await connections();
+  await page.goto("/?entry=real");
+  await expect.poll(connections).toBeGreaterThan(previous);
+  await page.request.post("/fixture/data", { data: { text: "first needle\r\nsecond Needle\r\nlast NEEDLE\r\n" } });
+  const buffer = page.locator("#lineBuffer");
+  await expect(buffer).toContainText("last NEEDLE");
+  await page.locator("#button-output-find").click();
+  const query = page.locator("#output-find-query");
+  const count = page.locator("#output-find-count");
+  const mark = buffer.locator("mark");
+  const caseControl = page.getByLabel("Match case");
+  await query.fill("Needle");
+  await expect(count).toHaveText("1 of 3");
+  await expect(mark).toHaveText("needle");
+
+  await caseControl.check();
+  await expect(count).toHaveText("1 of 1");
+  await expect(mark).toHaveText("Needle");
+  await caseControl.uncheck();
+  await expect(count).toHaveText("1 of 3");
+  await expect(mark).toHaveText("needle");
+
+  await page.getByRole("button", { name: "Previous match" }).click();
+  await expect(count).toHaveText("3 of 3");
+  await expect(mark).toHaveText("NEEDLE");
+  await page.getByRole("button", { name: "Next match" }).click();
+  await expect(count).toHaveText("1 of 3");
+  await expect(mark).toHaveText("needle");
+});
+
 test("Find ignores an older snapshot while the next query debounces", async ({ page }) => {
   await page.evaluate(() => window.outputTest.feed("old needle\nnew replacement\n"));
   await page.locator("#button-output-find").click();
