@@ -58,6 +58,13 @@ async function redockCompanion(popup) {
   });
 }
 
+test("ANSI extended xterm colors reach the real output stylesheet", async ({ page }) => {
+  await page.evaluate(() => window.outputTest.feed("\u001b[38;5;21;48;5;196mextended palette row\u001b[0m\n"));
+  const text = page.locator("#lineBuffer").getByText("extended palette row", { exact: true });
+  await expect(text).toHaveCSS("color", "rgb(0, 0, 255)");
+  await expect(text).toHaveCSS("background-color", "rgb(255, 0, 0)");
+});
+
 test("docked and detached output keep named keyboard regions and list positions", async ({ page }) => {
   await page.evaluate(async () => {
     const { manager, feed } = window.outputTest;

@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { urlRegex, ipRegex, hostnameRegex } from "../../src/client/features/terminal/replacements.js";
 import { xterm256Colors } from "../../src/client/features/terminal/xterm-colors.js";
 import { createAnsiRenderer } from "../../src/client/features/terminal/ansi-renderer.js";
@@ -53,6 +54,38 @@ test("xterm256 background color replacement", () => {
   const input = "\u001b[48;5;2mbar";
   const output = applyAnsi(input);
   assert.equal(output, `<span class="xterm256-bg-${xterm256Colors[2]}">bar</span>`);
+});
+
+test("every xterm index renders with its authored foreground and background colors", () => {
+  const styles = readFileSync(new URL("../../less/client/xterm256.less", import.meta.url), "utf8");
+  const foreground = new Map([...styles.matchAll(/^\.xterm256-([\w-]+)\s*\{\s*color: #([\da-f]{6})/gim)]
+    .map(([, name, hex]) => [name, hex.toLowerCase()]));
+  const background = new Map([...styles.matchAll(/^\.xterm256-bg-([\w-]+)\s*\{\s*background-color: #([\da-f]{6})/gim)]
+    .map(([, name, hex]) => [name, hex.toLowerCase()]));
+  const basic = "000000 800000 008000 808000 000080 800080 008080 c0c0c0 808080 ff0000 00ff00 ffff00 0000ff ff00ff 00ffff ffffff".split(" ");
+  const steps = ["00", "5f", "87", "af", "d7", "ff"];
+  const names = new Set();
+
+  for (let index = 0; index < 256; index++) {
+    let color = basic[index];
+    if (index >= 232) color = (8 + 10 * (index - 232)).toString(16).padStart(2, "0").repeat(3);
+    else if (index >= 16) {
+      const cube = index - 16;
+      color = steps[Math.floor(cube / 36)] + steps[Math.floor(cube / 6) % 6] + steps[cube % 6];
+    }
+
+    const html = applyAnsi(`\u001b[38;5;${index};48;5;${index}mpalette\u001b[0m`);
+    const match = html.match(/class="xterm256-([\w-]+) xterm256-bg-([\w-]+)"/);
+    assert.ok(match, `missing color classes for index ${index}`);
+    const [, front, back] = match;
+    names.add(front);
+    assert.equal(front, back, `inconsistent classes for index ${index}`);
+    assert.equal(background.get(back), color, `background at index ${index}`);
+    // Dome uses brighter blues for foreground contrast in the base palette.
+    const frontColor = index === 4 ? "0000cc" : index === 12 ? "0033ff" : color;
+    assert.equal(foreground.get(front), frontColor, `foreground at index ${index}`);
+  }
+  assert.equal(names.size, 256);
 });
 
 test("truecolor foreground replacement", () => {
