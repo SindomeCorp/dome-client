@@ -52,6 +52,39 @@ test("output indexing releases waiters only after the new row is indexed", async
   assert.deepEqual(lines(manager.views.main), ["queued output"]);
 });
 
+test("output indexing drains later slices without repeating an announcement", async (t) => {
+  const { doc, manager, win } = await createOutputApp(t);
+  const timers = t.mock.method(win, "setTimeout", () => 1);
+  let elapsed = 0;
+  const clock = t.mock.method(win.performance, "now", () => elapsed);
+  const rows = Array.from({ length: 65 }, (_, i) => `output row ${i + 1}`);
+  const status = doc.querySelector("#output-announcements");
+  const observer = new win.MutationObserver(() => {});
+  observer.observe(status, { childList: true });
+  t.after(() => observer.disconnect());
+
+  manager.appendRuns([{ text: rows.join("\n") + "\n", classes: [], inlineStyles: [] }], { local: true });
+  let ready = false;
+  manager.whenIndexed().then(() => { ready = true; });
+  clock.mock.mockImplementationOnce(() => 0);
+  elapsed = 9;
+  assert.equal(timers.mock.callCount(), 1);
+  timers.mock.calls[0].arguments[0]();
+
+  assert.equal(manager.views.main.index.length, 64);
+  assert.equal(status.textContent, rows.slice(-20).join("\n"));
+  assert.equal(observer.takeRecords().length, 1);
+  await Promise.resolve();
+  assert.equal(ready, false);
+  assert.equal(timers.mock.callCount(), 2);
+
+  timers.mock.calls[1].arguments[0]();
+  assert.equal(observer.takeRecords().length, 0, "the same batch only updates the live region once");
+  await Promise.resolve();
+  assert.equal(ready, true);
+  assert.deepEqual(lines(manager.views.main), rows);
+});
+
 test("grid blocks route using the first nonblank ANSI-stripped line and stream before END", async (t) => {
   const { manager, client, feed } = await createOutputApp(t);
   client.preferences.sdwcNowrapBlocks = true;

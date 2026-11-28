@@ -1866,7 +1866,7 @@ test("the real IDE requests and caches verb and property hover previews", async 
   const opened = page.waitForEvent("popup");
   await socketFeed(page, "#$# edit name: hover fixture upload: @program #12:look\r\nthis:preview();\r\n$tools.label;\r\n.\r\n");
   const ide = await opened;
-  const editor = ide.locator(".ace_editor");
+  const editor = ide.locator(".ace_editor:visible");
   await expect(editor).toBeVisible();
   const hoverCode = async (row, column) => {
     const point = await editor.evaluate((element, position) => {
@@ -1875,14 +1875,22 @@ test("the real IDE requests and caches verb and property hover previews", async 
       return { x: pageX - window.scrollX + 2, y: pageY - window.scrollY + renderer.lineHeight / 2 };
     }, { row, column });
     await ide.mouse.move(point.x, point.y);
+    return point;
   };
   await ide.mouse.move(4, 4);
   const commands = async () => (await fixtureState(page)).commands.slice(before);
   const overlay = ide.locator(".sdwc-hover-overlay");
-  await hoverCode(0, 7);
+  const pointer = await hoverCode(0, 7);
   const verbRequest = "#$# SDWC%%VERB-OVERLAY%%#12%%preview";
   await expect.poll(commands).toEqual([verbRequest]);
+  await expect(overlay).toContainText("#12:preview");
   await expect(overlay).toContainText("Loading...");
+  // The preview should open near the target while leaving the target itself reachable.
+  const bounds = await overlay.boundingBox();
+  expect(bounds.x - pointer.x).toBeGreaterThan(0);
+  expect(bounds.y - pointer.y).toBeGreaterThan(0);
+  expect(bounds.x - pointer.x).toBeLessThan(32);
+  expect(bounds.y - pointer.y).toBeLessThan(32);
   await hoverCode(0, 8);
   await socketFeed(page, "#$# SDWC%%VERB-OVERLAY%%" + JSON.stringify({
     object: "#12", verb: "preview", value: ["First fixture line", "Second fixture line"]
@@ -1901,5 +1909,21 @@ test("the real IDE requests and caches verb and property hover previews", async 
   }) + "\n");
   await expect(overlay).toContainText("$tools.label");
   await expect(overlay.locator("pre")).toHaveText("Fixture property");
+  const editorText = () => editor.evaluate((element) => element.env.editor.getValue());
+  await socketFeed(page, "#$# edit name: second hover fixture upload: @program #13:another\r\nreturn 2;\r\n.\r\n");
+  await expect.poll(editorText).toBe("return 2;");
+  await expect(overlay).toHaveCount(0);
+
+  await ide.keyboard.press("Control+BracketLeft");
+  await expect.poll(editorText).toContain("this:preview();");
+  await ide.mouse.move(4, 4);
+  await hoverCode(0, 7);
+  await expect(overlay.locator("pre")).toHaveText("First fixture line\nSecond fixture line");
+  await ide.keyboard.press("Control+BracketRight");
+  await expect.poll(editorText).toBe("return 2;");
+  await expect(overlay).toHaveCount(0);
+  await ide.keyboard.press("Control+BracketLeft");
+  await expect.poll(editorText).toContain("this:preview();");
+  await expect(overlay).toHaveCount(0);
   expect(await commands()).toEqual([verbRequest, propertyRequest]);
 });
