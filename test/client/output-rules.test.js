@@ -229,3 +229,54 @@ test("the routing watchdog gives each rule its own time and suspends only the st
   assert.equal(errors.length, 1);
   assert.deepEqual(await next, [true]);
 });
+
+test("the routing queue resumes after a failure with or without yielding", async (t) => {
+  for (const elapsed of [7, 8]) {
+    await t.test("failure at " + elapsed + " ms", async (t) => {
+      t.mock.timers.enable({ apis: ["setTimeout"] });
+      const clock = t.mock.method(performance, "now", () => 0);
+      const workers = [];
+      const runner = createRuleRunner({
+        workerFactory() {
+          const worker = {
+            addEventListener(name, listener) { this[name] = listener; },
+            postMessage(message) { this.sent = message; },
+            terminate() { this.terminated = true; }
+          };
+          workers.push(worker);
+          return worker;
+        }
+      });
+      t.after(() => runner.cancel());
+
+      let failedBatch;
+      let queuedBatch;
+      runner.match(["old"], rules).then((matches) => { failedBatch = matches; });
+      const grid = [{ id: "grid", name: "Grid", pattern: "^grid" }];
+      runner.match(["grid"], grid).then((matches) => { queuedBatch = matches; });
+      const first = workers[0];
+      first.message({ data: { id: first.sent.id, activeRule: "chat" } });
+      clock.mock.mockImplementation(() => elapsed);
+      first.message({ data: { id: first.sent.id, error: "Fixture rule failure" } });
+      assert.equal(first.terminated, true);
+      assert.equal(runner.pendingLines, 1);
+      assert.equal(workers.length, 1);
+      await Promise.resolve();
+      assert.deepEqual(failedBatch, [false]);
+
+      if (elapsed === 8) {
+        assert.equal(workers.length, 1, "yielding leaves the queue pending until the next timer");
+        t.mock.timers.tick(0);
+      }
+
+      assert.equal(workers.length, 2);
+      const replacement = workers[1];
+      assert.deepEqual(replacement.sent.lines, ["grid"]);
+      assert.deepEqual(replacement.sent.rules, grid);
+      replacement.message({ data: { id: replacement.sent.id, matches: [true] } });
+      assert.equal(runner.pendingLines, 0);
+      await Promise.resolve();
+      assert.deepEqual(queuedBatch, [true]);
+    });
+  }
+});
