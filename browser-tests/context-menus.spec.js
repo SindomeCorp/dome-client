@@ -541,6 +541,10 @@ test("reference menus close after output pruning, Tab, or a click elsewhere", as
     await expect(menu.getByRole("menuitem", { name: "Copy to Clipboard" })).toBeFocused();
   };
   await openReference(old);
+  await feed(page, "additional output while menu is open\n");
+  await expect(old).toBeVisible();
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Copy to Clipboard" })).toBeFocused();
   await page.evaluate(() => { window.outputTest.client.preferences.performanceBuffer = 2; });
   await feed(page, "fresh plain text\nfresh reference #456\n");
   await expect(old).toHaveCount(0);
@@ -552,9 +556,21 @@ test("reference menus close after output pruning, Tab, or a click elsewhere", as
   await expect(fresh).toBeFocused();
 
   await openReference(fresh);
+  await page.keyboard.press("Shift");
+  await expect(menu).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+  await expect(fresh).toBeFocused();
+
+  await openReference(fresh);
   await page.locator("#inputBuffer").click();
   await expect(menu).toHaveCount(0);
   expect(await page.evaluate(() => window.contextCopied)).toBeUndefined();
+
+  await openReference(fresh);
+  await menu.getByRole("menuitem", { name: "Copy to Clipboard" }).click();
+  await expect(menu).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#456");
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
 });
 
