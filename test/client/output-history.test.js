@@ -378,7 +378,7 @@ test("input chunk boundaries preserve CRLF and complete Unicode characters", asy
   assert.ok(windows[0].endsWith("\r\n"));
 });
 
-test("ranged snapshots start at the requested chunk and keep stable boundaries across pruning and clear", () => {
+test("ranged snapshots start at the requested chunk and keep stable boundaries across pruning and clear", (t) => {
   const history = new OutputHistory();
   for (let id = 1; id <= 100_000; id++) history.append(runs("row " + id));
   let chunkReads = 0;
@@ -387,8 +387,21 @@ test("ranged snapshots start at the requested chunk and keep stable boundaries a
   const tail = history.snapshot(undefined, 99_999);
   assert.equal(chunkReads, 1);
   assert.deepEqual([...tail].map((record) => record.id), [99_999, 100_000]);
-  history.append(runs("later"));
+  const newest = history.append(runs("later"));
+  const deleteChunk = history.chunks.delete.bind(history.chunks);
+  t.mock.method(history.chunks, "delete", (key) => {
+    assert.ok(history.chunks.has(key), "pruning only deletes existing chunks in this dense history");
+    return deleteChunk(key);
+  });
+  history.prune(newest.id - 255);
+  assert.equal(history.get(256)?.id, 256, "keep the final live row of a partially pruned chunk");
+  history.prune(newest.id - 256);
+  assert.equal(history.get(257)?.id, 257);
+  assert.equal(history.chunks.has(0), false, "crossing the boundary releases the now-empty chunk");
   history.prune(1);
+  assert.equal(history.chunks.size, 1, "pruning releases all complete older chunks");
+  assert.equal(history.get(newest.id), newest);
+  assert.deepEqual([...tail].map((record) => record.id), [99_999, 100_000]);
   history.clear();
   assert.equal(tail.get(100_000).id, 100_000);
   assert.equal(tail.get(100_001), undefined);
