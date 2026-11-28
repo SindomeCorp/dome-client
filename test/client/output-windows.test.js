@@ -781,6 +781,18 @@ test("Television routes complete ANSI-formatted screen broadcasts and preserves 
   assert.equal(recordText(manager.views.secondary.index.at(0)), "On the large wall screen: a broadcast");
 });
 
+test("copied history uses displayed offsets across split and complete host tags", async (t) => {
+  const { manager, feed } = await createOutputApp(t);
+  await feed("[ho\u001b[31mst=example.invalid\u001b[0m] choose styled tail\nlast [host=plain.invalid] tail\n");
+  const first = manager.history.first;
+  const last = first + 1;
+  const copied = await copyOutputSelection(await manager.snapshot(undefined, first, last), {
+    start: { id: first, offset: "[host=example.invalid] choose ".length },
+    end: { id: last, offset: "last plain.invalid".length }
+  });
+  assert.equal(copied, "styled tail\nlast plain.invalid");
+});
+
 test("a pruned virtual jump target leaves live output following and unhighlighted", async (t) => {
   const { manager, client, feed } = await createOutputApp(t);
   const view = manager.views.main;

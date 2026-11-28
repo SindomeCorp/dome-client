@@ -830,6 +830,39 @@ test("right-click copies a reverse selection and leaves unrelated plain text nat
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
 });
 
+test("context-menu Copy follows visible selection offsets after plain and ANSI-split host tags", async ({ page }) => {
+  await page.context().addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { async writeText(text) { window.contextCopied = text; } } });
+  });
+  const previous = (await fixtureState(page)).connections;
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(previous);
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
+  const original = (await fixtureState(page)).commands;
+
+  for (const [wire, visible, selected] of [
+    ["[host=example.invalid] choose plain tail", "example.invalid choose plain tail", "plain"],
+    ["[ho\u001b[31mst=example.invalid\u001b[0m] choose styled tail", "[host=example.invalid] choose styled tail", "styled"]
+  ]) {
+    await socketFeed(page, wire + "\r\n");
+    const row = page.locator("#lineBuffer [data-output-id]").last();
+    await expect(row).toHaveText(visible);
+    await row.evaluate((element, word) => {
+      element.focus();
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      let node = walker.nextNode();
+      while (node && !node.data.includes(word)) node = walker.nextNode();
+      const start = node.data.indexOf(word);
+      document.getSelection().setBaseAndExtent(node, start, node, start + word.length);
+    }, selected);
+    await expect.poll(() => page.evaluate(() => document.getSelection().toString())).toBe(selected);
+    await openSelection(page);
+    await page.getByRole("menuitem", { name: "Copy selected text" }).click();
+    await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe(selected);
+  }
+  expect((await fixtureState(page)).commands).toEqual(original);
+});
+
 test("dismissing selected-output actions restores the original ANSI-split range", async ({ page }) => {
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
