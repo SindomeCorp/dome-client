@@ -2010,3 +2010,52 @@ test("the real IDE shortcut guide keeps editing shortcuts from reaching the docu
   await expect.poll(async () => (await fixtureState(page)).commands.slice(before))
     .toEqual(["@program #12:preview", "return 2;\n."]);
 });
+
+test("the real IDE ignores an older Wasm result as soon as the editor changes", async ({ page }) => {
+  await page.context().route("**/editor/ide/", async (route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("parser", "moo");
+    await route.fulfill({ response: await route.fetch({ url: url.href }) });
+  });
+  await page.context().addInitScript(() => {
+    const BrowserWorker = window.Worker;
+    window.Worker = class extends BrowserWorker {
+      addEventListener(type, listener, options) {
+        if (type !== "message" || !this.isMooParser) return super.addEventListener(type, listener, options);
+        return super.addEventListener(type, (event) => {
+          window.fixtureParserReply = () => {
+            listener(event);
+            return event.data.annotations;
+          };
+        }, options);
+      }
+
+      constructor(...args) {
+        super(...args);
+        this.isMooParser = String(args[0]).endsWith("/moo-parser-worker.js");
+      }
+    };
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const opened = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: delayed parser fixture upload: @program #12:preview\r\nif (1)\r\n  return 1;\r\n.\r\n");
+  const ide = await opened;
+  const editor = ide.locator(".ace_editor");
+  await expect(editor).toBeVisible();
+  await ide.waitForFunction(() => Boolean(window.fixtureParserReply));
+
+  const annotations = await editor.evaluate((element) => {
+    const editor = element.env.editor;
+    editor.setValue("return 2;", -1);
+    const previousReply = window.fixtureParserReply();
+    delete window.fixtureParserReply;
+    return { previousReply, displayed: editor.getSession().getAnnotations() };
+  });
+  expect(annotations.previousReply).toContainEqual(expect.objectContaining({ type: "error", text: "Missing endif" }));
+  expect(annotations.displayed).toEqual([]);
+  await ide.waitForFunction(() => Boolean(window.fixtureParserReply));
+  expect(await ide.evaluate(() => window.fixtureParserReply())).toEqual([]);
+  await expect.poll(() => editor.evaluate((element) => element.env.editor.getSession().getAnnotations())).toEqual([]);
+});

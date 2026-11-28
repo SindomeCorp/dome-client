@@ -50,7 +50,8 @@ test("attachMooParserDiagnostics does nothing when parser is disabled", () => {
   }
 });
 
-test("attachMooParserDiagnostics posts editor content and applies current annotations", async () => {
+test("attachMooParserDiagnostics posts editor content and applies current annotations", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
   const previousWorker = globalThis.Worker;
   const workers = [];
   globalThis.Worker = class {
@@ -79,7 +80,7 @@ test("attachMooParserDiagnostics posts editor content and applies current annota
     const cleanup = attachMooParserDiagnostics(editor, "MOO", {
       onAnnotations: (annotations) => annotationUpdates.push(annotations)
     });
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    t.mock.timers.tick(300);
 
     assert.equal(workers.length, 1);
     assert.equal(workers[0].url, "/js/moo-parser-worker.js");
@@ -90,29 +91,44 @@ test("attachMooParserDiagnostics posts editor content and applies current annota
       source: "return 1;"
     });
 
-    editor.value = "return ;";
+    editor.value = "return 2;";
     editor.handlers.change();
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    assert.deepEqual(workers[0].messages[1], {
-      type: "parse",
-      id: 2,
-      source: "return ;"
-    });
+    t.mock.timers.tick(200);
+    editor.value = "return (1 + );";
+    editor.handlers.change();
 
-    workers[0].handlers.message({
+    const stale = {
       data: {
         id: 1,
         annotations: [{ row: 0, column: 0, text: "stale", type: "error" }]
       }
+    };
+    assert.equal(workers[0].messages.length, 1, "the new edit is still debouncing");
+    workers[0].handlers.message(stale);
+    assert.equal(editor.session.annotations, null, "the previous reply is already stale");
+    assert.deepEqual(annotationUpdates, []);
+
+    t.mock.timers.tick(100);
+    assert.equal(workers[0].messages.length, 1);
+    t.mock.timers.tick(200);
+    assert.deepEqual(workers[0].messages[1], {
+      type: "parse",
+      id: 3,
+      source: "return (1 + );"
     });
+    workers[0].handlers.message(stale);
     assert.equal(editor.session.annotations, null);
 
     const annotations = [{ row: 0, column: 7, text: "MOO syntax error", type: "error" }];
-    workers[0].handlers.message({ data: { id: 2, annotations } });
+    workers[0].handlers.message({ data: { id: 3, annotations } });
     assert.deepEqual(editor.session.annotations, annotations);
     assert.deepEqual(annotationUpdates, [annotations]);
 
+    editor.handlers.change();
     cleanup();
+    t.mock.timers.tick(300);
+    workers[0].handlers.message({ data: { id: 4, annotations } });
+    assert.equal(workers[0].messages.length, 2);
     assert.equal(workers[0].terminated, true);
     assert.deepEqual(editor.session.annotations, []);
     assert.deepEqual(annotationUpdates, [annotations, []]);

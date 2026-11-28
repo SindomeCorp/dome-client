@@ -19,9 +19,8 @@ export function attachMooParserDiagnostics(editor, parser, options = {}) {
   let sequence = 0;
   let active = true;
 
-  const requestParse = () => {
+  const requestParse = (id) => {
     if (!active) return;
-    const id = ++sequence;
     worker.postMessage({
       type: "parse",
       id,
@@ -31,7 +30,8 @@ export function attachMooParserDiagnostics(editor, parser, options = {}) {
 
   const scheduleParse = () => {
     clearTimeout(timer);
-    timer = setTimeout(requestParse, PARSE_DEBOUNCE_MS);
+    // An edit invalidates an in-flight reply before its replacement is sent.
+    timer = setTimeout(requestParse, PARSE_DEBOUNCE_MS, ++sequence);
   };
 
   worker.addEventListener("message", (event) => {
