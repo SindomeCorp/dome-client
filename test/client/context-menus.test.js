@@ -300,6 +300,41 @@ test("display projection crosses ANSI/Find spans and omits preview controls", ()
   window.close();
 });
 
+test("pointer targeting handles both caret APIs and the edges of split display text", (t) => {
+  const { window } = new JSDOM("<div id='row'><span>#12</span><mark>3:</mark><span>look</span><button>▾</button></div>");
+  t.after(() => window.close());
+  const doc = window.document;
+  const row = doc.querySelector("#row");
+  const projection = projectOutputRow(row);
+  const { node } = projection.nodes[1];
+
+  const createRange = doc.createRange.bind(doc);
+  doc.createRange = () => {
+    const range = createRange();
+    range.getClientRects = () => {
+      assert.equal(range.startContainer, node);
+      assert.equal(range.endOffset, range.startOffset + 1);
+      const left = 10 + 10 * range.startOffset;
+      return [{ left, right: left + 10, top: 10, bottom: 20 }];
+    };
+    return range;
+  };
+  doc.caretRangeFromPoint = () => ({ startContainer: node, startOffset: node.length });
+  assert.equal(characterAtPoint(doc, projection, 30, 20), 4, "a caret after the span can still hit its last glyph");
+  doc.caretPositionFromPoint = () => null;
+  assert.equal(characterAtPoint(doc, projection, 25, 15), 4, "fall back when the newer API finds nothing");
+
+  doc.caretRangeFromPoint = () => assert.fail("the newer caret result should take precedence");
+  doc.caretPositionFromPoint = () => ({ offsetNode: node, offset: 0 });
+  assert.equal(characterAtPoint(doc, projection, 10, 10), 3, "a zero UTF-16 offset is valid");
+  for (const [x, y] of [[9, 15], [21, 15], [15, 9], [15, 21]]) {
+    assert.equal(characterAtPoint(doc, projection, x, y), null, "adjacent whitespace is outside the glyph");
+  }
+
+  doc.caretPositionFromPoint = () => ({ offsetNode: row.querySelector("button").firstChild, offset: 0 });
+  assert.equal(characterAtPoint(doc, projection, 15, 15), null, "excluded controls have no text match offset");
+});
+
 test("worker watchdog terminates pathological jobs and does not run a synchronous fallback", async () => {
   const handlers = {};
   let terminated = false;
