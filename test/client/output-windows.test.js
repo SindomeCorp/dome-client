@@ -452,15 +452,32 @@ test("toolbar pause always controls main and secondary uses the same styled paus
   assert.equal(manager.views.main.paused, true);
 });
 
-test("rendered text height excludes pane padding when following the newest output", async (t) => {
+test("following the newest output excludes pane padding and avoids redundant native scroll writes", async (t) => {
   const { manager, feed } = await createOutputApp(t);
   await feed(Array.from({ length: 100 }, (_, i) => "row " + i).join("\n") + "\n");
   const view = manager.views.main;
   Object.defineProperty(view.element, "clientHeight", { value: 400 });
   view.element.style.padding = "10px 0 15px";
-  view.render();
   assert.equal(view.viewportHeight(), 375);
-  assert.equal(view.element.scrollTop, view.index.total - 375);
+
+  const tail = view.index.total - 375;
+  let position = tail - 20;
+  const writes = [];
+  Object.defineProperty(view.element, "scrollTop", {
+    get: () => position,
+    set(value) {
+      writes.push(value);
+      position = value;
+    }
+  });
+  view.render();
+  assert.deepEqual(writes, [tail]);
+  assert.equal(view.element.scrollTop, tail);
+
+  // The renderer must leave the native scroll position alone for rounding noise.
+  position = tail - 0.005;
+  view.render();
+  assert.deepEqual(writes, [tail]);
 });
 
 test("scaled scrollback redistributes gaps around distant selection endpoints", async (t) => {
@@ -507,6 +524,10 @@ test("scaled scrollback redistributes gaps around distant selection endpoints", 
   view.render();
   assert.deepEqual(visibleIds(), [1, 31, 32]);
   assert.equal(geometry().gaps.length, 1);
+  assert.equal(selection.anchorNode, last);
+  assert.equal(selection.anchorOffset, 2);
+  assert.equal(selection.focusNode, first);
+  assert.equal(selection.focusOffset, 1);
 
   selection.removeAllRanges();
   view.setPaused(false);
