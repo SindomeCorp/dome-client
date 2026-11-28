@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Indent MOO blocks after trailing comments and preserve comment and string indentation when typing block keywords.
 - Keep output context menus responsive when Find changes how a reference is highlighted.
+- Leave missing note metadata blank and show save and validation feedback in the note viewer.
 
 ## 2026-11-27
 

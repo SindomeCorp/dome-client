@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
+import ejs from "ejs";
 import {
   setupEditor,
   attachUpload,
@@ -8,30 +9,11 @@ import {
 } from "../../src/client/features/editor/editor-utils.js";
 
 test("note editor window", async (t) => {
-  let buildDom;
   let setupGlobals;
   let window;
   let initialBody;
 
   t.before(async () => {
-    buildDom = () =>
-      "<!doctype html><html><head><title></title></head><body>" +
-      "<div class=\"editor\">" +
-      "<div class=\"menu\">" +
-      "<button class=\"upload\"></button>" +
-      "<button class=\"abort\"></button>" +
-      "</div>" +
-      "<div class=\"status\"></div>" +
-      "<div class=\"note-header\">" +
-      "<div class=\"note-subject\"><span class=\"header-value\"></span></div>" +
-      "<div class=\"note-timestamp\"><span class=\"header-value\"></span></div>" +
-      "<div class=\"note-objects\"><span class=\"header-value\"></span></div>" +
-      "<div class=\"note-authors\"><span class=\"header-value\"></span></div>" +
-      "</div>" +
-      "<textarea></textarea>" +
-      "</div>" +
-      "</body></html>";
-
     setupGlobals = (win) => {
       const origWindow = globalThis.window;
       const origDocument = globalThis.document;
@@ -46,7 +28,19 @@ test("note editor window", async (t) => {
       });
     };
 
-    ({ window } = new JSDOM(buildDom()));
+    const template = new URL("../../views/editors/note-viewer.ejs", import.meta.url);
+    const html = await ejs.renderFile(template.pathname, {
+      editor: { readonly: false },
+      meta: { title: "Note", description: "", keywords: "" },
+      decache: (value) => value
+    });
+    ({ window } = new JSDOM(html));
+    // Each case dispatches its own load event after setting popup data.
+    if (window.document.readyState === "loading") {
+      await new Promise((resolve) => window.document.addEventListener("DOMContentLoaded", resolve, { once: true }));
+    }
+    const close = window.close.bind(window);
+    t.after(close);
     setupGlobals(window);
     initialBody = window.document.body.innerHTML;
 
@@ -103,6 +97,20 @@ test("note editor window", async (t) => {
         .querySelector(".note-authors .header-value")
         .innerHTML.includes("Author")
     );
+  });
+
+  await t.test("optional note metadata starts empty when author and object lists are absent", () => {
+    window.editorData = {
+      editorName: "Unlinked note",
+      uploadCommand: "none",
+      buffer: "Fixture note",
+      note: { subject: "Local note", createdat: "Today" }
+    };
+    window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
+    assert.equal(window.document.title, "Viewing Unlinked note");
+    assert.equal(window.document.querySelector("textarea").value, "Fixture note");
+    assert.equal(window.document.querySelector(".note-objects .header-value").textContent, "");
+    assert.equal(window.document.querySelector(".note-authors .header-value").textContent, "");
   });
 
   await t.test("upload button sends command and buffer", async () => {
@@ -169,7 +177,7 @@ test("note editor window", async (t) => {
         .querySelector("button.upload")
         .dispatchEvent(new window.Event("click"));
       assert.equal(
-        window.document.querySelector(".status").textContent,
+        window.document.querySelector("[role=status].success").textContent,
         "Saved"
       );
       window.document
@@ -197,7 +205,7 @@ test("note editor window", async (t) => {
       .dispatchEvent(new window.Event("click"));
     assert.equal(emit.mock.calls.length, 0);
     assert.equal(
-      window.document.querySelector(".status").textContent,
+      window.document.querySelector("[role=status].error").textContent,
       "Note cannot be empty"
     );
     assert.equal(close.mock.calls.length, 0);

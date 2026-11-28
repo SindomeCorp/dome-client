@@ -60,6 +60,13 @@ app.get("/runtime.js", (_req, res) => res.type("js").send(bundled.outputFiles[0]
 app.use("/profiles", express.static(root + "data/profiles", { dotfiles: "ignore", index: false }));
 app.use(express.static(root + "public"));
 app.get("/editor/:type/", async (req, res) => {
+  if (req.params.type === "note-viewer") {
+    const html = await ejs.renderFile(root + "views/editors/note-viewer.ejs", {
+      meta: { title: "Note fixture", description: "Local test", keywords: "test" },
+      decache: (value) => value, editor: { readonly: false }
+    });
+    return res.type("html").send(html.replace(/<link[^>]+fonts\.googleapis[^>]+>/g, ""));
+  }
   if (req.params.type !== "ide") return res.type("html").send("<!doctype html><title>Editor fixture</title>");
   const html = await ejs.renderFile(root + "views/editors/ide.ejs", {
     req, meta: { title: "IDE fixture", description: "Local test", keywords: "test" }, decache: (value) => value,
