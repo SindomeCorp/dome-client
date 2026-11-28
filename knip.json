@@ -17,7 +17,6 @@
     "src/**/*.js",
     "src/**/*.jsx",
     "test/**/*.js",
-    "less/**/*.less",
     "views/**/*.ejs",
     "scripts/**/*.{awk,sh}",
     "*.js",
@@ -33,8 +32,10 @@
     ".stryker-tmp/**",
     "src/client/features/editor/ace/mode-moo.js"
   ],
+  "ignoreUnresolved": ["/js/parsers/web-tree-sitter.js"],
   "ignoreDependencies": [
-    "@stryker-mutator/command-runner"
+    "@stryker-mutator/command-runner",
+    "tailwindcss"
   ],
   "ignoreIssues": {
     "src/client/core/preferences.js": [

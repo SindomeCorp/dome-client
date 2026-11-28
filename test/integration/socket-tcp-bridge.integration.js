@@ -2,18 +2,30 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import net from "node:net";
+import { once } from "node:events";
+import { setTimeout as delay } from "node:timers/promises";
 import { io as createSocketClient } from "socket.io-client";
 
 async function startMooTestServer() {
   let received = "";
+  let latestPeer;
+  let ignoreQuit = false;
+  const peers = new Set();
   const server = net.createServer((socket) => {
-    socket.on("data", (chunk) => {
+    latestPeer = socket;
+    peers.add(socket);
+    socket.once("close", () => peers.delete(socket));
+    socket.on("data", async (chunk) => {
       const text = chunk.toString("utf8");
       received += text;
       if (text.includes("look\r\n")) {
-        socket.write("You look around.\r\n");
+        const output = Buffer.from("You look around. You see café 🌲.\r\n");
+        const split = output.indexOf(0xc3) + 1;
+        socket.write(output.subarray(0, split));
+        await delay(20);
+        socket.write(output.subarray(split));
       }
-      if (text.includes("@quit\r\n")) {
+      if (!ignoreQuit && text.includes("@quit\r\n")) {
         socket.end();
       }
     });
@@ -33,7 +45,10 @@ async function startMooTestServer() {
     getReceived() {
       return received;
     },
+    ignoreQuit() { ignoreQuit = true; },
+    latestPeer() { return latestPeer; },
     close() {
+      for (const peer of peers) peer.destroy();
       return new Promise((resolve) => {
         server.close(() => resolve());
       });
@@ -186,7 +201,7 @@ test("integration: socket bridge works with a real tcp moo server", async (t) =>
 
     socket.on("data", (message) => {
       socketData.push(String(message));
-      if (String(message).includes("You look around.")) {
+      if (socketData.join("").includes(".\r\n")) {
         socket.emit("input", "@quit");
       }
     });
@@ -203,5 +218,15 @@ test("integration: socket bridge works with a real tcp moo server", async (t) =>
   const received = moo.getReceived();
   assert.match(received, /look\r\n/);
   assert.match(received, /@quit\r\n/);
-  assert.ok(socketData.some((chunk) => chunk.includes("You look around.")));
+  assert.equal(socketData.join(""), "You look around. You see café 🌲.\r\n");
+
+  // Open another web session against the same local game. It must close
+  // the upstream connection even if the game ignores the quit command.
+  moo.ignoreQuit();
+  const socket = createSocketClient(baseUrl, { transports: ["websocket"], reconnection: false });
+  t.after(() => socket.disconnect());
+  await once(socket, "connected", { signal: AbortSignal.timeout(2500) });
+  const closed = once(moo.latestPeer(), "end", { signal: AbortSignal.timeout(2500) });
+  socket.disconnect();
+  await closed;
 });

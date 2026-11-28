@@ -21,7 +21,6 @@ function createStore(t) {
 }
 
 test("guest connect stores initial command", async (t) => {
-  t.mock.timers.enable();
   const { window } = setupDom(t, "<!doctype html><html><body><a class=\"btn-connect-guest\" href=\"/player-client/\"></a></body></html>", { suppressNavigationErrors: true });
   const { store } = await import("../../src/client/core/store.js");
   Object.assign(store, {
@@ -34,9 +33,13 @@ test("guest connect stores initial command", async (t) => {
     purge: () => {}
   });
 
+  // Wait for the synthetic document to finish its own ready event before
+  // reproducing the deferred script lifecycle.
+  if (window.document.readyState === "loading") {
+    await new Promise((resolve) => window.document.addEventListener("DOMContentLoaded", resolve, { once: true }));
+  }
   await import("../../src/client/entrypoints/client-connect.js?guest");
   window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
-  t.mock.timers.tick(10);
   const button = window.document.querySelector(".btn-connect-guest");
   const evt = new window.Event("click", { cancelable: true });
   try {
@@ -202,7 +205,7 @@ test("connect page chrome temporarily clears existing background images", (t) =>
 
   t.mock.timers.tick(10);
 
-  assert.equal(window.document.body.style.backgroundImage, "url(\"hero.png\")");
+  assert.equal(window.document.body.style.backgroundImage, "url(\"http://example.com/hero.png\")");
 });
 
 test("connect action stores login only when credentials are present", (t) => {
@@ -262,8 +265,10 @@ test("saved user picker handles preset characters, commands, and menu dismissal"
   };
   const logger = { info: t.mock.fn() };
   const reload = t.mock.fn();
+  const confirm = t.mock.fn(() => true);
+  confirm.mock.mockImplementationOnce(() => false);
   const pickerWindow = {
-    confirm: () => true,
+    confirm,
     prompt: () => "newbie",
     location: { reload }
   };
@@ -294,7 +299,11 @@ test("saved user picker handles preset characters, commands, and menu dismissal"
   picker.querySelector("[data-command='newChar']").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert.equal(window.document.getElementById("moo-username").value, "newbie");
 
-  picker.querySelector("[data-command='purgeAll']").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  const forget = picker.querySelector("[data-command='purgeAll']");
+  forget.click();
+  assert.equal(savedUsersStore.purge.mock.callCount(), 0);
+  assert.equal(reload.mock.callCount(), 0);
+  forget.click();
   assert.equal(savedUsersStore.purge.mock.callCount(), 1);
   assert.equal(reload.mock.callCount(), 1);
 });

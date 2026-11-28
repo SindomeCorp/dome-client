@@ -115,6 +115,18 @@ const createSocket = async (t) => {
   return { ioSocket, emitter: currentEmitter };
 };
 
+test("connection replacement and transport disconnect reset only session context selection", async (t) => {
+  let resets = 0;
+  dome.contextMenus = { resetSession() { resets++; } };
+  t.after(() => { delete dome.contextMenus; });
+  const { ioSocket } = await createSocket(t);
+  assert.ok(resets >= 1);
+  const previous = resets;
+  ioSocket.emit("disconnect", "transport close");
+  assert.ok(resets > previous);
+  assert.equal(dome.socketState, SOCKET_STATE_ENUM.DISCONNECTED);
+});
+
 test("handlers manage reconnect, login branches, and errors", async (t) => {
   {
     const { ioSocket } = await createSocket(t);
@@ -270,4 +282,98 @@ test("setupSocket forwards direct TLS transport query when present", () => {
     port: "4444",
     transport_mode: "tls"
   });
+});
+
+test("web output belongs to the ready connection across transport loss and replacement", async (t) => {
+  const client = createClientState();
+  client.disconnectView = dome.disconnectView;
+  client.preferences = { shortenUrls: false };
+  client.parseSocketData = t.mock.fn();
+  client.resetOutputStream = t.mock.fn();
+  client.contextMenus = { resetSession: t.mock.fn() };
+  client.health = { showStatus: t.mock.fn(), handleSocketError: t.mock.fn() };
+  const init = (socket) => setupSocket({ client, ioClient: () => socket, sleepFn: async () => {} });
+  const first = new EventEmitter();
+  first.disconnect = () => first.emit("disconnect", "io client disconnect");
+  init(first);
+
+  first.emit("data", "before game ready");
+  first.emit("connected");
+  first.emit("data", "first");
+  first.emit("disconnect", "transport close");
+  first.emit("data", "stale during transport loss");
+  first.emit("connected");
+  first.emit("data", "after transport reconnect");
+
+  const next = new EventEmitter();
+  next.disconnect = () => {};
+  init(next);
+  first.emit("data", "stale after replacement");
+  first.emit("error", new Error("stale error"));
+  next.emit("data", "before replacement is ready");
+  next.emit("connected");
+  next.emit("data", "replacement");
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.deepEqual(client.parseSocketData.mock.calls.map(({ arguments: args }) => args[0]), [
+    "first", "after transport reconnect", "replacement"
+  ]);
+  assert.equal(client.health.handleSocketError.mock.callCount(), 0);
+});
+
+test("an old login timer cannot consume the replacement connection's saved login", async (t) => {
+  const client = createClientState();
+  client.disconnectView = dome.disconnectView;
+  client.preferences = { shortenUrls: false };
+  const old = new EventEmitter();
+  old.disconnect = () => old.emit("disconnect", "io client disconnect");
+  const next = new EventEmitter();
+  next.disconnect = () => {};
+  const storage = { get: t.mock.fn(() => "fixture-command"), remove: t.mock.fn() };
+  const oldInput = t.mock.fn();
+  old.on("input", (command, ack) => { oldInput(command); ack(); });
+  const delay = Promise.withResolvers();
+  setupSocket({ client, ioClient: () => old, sleepFn: () => delay.promise, storage });
+  old.emit("connected");
+  setupSocket({ client, ioClient: () => next, storage });
+  delay.resolve();
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.equal(oldInput.mock.callCount(), 0);
+  assert.equal(storage.remove.mock.callCount(), 0);
+});
+
+test("only the current generation initializes after Socket.IO reconnects on the same object", async (t) => {
+  const client = createClientState();
+  client.disconnectView = dome.disconnectView;
+  client.preferences = { shortenUrls: false };
+  const ioSocket = new EventEmitter();
+  ioSocket.io = new EventEmitter();
+  ioSocket.disconnect = t.mock.fn(() => ioSocket.emit("disconnect"));
+  const sleeps = [Promise.withResolvers(), Promise.withResolvers()];
+  let nextSleep = 0;
+  const sleepFn = t.mock.fn(() => sleeps[nextSleep++].promise);
+  const storage = { get: t.mock.fn(() => "fixture-command"), remove: t.mock.fn() };
+  const input = t.mock.fn();
+  ioSocket.on("input", (command, ack) => { input(command); ack(); });
+  setupSocket({ client, ioClient: () => ioSocket, sleepFn, storage });
+
+  ioSocket.emit("connected");
+  ioSocket.emit("connected");
+  ioSocket.emit("disconnect", "transport close");
+  ioSocket.emit("connected");
+  sleeps[0].resolve();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(input.mock.callCount(), 0);
+  sleeps[1].resolve();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(input.mock.callCount(), 1);
+  assert.equal(storage.remove.mock.callCount(), 1);
+
+  ioSocket.io.emit("reconnect_failed");
+  assert.equal(client.socketState, SOCKET_STATE_ENUM.CONNECTED);
+  ioSocket.emit("disconnect");
+  ioSocket.io.emit("reconnect_failed");
+  assert.equal(client.socketState, SOCKET_STATE_ENUM.RECONNECT_FAILED);
+  assert.equal(ioSocket.disconnect.mock.callCount(), 1);
 });

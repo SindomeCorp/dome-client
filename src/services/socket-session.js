@@ -9,7 +9,7 @@ export function bindSocketSession({
 }) {
   const writeAsync = data => new Promise(resolve => moo.write(data, "utf8", resolve));
 
-  moo.on("end", function() {
+  const onUpstreamEnd = () => {
     logger.debug("moo connection sent end");
     if (socket.isActive) {
       logger.debug("socket is active, sending disconnect and marking inactive");
@@ -18,7 +18,9 @@ export function bindSocketSession({
     } else {
       logger.debug("socket is no longer active");
     }
-  });
+  };
+  moo.on("end", onUpstreamEnd);
+  moo.on("close", onUpstreamEnd);
 
   moo.on("error", function(err) {
     logger.error("moo error event occurred");
@@ -49,19 +51,32 @@ export function bindSocketSession({
     if (data) {
       logger.debug("disconnected from client: " + data);
     }
-    if (!moo.socketQuit) moo.write("@quit" + "\r\n", "utf8", function() {});
+    try {
+      if (!moo.socketQuit) {
+        moo.socketQuit = true;
+        moo.write("@quit\r\n", "utf8", function() {});
+      }
+    } catch (error) {
+      logError(socket, error);
+    } finally {
+      if (moo.destroySoon) moo.destroySoon();
+      else moo.end?.();
+    }
   });
 
   socket.on("input", async function(command) {
+    if (!socket.isActive) return;
     if (command == null) {
       socket.emit("error", new Error("no input"));
       return;
     }
     logConnectCommand(socket, command, logUser);
     try {
+      const quitting = /^@quit(\r\n)?$/.test(command);
+      if (quitting) moo.socketQuit = true;
       await writeAsync(command + "\r\n");
-      if (command.match(/^@quit(\r\n)?$/)) {
-        moo.socketQuit = true;
+      if (!socket.isActive) return;
+      if (quitting) {
         socket.isActive = false;
         moo.end();
         socket.emit("disconnected");

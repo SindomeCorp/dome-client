@@ -99,14 +99,14 @@ test("integration: autocomplete enabled returns commands, unknown type empty, an
   const { baseUrl } = await bootServer(t, { playerPath, brokenPath });
   const http = request(baseUrl);
 
-  const known = await http.get("/ac/p").expect(200);
+  const known = await http.get("/ac/p").timeout({ response: 2000 }).expect(200);
   assert.match(known.headers["content-type"] || "", /application\/json/);
   assert.deepEqual(known.body.slice(0, 2), ["look", "say"]);
 
-  const unknown = await http.get("/ac/unknown").expect(200);
+  const unknown = await http.get("/ac/unknown").timeout({ response: 2000 }).expect(200);
   assert.deepEqual(unknown.body, []);
 
-  const broken = await http.get("/ac/z").expect(500);
+  const broken = await http.get("/ac/z").timeout({ response: 2000 }).expect(500);
   assert.deepEqual(broken.body, { error: "Failed to load autocomplete data" });
 });
 
@@ -138,10 +138,10 @@ test("integration: autocomplete caches loaded command files during server lifeti
   const { baseUrl } = await bootServer(t, { playerPath, brokenPath });
   const http = request(baseUrl);
 
-  const first = await http.get("/ac/p").expect(200);
+  const first = await http.get("/ac/p").timeout({ response: 2000 }).expect(200);
   assert.deepEqual(first.body.slice(0, 2), ["look", "say"]);
 
   await fs.writeFile(playerPath, "pose\nwhisper\n", "utf8");
-  const second = await http.get("/ac/p").expect(200);
+  const second = await http.get("/ac/p").timeout({ response: 2000 }).expect(200);
   assert.deepEqual(second.body.slice(0, 2), ["look", "say"]);
 });

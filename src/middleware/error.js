@@ -1,10 +1,7 @@
 /* eslint indent: ["error", 2], quotes: ["error", "double"], semi: ["error", "always"], no-unused-vars: ["error", { "argsIgnorePattern": "^_" }] */
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { named } from "../logger.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const logger = named("middleware/" + path.basename(__filename, ".js"));
+const logger = named("middleware/error");
 
 export const metrics = {
   "404": {

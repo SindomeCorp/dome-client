@@ -5,7 +5,7 @@ This guide describes the minimum production setup for Dome Client when optional 
 ## Production Checklist
 
 - Point a public DNS record, such as `play.example.com`, at the server.
-- Install Node.js 22+, npm, git, Supervisor, and Certbot.
+- Install Node.js 26+, npm, git, Supervisor, and Certbot.
 - Copy `.env-example-production` to `.env` and update the required production values.
 - Generate a strong `SESSION_SECRET`.
 - Configure `NODE_SOCKET_URL` and `NODE_SOCKET_URL_SSL` to the public URL players will open in their browsers.
@@ -17,14 +17,17 @@ This guide describes the minimum production setup for Dome Client when optional 
 
 ## Install
 
+Install Node.js 26 or newer and confirm it with `node --version` before running
+the following commands. Ensure the service account uses the same Node.js version.
+
 Ubuntu example:
 
 ```bash
 sudo apt update
-sudo apt install -y nodejs npm git supervisor certbot
+sudo apt install -y git supervisor certbot
 git clone https://github.com/SindomeCorp/dome-client.git
 cd dome-client
-npm install
+npm ci
 cp .env-example-production .env
 ```
 
@@ -107,7 +110,9 @@ If Certbot needs port 80 for renewal and Dome Client is bound directly to port 8
 
 ## Running the Service
 
-The repository includes `supervisor.conf`. Review the paths first; the checked-in file assumes the app lives at `/home/ubuntu/dome-client`.
+The included `supervisor.conf` assumes the app lives at
+`/home/ubuntu/dome-client` and starts `/usr/bin/node`. If Node.js 26 or newer is
+installed elsewhere, set `command` to that binary's absolute path.
 
 ```bash
 sudo ln -s "$(pwd)/supervisor.conf" /etc/supervisor/conf.d/dome-client.conf
@@ -146,3 +151,21 @@ curl https://play.example.com/health/
 
 Then open `https://play.example.com` in a browser and confirm that a player can connect to the configured `MUD_HOST` and `MUD_PORT`.
 
+
+## Release validation and rollback
+
+Build and test a new release in a separate checkout. Use the
+[core checks](TESTING.md#core-checks), then run the browser smoke tests. Keep the
+previous release and its configuration available for rollback.
+
+The build compiles into a staging directory beside the output tree. It leaves
+the served bundles alone if compilation fails and attempts to restore the
+previous assets if publishing fails. Publish in a stopped checkout or prepare
+a separate release directory before switching traffic. Publication replaces generated bundles, vendor directories, and CSS in
+sequence. Use the release-directory switch for live deployments.
+
+A failed required asset build stops startup before the server listens. After
+switching releases, check HTTP, load the player client and editor, and confirm
+the required JS and CSS load. `/health/` reports process health and connection
+counts. A browser smoke test verifies the bundles and game connection path.
+If the new release fails, switch back to the previous release and restart.

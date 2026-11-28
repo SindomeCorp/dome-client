@@ -98,13 +98,8 @@ test("startClientSocket creates native socket shim and delegates lifecycle calls
 });
 
 test("startClientSocket schedules browser socket setup", (t) => {
-  const registered = {};
-  const client = { parseSocketData: t.mock.fn() };
-  const socket = {
-    on: t.mock.fn((event, handler) => {
-      registered[event] = handler;
-    })
-  };
+  const client = {};
+  const socket = {};
   const win = {
     setTimeout(callback, delay) {
       assert.equal(delay, 500);
@@ -116,10 +111,8 @@ test("startClientSocket schedules browser socket setup", (t) => {
   };
 
   const result = startClientSocket({ client, doc: {}, win, features });
-  registered.data("payload");
 
   assert.equal(result, null);
   assert.equal(client.socket, socket);
   assert.equal(features.setupSocket.mock.callCount(), 1);
-  assert.equal(client.parseSocketData.mock.calls[0].arguments[0], "payload");
 });

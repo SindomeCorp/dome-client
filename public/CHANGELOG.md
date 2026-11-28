@@ -2,6 +2,86 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-11-28
+
+### Fixed
+- Indent MOO blocks after trailing comments and preserve comment and string indentation when typing block keywords.
+- Keep output context menus responsive when Find changes how a reference is highlighted.
+
+## 2026-11-27
+
+### Fixed
+- Fail the asset build if a selected browser script cannot be compiled, preserving the previous client assets.
+- Keep the previous client assets when a build fails and prevent startup without a successful build.
+- Cancel incomplete game connections and wait for the TLS handshake before reporting a secure connection.
+- Prevent overlapping status checks from replacing fresh results with stale responses.
+- Discard queued output from old connections even when context menus are disabled.
+- Keep context menus available throughout large output bursts without overflowing the matching queue.
+- Apply edits to shipped Player JSON unless explicitly overridden by local configuration.
+- Restore the latest recognized server profile after a failed context-menu reload while preserving session resets and user overrides.
+- Reject unusable profile regexes during bounded startup validation and disable context menus with a logged error when no usable files remain.
+- Preserve output line boundaries around client control messages so login profile selection works regardless of network packet splits, including split CRLF newlines.
+- Keep website session updates when a concurrent read-only request finishes later.
+- Keep the health endpoint available when its configured restart timestamp is invalid.
+- Shorten complete links independently and keep original links when the shortening service returns an error or no key.
+- Use the legacy stylesheet for log exports if the compiled stylesheet is blank.
+- Clean up HTTP and HTTPS startup listeners after a failed bind so the server can retry cleanly.
+- Match equivalent IPv4-mapped IPv6 spellings in the IP blocklist.
+- Preserve split UTF-8 output, editor content, and SDWC payloads across game packets.
+- Resume ordinary output after an overlong Telnet subnegotiation ends.
+- Ignore stale output after disconnect or reconnect and close the previous game connection promptly.
+- Keep IDE display preferences usable when browser storage is blocked.
+- Clear the alert when returning to focused output or a context menu without moving keyboard focus.
+- Keep the selected character and password when Add Character is canceled.
+- Keep context menus working when the matching worker sends a malformed or late reply.
+- Keep newer context-menu imports and edits when an older JSON file finishes reading late.
+- Keep the local editor from flagging ordinary variable names such as `constructor` as MOO block keywords.
+
+### Added
+- Add wildcard @rewind menus for `[+][channel]` and `[-][channel]` tags in Player, GM and Programmer profiles.
+- Group GM and Programmer verb/property actions separately from all owning-object actions, with explicit target headers, keyboard navigation and configurable JSON composition.
+- Add @list immediately below @edit in Programmer verb menus for numeric and symbolic references.
+
+- Add named Stryker profiles for server and client code beyond the original mutation suite.
+
+### Changed
+- Refresh the client build, server, and editor dependencies while retaining the existing runtime and browser support requirements.
+- Require Node.js 26 or newer to run the client server and development tools.
+- Upgrade the local editor to Tailwind CSS 4. The editor now targets Chrome 111+, Firefox 128+, and Safari 16.4+.
+
+## 2026-11-25
+
+### Added
+- Document MOO login notifications for selecting Player, GM or Programmer menus and resetting the session choice.
+- Add an enabled-by-default ENV switch for context menus; automatically disable them with a logged error when no registered JSON profile file is usable.
+- Add a context-menu JSON authoring guide with import instructions, a complete personal profile, safe templates, native actions and troubleshooting.
+- Add an optional Basic setting to underline text with context-menu actions across output panes and pop-outs, without changing text selection or ANSI formatting.
+
+### Changed
+- Make Player menus selected-text Copy only, with no reference matching or underlines; keep staff reference and Scratchpad actions.
+- Match Context Menus Basic/Advanced tabs to Presentation tabs, including their styling and placement directly below the main Options tabs.
+- Simplify Context Menus Options with Basic/Advanced tabs, a bold active profile, and automatic Player-first fallback instead of a fallback dropdown; disable menus when no profiles are available.
+- Put Copy to Clipboard first in every shipped reference menu, keeping the remaining commands in their existing order.
+- Center profile-change notices in a translucent, nonblocking overlay above client controls.
+
+### Fixed
+- Keep prepared selected-text menus available immediately after switching profiles, without needing a second right-click or refresh.
+- Keep object and symbolic references normally selectable so Firefox opens reference menus on the first right-click instead of automatically selecting the reference.
+
+## 2026-11-24
+
+### Added
+- Add typed symbolic Programmer references and source-shaped traceback Copy Frame, plus Look before Copy in GM and Programmer object menus.
+- Ship separate Player, GM and Programmer context-menu JSON files, with typed role actions and safe registered-file fallback.
+- Add configurable reference and selection context menus across output panes and pop-outs, with keyboard access, editable JSON, session-selected profiles, and a global Options override.
+- Copy selected output or open it unsaved in the existing IDE Scratchpad; saving to the game remains a separate explicit action.
+
+### Changed
+- Reuse compiled context-menu regex rules across output rows, refreshing them when JSON configuration reloads.
+
+### Fixed
+- Target right-clicked references across auto-selecting ANSI spans, and list keyboard reference choices in text order.
+
 ## 2026-11-20
 
 ### Fixed

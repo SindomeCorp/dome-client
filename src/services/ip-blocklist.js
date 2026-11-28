@@ -12,7 +12,13 @@ export function normalizeClientIp(value) {
   if (typeof value !== "string") {
     return "";
   }
-  return value.trim().replace(/^::ffff:/i, "");
+  const address = value.trim();
+  const mappedPrefix = "::ffff:";
+  if (address.toLowerCase().startsWith(mappedPrefix)) {
+    const ipv4 = address.slice(mappedPrefix.length);
+    if (net.isIPv4(ipv4)) return ipv4;
+  }
+  return address;
 }
 
 export function loadIpBlocklist({ filePath, fs, logger }) {
@@ -55,7 +61,7 @@ function createMatcher(list, size) {
     has(ip) {
       const normalized = normalizeClientIp(ip);
       const family = net.isIP(normalized);
-      return Boolean(list && normalized && family !== 0 && list.check(normalized, family === 6 ? "ipv6" : "ipv4"));
+      return family !== 0 && list.check(normalized, family === 6 ? "ipv6" : "ipv4");
     }
   };
 }

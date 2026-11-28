@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert";
-import { renderFile } from "ejs";
+import ejs from "ejs";
 import { glob } from "glob";
 import fs from "node:fs/promises";
 import { CLIENT_OPTION_GROUPS, CLIENT_OPTION_LABELS, CLIENT_OPTION_VIEW } from "../../src/shared/client-options.js";
@@ -120,7 +120,7 @@ for (const file of files) {
   test(`renders ${file}`, async () => {
     await fs.access(file);
     const data = sampleData[file] || {};
-    const html = await renderFile(file, data);
+    const html = await ejs.renderFile(file, data);
     if (file === "views/client.ejs") {
       assert.match(html, /id="editor-list-view"/);
       const inputBuffer = html.match(/<textarea[^>]*id="inputBuffer"[^>]*>/s)?.[0] ?? "";
@@ -169,7 +169,7 @@ test("connect-as multi-mud render treats missing mudTlsEnabled as disabled", asy
   };
   delete data.mudTlsEnabled;
 
-  const html = await renderFile("views/connect-as.ejs", data);
+  const html = await ejs.renderFile("views/connect-as.ejs", data);
 
   assert.match(html, /Connect To \.\.\./);
   assert.doesNotMatch(html, /id="mud-use-tls"/);

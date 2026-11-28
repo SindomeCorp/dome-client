@@ -28,10 +28,12 @@ export default [
     },
   },
   {
-    files: ["src/client/**/*.js"],
+    files: ["src/client/**/*.{js,jsx}"],
     languageOptions: {
+      parserOptions: { ecmaFeatures: { jsx: true } },
       globals: {
         ...globals.browser,
+        ...globals.worker,
         socket: "writable",
         MOO_STATUS_ENUM: "readonly",
         SOCKET_STATE_ENUM: "readonly",
@@ -42,13 +44,20 @@ export default [
       },
     },
     rules: {
-      "no-undef": "off",
-      "no-unused-vars": "off",
-      "no-redeclare": "off",
+      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "no-empty": "off",
       "no-cond-assign": "off",
       "no-useless-escape": "off",
       "no-prototype-builtins": "off",
     },
+  },
+  {
+    // JSX component names are not tracked as references by core ESLint.
+    files: ["src/client/**/*.jsx"],
+    rules: { "no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z]", argsIgnorePattern: "^_" }] },
+  },
+  {
+    files: ["src/shared/context-menus.js", "test-support/context-menu-reference-fixture.js"],
+    languageOptions: { ecmaVersion: 2025 },
   },
 ];

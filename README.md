@@ -4,7 +4,7 @@
 </p>
 <br />
 
-[![Node.js](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](#requirements)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D26-339933?logo=node.js&logoColor=white)](#requirements)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE.txt)
 
 Dome Client is the maintained successor to the [Legacy Dome Client](https://github.com/javaChilly/dome-client.js), with ongoing fixes, modernized dependencies, a developer IDE for editing MOO verbs & properties, and expanded documentation.
@@ -12,6 +12,8 @@ Dome Client is the maintained successor to the [Legacy Dome Client](https://gith
 It is a browser-based MUD client built with Node.js, Express, and Socket.io. It bridges browser WebSocket connections to traditional telnet-based MUD servers, so players can connect without installing anything.
 
 ## Try It Live
+
+Output reference and selection menus are configurable in **Options → Context Menus**. Use Basic for a global profile override and optional underlining, or Advanced to import/edit/reload JSON. Fallback automatically uses Player or the first available profile. Player offers selected-text Copy and channel-tag `@rewind`; GM and Programmer also offer reference actions and the existing saveable IDE Scratchpad. See [Context Menus](docs/CONTEXT-MENUS.md) for the feature overview and [Creating context-menu JSON](docs/CONTEXT-MENU-JSON.md) for a complete example and authoring guide.
 
 Sindome provides a hosted version of the client that can connect to any MUD. You are free to use this version to check out the features, or to connect to a game you like to play.
 
@@ -63,8 +65,9 @@ Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice f
 
 ## Requirements
 
-- Node.js 22+
+- Node.js 26+
 - npm
+- The local editor needs a modern browser. Its styling targets Chrome 111+, Firefox 128+, and Safari 16.4+.
 
 ## Terminology
 
@@ -78,6 +81,7 @@ Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice f
   - Single-MUD mode (`MULTI_MUD=false`): fixed game from `MUD_HOST`/`MUD_PORT`.
   - Multi-MUD mode (`MULTI_MUD=true`): user enters host/port to enter connect flow with persisted per-game metrics.
 - Terminal-accurate ANSI rendering with a stateful parser (including reset/inverse handling), full Xterm256 support, and TrueColor (`38;2`/`48;2`) foreground/background rendering in both live output and exported logs.
+- Configurable output context menus, ready for MOOs out of the box with Player, GM and Programmer profiles. JSON regex rules and command templates can adapt them to any game; see [Creating context-menu JSON](docs/CONTEXT-MENU-JSON.md). Enable or disable with `CONTEXT_MENUS_ENABLED` (default `true`).
 - HTTPS support.
 - Automatic URL linkification in output buffer.
 - [Inline media previews](docs/IMAGE-PREVIEWS.md) for image/video/YouTube links with expand/collapse toggles. Image detection checks HTTP(S) URL path extensions, including WebP and AVIF, while preserving query strings and fragments.
@@ -106,6 +110,8 @@ Set `MUD_TLS_ENABLED=true` to expose an optional **Use TLS** connection choice f
 Secondary output can also move into a browser pop-out using **Pop Out**, then
 return using **Redock** in either window. See the [Output Windows guide](docs/OUTPUT-WINDOWS.md#pop-out-output)
 for controls, shared history, popup permissions, and native-app limitations.
+
+`CONTEXT_MENUS_ENABLED` defaults to `true`. Set it to `false` to disable reference/selection menus, underlining and their Options tab while preserving browser menus. At startup, if no registered JSON profile file can be loaded and validated with actions, the feature disables itself and logs an error. Fix the profile files and restart the client server to enable it again. Failed JSON reloads in an already-running session preserve the last valid rules. Browser-saved profiles cannot bypass an administrator disable.
 
 `OUTPUT_WINDOWS_ENABLED` and `OUTPUT_WINDOWS_CUSTOM_REGEX_ENABLED` default to
 `true`. `OUTPUT_WINDOWS_PRESETS_PATH` defaults to
@@ -214,7 +220,7 @@ sudo supervisorctl reread
 sudo supervisorctl update
 ```
 
-After linking, manage the service with `sudo supervisorctl start dome-client`, `sudo supervisorctl restart dome-client`, etc. Adjust the paths inside `supervisor.conf` if the repository lives somewhere other than `/opt/dome-client`.
+After linking, manage the service with `sudo supervisorctl start dome-client`, `sudo supervisorctl restart dome-client`, etc. Adjust the repository path and Node binary in `supervisor.conf` for your installation. The binary must run Node.js 26 or newer.
 
 ## Running without Supervisor
 
@@ -234,19 +240,11 @@ On production systems, SSL certificates are typically readable only by root. Sta
 
 ## Project Structure
 
-All application code resides in `src/` and follows a layered design:
-
-- `src/server.js` starts the Express application.
-- `src/config/` builds configuration objects from environment variables.
-- `src/routes/` maps HTTP routes to controllers.
-- `src/controllers/` handle request and response logic.
-- `src/services/` contain reusable domain logic.
-- `src/middleware/` contains middleware helpers (for example error and LESS middleware).
-- `src/logger.js` exposes a shared Winston logger.
-- `src/env.js` defines and validates environment variables.
-- View templates live in `views/`; see [`views/README.md`](views/README.md) for directory layout and templating guidelines.
-
-Controllers may depend on services and configuration, but services remain independent of Express. Tests live in `test/` and mirror this structure.
+The browser entrypoints and features live in `src/client/`, shared schemas in
+`src/shared/`, and the Express and Socket.IO runtime in `src/server.js` and
+`src/server/`. See the [architecture guide](docs/ARCHITECTURE.md) for ownership,
+initialization, worker boundaries, generated assets, and where to make changes.
+[View conventions](views/README.md) cover the EJS templates.
 
 ## IP Block List
 
@@ -256,7 +254,7 @@ When `NODE_SOCKET_PROXIED=true`, block-list checks use the left-most `X-Forwarde
 
 ## Editor
 
-The in-browser editor uses [Ace](https://ace.c9.io/) v1.43.2 with a custom MOO mode and optional Vim keybindings. Custom modules live under `src/client/features/editor/ace` and are bundled during the build. Run `npm start` or `npm run build` after editing these modules to regenerate client assets. See [docs/ace-notes.md](docs/ace-notes.md) for details.
+The in-browser editor uses [Ace](https://ace.c9.io/) v1.45.2 with a custom MOO mode and optional Vim keybindings. Custom modules live under `src/client/features/editor/ace` and are bundled during the build. Run `npm start` or `npm run build` after editing these modules to regenerate client assets. See [docs/ace-notes.md](docs/ace-notes.md) for details.
 
 ## Advanced Setup Guides
 
@@ -266,6 +264,7 @@ If you want the IDE to function properly you'll need to make a few verb changes/
 - [MOO Verbs Setup](docs/MOO-SETUP.md)
 
 ### Advanced Setup
+- [Creating and using context-menu JSON files](docs/CONTEXT-MENU-JSON.md)
 - [Production Deployment](docs/PRODUCTION.md)
 - [Autocomplete](docs/AUTOCOMPLETE.md)
 - [URL Shortener](docs/URL-SHORTENER.md)
@@ -304,13 +303,8 @@ See the dedicated testing guide: [docs/TESTING.md](docs/TESTING.md).
 
 Run `npm run lint` and `npm test` before committing. Coverage must remain at or above 80%.
 
-## Node.js 26 validation
+## Development baseline
 
-Validated on Linux with **Node.js 26.12.1** on **2026-10-26**. The template lint, automated test suite, and asset build passed.
-
-With Node.js 26.12.1 selected, reproduce the checks with:
-
-```sh
-npm test
-npm run build
-```
+Use Node.js 26 for development and test tools. The pinned version is in
+[`.nvmrc`](.nvmrc). The [testing guide](docs/TESTING.md) documents the same Node
+version in the browser, coverage, and mutation test runner.

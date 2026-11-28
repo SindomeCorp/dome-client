@@ -13,6 +13,7 @@ const defaults = {
   NODE_SOCKET_URL_SSL: "",
   NODE_SOCKET_PROXIED: false,
   MULTI_MUD: false,
+  CONTEXT_MENUS_ENABLED: true,
   HEALTH_ENDPOINT_ENABLED: true,
   IP_BLOCKLIST_PATH: "",
   NODE_POWERED_BY: "Dome Client",

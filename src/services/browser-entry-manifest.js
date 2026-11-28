@@ -14,6 +14,7 @@ const playerClientEntries = [
 ];
 
 const pageEntries = [
+  { entry: "context-menus-worker.js", file: "context-menus-worker.js", external: [] },
   { entry: "output-window.js", file: "output-window.js", external: [] },
   { entry: "output-rules-worker.js", file: "output-rules-worker.js", external: [] },
   { entry: "client-connect.js", file: "client-connect.js", external: ["./logger.js"] },

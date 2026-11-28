@@ -315,7 +315,6 @@ test("reconnect button reinitializes socket without reloading", async (t) => {
   dome.reconnectButton = btn;
   dome.parseSocketData = () => {};
   const emitter = new EventEmitter();
-  const onMock = t.mock.method(emitter, "on", () => {});
   const setupSocketFn = t.mock.fn(() => emitter);
 
   setupButtons({ client: dome, doc: window.document, setupSocketFn });
@@ -328,39 +327,26 @@ test("reconnect button reinitializes socket without reloading", async (t) => {
   globalThis.window = origWindow;
 
   assert.equal(setupSocketFn.mock.callCount(), 1);
-  assert.equal(onMock.mock.calls[0]?.arguments[0], "data");
-  assert.equal(onMock.mock.calls[0]?.arguments[1], dome.parseSocketData);
+  assert.equal(dome.socket, emitter);
   assert.equal(reloadCalled, 0);
   assert.equal(btn.disabled, false);
 });
 
-test("reconnect button replaces socket and listener", async (t) => {
+test("reconnect button delegates each connection replacement to socket setup", async (t) => {
   const { dome, setupButtons } = await setupWindow(t);
   const btn = document.createElement("button");
-  let handler;
-  btn.addEventListener = (event, fn) => { if (event === "click") handler = fn; };
   dome.reconnectButton = btn;
-  dome.parseSocketData = () => {};
   const sockets = [];
   const setupSocketFn = t.mock.fn(() => {
     const emitter = new EventEmitter();
-    emitter.disconnect = () => {};
-    t.mock.method(emitter, "disconnect");
     sockets.push(emitter);
     return emitter;
   });
 
   setupButtons({ client: dome, doc: document, setupSocketFn });
+  btn.click();
+  btn.click();
 
-  handler();
-  handler();
-  handler();
-
-  assert.equal(setupSocketFn.mock.callCount(), 3);
-  assert.equal(sockets[0].disconnect.mock.callCount(), 1);
-  assert.equal(sockets[0].listenerCount("data"), 0);
-  assert.equal(sockets[1].disconnect.mock.callCount(), 1);
-  assert.equal(sockets[1].listenerCount("data"), 0);
-  assert.equal(sockets[2].listenerCount("data"), 1);
-  assert.strictEqual(dome.socket, sockets[2]);
+  assert.deepEqual(setupSocketFn.mock.calls.map(({ arguments: args }) => args), [[{ client: dome }], [{ client: dome }]]);
+  assert.strictEqual(dome.socket, sockets[1]);
 });

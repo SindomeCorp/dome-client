@@ -1,13 +1,6 @@
 import os from "node:os";
 
-function isFiniteNumber(value) {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
 function extractSockets(server) {
-  if (!server) {
-    return null;
-  }
   if (typeof server.of === "function") {
     const namespace = server.of("/");
     if (namespace?.sockets) {
@@ -17,20 +10,17 @@ function extractSockets(server) {
   if (server.sockets?.sockets) {
     return server.sockets.sockets;
   }
-  if (server.sockets) {
-    return server.sockets;
-  }
-  return null;
+  return server.sockets;
 }
 
 function countCollection(collection) {
   if (!collection) {
     return 0;
   }
-  if (isFiniteNumber(collection.size)) {
+  if (Number.isFinite(collection.size)) {
     return collection.size;
   }
-  if (isFiniteNumber(collection.length)) {
+  if (Number.isFinite(collection.length)) {
     return collection.length;
   }
   if (typeof collection === "object") {
@@ -43,7 +33,7 @@ function countConnections(server) {
   if (!server) {
     return 0;
   }
-  if (isFiniteNumber(server.engine?.clientsCount)) {
+  if (Number.isFinite(server.engine?.clientsCount)) {
     return server.engine.clientsCount;
   }
   return countCollection(extractSockets(server));
@@ -52,16 +42,13 @@ function countConnections(server) {
 function formatCpuLoad(loadAvg) {
   const [one, five, fifteen] = Array.isArray(loadAvg) ? loadAvg : [];
   return {
-    "1m": isFiniteNumber(one) ? one : 0,
-    "5m": isFiniteNumber(five) ? five : 0,
-    "15m": isFiniteNumber(fifteen) ? fifteen : 0
+    "1m": Number.isFinite(one) ? one : 0,
+    "5m": Number.isFinite(five) ? five : 0,
+    "15m": Number.isFinite(fifteen) ? fifteen : 0
   };
 }
 
 function resolveLastRestart(startTime) {
-  if (startTime instanceof Date) {
-    return startTime.toISOString();
-  }
   if (startTime) {
     const parsed = new Date(startTime);
     if (!Number.isNaN(parsed.getTime())) {

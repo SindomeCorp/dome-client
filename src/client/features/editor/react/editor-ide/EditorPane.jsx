@@ -54,14 +54,14 @@ function EditableDocument({
             onChange={(e) => onUpdateVmsNote(tab.id, e.target.value)}
             onBlur={() => setIsVmsNoteFocused(false)}
             onFocus={() => setIsVmsNoteFocused(true)}
-            className="w-full px-3 py-2 rounded-md border border-line-subtle bg-bg-sunken text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+            className="w-full px-3 py-2 rounded-md border border-line-subtle bg-bg-sunken text-ink focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500/40"
             placeholder="Enter VMS note"
             aria-label="VMS note"
           />
         </div>
       )}
       <div
-        ref={(node) => setEditorRef(tab.id, node, tab.content, tab.command, tab.commandTarget)}
+        ref={(node) => setEditorRef(tab.id, node, tab.content, tab.command, tab.commandTarget, tab.contextScratch === true)}
         className="w-full flex-1"
       />
     </div>

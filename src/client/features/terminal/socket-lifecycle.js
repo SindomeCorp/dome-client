@@ -26,14 +26,27 @@ export function setupSocket({
   poweredByValue = globalThis.poweredBy,
   sleepFn = sleep
 } = {}) {
-  client.socket?.disconnect?.();
+  client.resetOutputStream?.();
+  client.contextMenus?.resetSession();
+  const previousSocket = client.socket;
+  client.socket = undefined;
+  previousSocket?.disconnect?.();
+  let sessionActive = false;
+  let sessionGeneration = 0;
+  const endSession = () => {
+    sessionActive = false;
+    sessionGeneration++;
+  };
   const onDisconnectedHandler = function() {
+    if (client.socket !== ioSocket) return;
+    endSession();
+    client.contextMenus?.resetSession();
     log.info("disconnected");
-    ioSocket.disconnect();
     if (client.socketState != SOCKET_STATE_ENUM.CONNECTED) {
       log.warn("disconnected before we connected!");
     }
     client.socketState = SOCKET_STATE_ENUM.DISCONNECTED;
+    ioSocket.disconnect();
     if (client.activeEditor) {
       client.activeEditor.readingContent = false;
     }
@@ -48,6 +61,10 @@ export function setupSocket({
     client.disconnectView.buttonGroup.classList.add("hide");
   };
   const onReconnectFailedHandler = function() {
+    if (client.socket !== ioSocket || sessionActive) return;
+    endSession();
+    client.resetOutputStream?.();
+    client.contextMenus?.resetSession();
     client.socketState = SOCKET_STATE_ENUM.RECONNECT_FAILED;
     ioSocket.disconnect();
     client.disconnectView.overlay.classList.remove("hide");
@@ -56,6 +73,11 @@ export function setupSocket({
 
   let initialCommand = false;
   const onConnectedHandler = async function() {
+    if (client.socket !== ioSocket || sessionActive) return;
+    sessionActive = true;
+    const generation = ++sessionGeneration;
+    const ownsSession = () => client.socket === ioSocket && generation === sessionGeneration;
+    client.contextMenus?.resetSession();
     if (client.socketState == SOCKET_STATE_ENUM.DISCONNECTED) {
       onReconnectHandler();
     }
@@ -65,33 +87,34 @@ export function setupSocket({
     if (client.inputReader) client.inputReader.focus(); // focus the cursor in the input field
     client.health?.showStatus("CONNECTED");
 
-    if (!initialCommand) {
+    if (initialCommand) return;
+    try {
       await sleepFn(2000); // delayed input to account for latency
-      let cmd;
+      if (!ownsSession()) return;
+      initialCommand = true;
       const guestCmd = storage.get("dc-initial-command");
       if (guestCmd) {
-        // remove guest auto-connect before emit so reconnect errors do not repeat forced guest login
+        // Remove guest auto-connect before emit so a reconnect does not repeat it.
         storage.remove("dc-initial-command");
         if (client.setWindowTitle) client.setWindowTitle("Guest | " + gameNameValue + " | " + poweredByValue);
-        try {
-          await emitAsync(ioSocket, "input", guestCmd);
-        } catch (err) {
-          log.error("failed to emit guest initial command", err);
+        await emitAsync(ioSocket, "input", guestCmd);
+      } else {
+        const cmd = storage.get("dc-user-login");
+        if (cmd) {
+          const who = storage.get("last-username");
+          if (who) client.alert.pattern = new RegExp(escapeRegex(who), "i");
+          if (client.setWindowTitle) client.setWindowTitle(who + " | " + gameNameValue + " | " + poweredByValue);
+          await emitAsync(ioSocket, "input", cmd);
+          if (ownsSession()) storage.remove("dc-user-login");
         }
-      } else if ((cmd = storage.get("dc-user-login"))) {
-        // user login
-        const who = storage.get("last-username");
-        if (who) client.alert.pattern = new RegExp(escapeRegex(who), "i");
-        if (client.setWindowTitle) client.setWindowTitle(who + " | " + gameNameValue + " | " + poweredByValue);
-        await emitAsync(ioSocket, "input", cmd);
-        storage.remove("dc-user-login");
       }
-      if (win.shortenEnabled !== false && client.preferences.shortenUrls) {
+      if (ownsSession() && win.shortenEnabled !== false && client.preferences.shortenUrls) {
         await emitAsync(ioSocket, "shorten-on", "shorten-on");
-        log.info("enabling short urls");
+        if (ownsSession()) log.info("enabling short urls");
       }
+    } catch (error) {
+      if (ownsSession()) log.error("failed to initialize socket session", error);
     }
-    initialCommand = true;
   };
 
   const searchParams = win ? new URLSearchParams(win.location.search || "") : new URLSearchParams();
@@ -115,17 +138,25 @@ export function setupSocket({
   });
   client.socket = ioSocket;
 
-  ioSocket.on("connected", () => {
-    onConnectedHandler();
-  });
+  ioSocket.on("connected", onConnectedHandler);
   ioSocket.on("disconnected", () => {
     onDisconnectedHandler();
   });
-  ioSocket.on("reconnect_failed", () => {
-    onReconnectFailedHandler();
+  const manager = ioSocket.io ?? ioSocket;
+  manager.on("reconnect_failed", onReconnectFailedHandler);
+  ioSocket.on("disconnect", () => {
+    if (client.socket !== ioSocket) return;
+    endSession();
+    if (client.socketState === SOCKET_STATE_ENUM.DISCONNECTED || client.socketState === SOCKET_STATE_ENUM.RECONNECT_FAILED) return;
+    client.contextMenus?.resetSession();
+    client.socketState = SOCKET_STATE_ENUM.DISCONNECTED;
+    client.resetOutputStream?.();
+  });
+  ioSocket.on("data", (part) => {
+    if (client.socket === ioSocket && sessionActive) client.parseSocketData?.(part);
   });
   ioSocket.on("error", (e) => {
-    client.health?.handleSocketError(e);
+    if (client.socket === ioSocket) client.health?.handleSocketError(e);
   });
 
   return ioSocket;

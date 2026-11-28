@@ -83,7 +83,7 @@ export function useAceEditors({
     });
   }, [wordWrap]);
 
-  const setEditorRef = (id, node, content, command, commandTarget = "") => {
+  const setEditorRef = (id, node, content, command, commandTarget = "", contextScratch = false) => {
     if (!node || editors.current[id]) return;
     if (typeof ace?.edit !== "function") return;
 
@@ -147,6 +147,7 @@ export function useAceEditors({
       if (editCommand) emitInput(editCommand);
     });
     ed.on("mousemove", (event) => {
+      if (contextScratch) return;
       if (!ideHoverOverlaysEnabled) return;
       const pos = event?.getDocumentPosition?.();
       const domEvent = event?.domEvent;

@@ -28,19 +28,22 @@ async function shortenOne(url) {
         signal: controller.signal
       }
     );
+    if (!res.ok) return null;
     const response = await res.json();
-    if (response.url && response.url === url) {
-      const protocol = config.shorten.useHttps ? "https" : "http";
-      const newUrl = `${protocol}://${config.shorten.domain}/${response.key}`;
-      shortCache.set(url, newUrl);
-      if (shortCache.size > cacheLimit) {
-        const firstKey = shortCache.keys().next().value;
-        shortCache.delete(firstKey);
-      }
-      logger.debug(url + " >> " + newUrl);
-      return newUrl;
+    if (response?.url !== url) return null;
+    const { key } = response;
+    if ((typeof key !== "string" && !Number.isFinite(key)) || String(key).trim() === "") {
+      return null;
     }
-    return null;
+    const protocol = config.shorten.useHttps ? "https" : "http";
+    const newUrl = `${protocol}://${config.shorten.domain}/${key}`;
+    shortCache.set(url, newUrl);
+    if (shortCache.size > cacheLimit) {
+      const firstKey = shortCache.keys().next().value;
+      shortCache.delete(firstKey);
+    }
+    logger.debug(url + " >> " + newUrl);
+    return newUrl;
   } catch (err) {
     if (err.name === "AbortError") {
       logger.warn("url shortener request timed out");
@@ -57,18 +60,17 @@ export async function urls(data) {
   try {
     const matches = data.match(urlRegex);
     if (!matches) return data;
-    let output = data;
-    await Promise.all(matches.map(async url => {
+    const replacements = await Promise.all(matches.map(async (url) => {
       try {
-        const newUrl = await shortenOne(url);
-        if (newUrl) {
-          output = output.replace(url, newUrl);
-        }
+        return await shortenOne(url);
       } catch (err) {
         logger.warn("failed to shorten url", err);
+        return null;
       }
     }));
-    return output;
+    // Apply results to the original match positions, regardless of completion order.
+    let index = 0;
+    return data.replace(urlRegex, (url) => replacements[index++] ?? url);
   } catch (err) {
     logger.warn("shortening urls failed", err);
     return data;

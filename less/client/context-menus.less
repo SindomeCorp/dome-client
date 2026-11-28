@@ -1,0 +1,57 @@
+::highlight(dome-context-targets) {
+  text-decoration: underline;
+}
+.context-menu-popup {
+  position: fixed;
+  z-index: 11000;
+  min-width: 190px;
+  max-width: min(360px, 95vw);
+  max-height: 80vh;
+  overflow: auto;
+  padding: 5px;
+  color: #f5f5f5;
+  background: #222;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px #0008;
+  .context-menu-group + .context-menu-group { margin-top: 5px; padding-top: 5px; border-top: 1px solid #666; }
+  .context-menu-heading { padding: 6px 12px; font-weight: bold; color: #b7d9ff; overflow-wrap: anywhere; }
+  button {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    text-align: left;
+    white-space: normal;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    &:hover, &:focus { background: #375b80; outline: 2px solid #b7d9ff; outline-offset: -2px; }
+  }
+}
+.context-menu-notice {
+  &:empty { padding: 0; border: 0; box-shadow: none; }
+  position: fixed;
+  z-index: 11001;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 90vw;
+  padding: 14px 20px;
+  border: 1px solid #ffffff40;
+  border-radius: 8px;
+  box-shadow: 0 8px 28px #0008;
+  font-size: 16px;
+  text-align: center;
+  color: #fff;
+  background: rgba(37, 65, 94, 0.9);
+  pointer-events: none;
+}
+#client-options-panel-context {
+  #context-menu-active { font-weight: bold; }
+  .context-option { display: block; margin: 12px 0; }
+  select, textarea, input[type=file] { color: #111; background: #fff; }
+  textarea { width: 100%; font-family: monospace; }
+  #context-menu-error { color: #ffbdad; white-space: pre-wrap; }
+}

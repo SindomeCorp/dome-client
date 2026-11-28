@@ -22,6 +22,7 @@
       var shortenEnabled = <%= shortenEnabled ? "true" : "false" %>;
       window.__OUTPUT_WINDOWS__ = <%- JSON.stringify(typeof outputWindows !== "undefined" ? outputWindows : { enabled: true, customRegexEnabled: true, presets: [] }).replace(/</g, "\\u003c") %>;
       window.__LOG_EXPORT_CSS__ = <%- JSON.stringify(typeof logExportCss === "string" ? logExportCss : "") %>;
+      window.__CONTEXT_MENUS__ = <%- JSON.stringify(typeof contextMenus !== "undefined" ? contextMenus : { enabled: true }).replace(/</g, "\\u003c") %>;
     </script>
     <script type="module" src="<%=decache('/js/logger.js')%>"></script>
     <link rel="stylesheet" type="text/css" href="<%=decache('/css/client.css')%>">

@@ -126,3 +126,20 @@ test("honors LOG_LEVEL and defaults to info", async (t) => {
   }
 });
 
+
+test("loads dotenv before validating declared settings", async (t) => {
+  const previousPort = process.env.NODE_PORT;
+  delete process.env.NODE_PORT;
+  t.after(() => {
+    if (previousPort === undefined) delete process.env.NODE_PORT;
+    else process.env.NODE_PORT = previousPort;
+  });
+  const config = t.mock.method(dotenv, "config", () => {
+    process.env.NODE_PORT = "8123";
+    return {};
+  });
+
+  const { default: env } = await import(`${envUrl.href}?dotenv=${Date.now()}`);
+  assert.equal(config.mock.callCount(), 1);
+  assert.equal(env.NODE_PORT, 8123);
+});

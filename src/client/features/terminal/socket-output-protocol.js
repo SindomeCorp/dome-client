@@ -26,7 +26,9 @@ function createEditorState() {
 }
 
 function findMetaIndex(segment) {
-  return segment.indexOf("#$#") === 0 ? 0 : segment.indexOf("\n#$#");
+  if (segment.startsWith("#$#")) return 0;
+  const newline = segment.indexOf("\n#$#");
+  return newline < 0 ? -1 : newline + 1;
 }
 
 function parseMetaLine(metaLine) {
@@ -84,10 +86,10 @@ function parseOverlayPayload(command, payloadRaw) {
 function parseSdwcMetaCommand(metaCommand) {
   const metaCommandNormalized = metaCommand.trim().toUpperCase();
   if (metaCommandNormalized === "SDWC-START-NOWRAP") {
-    return { event: { type: "sdwc-nowrap-start" }, isNowrapMarker: true };
+    return { event: { type: "sdwc-nowrap-start" } };
   }
   if (metaCommandNormalized === "SDWC-END-NOWRAP") {
-    return { event: { type: "sdwc-nowrap-end" }, isNowrapMarker: true };
+    return { event: { type: "sdwc-nowrap-end" } };
   }
 
   const sdwcParts = metaCommand.trim().split("%%");
@@ -97,6 +99,13 @@ function parseSdwcMetaCommand(metaCommand) {
 
   const sdwcCommand = (sdwcParts[1] || "").trim().toLowerCase();
   const sdwcPayload = sdwcParts.slice(2).join("%%").trim();
+  if (sdwcCommand === "context-profile") {
+    try {
+      const id = sdwcPayload.length <= 128 ? JSON.parse(sdwcPayload) : null;
+      return { event: { type: "context-profile", id: typeof id === "string" && /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(id) ? id : null } };
+    } catch { return { event: { type: "context-profile", id: null } }; }
+  }
+  if (sdwcCommand === "context-reset" && !sdwcPayload) return { event: { type: "context-reset" } };
   if (sdwcCommand === "verbs" && sdwcPayload) {
     return parseJsonPayload("sdwc-verbs", sdwcPayload);
   }
@@ -115,6 +124,7 @@ function parseSdwcMetaCommand(metaCommand) {
 
 export function createSocketOutputProtocolParser() {
   let carry = "";
+  let lastWasCR = false;
   let editor = createEditorState();
 
   const resetEditor = () => {
@@ -129,12 +139,21 @@ export function createSocketOutputProtocolParser() {
     resetEditor,
     reset() {
       carry = "";
+      lastWasCR = false;
       resetEditor();
     },
 
     parse(incomingSegmentRaw) {
       const events = [];
-      let segment = normalizeSocketNewlines(incomingSegmentRaw);
+      const raw = incomingSegmentRaw ?? "";
+      let segment = raw;
+      if (raw.length) {
+        // A CR already ended the preceding chunk's line. Consume only its
+        // matching LF, even if empty chunks arrived between the two bytes.
+        if (lastWasCR && raw.startsWith("\n")) segment = raw.slice(1);
+        lastWasCR = raw.endsWith("\r");
+      }
+      segment = normalizeSocketNewlines(segment);
 
       if (carry) {
         segment = carry + segment;
@@ -154,12 +173,10 @@ export function createSocketOutputProtocolParser() {
       if (editor.readingContent) {
         const terminator = findDotTerminator(segment);
         if (terminator) {
-          if (terminator.hasLeadingNewline) {
-            editor.buffer += segment.slice(0, terminator.index - 1);
-          } else {
-            editor.buffer += segment.slice(0, terminator.index);
-          }
-          events.push({ type: "editor-content", editor: { ...editor } });
+          const content = editor.buffer + segment.slice(0, terminator.index);
+          const buffer = content.endsWith("\n") ? content.slice(0, -1) : content;
+          const { editorName, uploadCommand } = editor;
+          events.push({ type: "editor-content", updateEditorList: true, editor: { editorName, uploadCommand, buffer } });
           resetEditor();
           segment = segment.slice(terminator.index + terminator.length);
           events.push({ type: "fade", message: "BUFFERING POPUP ..." });
@@ -172,13 +189,20 @@ export function createSocketOutputProtocolParser() {
 
       let metaIdx;
       while ((metaIdx = findMetaIndex(segment)) > -1) {
-        const start = metaIdx === 0 ? 0 : metaIdx + 1;
-        const end = segment.indexOf("\n", start);
+        const start = metaIdx;
+        // Emit preceding output with its newline before consuming the control
+        // line. Cutting both separators would join text to the next marker.
+        if (start) events.push({ type: "text", text: segment.slice(0, start) });
+        segment = segment.slice(start);
+        const end = segment.indexOf("\n");
         const lineEnd = end === -1 ? segment.length : end;
-        const metaLine = segment.slice(start, lineEnd);
-        const { metaCommand, editorName, uploadCommand } = parseMetaLine(metaLine);
+        const metaLine = segment.slice(0, lineEnd);
+        const command = metaLine.slice(4);
+        const editorMeta = command === "edit" || command.startsWith("edit ") ? parseMetaLine(metaLine) : null;
+        const metaCommand = editorMeta?.metaCommand ?? command;
 
         if (metaCommand === "edit") {
+          const { editorName, uploadCommand } = editorMeta;
           const termPos = findDotTerminator(segment, lineEnd + 1);
           if (termPos) {
             const bufferEnd = termPos.hasLeadingNewline ? termPos.index - 1 : termPos.index;
@@ -191,15 +215,15 @@ export function createSocketOutputProtocolParser() {
                 buffer: segment.slice(lineEnd + 1, bufferEnd)
               }
             });
-            segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) +
-              segment.slice(termPos.index + termPos.length);
+            segment = segment.slice(termPos.index + termPos.length);
           } else {
             editor.readingContent = true;
             editor.buffer += segment.slice(lineEnd + 1);
             editor.editorName = editorName;
             editor.uploadCommand = uploadCommand;
-            segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx);
+            segment = "";
           }
+          continue;
         } else if (metaCommand && metaCommand.indexOf("user") === 0) {
           const typeStart = metaLine.indexOf("user-type");
           if (typeStart > -1) {
@@ -209,27 +233,15 @@ export function createSocketOutputProtocolParser() {
               userType
             });
           }
-          segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
         } else if (metaCommand === "- PING!") {
-          segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
           events.push({ type: "ping" });
         } else if (/^\s*SDWC\b/i.test(metaCommand)) {
           const parsed = parseSdwcMetaCommand(metaCommand);
-          if (parsed.isNowrapMarker) {
-            const beforeMarker = segment.slice(0, metaIdx === 0 ? 0 : metaIdx + 1);
-            if (beforeMarker) {
-              events.push({ type: "text", text: beforeMarker });
-            }
-            events.push(parsed.event);
-            segment = segment.slice(lineEnd + 1);
-            continue;
-          }
           events.push(parsed.event);
-          segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
         } else {
           events.push({ type: "fade", message: metaCommand });
-          segment = segment.slice(0, metaIdx === 0 ? 0 : metaIdx) + segment.slice(lineEnd + 1);
         }
+        segment = segment.slice(lineEnd + 1);
       }
 
       if (segment) {

@@ -5,20 +5,17 @@ import qs from "node:querystring";
 import md5 from "md5";
 import nock from "nock";
 
-async function load(t, remoteAuth = { enabled: true, host: "http://localhost:5550", path: "/session/authenticate/", remoteSecret: "XXX" }) {
+async function load(t, remoteAuth = { enabled: true, host: "http://localhost:5550", path: "/session/authenticate/", remoteSecret: "XXX" }, { error = () => {} } = {}) {
   const configMock = t.mock.module("../../src/config/index.js", { defaultExport: { remoteAuth } });
-  const loggerMock = t.mock.module("../../src/logger.js", {
-    namedExports: {
-      named: () => ({ info() {}, error() {}, warn() {}, debug() {} })
-    }
-  });
+  const named = t.mock.fn(() => ({ info() {}, error, warn() {}, debug() {} }));
+  const loggerMock = t.mock.module("../../src/logger.js", { namedExports: { named } });
   const [{ login }, { setupAuth }] = await Promise.all([
     import(`../../src/controllers/auth.js?c=${Date.now()}`),
     import("../helpers/auth.js")
   ]);
   configMock.restore();
   loggerMock.restore();
-  return { login, setupAuth };
+  return { login, setupAuth, named };
 }
 
 test("assigns session user on success", async t => {
@@ -191,23 +188,23 @@ test("sets session error on remote error status", async t => {
   assert.strictEqual(redirect.url, "/");
 });
 
-test("handles response error", async t => {
+test("handles response error", { timeout: 5000 }, async t => {
   const { login, setupAuth } = await load(t);
   const { req, res, scope, redirect, done } = setupAuth({ error: "fail" });
   login(req, res);
   await done;
   scope.done();
-  assert.strictEqual(req.session.error, "fail");
+  assert.strictEqual(req.session.error, "fetch failed");
   assert.strictEqual(redirect.url, "/");
 });
 
-test("handles request error", async t => {
+test("handles request error", { timeout: 5000 }, async t => {
   const { login, setupAuth } = await load(t);
   const { req, res, scope, redirect, done } = setupAuth({ error: "boom" });
   login(req, res);
   await done;
   scope.done();
-  assert.strictEqual(req.session.error, "boom");
+  assert.strictEqual(req.session.error, "fetch failed");
   assert.strictEqual(redirect.url, "/");
 });
 
@@ -267,7 +264,7 @@ test("rejects payload with non-string status", async t => {
   const { login, setupAuth } = await load(t);
   const { req, res, scope, redirect, done } = setupAuth({
     status: 200,
-    response: { status: 123, user: { perms: [1] } }
+    response: { status: 123, message: "This malformed response should be rejected", user: { perms: [1] } }
   });
   login(req, res);
   await done;
@@ -325,6 +322,50 @@ test("gogogo does not auto-redirect when first char has empty name", async t => 
   await done;
   scope.done();
   assert.strictEqual(redirect.url, "/?auto=hero");
+});
+
+test("drops malformed character names without enabling automatic navigation", async t => {
+  const { login, setupAuth } = await load(t);
+  const hero = { name: "hero" };
+  const { req, res, scope, redirect } = setupAuth({
+    status: 200,
+    response: { status: "ok", user: { chars: [{ name: 123 }, {}, { name: "" }, hero] } }
+  });
+
+  await login(req, res);
+  scope.done();
+  assert.deepEqual(req.session.user.chars, [hero]);
+  assert.equal(req.session.error, undefined);
+  assert.equal(redirect.url, "/");
+});
+
+test("automatic login with no eligible character returns home without a session error", async t => {
+  const { login, setupAuth } = await load(t);
+  const { req, res, scope, redirect } = setupAuth({
+    status: 200,
+    response: { status: "ok", user: { chars: [{ name: "" }] } },
+    body: { email: "a", pass: "b", gogogo: true }
+  });
+
+  await login(req, res);
+  scope.done();
+  assert.deepEqual(req.session.user.chars, []);
+  assert.equal(req.session.error, undefined);
+  assert.equal(redirect.url, "/");
+});
+
+test("logs a transport error and provides a fallback if it has no message", async t => {
+  const error = t.mock.fn();
+  const failure = new Error();
+  const { login, setupAuth, named } = await load(t, undefined, { error });
+  t.mock.method(globalThis, "fetch", async () => { throw failure; });
+  const { req, res, redirect } = setupAuth();
+
+  await login(req, res);
+  assert.deepEqual(named.mock.calls[0].arguments, ["controllers/auth"]);
+  assert.equal(error.mock.calls[0].arguments[0], failure);
+  assert.match(req.session.error, /^Unhandled exception thrown while authenticating/);
+  assert.equal(redirect.url, "/");
 });
 
 test("handles missing request body fields safely", async t => {

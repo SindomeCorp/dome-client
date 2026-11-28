@@ -17,16 +17,17 @@ export function setupOutputParser({
   client.activeEditor = protocolParser.editorState;
   client.resetSdwcNowrapState = renderer.resetSdwcNowrapState;
   client.resetAnsiRendererState = renderer.resetAnsiRendererState;
+  let connectionGeneration = 0;
   client.resetOutputProtocol = () => {
     protocolParser.reset();
     client.activeEditor = protocolParser.editorState;
   };
   client.resetOutputStream = () => {
+    connectionGeneration++;
     const reset = () => {
-      protocolParser.reset();
+      client.resetOutputProtocol();
       renderer.resetSdwcNowrapState();
       renderer.resetAnsiRendererState();
-      client.activeEditor = protocolParser.editorState;
     };
     if (client.outputWindows) client.outputWindows.inputQueue.task(reset);
     else reset();
@@ -61,7 +62,9 @@ export function setupOutputParser({
   client.parseSocketData = (incomingSegmentRaw) => {
     if (!client.outputWindows) return parseSegment(incomingSegmentRaw);
     const windows = client.outputWindows;
+    const connection = connectionGeneration;
     windows.inputQueue.text(String(incomingSegmentRaw ?? ""), (part, context) => {
+      if (connection !== connectionGeneration) return;
       windows.withContext(context, () => parseSegment(part));
     }, windows.routeState());
   };

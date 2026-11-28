@@ -3,6 +3,9 @@ var useMinified = !debugMode;
 %>
 <% req.bodyClass = 'client'; %>
 <div id="browser-client">
+  <% if (typeof contextMenus === "undefined" || contextMenus.enabled !== false) { %>
+  <div id="context-menu-notice" class="context-menu-notice" role="status" aria-live="polite"></div>
+  <% } %>
   <%- include("partials/output-find") %>
   <div id="output-workspace" class="output-workspace" data-position="right">
     <%- include("partials/output-window-panel", { panelName: "main" }) %>

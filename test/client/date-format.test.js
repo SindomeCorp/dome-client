@@ -24,3 +24,23 @@ test("formats hours in 12-hour clock", () => {
   assert.equal(formatDate(afternoon, "hh", { useUTC: true }), "1");
 });
 
+test("local and UTC dates diverge across midnight in a non-UTC time zone", (t) => {
+  const previousTimeZone = process.env.TZ;
+  process.env.TZ = "America/New_York";
+  t.after(() => {
+    if (previousTimeZone === undefined) delete process.env.TZ;
+    else process.env.TZ = previousTimeZone;
+  });
+
+  const d = new Date("2024-01-01T01:02:03Z");
+  assert.equal(formatDate(d), "12/31/2023");
+  assert.equal(formatDate(d, "MM/dd/yy HH:mm:ss"), "12/31/23 20:02:03");
+  assert.equal(formatDate(d, "MM/dd/yyyy HH:mm:ss", { useUTC: true }), "01/01/2024 01:02:03");
+});
+
+test("formats noon and midnight with the matching period", () => {
+  const noon = new Date("2024-09-12T12:11:13Z");
+  const midnight = new Date("2024-09-12T00:11:13Z");
+  assert.equal(formatDate(noon, "MM/dd hh:mm:ss t", { useUTC: true }), "09/12 12:11:13 pm");
+  assert.equal(formatDate(midnight, "hh:mm:ss t", { useUTC: true }), "12:11:13 am");
+});

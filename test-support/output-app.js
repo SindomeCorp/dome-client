@@ -1,8 +1,8 @@
-import { renderFile } from "ejs";
+import ejs from "ejs";
 import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
 import { buildPreferenceDefaults, CLIENT_OPTION_GROUPS } from "../src/shared/client-options.js";
-import { OutputWindows } from "../src/client/features/output-windows/output-windows.js";
+import { setupOutputWindows } from "../src/client/features/output-windows/output-windows.js";
 import { handleRuleRequest } from "../src/client/features/output-windows/rule-worker.js";
 import { setupOutputParser } from "../src/client/features/terminal/output-buffer.js";
 import { setupAutoscroll } from "../src/client/features/terminal/autoscroll.js";
@@ -25,7 +25,7 @@ export async function createOutputApp(t, { config = {}, stored, workerFactory = 
     clientOptionGroups: CLIENT_OPTION_GROUPS, shortenEnabled: false,
     outputWindows: { enabled: true, customRegexEnabled: true, presets, ...config }
   };
-  const html = await renderFile(new URL("../views/client.ejs", import.meta.url).pathname, data);
+  const html = await ejs.renderFile(new URL("../views/client.ejs", import.meta.url).pathname, data);
   const dom = new JSDOM(html, { url: "https://example.com", pretendToBeVisual: true });
   const win = dom.window;
   win.confirm = () => true;
@@ -46,7 +46,7 @@ export async function createOutputApp(t, { config = {}, stored, workerFactory = 
     alert: { active: false },
     scrollBuffer() {}
   };
-  const manager = new OutputWindows({ client, doc, win, storage, logger, config: data.outputWindows, workerFactory });
+  const manager = setupOutputWindows({ client, doc, win, storage, logger, config: data.outputWindows, workerFactory });
   setupAutoscroll({ client, doc, win });
   setupOutputParser({ client, win, logger });
   const feed = async (text) => {

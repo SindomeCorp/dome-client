@@ -1,11 +1,8 @@
-import path from "node:path";
 import fs from "node:fs";
-import { fileURLToPath } from "node:url";
 import { named } from "../logger.js";
 import config from "../config/index.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const logger = named("controllers/" + path.basename(__filename, ".js"));
+const logger = named("controllers/autocomplete");
 
 const AUTOCOMPLETE = {};
 
@@ -35,9 +32,6 @@ export async function ac(usertype) {
 }
 
 export async function basic(req, res) {
-  if (!isAutocompleteEnabled()) {
-    return res.json([]);
-  }
   try {
     const cmds = await ac(req.params.type);
     return res.json(cmds);

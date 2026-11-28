@@ -145,6 +145,36 @@ Trigger from connect/login flow:
 notify(player, "#$# dome-client-user");
 ```
 
+## Selecting a logged-in user's context-menu profile
+
+After your login flow identifies a Dome webclient session, choose a profile using the logged-in user's current role/permissions. Send one standalone output line with a JSON string ID:
+
+```text
+#$# SDWC%%CONTEXT-PROFILE%%"player"
+#$# SDWC%%CONTEXT-PROFILE%%"gm"
+#$# SDWC%%CONTEXT-PROFILE%%"programmer"
+```
+
+Send only the appropriate line, not all three. In MOO code these are:
+
+```moo
+notify(player, "#$# SDWC%%CONTEXT-PROFILE%%\"player\"");
+notify(player, "#$# SDWC%%CONTEXT-PROFILE%%\"gm\"");
+notify(player, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"");
+```
+
+Integrate the appropriate notification into your existing successful login/webclient detection path. The metadata exchange above may be part of that integration, but a client-supplied marker or role ID is never proof of staff permission. Use your game's own Programmer/Support GM eligibility checks to choose the ID; actual menu commands remain subject to ordinary MOO authorization. The client sends no command in response to profile selection. A command is sent only after explicit menu activation.
+
+The built-in client registry maps `player`, `gm` and `programmer` to separate client-owned files under `data/profiles/`. IDs are case-sensitive; lowercase IDs with hyphens and underscores are supported, and those characters are distinct. Additional IDs must first be registered/loaded in the client. Never send profile bodies, regexes, templates, executable code, file paths or URLs through OOB. Unknown IDs, malformed payloads and unavailable/invalid registered files clear the previous server choice and fall back to Player or the first available profile; without a usable profile, menus are disabled.
+
+The choice lasts only for the current session. Resend the correct ID after login/reconnect and after role changes, including `player` when leaving a staff role. Before a same-connection logout or character switch, clear the old choice with:
+
+```moo
+notify(player, "#$# SDWC%%CONTEXT-RESET");
+```
+
+Then select the newly logged-in user's profile. Transport disconnect/reconnect also clears the recognized server choice automatically. The global **Options → Context Menus → Basic → Override server context menu selection** setting wins while checked; unchecking restores the latest recognized server choice for this session, or fallback. Check the durable **Active Profile** label/source when troubleshooting. `CONTEXT_MENUS_ENABLED=false`, or startup with no usable registered JSON files, disables the feature regardless of OOB or saved local overrides. See [Context Menus](CONTEXT-MENUS.md) and the [JSON authoring guide](CONTEXT-MENU-JSON.md).
+
 ## Operational Recommendations
 
 - Keep marker spelling exact; matching is literal for control markers.

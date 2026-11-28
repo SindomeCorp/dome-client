@@ -50,6 +50,7 @@ async function loadRoute(options = {}) {
 
 test("error utility logs via stub logger", async (t) => {
   const messages = { error: [], debug: [] };
+  const debug = t.mock.method(logger, "debug", () => {});
   const childMock = t.mock.method(logger, "child", () => ({
     error: msg => messages.error.push(msg),
     debug: msg => messages.debug.push(msg),
@@ -60,6 +61,8 @@ test("error utility logs via stub logger", async (t) => {
   route.error(err);
   assert.deepEqual(messages.error, [err]);
   assert.ok(messages.debug.includes("args:"));
+  assert.deepEqual(childMock.mock.calls.at(-1).arguments, [{ namespace: "controllers/socket" }]);
+  assert.match(debug.mock.calls[0].arguments[0], /Error: boom/);
   childMock.mock.restore();
 });
 
@@ -86,6 +89,7 @@ test("handles net.connect failure", async () => {
   const { socket, events } = createSocket();
   await route.connection(socket);
   assert.ok(errorLogs.some(m => m.includes("error while connecting to moo")));
+  assert.ok(errorLogs.some(m => m.includes("ERR 127.0.0.1") && m.endsWith("connect fail")));
   assert.ok(events.some(e => e[0] === "error" && e[1] === err.toString()));
   net.connect = original.connect;
   dns.promises.reverse = original.reverse;
@@ -209,6 +213,50 @@ test("connection uses query host/port only when multi-mud is enabled", async () 
   await fs.rm(metricsPath, { force: true });
 });
 
+test("disconnect during connection setup releases the transport without starting a session", async (t) => {
+  for (const stage of ["pending", "transport ready", "already disconnected"]) {
+    await t.test(stage, { timeout: 1000 }, async (t) => {
+      const mud = new EventEmitter();
+      mud.destroy = t.mock.fn();
+      t.mock.method(net, "connect", () => mud);
+      const reverse = t.mock.method(dns.promises, "reverse", async () => []);
+      const { connection } = await loadRoute({ multiMud: false, mudTlsEnabled: false });
+      const { socket, events } = createSocket();
+
+      const pending = connection(socket);
+      if (stage === "pending") socket.emit("disconnect");
+      mud.emit("connect");
+      if (stage === "transport ready") socket.emit("disconnect");
+      if (stage === "already disconnected") socket.disconnected = true;
+      await pending;
+
+      assert.equal(mud.destroy.mock.callCount(), 1);
+      assert.equal(reverse.mock.callCount(), 0);
+      assert.equal(mud.listenerCount("data"), 0);
+      assert.equal(socket.listenerCount("disconnect"), 0);
+      assert.deepEqual(events.filter(([event]) => event !== "disconnect"), []);
+    });
+  }
+});
+
+test("the socket route strips and logs Telnet negotiation while forwarding text", async (t) => {
+  const mud = new EventEmitter();
+  t.mock.method(net, "connect", () => mud);
+  t.mock.method(dns.promises, "reverse", async () => []);
+  const debug = t.mock.fn();
+  t.mock.method(logger, "child", () => ({ debug, info() {} }));
+  const { connection } = await loadRoute({ multiMud: false, mudTlsEnabled: false });
+  const { socket, events } = createSocket();
+
+  const pending = connection(socket);
+  mud.emit("connect");
+  await pending;
+  mud.emit("data", Buffer.concat([Buffer.from([255, 251, 1]), Buffer.from("fixture text")]));
+
+  assert.deepEqual(events.filter(([event]) => event === "data"), [["data", "fixture text"]]);
+  assert.ok(debug.mock.calls.some(({ arguments: [message] }) => message === "telnet iac command: WILL 1"));
+});
+
 test("connection selects TLS connector from single-MUD env config", async () => {
   const moo = new EventEmitter();
   moo.write = () => {};
@@ -234,7 +282,7 @@ test("connection selects TLS connector from single-MUD env config", async () => 
   const { socket } = createSocket();
   socket.handshake.query = { host: "example.net", port: "8888", transport_mode: "tcp" };
   const pending = route.connection(socket);
-  moo.emit("connect");
+  moo.emit("secureConnect");
   await pending;
 
   assert.equal(netCalls.length, 0);
@@ -271,7 +319,7 @@ test("connection honors multi-mud TLS query only when feature is enabled", async
   const { socket: tlsSocket } = createSocket();
   tlsSocket.handshake.query = { host: "secure.example", port: "6697", transport_mode: "tls" };
   const pendingTls = enabledRoute.connection(tlsSocket);
-  moo.emit("connect");
+  moo.emit("secureConnect");
   await pendingTls;
 
   const disabledRoute = await loadRoute({ multiMud: true, mudTlsEnabled: false });
@@ -330,7 +378,8 @@ test("logUser formats info messages", async (t) => {
   const route = await loadRoute();
   const { socket } = createSocket();
   route.logUser(socket, "HI", ["there"]);
-  assert.deepEqual(entries, ["HI 127.0.0.1 there"]);
+  route.logUser(socket);
+  assert.deepEqual(entries, ["HI 127.0.0.1 there", " 127.0.0.1"]);
   childMock.mock.restore();
 });
 
@@ -358,6 +407,22 @@ test("logError logs error details", async (t) => {
   assert.match(msg, /fail/);
   assert.equal(obj, err);
   childMock.mock.restore();
+});
+
+test("network error codes remain visible for connections without device details", async (t) => {
+  const error = t.mock.fn();
+  t.mock.method(logger, "child", () => ({ error }));
+  const route = await loadRoute();
+  const { socket } = createSocket();
+  const failure = { code: "ENOTFOUND" };
+
+  route.logError(socket, failure);
+  route.logError(socket, new Error(""));
+
+  const { arguments: [message, detail] } = error.mock.calls[0];
+  assert.equal(message, "ERR 127.0.0.1 Other 0.0.0    ENOTFOUND");
+  assert.equal(detail, failure);
+  assert.equal(error.mock.calls[1].arguments[0], "ERR 127.0.0.1 Other 0.0.0    ");
 });
 
 test("logUser handles error objects", async (t) => {
@@ -457,7 +522,7 @@ test("dns reverse handling", async (t) => {
     moo.emit("connect");
     await p;
     assert.equal(socket.hostname, "host.name");
-    assert.ok(infoLogs.some(m => m.includes("DNS") && m.includes("host.name")));
+    assert.ok(infoLogs.includes("DNS 127.0.0.1 host.name "));
     net.connect = original.connect;
     dns.promises.reverse = original.reverse;
     logger.child = original.child;
@@ -710,7 +775,7 @@ test("moo and socket events", async (t) => {
 });
 
 test("socket route connection lifecycle", async (t) => {
-  await t.test("forwards data and shortens URLs", async () => {
+  await t.test("forwards data and shortens URLs", async t => {
     const moo = new EventEmitter();
     moo.write = (data, enc, cb) => { if (cb) cb(); };
     moo.end = () => { moo.emit("end"); };
@@ -719,8 +784,17 @@ test("socket route connection lifecycle", async (t) => {
       connect: net.connect,
       reverse: dns.promises.reverse,
     };
-    net.connect = () => moo;
+    net.connect = (options, ...args) => {
+      // Leave native fetch's connection available to the HTTP interceptor.
+      if (options?.host === config.moo.host && options.port === config.moo.port) return moo;
+      return original.connect(options, ...args);
+    };
     dns.promises.reverse = async () => ["host"];
+    t.after(() => {
+      net.connect = original.connect;
+      dns.promises.reverse = original.reverse;
+      nock.cleanAll();
+    });
 
     const longUrl = "http://example.com/" + "a".repeat(60);
 
@@ -747,11 +821,7 @@ test("socket route connection lifecycle", async (t) => {
     });
     const lastData = events.filter(e => e[0] === "data").pop();
     assert.equal(lastData[1], `https://${config.shorten.domain}/abc`);
-    assert.ok(scope.isDone());
-
-    net.connect = original.connect;
-    dns.promises.reverse = original.reverse;
-    nock.cleanAll();
+    scope.done();
   });
 
   await t.test("marker response falls back to userIp when hostname is not present", async () => {
@@ -788,7 +858,7 @@ test("socket route connection lifecycle", async (t) => {
     dns.promises.reverse = original.reverse;
   });
 
-  await t.test("handles moo.write throwing based on activity", async () => {
+  await t.test("reports active write errors and ignores input after the session ends", async () => {
     const moo = new EventEmitter();
     const err = new Error("write fail");
     moo.write = () => { throw err; };
@@ -826,7 +896,7 @@ test("socket route connection lifecycle", async (t) => {
     socket.isActive = false;
     socket.emit("input", "look");
     await new Promise(r => setImmediate(r));
-    assert.equal(errorLogs.filter(m => m === err.stack).length, 2);
+    assert.equal(errorLogs.filter(m => m === err.stack).length, 1);
     assert.equal(events.filter(e => e[0] === "error").length, errorCount);
 
     net.connect = original.connect;
@@ -877,10 +947,9 @@ test("socket route connection lifecycle", async (t) => {
     moo.emit("connect");
     await p;
 
-    let writeCalled = 0;
     socket.emit("input", "@quit");
     await new Promise(r => setImmediate(r));
-    writeCalled = writes.length;
+    const writeCalled = writes.length;
 
     assert.equal(writeCalled, 1);
     assert.ok(writes.includes("@quit\r\n"));
@@ -1335,7 +1404,8 @@ test("socket route connection lifecycle", async (t) => {
     const p = route.connection(socket);
     moo.emit("connect");
     await p;
-    assert.ok(infoLogs.some(m => m.includes("5.6.7.8") && m.includes("iPhone")));
+    assert.ok(infoLogs.some(m => m.startsWith("HI ") && m.includes("5.6.7.8") && m.includes("iPhone")));
+    assert.ok(infoLogs.some(m => m.startsWith("DNS 5.6.7.8 resolved.host") && m.includes("iPhone")));
 
     const err = new Error("fail");
     moo.emit("error", err);
@@ -1390,10 +1460,7 @@ test("socket route connection lifecycle", async (t) => {
     const p = route.connection(socket);
     moo.emit("connect");
     await p;
-    const hiLog = infoLogs.find(m => m.startsWith("HI "));
-    assert.ok(hiLog);
-    const occurrences = (hiLog.match(/Other 0\.0\.0/g) || []).length;
-    assert.equal(occurrences, 1);
+    assert.ok(infoLogs.includes("HI  5.6.7.8 Other 0.0.0   "));
 
     net.connect = original.connect;
     dns.promises.reverse = original.reverse;
@@ -1404,4 +1471,33 @@ test("socket route connection lifecycle", async (t) => {
       delete config.node.socketProxied;
     }
   });
+});
+
+test("disconnect during reverse lookup closes the provisional game connection", async (t) => {
+  const lookup = Promise.withResolvers();
+  const lookupStarted = Promise.withResolvers();
+  const moo = new EventEmitter();
+  moo.destroy = t.mock.fn(() => { moo.emit("close"); });
+  t.mock.method(net, "connect", () => {
+    process.nextTick(() => moo.emit("connect"));
+    return moo;
+  });
+  t.mock.method(dns.promises, "reverse", () => {
+    lookupStarted.resolve();
+    return lookup.promise;
+  });
+  const { connection } = await loadRoute();
+  const { socket, events } = createSocket();
+  const starting = connection(socket);
+  await lookupStarted.promise;
+
+  socket.emit("disconnect", "transport close");
+  const destroyedOnDisconnect = moo.destroy.mock.callCount();
+  lookup.resolve(["old-host.fixture.invalid"]);
+  await starting;
+  moo.emit("data", Buffer.from("old output\n"));
+
+  assert.equal(destroyedOnDisconnect, 1);
+  assert.equal(Boolean(socket.isActive), false);
+  assert.equal(events.some(([event]) => event === "connected" || event === "data"), false);
 });

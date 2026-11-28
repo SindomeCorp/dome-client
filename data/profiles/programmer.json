@@ -1,0 +1,238 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "programmer-verb",
+      "priority": 300,
+      "pattern": "(?<![A-Za-z0-9_#$])(?<object>#[0-9]+|\\$[A-Za-z_][A-Za-z0-9_]*):(?<verb>[A-Za-z_][A-Za-z0-9_]*)(?![A-Za-z0-9_])",
+      "captures": {
+        "object": "object-reference",
+        "verb": "verb-name"
+      },
+      "actions": [
+        {
+          "id": "copy",
+          "label": "Copy to Clipboard",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "target"
+        },
+        {
+          "id": "command-0",
+          "label": "@edit",
+          "type": "game-command",
+          "template": "@edit ${object}:${verb}"
+        },
+        {
+          "id": "list",
+          "label": "@list",
+          "type": "game-command",
+          "template": "@list ${object}:${verb}"
+        },
+        {
+          "id": "command-1",
+          "label": "@show",
+          "type": "game-command",
+          "template": "@show ${object}:${verb}"
+        },
+        {
+          "id": "command-2",
+          "label": "@args",
+          "type": "game-command",
+          "template": "@args ${object}:${verb}"
+        },
+        {
+          "id": "command-3",
+          "label": "help",
+          "type": "game-command",
+          "template": "help ${object}:${verb}"
+        }
+      ],
+      "heading": "Verb ${object}:${verb}",
+      "relatedContexts": [
+        {
+          "rule": "programmer-object",
+          "captures": {
+            "object": "object"
+          }
+        }
+      ]
+    },
+    {
+      "id": "programmer-property",
+      "priority": 200,
+      "pattern": "(?<![A-Za-z0-9_#$])(?<object>#[0-9]+|\\$[A-Za-z_][A-Za-z0-9_]*)\\.(?<property>[A-Za-z_][A-Za-z0-9_]*)(?![A-Za-z0-9_])",
+      "captures": {
+        "object": "object-reference",
+        "property": "property-name"
+      },
+      "actions": [
+        {
+          "id": "copy",
+          "label": "Copy to Clipboard",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "target"
+        },
+        {
+          "id": "command-0",
+          "label": "@edit",
+          "type": "game-command",
+          "template": "@edit ${object}.${property}"
+        },
+        {
+          "id": "command-1",
+          "label": "@show",
+          "type": "game-command",
+          "template": "@show ${object}.${property}"
+        }
+      ],
+      "heading": "Property ${object}.${property}",
+      "relatedContexts": [
+        {
+          "rule": "programmer-object",
+          "captures": {
+            "object": "object"
+          }
+        }
+      ]
+    },
+    {
+      "id": "programmer-object",
+      "priority": 100,
+      "pattern": "(?<![A-Za-z0-9_#$])(?<object>#[0-9]+|\\$[A-Za-z_][A-Za-z0-9_]*)(?![A-Za-z0-9_])",
+      "captures": {
+        "object": "object-reference"
+      },
+      "actions": [
+        {
+          "id": "copy",
+          "label": "Copy to Clipboard",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "target"
+        },
+        {
+          "id": "command-0",
+          "label": "@show",
+          "type": "game-command",
+          "template": "@show ${object}"
+        },
+        {
+          "id": "command-1",
+          "label": "Name and Number",
+          "type": "game-command",
+          "template": ";$$string_utils:nn(${object})"
+        },
+        {
+          "id": "command-2",
+          "label": "@verbs",
+          "type": "game-command",
+          "template": "@verbs ${object}"
+        },
+        {
+          "id": "command-3",
+          "label": "@props",
+          "type": "game-command",
+          "template": "@props ${object}"
+        },
+        {
+          "id": "command-4",
+          "label": "@parents",
+          "type": "game-command",
+          "template": "@parents ${object}"
+        },
+        {
+          "id": "command-5",
+          "label": "@kids",
+          "type": "game-command",
+          "template": "@kids ${object} -lcd"
+        },
+        {
+          "id": "command-6",
+          "label": "@siblings",
+          "type": "game-command",
+          "template": "@siblings ${object}"
+        },
+        {
+          "id": "command-7",
+          "label": "@tree",
+          "type": "game-command",
+          "template": "@tree ${object}"
+        },
+        {
+          "id": "look",
+          "label": "Look",
+          "type": "game-command",
+          "template": "look ${object}"
+        }
+      ],
+      "heading": "Object ${object}",
+      "target": "${object}"
+    },
+    {
+      "id": "programmer-frame",
+      "priority": 400,
+      "pattern": "^(?:\\.\\.\\. called from )?(?<object>#[0-9]+):(?<verb>[A-Za-z_][A-Za-z0-9_]*)(?: \\(this == #-?[0-9]+\\))?, line (?<line>[1-9][0-9]{0,8})(?::[^\\r\\n]*)?$",
+      "captures": {
+        "object": "object-id",
+        "verb": "verb-name",
+        "line": "line-number"
+      },
+      "actions": [
+        {
+          "id": "copy-frame",
+          "label": "Copy Frame",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "target"
+        }
+      ]
+    },
+    {
+      "id": "programmer-channel",
+      "priority": 350,
+      "pattern": "\\[[+-]\\]\\[(?<channel>[^\\]\\r\\n]{1,128})\\]",
+      "captures": {
+        "channel": "channel-name"
+      },
+      "actions": [
+        {
+          "id": "rewind",
+          "label": "@rewind",
+          "type": "game-command",
+          "template": "@rewind ${channel}"
+        }
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "programmer",
+      "label": "Programmer",
+      "rules": [
+        "programmer-verb",
+        "programmer-property",
+        "programmer-object",
+        "programmer-frame",
+        "programmer-channel"
+      ],
+      "selectionActions": [
+        {
+          "id": "copy",
+          "label": "Copy selected text",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "selection"
+        },
+        {
+          "id": "scratch",
+          "label": "Open in Scratchpad",
+          "type": "client-action",
+          "action": "ide.open-scratch",
+          "input": "selection"
+        }
+      ]
+    }
+  ]
+}

@@ -1,22 +1,17 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { named } from "../logger.js";
 import qs from "node:querystring";
 import md5 from "md5";
 import config from "../config/index.js";
 import { sessionError } from "./session-error.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const logger = named("controllers/" + path.basename(__filename, ".js"));
+const logger = named("controllers/auth");
 
 function hasValidAuthShape(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
+  // Only an object from the JSON response can provide a named status field.
+  if (typeof value?.status !== "string") {
     return false;
   }
-  if (typeof value.status !== "string") {
-    return false;
-  }
-  if (value.status === "ok" && (value.user === undefined || typeof value.user !== "object" || Array.isArray(value.user) || value.user === null)) {
+  if (value.status === "ok" && (value.user === null || typeof value.user !== "object" || Array.isArray(value.user))) {
     return false;
   }
   if (value.message !== undefined && typeof value.message !== "string") {
@@ -61,7 +56,7 @@ export async function login(req, res) {
     }
     let dest = "/";
     if (authJSON.status == "ok") {
-      const remoteUser = authJSON.user && typeof authJSON.user === "object" ? authJSON.user : {};
+      const remoteUser = authJSON.user;
       const chars = Array.isArray(remoteUser.chars)
         ? remoteUser.chars.filter(char => char && typeof char.name === "string" && char.name.length)
         : [];

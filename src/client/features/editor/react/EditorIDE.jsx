@@ -170,6 +170,14 @@ export default function EditorIDE() {
   };
 
   const addTab = (editor) => {
+    if (editor.contextScratch === true) {
+      if (!ideScratchEnabled) {
+        window.opener?.postMessage({ type: "ide-scratch-unavailable" }, window.location.origin);
+        return;
+      }
+      const title = "Temporary Scratch Pad";
+      editor = { contextScratch: true, editorName: title, name: "selection-scratch-" + crypto.randomUUID(), uploadCommand: "@scratch " + title, buffer: String(editor.buffer ?? "") };
+    }
     setHoverOverlay(null);
     pendingOverlayKey.current = "";
     const plan = buildOpenTabPlan(editor, documents);

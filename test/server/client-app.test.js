@@ -1,7 +1,6 @@
 /* eslint indent: ["error", 2], quotes: ["error", "double"], semi: ["error", "always"] */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import path from "node:path";
 import { EventEmitter } from "node:events";
 
 async function loadClientApp(t, config, options = {}) {
@@ -77,7 +76,6 @@ async function loadClientApp(t, config, options = {}) {
   };
 
   let middlewareFns = [];
-  let lessOptions;
   let morganStream;
   let morganSkip;
   let disable;
@@ -160,12 +158,6 @@ async function loadClientApp(t, config, options = {}) {
       return () => {};
     }
   }));
-  mockCtxs.push(mock.module("../../src/middleware/less-middleware.js", {
-    defaultExport: (dir, opts) => {
-      lessOptions = opts;
-      return () => {};
-    }
-  }));
   mockCtxs.push(mock.module("../../src/services/ua.js", {
     namedExports: {
       deviceCapture() { return () => {}; },
@@ -193,7 +185,7 @@ async function loadClientApp(t, config, options = {}) {
     error: mock.fn()
   };
   mockCtxs.push(mock.module("../../src/controllers/socket.js", { namedExports: socketHandlers }));
-  mockCtxs.push(mock.module("../../src/controllers/status.js", { namedExports: { get() {} } }));
+  mockCtxs.push(mock.module("../../src/controllers/status.js", { namedExports: { get() {}, startStatusPolling() {}, stopStatusPolling() {} } }));
   mockCtxs.push(mock.module("../../src/controllers/save.js", { namedExports: { log() {} } }));
   mockCtxs.push(mock.module("../../src/controllers/auth.js", {
     namedExports: {
@@ -208,7 +200,11 @@ async function loadClientApp(t, config, options = {}) {
   try {
     const appModule = await import(importPath);
     stop = appModule.stop;
-    await appModule.start();
+    if (options.startError) {
+      await assert.rejects(appModule.start(), options.startError);
+      assert.equal(httpListen.mock.calls.length, 0);
+      assert.equal(httpsListen.mock.calls.length, 0);
+    } else await appModule.start();
     if (global.__coverage__) {
       const current = global.__coverage__[importPath];
       if (current) {
@@ -246,11 +242,8 @@ async function loadClientApp(t, config, options = {}) {
     res.locals.showReporter({ headers: {} });
     res.locals.showReporter({ headers: { "user-agent": "MSAppHost" } });
   }
-  if (lessOptions && lessOptions.preprocess && lessOptions.preprocess.path) {
-    lessOptions.preprocess.path("a" + path.sep + "css" + path.sep + "b");
-  }
   const handler = process.listeners("uncaughtException").at(-1);
-  if (handler) {
+  if (!options.startError && handler) {
     handler(new Error("boom"));
     process.removeListener("uncaughtException", handler);
   }
@@ -559,7 +552,7 @@ test("servers listen on configured ip when provided", async (t) => {
   assert.deepStrictEqual(httpsListen.mock.calls[0].arguments.slice(0, 2), [3443, "127.0.0.1"]);
 });
 
-test("logs error when asset build fails", async (t) => {
+test("server startup rejects a failed required asset build without listening", async (t) => {
   const config = {
     node: {
       mode: "production",
@@ -577,11 +570,7 @@ test("logs error when asset build fails", async (t) => {
 
   const err = new Error("fail");
   const build = t.mock.fn(() => Promise.reject(err));
-  const { loggerError } = await loadClientApp(t, config, { build });
-  await Promise.resolve();
-  assert.ok(loggerError.mock.calls.some((c) => c.arguments[0] === "asset build failed" && c.arguments[1] === err));
-  build.mock.restore();
-  loggerError.mock.restore();
+  await loadClientApp(t, config, { build, startError: err });
 });
 
 test("start resolves when servers listen", async (t) => {
@@ -685,7 +674,7 @@ test("start skips https listen when ssl missing", async (t) => {
   assert.strictEqual(httpsListen.mock.calls.length, 0);
 });
 
-test("logs errors when build and autocomplete check fail", async (t) => {
+test("logs an autocomplete file failure without preventing startup", async (t) => {
   const config = {
     node: {
       mode: "development",
@@ -701,14 +690,11 @@ test("logs errors when build and autocomplete check fail", async (t) => {
     heap: {},
   };
 
-  const err = new Error("fail");
   const { loggerError } = await loadClientApp(t, config, {
-    build: () => Promise.reject(err),
     readFileError: true,
   });
   await Promise.resolve();
   const msgs = loggerError.mock.calls.map((c) => c.arguments[0]);
-  assert.ok(msgs.includes("asset build failed"));
   assert.ok(msgs.includes("error while checking for autocomplete file "));
 });
 

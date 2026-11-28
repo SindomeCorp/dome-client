@@ -1,7 +1,6 @@
 import net from "node:net";
 import tls from "node:tls";
 import dns from "node:dns";
-import path from "node:path";
 import { parse } from "../services/ua.js";
 import config from "../config/index.js";
 import { named, inspect } from "../logger.js";
@@ -14,10 +13,8 @@ import { forwardMudData } from "../services/socket-data-flow.js";
 import { createTelnetIacProcessor } from "../services/telnet-iac-processor.js";
 import { bindSocketSession } from "../services/socket-session.js";
 import { handleTelnetIacEvent } from "./telnet-iac.js";
-import { fileURLToPath } from "node:url";
 
-const __filename = fileURLToPath(import.meta.url);
-const logger = named("controllers/" + path.basename(__filename, ".js"));
+const logger = named("controllers/socket");
 
 export function error(err) {
   logger.error(err);
@@ -25,14 +22,14 @@ export function error(err) {
   inspect(arguments);
 }
 
-const SOCKET_PROXIED = config.node?.socketProxied ?? false;
-const SHORTEN_ENABLED = config.shorten?.enabled ?? true;
-const MULTI_MUD_ENABLED = config.node?.multiMud === true;
-const MUD_TLS_ENABLED = config.moo?.tlsEnabled === true;
+const SOCKET_PROXIED = config.node.socketProxied;
+const SHORTEN_ENABLED = config.shorten.enabled;
+const MULTI_MUD_ENABLED = config.node.multiMud;
+const MUD_TLS_ENABLED = config.moo.tlsEnabled;
 
 export function userIp(socket) {
   let handshakeAddress = socket.handshake.address;
-  if (typeof handshakeAddress === "object" && Object.prototype.hasOwnProperty.call(handshakeAddress, "address")) {
+  if (Object.hasOwn(handshakeAddress, "address")) {
     handshakeAddress = handshakeAddress.address;
   }
   const tempAddress = SOCKET_PROXIED ? (socket.handshake.headers["x-forwarded-for"] || handshakeAddress) : handshakeAddress;
@@ -59,7 +56,6 @@ export function logError(socket, err) {
 }
 
 export async function connection(socket) {
-  socket.isActive = true;
   socket.logger = logger;
   socket.logUser = logUser;
   socket.logError = logError;
@@ -70,24 +66,56 @@ export async function connection(socket) {
     mudTlsEnabled: MUD_TLS_ENABLED
   });
   socket.gameAddress = gameAddress;
+  const pendingConnection = new AbortController();
   let moo;
+  const cancelConnection = () => {
+    pendingConnection.abort();
+    moo?.destroy?.();
+  };
+  socket.once("disconnect", cancelConnection);
   try {
     moo = await connectToMud({
       host: gameAddress.host,
       port: gameAddress.port,
       useTls: gameAddress.useTls,
+      signal: pendingConnection.signal,
       timeoutMs: DEFAULT_SOCKET_CONNECT_TIMEOUT_MS,
       netConnect: net.connect,
       tlsConnect: tls.connect
     });
   } catch (err) {
+    if (pendingConnection.signal.aborted) return;
     logger.error("error while connecting to moo");
     logError(socket, err);
     socket.emit("error", err.toString());
     return;
+  } finally {
+    if (!moo) socket.removeListener("disconnect", cancelConnection);
+  }
+  if (pendingConnection.signal.aborted || socket.disconnected === true) {
+    socket.removeListener("disconnect", cancelConnection);
+    moo.destroy();
+    return;
   }
 
-  const onConnect = async () => {
+  const onEarlyUpstreamEnd = () => {
+    if (pendingConnection.signal.aborted) return;
+    pendingConnection.abort();
+    socket.emit("disconnected");
+  };
+  moo.once("end", onEarlyUpstreamEnd);
+  moo.once("close", onEarlyUpstreamEnd);
+  bindSocketSession({
+    socket,
+    moo,
+    logger,
+    poweredBy: config.node.poweredBy,
+    shortenEnabled: SHORTEN_ENABLED,
+    logUser,
+    logError
+  });
+  // Keep cancellation active through DNS. A late lookup must not revive this socket.
+  try {
     recordConnection(gameAddress.host, gameAddress.port, gameAddress.useTls);
     const address = userIp(socket);
     const userAgent = parse(socket.handshake.headers["user-agent"]);
@@ -100,7 +128,7 @@ export async function connection(socket) {
     socket.hostname = address;
     try {
       const domains = await dns.promises.reverse(address);
-      if (domains && domains.length) {
+      if (!pendingConnection.signal.aborted && domains && domains.length) {
         socket.hostname = domains[0];
         logUser(socket, "DNS", [
           socket.hostname,
@@ -108,18 +136,19 @@ export async function connection(socket) {
         ]);
       }
     } catch (err) {
-      dnsErrorHandler(err, socket, address);
+      if (!pendingConnection.signal.aborted) dnsErrorHandler(err, socket, address);
     }
-    socket.isActive = true;
-    socket.emit("connected", new Date().toString());
-  };
-  await onConnect();
+  } finally {
+    socket.removeListener("disconnect", cancelConnection);
+    moo.removeListener("end", onEarlyUpstreamEnd);
+    moo.removeListener("close", onEarlyUpstreamEnd);
+  }
+  if (pendingConnection.signal.aborted) return;
 
   const telnetIacProcessor = createTelnetIacProcessor({
     onEvent: handleTelnetIacEvent,
     logger
   });
-
   moo.on("data", async function(data) {
     await forwardMudData({
       data,
@@ -132,14 +161,6 @@ export async function connection(socket) {
       telnetIacProcessor
     });
   });
-
-  bindSocketSession({
-    socket,
-    moo,
-    logger,
-    poweredBy: config.node.poweredBy,
-    shortenEnabled: SHORTEN_ENABLED,
-    logUser,
-    logError
-  });
+  socket.isActive = true;
+  socket.emit("connected", new Date().toString());
 }

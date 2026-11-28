@@ -1,6 +1,25 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss" source(none);
+@source "./";
+
+@theme inline {
+  --color-bg-canvas: rgb(var(--bg-canvas));
+  --color-bg-surface: rgb(var(--bg-surface));
+  --color-bg-sunken: rgb(var(--bg-sunken));
+  --color-bg-raised: rgb(var(--bg-raised, var(--bg-surface)));
+  --color-ink: rgb(var(--ink));
+  --color-ink-muted: rgb(var(--ink-muted));
+  --color-ink-invert: rgb(var(--ink-invert));
+  --color-line-subtle: rgb(var(--line-subtle));
+  --color-line-strong: rgb(var(--line-strong));
+  --color-brand-500: rgb(var(--brand-500));
+  --color-brand-600: rgb(var(--brand-600));
+}
+
+@theme {
+  --color-warn-500: #f59e0b;
+  --color-ok-500: #10b981;
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
 
 /* ---- IDE theme variables (light & dark) ----
    These back the Tailwind tokens used in JSX (bg-*, ink-*, line-*, brand-*). */

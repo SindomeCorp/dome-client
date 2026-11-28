@@ -1,9 +1,9 @@
+import { store } from "./store.js";
 import { logger } from "./constants.js";
 import {
-  store,
   clientOptions,
   setClientOptionsActions
-} from "../entrypoints/client-options.js";
+} from "../features/options/client-options-runtime.js";
 import { createClientOptionsController } from "../features/options/client-options-controller.js";
 import { setupAutoscroll } from "../features/terminal/autoscroll.js";
 import { setupAutoCompleteFeature } from "../features/terminal/autocomplete.js";

@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "gm-verb",
+      "priority": 300,
+      "pattern": "(?<![A-Za-z0-9_#])(?<object>#[0-9]+):(?<verb>[A-Za-z_][A-Za-z0-9_]*)(?![A-Za-z0-9_])",
+      "captures": {
+        "object": "object-id",
+        "verb": "verb-name"
+      },
+      "actions": [
+        {
+          "id": "copy",
+          "label": "Copy to Clipboard",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "target"
+        }
+      ],
+      "heading": "Verb ${object}:${verb}",
+      "relatedContexts": [
+        {
+          "rule": "gm-object",
+          "captures": {
+            "object": "object"
+          }
+        }
+      ]
+    },
+    {
+      "id": "gm-property",
+      "priority": 200,
+      "pattern": "(?<![A-Za-z0-9_#])(?<object>#[0-9]+)\\.(?<property>[A-Za-z_][A-Za-z0-9_]*)(?![A-Za-z0-9_])",
+      "captures": {
+        "object": "object-id",
+        "property": "property-name"
+      },
+      "actions": [
+        {
+          "id": "copy",
+          "label": "Copy to Clipboard",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "target"
+        }
+      ],
+      "heading": "Property ${object}.${property}",
+      "relatedContexts": [
+        {
+          "rule": "gm-object",
+          "captures": {
+            "object": "object"
+          }
+        }
+      ]
+    },
+    {
+      "id": "gm-object",
+      "priority": 100,
+      "pattern": "(?<![A-Za-z0-9_#])(?<object>#[0-9]+)(?![A-Za-z0-9_])",
+      "captures": {
+        "object": "object-id"
+      },
+      "actions": [
+        {
+          "id": "copy",
+          "label": "Copy to Clipboard",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "target"
+        },
+        {
+          "id": "command-0",
+          "label": "@parents",
+          "type": "game-command",
+          "template": "@parents ${object}"
+        },
+        {
+          "id": "command-1",
+          "label": "@kids",
+          "type": "game-command",
+          "template": "@kids ${object}"
+        },
+        {
+          "id": "command-2",
+          "label": "@notes",
+          "type": "game-command",
+          "template": "@notes ${object}"
+        },
+        {
+          "id": "look",
+          "label": "Look",
+          "type": "game-command",
+          "template": "look ${object}"
+        }
+      ],
+      "heading": "Object ${object}",
+      "target": "${object}"
+    },
+    {
+      "id": "gm-channel",
+      "priority": 350,
+      "pattern": "\\[[+-]\\]\\[(?<channel>[^\\]\\r\\n]{1,128})\\]",
+      "captures": {
+        "channel": "channel-name"
+      },
+      "actions": [
+        {
+          "id": "rewind",
+          "label": "@rewind",
+          "type": "game-command",
+          "template": "@rewind ${channel}"
+        }
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "gm",
+      "label": "GM",
+      "rules": [
+        "gm-verb",
+        "gm-property",
+        "gm-object",
+        "gm-channel"
+      ],
+      "selectionActions": [
+        {
+          "id": "copy",
+          "label": "Copy selected text",
+          "type": "client-action",
+          "action": "clipboard.copy",
+          "input": "selection"
+        },
+        {
+          "id": "scratch",
+          "label": "Open in Scratchpad",
+          "type": "client-action",
+          "action": "ide.open-scratch",
+          "input": "selection"
+        }
+      ]
+    }
+  ]
+}

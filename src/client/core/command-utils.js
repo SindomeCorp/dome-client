@@ -1,5 +1,5 @@
 export function parseCommand(commandString = "") {
-  const [command = "", ...rest] = commandString.trim().split(/\s+/);
+  const [command, ...rest] = commandString.trim().split(/\s+/);
   return { command, commandTarget: rest.join(" ") };
 }
 
@@ -21,11 +21,5 @@ export function getCommandLabel(commandString = "", editorName = "") {
   ) {
     return commandTarget;
   }
-  if (command === "@grep") {
-    return `${command} ${commandTarget}`.trim();
-  }
-  if (command) {
-    return `${command} ${commandTarget}`.trim();
-  }
-  return "";
+  return `${command} ${commandTarget}`.trim();
 }

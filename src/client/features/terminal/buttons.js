@@ -1,6 +1,6 @@
 import { logger } from "../../core/constants.js";
 import { setupSocket } from "./socket-lifecycle.js";
-import { refreshClientOptions } from "../../entrypoints/client-options.js";
+import { refreshClientOptions } from "../options/client-options-controls.js";
 import {
   bindClearBufferControls,
   bindCloseButton,

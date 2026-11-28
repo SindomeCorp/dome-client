@@ -91,6 +91,8 @@ test("recordConnection ignores invalid host/port values", async (t) => {
     svc.recordConnection("host", 65536);
     svc.recordConnection("host", "not-a-port");
     svc.recordConnection("host", null);
+    svc.recordConnection("", 5555, true);
+    svc.recordConnection("host", 22, true);
 
     const stats = svc.connectedStats();
     assert.equal(stats.count, 0);
@@ -179,6 +181,49 @@ test("loadMetrics coerces count and rejects non-object games containers", async 
   });
 });
 
+test("the first connection after restart preserves normalized historical counts", async (t) => {
+  await withMetricsPath(t, "restart", async ({ svc, metricsPath }) => {
+    await fs.writeFile(metricsPath, JSON.stringify({
+      count: 7,
+      games: {
+        "Example.org:7777": 2,
+        "example.org:7777|tcp": 1,
+        "a:23": 1,
+        "example.org:7777|tls": 3,
+        "7777": 64,
+        ":7777": 64,
+        "example.org:22": 64
+      }
+    }), "utf8");
+
+    svc.recordConnection("EXAMPLE.ORG", 7777);
+    assert.deepEqual(svc.connectedStats(), {
+      count: 8,
+      games: [tcpEntry("example.org:7777", 4), tlsEntry("example.org:7777", 3), tcpEntry("a:23", 1)]
+    });
+    assert.deepEqual(JSON.parse(await fs.readFile(metricsPath, "utf8")), {
+      count: 8,
+      games: { "example.org:7777": 4, "example.org:7777|tls": 3, "a:23": 1 }
+    });
+  });
+});
+
+test("persists the first connection when parent directories are missing", async (t) => {
+  await withMetricsPath(t, "create-parent", async ({ svc, metricsPath }) => {
+    const root = await fs.mkdtemp(`${metricsPath}-`);
+    t.after(() => fs.rm(root, { recursive: true, force: true }));
+    const nestedPath = path.join(root, "one", "two", "metrics.json");
+    svc.setMetricsPathForTests(nestedPath);
+
+    svc.recordConnection("example.org", 7777);
+
+    assert.deepEqual(JSON.parse(await fs.readFile(nestedPath, "utf8")), {
+      count: 1,
+      games: { "example.org:7777": 1 }
+    });
+  });
+});
+
 test("setMetricsPathForTests resets in-memory metrics", async (t) => {
   await withMetricsPath(t, "reset-hook", async ({ svc, metricsPath }) => {
     svc.recordConnection("one.example", 4444);
@@ -196,13 +241,16 @@ test("setMetricsPathForTests resets in-memory metrics", async (t) => {
   });
 });
 
-async function loadServiceWithMocks(t, { fsMock, loggerMock, tag }) {
+async function loadServiceWithMocks(t, { fsMock, loggerMock, tag, captureNamespace = () => {} }) {
   t.mock.module("node:fs", {
     defaultExport: fsMock
   });
   t.mock.module("../../src/logger.js", {
     namedExports: {
-      named: () => loggerMock
+      named(namespace) {
+        captureNamespace(namespace);
+        return loggerMock;
+      }
     }
   });
   const svc = await import(`../../src/services/multi-mud-metrics.js?mocked=${tag}-${Date.now()}-${Math.random()}`);
@@ -211,6 +259,51 @@ async function loadServiceWithMocks(t, { fsMock, loggerMock, tag }) {
   });
   return svc;
 }
+
+test("reads the documented metrics file once per service instance", async (t) => {
+  const readFileSync = t.mock.fn(() => JSON.stringify({ count: 1 }));
+  const captureNamespace = t.mock.fn();
+  const logger = { warn: t.mock.fn() };
+  const svc = await loadServiceWithMocks(t, {
+    fsMock: { existsSync: () => true, readFileSync },
+    loggerMock: logger,
+    tag: "default-read",
+    captureNamespace
+  });
+
+  assert.deepEqual(svc.connectedStats(), { count: 1, games: [] });
+  assert.deepEqual(svc.connectedStats(), { count: 1, games: [] });
+  assert.equal(readFileSync.mock.callCount(), 1);
+  assert.deepEqual(captureNamespace.mock.calls[0].arguments, ["services/multi-mud-metrics"]);
+  assert.equal(readFileSync.mock.calls[0].arguments[0], path.join(process.cwd(), "data", "multi-mud-metrics.json"));
+  assert.equal(logger.warn.mock.callCount(), 0);
+});
+
+test("absent, empty and null metrics start without read warnings", async (t) => {
+  for (const [name, exists, raw] of [
+    ["absent", false, undefined],
+    ["empty", true, ""],
+    ["whitespace", true, "  \n "],
+    ["null", true, "null"]
+  ]) {
+    await t.test(name, async (t) => {
+      const readFileSync = t.mock.fn(() => {
+        if (!exists) throw new Error("file is absent");
+        return raw;
+      });
+      const logger = { warn: t.mock.fn() };
+      const svc = await loadServiceWithMocks(t, {
+        fsMock: { existsSync: () => exists, readFileSync },
+        loggerMock: logger,
+        tag: name
+      });
+
+      assert.deepEqual(svc.connectedStats(), { count: 0, games: [] });
+      assert.equal(readFileSync.mock.callCount(), exists ? 1 : 0);
+      assert.equal(logger.warn.mock.callCount(), 0);
+    });
+  }
+});
 
 test("loadMetrics read failure uses logger.warn when available", async (t) => {
   const logger = { warn: t.mock.fn(), error: t.mock.fn() };
@@ -247,6 +340,18 @@ test("loadMetrics read failure falls back to logger.error when warn is missing",
   assert.equal(logger.error.mock.calls[0].arguments[0], "Unable to load multi-mud metrics from disk");
 });
 
+test("unreadable metrics start empty even if the logger has no warn or error method", async (t) => {
+  const svc = await loadServiceWithMocks(t, {
+    fsMock: {
+      existsSync: () => true,
+      readFileSync: () => { throw new Error("read fixture"); }
+    },
+    loggerMock: {},
+    tag: "noop-read"
+  });
+  assert.deepEqual(svc.connectedStats(), { count: 0, games: [] });
+});
+
 test("saveMetrics write failure does not throw when logger has no warn/error", async (t) => {
   const logger = {};
   const fsMock = {
@@ -280,4 +385,23 @@ test("saveMetrics rename failure logs through warn fallback path", async (t) => 
   assert.equal(logger.warn.mock.callCount(), 1);
   assert.equal(logger.error.mock.callCount(), 0);
   assert.equal(logger.warn.mock.calls[0].arguments[0], "Unable to persist multi-mud metrics to disk");
+});
+
+test("logs a persistence failure through error when warn is unavailable", async (t) => {
+  const failure = new Error("disk fixture");
+  const logger = { error: t.mock.fn() };
+  const svc = await loadServiceWithMocks(t, {
+    fsMock: {
+      existsSync: () => true,
+      readFileSync: () => "{}",
+      writeFileSync: () => { throw failure; }
+    },
+    loggerMock: logger,
+    tag: "error-write"
+  });
+
+  svc.recordConnection("example.org", 7777);
+
+  assert.deepEqual(svc.connectedStats(), { count: 1, games: [tcpEntry("example.org:7777", 1)] });
+  assert.deepEqual(logger.error.mock.calls[0].arguments, ["Unable to persist multi-mud metrics to disk", failure]);
 });

@@ -73,7 +73,8 @@ test("client-connect flow integration: auto query connects known stored user and
     + "<div id=\"user-picker\" class=\"hide\">"
     + "<button class=\"dropdown-toggle\"></button>"
     + "<span class=\"user-picker-label\"></span>"
-    + "<ul class=\"dropdown-menu\"><li class=\"divider\"></li></ul>"
+    + "<ul class=\"dropdown-menu\"><li class=\"divider\"></li>"
+    + "<li class=\"command\" data-command=\"newChar\">Add Character</li></ul>"
     + "</div>"
     + "<a class=\"btn-connect-guest\" href=\"/player-client/\"></a>"
     + "<a class=\"btn-connect-other\" href=\"/player-client/\"></a>"
@@ -104,4 +105,11 @@ test("client-connect flow integration: auto query connects known stored user and
   assert.equal(memory.get("dc-user-login"), "connect hero pass");
   assert.equal(memory.get("game-hostname"), "moo.sindome.org");
   assert.equal(memory.get("game-port"), "5555");
+
+  const prompt = t.mock.method(window, "prompt", () => null);
+  window.document.querySelector("[data-command=newChar]").click();
+  assert.ok(prompt.mock.callCount() > 0);
+  assert.equal(window.document.querySelector(".user-picker-label").textContent, "hero");
+  assert.equal(window.document.getElementById("moo-username").value, "hero");
+  assert.equal(window.document.getElementById("moo-password").value, "pass");
 });

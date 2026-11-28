@@ -2,6 +2,13 @@ import { SOCKET_STATE_ENUM } from "./constants.js";
 
 export const installDomeBridge = ({ client, win = globalThis.window, hasNativeBridge = false }) => {
   win.DomeBridge = {
+    onSessionChange(state) {
+      if (!["connected", "disconnected", "logout", "character-changed"].includes(state)) return;
+      client.contextMenus?.resetSession();
+      client.resetOutputStream?.();
+      if (state === "connected") client.socketState = SOCKET_STATE_ENUM.CONNECTED;
+      if (state === "disconnected") client.socketState = SOCKET_STATE_ENUM.DISCONNECTED;
+    },
     onData(payload) {
       if (typeof client.parseSocketData === "function") {
         client.parseSocketData(String(payload ?? ""));
@@ -54,7 +61,7 @@ export const notifyNativeBridgeReady = ({ win = globalThis.window }) => {
   if (win.DomeNative && typeof win.DomeNative.bridgeReady === "function") {
     try {
       win.DomeNative.bridgeReady();
-    } catch (err) {
+    } catch {
       // Ignore bridge ready handshake failures.
     }
   }
@@ -62,7 +69,7 @@ export const notifyNativeBridgeReady = ({ win = globalThis.window }) => {
   if (typeof win.DomeNativeFlushQueuedEvents === "function") {
     try {
       win.DomeNativeFlushQueuedEvents();
-    } catch (err) {
+    } catch {
       // Ignore queue flush failures so the client can continue initializing.
     }
   }
@@ -84,7 +91,6 @@ export const startClientSocket = ({
 
   win.setTimeout(function() {
     client.socket = features.setupSocket({ client, doc, win });
-    client.socket.on("data", client.parseSocketData);
   }, 500);
   return null;
 };

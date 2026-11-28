@@ -205,6 +205,12 @@ test("media mounts once and remounting historical rows does not retrigger alerts
 });
 
 test("slow routing cannot retain a pruned backlog or delay current output behind discarded batches", async (t) => {
+  const realSetTimeout = globalThis.setTimeout;
+  // This worker only responds manually. Keep its watchdog from racing a slow test host.
+  t.mock.method(globalThis, "setTimeout", (callback, delay, ...args) => {
+    if (delay === 1000) return {};
+    return realSetTimeout(callback, delay, ...args);
+  });
   const sent = [];
   let worker;
   const { manager, client } = await createOutputApp(t, { workerFactory: () => worker = {
@@ -419,7 +425,7 @@ test("closing through either split button or layout options requires confirmatio
   await manager.idle();
   assert.equal(manager.isSplitOpen(), false);
   assert.equal(manager.views.main.index.length, 2);
-  assert.deepEqual([...doc.querySelectorAll(".client-options-tab")].map((tab) => tab.textContent), ["General", "Presentation", "Local Editor", "Output Windows", "Import/Export"]);
+  assert.deepEqual([...doc.querySelectorAll(".client-options-tab")].map((tab) => tab.textContent), ["General", "Presentation", "Local Editor", "Context Menus", "Output Windows", "Import/Export"]);
   assert.equal(doc.querySelector("#output-main-panel header"), null);
 });
 

@@ -272,7 +272,7 @@ async function renderEditorIde(t, attributes = {}) {
 
 async function postIdeMessage(window, data) {
   await act(async () => {
-    window.dispatchEvent(new window.MessageEvent("message", { data }));
+    window.dispatchEvent(new window.MessageEvent("message", { data, source: window.opener, origin: window.location.origin }));
   });
 }
 
@@ -311,6 +311,49 @@ async function openTab(window, editor) {
     assert.ok(getTabs(window).includes(editor.editorName));
   });
 }
+
+test("selection scratchpads start unsaved, preserve two selections, warn on immediate close and write only on Save", async (t) => {
+  const { window, emit } = await renderEditorIde(t);
+  window.opener = { postMessage() {} };
+  const first = "\n@quit\n#123:look\n;selected_text()\n.\n";
+  await postIdeMessage(window, { type: "ide-open-tab", editor: { contextScratch: true, buffer: first } });
+  assert.deepEqual(getTabs(window), ["Temporary Scratch Pad"]);
+  assert.equal(globalThis.__editorIdeAceEditors[0].getValue(), first);
+  assert.match(window.document.body.textContent, /Unsaved/);
+  const firstEditor = globalThis.__editorIdeAceEditors[0];
+  await act(async () => {
+    firstEditor.emitEditorEvent("mousemove", { getDocumentPosition: () => ({ row: 2, column: 3 }), domEvent: { clientX: 20, clientY: 20 } });
+    firstEditor.setTestValue("changed");
+    firstEditor.setTestValue(first);
+  });
+  assert.match(window.document.body.textContent, /Unsaved/, "undoing to the prefill is still unsaved");
+  assert.equal(emit.mock.callCount(), 0);
+  const confirm = t.mock.method(window, "confirm", () => false);
+  await click(window, getButtonByText(window, "Close"));
+  assert.equal(confirm.mock.callCount(), 1);
+  assert.equal(getTabs(window).length, 1);
+  const unload = new window.Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(unload);
+  assert.equal(unload.defaultPrevented, true);
+  await postIdeMessage(window, { type: "ide-open-tab", editor: { contextScratch: true, buffer: "second selection" } });
+  assert.equal(getTabs(window).length, 2);
+  assert.equal(globalThis.__editorIdeAceEditors[0].getValue(), first);
+  assert.equal(globalThis.__editorIdeAceEditors[1].getValue(), "second selection");
+  assert.equal(emit.mock.callCount(), 0);
+  await click(window, getButtonByText(window, "Save"));
+  assert.deepEqual(emit.mock.calls.map((call) => call.arguments), [["input", "@scratch Temporary Scratch Pad"], ["input", "second selection\n."]]);
+  const tabs = window.document.querySelectorAll("[role=tab]");
+  assert.match(tabs[0].textContent, /\*/);
+  assert.doesNotMatch(tabs[1].textContent, /\*/);
+});
+
+test("selection scratchpad respects existing scratch eligibility", async (t) => {
+  const { window, emit } = await renderEditorIde(t, { "data-ide-scratch-enabled": "false" });
+  window.opener = { postMessage() {} };
+  await postIdeMessage(window, { type: "ide-open-tab", editor: { contextScratch: true, buffer: "not uploaded" } });
+  assert.equal(getTabs(window).length, 0);
+  assert.equal(emit.mock.callCount(), 0);
+});
 
 test("EditorIDE pins browser tabs and saves an editable program tab", async (t) => {
   const { window, emit } = await renderEditorIde(t);

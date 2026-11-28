@@ -10,6 +10,7 @@ import { useIdeSaveFlow } from "../../src/client/features/editor/react/editor-id
 import { useIdeKeyboardShortcuts } from "../../src/client/features/editor/react/editor-ide/useIdeKeyboardShortcuts.js";
 import { useIdeBrowserCommands } from "../../src/client/features/editor/react/editor-ide/useIdeBrowserCommands.js";
 import { usePersistentPreference } from "../../src/client/features/editor/react/editor-ide/usePersistentPreference.js";
+import { useRecentTabs } from "../../src/client/features/editor/react/editor-ide/useRecentTabs.js";
 
 test("useIdeConfig reads root data attributes with defaults", () => {
   const { cleanup } = setupDom(null, `<!doctype html><html><body><div
@@ -233,6 +234,9 @@ test("useIdeMessages ignores malformed messages and unavailable opener postMessa
       data: { type: "ide-open-tab", editor: null }
     }));
     window.dispatchEvent(new window.MessageEvent("message", {
+      data: { type: "ide-open-tab", editor: "invalid" }
+    }));
+    window.dispatchEvent(new window.MessageEvent("message", {
       data: { type: "ide-set-font", font: 12 }
     }));
     window.dispatchEvent(new window.MessageEvent("message", {
@@ -245,6 +249,93 @@ test("useIdeMessages ignores malformed messages and unavailable opener postMessa
   await act(async () => {
     root.unmount();
   });
+});
+
+test("IDE scratchpad messages require the current same-origin opener", async (t) => {
+  const { window, cleanup } = setupDom();
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const root = createRoot(window.document.body.appendChild(window.document.createElement("div")));
+  t.after(async () => {
+    await act(async () => root.unmount());
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    cleanup();
+  });
+
+  const status = t.mock.fn();
+  const addTab = t.mock.fn();
+  const opener = window.document.body.appendChild(window.document.createElement("iframe")).contentWindow;
+  window.opener = opener;
+  t.mock.method(opener, "postMessage", status);
+  const origin = window.location.origin;
+
+  function ScratchpadHarness() {
+    useIdeMessages({ addTab });
+    return null;
+  }
+
+  await act(async () => root.render(React.createElement(ScratchpadHarness)));
+  assert.deepEqual(status.mock.calls[0].arguments, [{ type: "ide-ready" }, "*"]);
+
+  const editor = { contextScratch: true, buffer: "Selected output" };
+  const send = (source, origin) => {
+    window.dispatchEvent(new window.MessageEvent("message", {
+      data: { type: "ide-open-tab", editor },
+      source,
+      origin
+    }));
+  };
+
+  send(window, origin);
+  send(opener, "https://example.invalid");
+  window.opener = null;
+  send(null, origin);
+  assert.equal(addTab.mock.callCount(), 0);
+
+  window.opener = opener;
+  send(opener, origin);
+  assert.deepEqual(addTab.mock.calls.map(call => call.arguments), [[editor]]);
+});
+
+test("IDE messages use the latest handlers and are ignored after unmount", async (t) => {
+  const { window, cleanup } = setupDom();
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const root = createRoot(window.document.body.appendChild(window.document.createElement("div")));
+  t.after(() => {
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    cleanup();
+  });
+
+  const original = t.mock.fn();
+  const latest = t.mock.fn();
+  const errors = [];
+  const ready = t.mock.fn();
+  window.opener = { postMessage: ready };
+  window.addEventListener("error", (event) => {
+    errors.push(event.error);
+    event.preventDefault();
+  });
+
+  function FontHarness({ setEditorFont }) {
+    useIdeMessages({ setEditorFont });
+    return null;
+  }
+
+  const send = (data) => window.dispatchEvent(new window.MessageEvent("message", { data }));
+  await act(async () => root.render(React.createElement(FontHarness, { setEditorFont: original })));
+  send({ type: "set-editor-font", font: "small" });
+
+  await act(async () => root.render(React.createElement(FontHarness, { setEditorFont: latest })));
+  const invalidArray = Object.assign([], { type: "ide-set-font", font: "ignored array" });
+  for (const data of [false, "invalid", invalidArray, null, { type: "unknown", font: "ignored" }]) send(data);
+  send({ type: "ide-set-font", font: "large" });
+
+  await act(async () => root.unmount());
+  send({ type: "set-editor-font", font: "ignored after close" });
+
+  assert.deepEqual(errors, []);
+  assert.equal(ready.mock.callCount(), 1);
+  assert.deepEqual(original.mock.calls.map(call => call.arguments), [["small"]]);
+  assert.deepEqual(latest.mock.calls.map(call => call.arguments), [["large"]]);
 });
 
 test("useIdeSaveFlow prompts, submits, cancels, and preserves failed saves", async (t) => {
@@ -449,6 +540,57 @@ test("useIdeKeyboardShortcuts routes keydown commands", async (t) => {
   });
 });
 
+test("recent IDE tabs restore the most recently visited editor after removal", async (t) => {
+  const { window, cleanup } = setupDom();
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const root = createRoot(window.document.body.appendChild(window.document.createElement("div")));
+  t.after(async () => {
+    await act(async () => root.unmount());
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    cleanup();
+  });
+
+  const dispatchIde = t.mock.fn();
+  const first = { id: 1 };
+  const second = { id: 2 };
+  const third = { id: 3 };
+  const all = [first, second, third];
+  let getCloseState;
+  function RecentTabsHarness({ active, tabs }) {
+    ({ getCloseState } = useRecentTabs({ active, tabs, dispatchIde }));
+    return null;
+  }
+
+  const render = async (active, tabs) => {
+    await act(async () => root.render(React.createElement(RecentTabsHarness, { active, tabs })));
+  };
+
+  await render(null, all);
+  await render(2, all);
+  await render(1, all);
+  await render(2, all);
+  assert.equal(dispatchIde.mock.callCount(), 0);
+
+  assert.deepEqual(getCloseState(3), {
+    nextActiveId: 2,
+    nextRecentTabIds: [1, 2],
+    nextTabs: [first, second]
+  });
+
+  await render(2, [first, third]);
+  assert.deepEqual(dispatchIde.mock.calls[0].arguments[0], { type: "activateTab", id: 1 });
+
+  await render(1, [first, third]);
+  assert.deepEqual(getCloseState(1), {
+    nextActiveId: 3,
+    nextRecentTabIds: [2],
+    nextTabs: [third]
+  });
+
+  await render(3, [third]);
+  assert.deepEqual(getCloseState(3), { nextActiveId: null, nextRecentTabIds: [2], nextTabs: [] });
+});
+
 test("useIdeBrowserCommands dispatches browser state and emits protocol commands", async (t) => {
   const { window, cleanup } = setupDom();
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -482,6 +624,8 @@ test("useIdeBrowserCommands dispatches browser state and emits protocol commands
     commands.onLoadProps("#12");
     commands.onEditVerb("#12", "look* tell");
     commands.onEditProperty("#12", "name aliases");
+    commands.onEditVerb("#12", " ");
+    commands.onEditProperty("#12", " ");
     commands.toggleObjectCollapsed("#12");
     commands.togglePropertyCollapsed("#12");
   });
@@ -523,5 +667,33 @@ test("emitInput ignores unavailable sockets and malformed socket adapters", () =
     assert.deepEqual(emitted, [["input", "look"]]);
   } finally {
     globalThis.window.uploadSocket = previousWindowSocket;
+  }
+});
+
+test("the IDE can render and change settings when browser storage is unavailable", async (t) => {
+  const { window, localStorage, cleanup } = setupDom();
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  t.after(() => {
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    cleanup();
+  });
+  localStorage.getItem = () => { throw new Error("fixture storage is blocked"); };
+  localStorage.setItem = () => { throw new Error("fixture storage is blocked"); };
+
+  function PreferenceHarness() {
+    const [orientation, setOrientation] = usePersistentPreference("ide-orientation", "top");
+    return React.createElement("button", { onClick: () => setOrientation("left") }, orientation);
+  }
+
+  const container = window.document.createElement("div");
+  window.document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(React.createElement(PreferenceHarness)));
+    assert.equal(container.textContent, "top");
+    await act(async () => container.querySelector("button").click());
+    assert.equal(container.textContent, "left");
+  } finally {
+    await act(async () => root.unmount());
   }
 });

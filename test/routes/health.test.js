@@ -71,3 +71,35 @@ test("get counts sockets from objects and falls back to uptime", (t) => {
   assert.equal(res.json.mock.callCount(), 1);
   assert.deepEqual(res.json.mock.calls[0].arguments[0], payload);
 });
+
+test("counts supported fallback socket collections and queries the default namespace", (t) => {
+  const of = t.mock.fn(() => undefined);
+  const servers = {
+    socketServer: { of, sockets: { length: 4 } },
+    httpsSocketServer: { sockets: { a: {}, b: {} } }
+  };
+  const response = { json: t.mock.fn() };
+  const result = get({ app: { get: (name) => servers[name] } }, response);
+  assert.deepEqual(of.mock.calls[0].arguments, ["/"]);
+  assert.equal(result.currentlyConnected, 6);
+});
+
+test("accepts a serialized restart timestamp and falls back when the app has no usable timestamp", (t) => {
+  t.mock.method(os, "loadavg", () => null);
+  t.mock.method(process, "uptime", () => 4);
+  const now = 1_700_000_000_000;
+  t.mock.method(Date, "now", () => now);
+  const parsedTime = "2024-02-01T11:22:33Z";
+  const response = { json: t.mock.fn() };
+  const fallback = new Date(now - 4000).toISOString();
+
+  assert.equal(get({ app: { get: () => parsedTime } }, response).lastRestart, new Date(parsedTime).toISOString());
+  assert.equal(get({ app: { get: () => "not a timestamp" } }, response).lastRestart, fallback);
+  assert.equal(get({ app: { get: () => new Date(NaN) } }, response).lastRestart, fallback);
+  assert.equal(get({ app: { get: () => null } }, response).lastRestart, fallback);
+  assert.equal(get({ app: {} }, response).lastRestart, fallback);
+  const missingApp = get({}, response);
+  assert.equal(missingApp.lastRestart, fallback);
+  assert.equal(missingApp.currentlyConnected, 0);
+  assert.deepEqual(missingApp.cpuLoad, { "1m": 0, "5m": 0, "15m": 0 });
+});

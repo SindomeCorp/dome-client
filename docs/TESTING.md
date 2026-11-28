@@ -64,18 +64,84 @@ reference measurements, acceptance checks, and the distinction between retained
 history and rendered rows. The player/operator guide is
 [Output windows](OUTPUT-WINDOWS.md).
 
+## Context menus in Firefox and Chromium
+
+After `npm run build`, run `npm run test:browser -- --project=chromium --project=firefox --grep "context menus:"`. Use headed mode under Xvfb for tests that need native window or clipboard behavior.
+`browser-tests/context-menus.spec.js` exercises ANSI-split pointer targets,
+keyboard menus and viewport clamping, secondary/companion selections, profile
+Options/import/reload, and unsaved IDE scratch tabs with explicit Save. The
+`?entry=real` fixture serves the actual built `player-client.js` and IDE bundles;
+its loopback Socket.IO endpoint records inputs and simulates transport reconnects
+without connecting to a MOO. Other output cases retain their selective fixture
+for direct virtual-history inspection. The reverse 2,000-line selection case
+checks partial endpoints through real Clipboard API Copy and the IDE; the
+existing native Copy/paste baseline remains separate and unchanged.
+
+Reuse checks exercise the shipped worker's RegExp construction, repeated rows,
+`lastIndex` isolation after success/errors, profile switching, and valid/invalid
+reloads. A real-bundle browser case also captures the open reference menu over
+synthetic output to `tmp/context-menu-review/open-reference-menu.png`. This
+ignored local artifact uses an owner-only directory and file permissions and is
+not served by the fixture. External fonts are unavailable in the offline runner,
+so the screenshot uses installed fallback fonts.
+
+Chromium projects explicitly enable Chromium's sandbox. If a restricted runner
+denies localhost binding or browser IPC, use the ordinary approval mechanism for
+the exact test invocation. Do not disable Chromium's sandbox or change host
+AppArmor/sysctl settings. The test runner uses the official Playwright image
+for browser libraries and pins Node.js 26 separately. Run it non-root with
+Playwright’s documented namespace-enabled
+[seccomp profile](https://playwright.dev/docs/docker#crawling-and-scraping).
+From the repository root with Docker available:
+
+```bash
+nvm use
+npm ci
+npm run build
+docker build -t dome-client-test:node26 test-support/runner
+mkdir -p node_modules/.cache
+export PLAYWRIGHT_BROWSERS_PATH="$PWD/node_modules/.cache/playwright-browsers"
+npx playwright install chromium firefox
+curl --fail --silent --show-error \
+  https://raw.githubusercontent.com/microsoft/playwright/v1.62.1/utils/docker/seccomp_profile.json \
+  -o node_modules/.cache/playwright-seccomp.json
+docker run --rm --init --network none --user "$(id -u):$(id -g)" \
+  --security-opt "seccomp=$PWD/node_modules/.cache/playwright-seccomp.json" \
+  --mount "type=bind,src=$PWD,dst=/work" --workdir /work --shm-size=1g \
+  --env SHORTEN_ENABLED=true \
+  --env PLAYWRIGHT_BROWSERS_PATH=/work/node_modules/.cache/playwright-browsers \
+  --env "GIT_HASH=$(git rev-parse HEAD)" \
+  dome-client-test:node26 \
+  xvfb-run -a npm run test:browser -- --project=chromium --project=firefox --headed
+```
+
+The Dockerfile keeps Node.js 26.12.1 and the browser system libraries separate.
+The worktree-local browser download matches the installed Playwright package.
+The container retains default AppArmor isolation, uses private shared memory,
+publishes no ports and has no external network. Use the same image for coverage
+or mutation checks by replacing the final
+command with `npm run coverage` or `npm run test:mutation:warm`. The socket tests
+expect `SHORTEN_ENABLED=true` for the local shortener fixture.
+Browser caches are ignored and all artifacts remain local. These tests do not
+verify live MOO permissions, native app WebViews or assistive-technology speech.
+
 ## Requirements
 
-- Node.js 22+
+- Node.js 26 for development, coverage, browser, and mutation tests. The
+  pinned version is in [`.nvmrc`](../.nvmrc).
 - npm
 
 ## Core Checks
 
-Run lint + default test suite:
+From a clean checkout with Node 26, install the locked dependencies and run the core checks:
 
 ```bash
+npm ci
 npm run lint
 npm test
+npm run coverage
+npm run build
+npm run deadcode
 ```
 
 Default `npm test` includes:
@@ -127,6 +193,42 @@ Warm the incremental cache with a tiny mutated file (fast prep before a longer r
 npm run test:mutation:warm
 ```
 
+### Mutation tests by area
+
+The full profile above is the original server baseline. The named profiles
+cover the other application JavaScript and JSX without overlapping its targets.
+Run them after building the client, using the Node.js 26 runner described above.
+
+```bash
+npm run test:mutation:area -- --list
+npm run test:mutation:area -- context-menus --dry-run
+npm run test:mutation:area -- context-menus
+```
+
+| Area | Code under mutation |
+| --- | --- |
+| `server` | Startup, configuration, routes, middleware, builds, and HTTP services |
+| `protocol` | Socket lifecycle, game connections, Telnet, and client output protocol |
+| `context-menus` | Profiles, validation, matching worker, rendering, and client control |
+| `output-windows` | Scrollback, filtering, pop-outs, layout, and presentation |
+| `terminal` | Input, history, ANSI rendering, media, and logs |
+| `editor` | IDE, editor windows, Ace integration, and MOO parser |
+| `options` | Options UI, preference changes, import, and export |
+| `client-shell` | Bootstrap, connection UI, health, core state, and native bridge |
+
+The bundled Ace MOO mode is vendor code and is excluded from mutation.
+The preview handler embedded in downloaded logs is also excluded from
+instrumentation because those pages run without Stryker's helpers. Its
+standalone behavior is still exercised by the log-export tests.
+Each area runs its own Node test selection. Browser and visual behavior
+continues to be covered by the separate Playwright suite.
+Use `--dry-run` to instrument the area and verify that its tests run before
+scheduling a full pass. Use `--force` to recompute that area's results.
+Reports and incremental caches are stored separately as
+`reports/mutation/<area>.json` and `reports/mutation/<area>.incremental.json`.
+The profiles use the existing 60% break threshold. Stryker writes a report
+even when an area falls below it.
+
 Enforce coverage thresholds:
 
 ```bash
@@ -138,6 +240,7 @@ Coverage must remain at or above:
 - 80% lines
 - 80% functions
 - 80% statements
+- 80% branches
 
 Mutation testing notes:
 

@@ -58,7 +58,7 @@ export async function runHtmlSnapshotCase(t, {
     ...(configOverrides || {})
   };
   const { baseUrl } = await bootServer(t, snapshotConfig);
-  const res = await request(baseUrl).get(urlPath).expect(200);
+  const res = await request(baseUrl).get(urlPath).timeout({ response: 2000 }).expect(200);
   const snapshot = projectSnapshot(res.text, urlPath);
 
   const absoluteGolden = path.join(process.cwd(), goldenFile);

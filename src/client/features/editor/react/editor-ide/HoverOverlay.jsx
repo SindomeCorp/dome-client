@@ -20,7 +20,7 @@ export function HoverOverlay({ overlay }) {
       {overlay.loading ? (
         <div className="text-ink-muted">Loading...</div>
       ) : (
-        <pre className="text-base text-ink-muted whitespace-pre-wrap break-words max-h-56 overflow-auto m-0">
+        <pre className="text-base text-ink-muted whitespace-pre-wrap wrap-break-word max-h-56 overflow-auto m-0">
           {formatOverlayValue(overlay.payload)}
         </pre>
       )}

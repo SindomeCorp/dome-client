@@ -171,6 +171,42 @@ test("showStatus uppercases, persists, cancels previous animations, and ignores 
   assert.equal(unhandled.length, 0);
 });
 
+test("only the current status schedules a fade when animations finish out of order", async (t) => {
+  const { dome, health, window } = await setup(t);
+  const animations = [];
+  window.Element.prototype.animate = function(frames, options) {
+    const { promise: finished, resolve: finish } = Promise.withResolvers();
+    const animation = { cancel: t.mock.fn(), finished, finish, frames, options };
+    assert.equal(this, dome.statusDisplay);
+    animations.push(animation);
+    return animation;
+  };
+
+  health.showStatus("old");
+  health.showStatus("latest");
+  assert.equal(animations[0].cancel.mock.callCount(), 1);
+  assert.deepEqual(animations[1].frames, [{ opacity: 0 }, { opacity: 1 }]);
+  assert.deepEqual(animations[1].options, { duration: 500, fill: "forwards" });
+
+  animations[0].finish();
+  await flushPromises();
+  assert.equal(animations.length, 2);
+  assert.equal(dome.statusDisplay.textContent, "LATEST");
+
+  animations[1].finish();
+  await flushPromises();
+  assert.equal(animations.length, 3);
+  assert.deepEqual(animations[2].frames, [{ opacity: 1 }, { opacity: 0 }]);
+  assert.deepEqual(animations[2].options, { delay: 5000, duration: 1000, fill: "forwards" });
+
+  health.showStatus(null, { persist: true });
+  assert.equal(animations[2].cancel.mock.callCount(), 1);
+  assert.equal(dome.statusDisplay.textContent, "");
+  animations[3].finish();
+  await flushPromises();
+  assert.equal(animations.length, 4);
+});
+
 test("handleSocketError diagnoses disconnected sockets and preserves connected error messages", async (t) => {
   const { dome, health, loggerInfo, loggerError } = await setup(t);
 
@@ -265,6 +301,46 @@ test("panel hover delays hide until leaving both icon and detail", async (t) => 
   flushOne();
   flushOne();
   assert.equal(dome.healthDetail.style.left, "-152px");
+});
+
+test("polling retains the latest 100 graph samples and current health for connection errors", async (t) => {
+  const { dome, health, graphs, animate, getFetchCallbacks } = await setup(t);
+
+  for (let value = 1; value < 100; value++) {
+    dome.gameHealth.push({ cpu: value, memory: value * 1024, users: value * 2 });
+  }
+  const initial = { cpu: 99, memory: 102400, users: 200, state: MOO_STATUS_ENUM.OK, message: "busy" };
+  await resolveHealth(getFetchCallbacks(), initial);
+  assert.equal(dome.gameHealth.length, 100);
+  assert.equal(dome.gameHealth[0].cpu, 1);
+  assert.equal(dome.gameHealth.cpu, 99);
+  assert.deepEqual(animate.mock.calls.map(call => call.arguments[1]), [
+    { duration: 500, fill: "forwards" }
+  ]);
+
+
+  const refresh = health.refreshStatus();
+  const latest = { cpu: 42, memory: 103424, users: 202, state: MOO_STATUS_ENUM.OK, message: "recovered" };
+  await resolveHealth(getFetchCallbacks(), latest);
+  await refresh;
+
+  assert.deepEqual(
+    [...dome.healthDetail.querySelectorAll("canvas")].map(canvas => canvas.id),
+    ["cpu-graph", "mem-graph", "user-graph"]
+  );
+  assert.equal(dome.gameHealth.length, 100);
+  assert.equal(dome.gameHealth[0].cpu, 2);
+  assert.equal(dome.gameHealth.cpu, 42);
+  for (const [index, expected] of [latest.cpu, latest.memory, latest.users].entries()) {
+    const [values] = graphs[index].update.mock.calls.at(-1).arguments;
+    assert.equal(values.length, 100);
+    assert.equal(values.at(-1), expected);
+  }
+  assert.equal(dome.statusDisplay.textContent, "RECOVERED");
+  assert.deepEqual(animate.mock.calls.slice(1).map(call => call.arguments[1]), [
+    { duration: 500, fill: "forwards" },
+    { delay: 5000, duration: 1000, fill: "forwards" }
+  ]);
 });
 
 test("refreshStatus handles success payloads, graph updates, globe classes, and perf buffer flag", async (t) => {

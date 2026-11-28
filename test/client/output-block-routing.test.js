@@ -130,3 +130,15 @@ test("clear during a pending decision releases the old block and reconnect ends 
   assert.deepEqual(lines(manager.views.secondary), ["[g] before reconnect"]);
   assert.deepEqual(lines(manager.views.main), ["after clear", "ordinary output after reconnect"]);
 });
+
+test("transport reset drops stale queued output even with context menus disabled", async (t) => {
+  const { manager, client, feed } = await createOutputApp(t);
+  await feed("retained history\n");
+  assert.equal(client.contextMenus, undefined);
+
+  client.parseSocketData("stale data from old transport\n");
+  client.resetOutputStream();
+  await feed("fresh data\n");
+
+  assert.deepEqual(lines(manager.views.main), ["retained history", "fresh data"]);
+});

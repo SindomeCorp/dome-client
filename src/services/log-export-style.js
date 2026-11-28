@@ -13,9 +13,6 @@ const CSS_PATHS = [
 let cachedCss;
 
 function addFontFallbacks(cssText) {
-  if (!cssText) {
-    return "";
-  }
   let css = cssText;
   css = css.replace(
     /font-family:\s*['"]?Source Code Pro['"]?/g,
@@ -43,7 +40,9 @@ export function getLogExportCss() {
 
   for (const cssPath of CSS_PATHS) {
     try {
-      cachedCss = addFontFallbacks(fs.readFileSync(cssPath, "utf8"));
+      const css = fs.readFileSync(cssPath, "utf8");
+      if (!css.trim()) continue;
+      cachedCss = addFontFallbacks(css);
       return cachedCss;
     } catch (err) {
       if (err?.code !== "ENOENT") {

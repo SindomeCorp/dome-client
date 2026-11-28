@@ -81,21 +81,13 @@ oop.inherits(Mode, TextMode);
     this.getNextLineIndent = function(state, line, tab) {
         var indent = this.$getIndent(line);
 
-        var tokenizedLine = this.$tokenizer.getLineTokens(line, state);
-        var tokens = tokenizedLine.tokens;
-        var endState = tokenizedLine.state;
-
-        if (tokens.length && tokens[tokens.length-1].type == "comment") {
-            return indent;
-        }
-        
         if (state == "start") {
             var match = line.match(/^\s*(?:if|elseif|else|for|while|try|except|finally|fork)\b/);
             if (match) {
                 indent += tab;
             }
         } else if (state == "doc-start") {
-            if (endState == "start") {
+            if (this.$tokenizer.getLineTokens(line, state).state == "start") {
                 return "";
             }
             var match = line.match(/^\s*(\/?)\*/);
@@ -111,7 +103,7 @@ oop.inherits(Mode, TextMode);
     };
 
     this.checkOutdent = function(state, line, input) {
-        return /^\s*(?:endif|endfor|endwhile|endtry|endfork|elseif|else|except|finally)\b/.test(line + input);
+        return state === "start" && /^\s*(?:endif|endfor|endwhile|endtry|endfork|elseif|else|except|finally)\b/.test(line + input);
     };
 
     this.autoOutdent = function(state, doc, row) {

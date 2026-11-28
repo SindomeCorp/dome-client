@@ -13,6 +13,7 @@ import { setupIdeLauncher } from "../features/editor/ide.js";
 import { setupAutoCompleteFeature } from "../features/terminal/autocomplete.js";
 import { setupHealthCheck } from "../features/health/health-check.js";
 import { setupOutputWindows } from "../features/output-windows/output-windows.js";
+import { setupContextMenus } from "../features/context-menus/controller.js";
 import {
   installDomeBridge,
   notifyNativeBridgeReady,
@@ -27,6 +28,7 @@ export {
 
 export const createClientFeatureSet = () => ({
   setupOutputWindows,
+  setupContextMenus,
   setupAutoCompleteFeature,
   setupAutoscroll,
   setupButtons,
@@ -140,6 +142,7 @@ export const setupClientFeatures = ({
   features.setupChevronToggle({ client, doc, win, capabilities: capabilities.uiControls });
   features.setupHealthCheck({ client, doc, win, capabilities: capabilities.health });
   features.setupOutputParser({ client, doc, win, capabilities: capabilities.socketOutput });
+  features.setupContextMenus?.({ client, doc, win });
 };
 
 export const initClient = ({

@@ -64,9 +64,10 @@ export function setupWindowHandlers({
     if (client.alert.titleProc != null) {
       win.clearInterval(client.alert.titleProc);
       client.alert.titleProc = null;
+      titleAlerted = false;
       doc.title = client.titleBarText;
     }
-    if (client.inputReader) {
+    if (client.inputReader && !doc.activeElement?.closest?.(".context-menu-popup, .output-scroll")) {
       client.inputReader.focus();
     }
   };

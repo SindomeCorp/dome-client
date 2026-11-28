@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./browser-tests",
-  testMatch: "output-windows.spec.js",
+  testMatch: /(?:output-windows|context-menus)\.spec\.js/,
   timeout: 60_000,
   workers: 1,
   use: { baseURL: "http://127.0.0.1:4318", trace: "retain-on-failure" },
@@ -12,8 +12,8 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "chromium", use: { ...devices["Desktop Chrome"], launchOptions: { chromiumSandbox: true } } },
     { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "narrow-touch", use: { ...devices["Pixel 7"] } }
+    { name: "narrow-touch", use: { ...devices["Pixel 7"], launchOptions: { chromiumSandbox: true } } }
   ]
 });

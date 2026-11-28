@@ -24,7 +24,7 @@ function get(k) {
       }
       try {
         return JSON.parse(raw);
-      } catch (e) {
+      } catch {
         logger.warn(`Ignoring corrupt localStorage value for ${k}: ${raw}`);
         localStorage.removeItem(k);
         return null;
