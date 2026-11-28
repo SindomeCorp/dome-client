@@ -3494,6 +3494,33 @@ test("real split output uses updated filters after an obsolete routing worker fa
   expect(workerRequests).toBe(2);
 });
 
+test("real Find reserves only its available keyboard shortcuts", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const input = page.locator("#inputBuffer");
+  const form = page.locator("#output-find");
+  const query = page.locator("#output-find-query");
+  const dispatch = (target, key, options = {}) => target.evaluate((element, { key, preempted, ...modifiers }) => {
+    const event = new window.KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...modifiers });
+    if (preempted) event.preventDefault();
+    return element.dispatchEvent(event);
+  }, { key, ...options });
+
+  // Observe event cancellation without opening browser chrome during the fixture.
+  for (const key of ["f", "F3", "Escape"]) expect(await dispatch(input, key)).toBe(true);
+  expect(await dispatch(input, "g", { ctrlKey: true })).toBe(true);
+  expect(await dispatch(input, "f", { ctrlKey: true, altKey: true })).toBe(true);
+  expect(await dispatch(input, "f", { ctrlKey: true, preempted: true })).toBe(false);
+  await expect(form).toBeHidden();
+  expect(await dispatch(input, "F", { ctrlKey: true })).toBe(false);
+  await expect(query).toBeFocused();
+  expect(await dispatch(query, "n")).toBe(true);
+  expect(await dispatch(query, "F3")).toBe(false);
+  expect(await dispatch(query, "Escape")).toBe(false);
+  await expect(form).toBeHidden();
+});
+
 test("real Find navigates backward and wraps between repeated matches on one row", async ({ page }) => {
   const initial = await fixtureState(page);
   await page.goto("/?entry=real");
