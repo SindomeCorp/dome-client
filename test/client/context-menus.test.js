@@ -65,7 +65,7 @@ test("reference underlining defaults off and persists only a validated boolean p
   assert.equal(invalid.controller.preferences.underline, false);
 });
 
-test("late underline matches cannot paint changed or detached output", async (t) => {
+test("late underline matches cannot paint changed or detached output", { timeout: 5000 }, async (t) => {
   const { controller, doc, window } = await fixture(t);
   window.Highlight = Set;
   window.CSS = { highlights: new Map() };
@@ -76,23 +76,33 @@ test("late underline matches cannot paint changed or detached output", async (t)
   row.textContent = "Old #123";
   output.append(row);
   doc.body.append(output);
-  let finish;
+  const matches = [{ rule: "object", start: 4, end: 8, text: "#123", values: { object: "#123" } }];
+  let started = Promise.withResolvers();
+  const { promise: matchedNewText, resolve: sawNewText } = Promise.withResolvers();
   const match = controller.match.bind(controller);
-  controller.match = (text) => text === "Old #123" ? new Promise((resolve) => { finish = resolve; }) : match(text);
+  controller.match = (text) => {
+    if (text === "New") sawNewText();
+    if (text !== "Old #123") return match(text);
+    const pending = Promise.withResolvers();
+    started.resolve(pending.resolve);
+    return pending.promise;
+  };
   controller.bindOutput(output, window);
-  await new Promise((resolve) => setTimeout(resolve, 10));
-  assert.equal(typeof finish, "function");
+  const finishChangedRow = await started.promise;
   row.firstChild.data = "New";
-  finish([{ rule: "object", start: 4, end: 8, text: "#123", values: { object: "#123" } }]);
-  await new Promise((resolve) => setTimeout(resolve, 30));
+  finishChangedRow(matches);
+  await matchedNewText;
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(doc.querySelector("#context-menu-error").textContent, "");
-  assert.equal(window.CSS.highlights.get("dome-context-targets").size, 0);
+  assert.equal(window.CSS.highlights.get(CONTEXT_UNDERLINE).size, 0);
+
+  started = Promise.withResolvers();
   row.textContent = "Old #123";
-  await new Promise((resolve) => setTimeout(resolve, 10));
+  const finishDetachedRow = await started.promise;
   row.remove();
-  finish([{ rule: "object", start: 4, end: 8, text: "#123", values: { object: "#123" } }]);
-  await new Promise((resolve) => setTimeout(resolve, 30));
-  assert.equal(window.CSS.highlights.get("dome-context-targets").size, 0);
+  finishDetachedRow(matches);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(window.CSS.highlights.get(CONTEXT_UNDERLINE).size, 0);
 });
 
 test("Context Menus Basic and Advanced tabs default to Basic and support keyboard navigation", async (t) => {
@@ -623,6 +633,48 @@ test("JSON import uses the real file control and failed edits keep the last pers
   assert.match(doc.querySelector("#context-menu-error").textContent, /no longer registered/);
 });
 
+
+test("local rules and override remain usable for the session when storage is read-only", async (t) => {
+  const { controller, doc, window } = await fixture(t);
+  const saved = window.localStorage.getItem(CONTEXT_MENUS_KEY);
+  t.mock.method(window.Storage.prototype, "setItem", () => {
+    throw new window.DOMException("Fixture storage is read-only", "QuotaExceededError");
+  });
+  const config = referenceContextMenus();
+  config.profiles.push({ ...config.profiles[0], id: "session-tools", label: "Session tools" });
+
+  assert.equal(await controller.reload(JSON.stringify(config)), true);
+  assert.ok(controller.snapshot.profiles.has("session-tools"));
+  assert.match(doc.querySelector("#context-menu-error").textContent, /Rules loaded for this session/);
+  assert.equal(window.localStorage.getItem(CONTEXT_MENUS_KEY), saved);
+
+  const override = doc.querySelector("#context-menu-override");
+  const dropdown = doc.querySelector("#context-menu-profile");
+  override.click();
+  dropdown.value = "session-tools";
+  dropdown.dispatchEvent(new window.Event("change"));
+  assert.equal(doc.querySelector("#context-menu-active").textContent, "Active Profile: Session tools (Override)");
+  assert.match(doc.querySelector("#context-menu-error").textContent, /preferences could not be saved/);
+  assert.equal(window.localStorage.getItem(CONTEXT_MENUS_KEY + "-preferences"), null);
+});
+
+test("oversized JSON editor values and files leave the last context-menu snapshot active", async (t) => {
+  const { controller, doc, window } = await fixture(t);
+  const before = controller.snapshot;
+  const oversized = " ".repeat(262144) + JSON.stringify(controller.config);
+  assert.equal(await controller.reload(oversized), false);
+  const error = doc.querySelector("#context-menu-error");
+  assert.match(error.textContent, /exceeds 256 KiB/);
+  assert.equal(controller.snapshot, before);
+
+  const file = doc.querySelector("#context-menu-file");
+  const text = t.mock.fn(async () => JSON.stringify(controller.config));
+  Object.defineProperty(file, "files", { value: [{ size: 262145, text }] });
+  file.dispatchEvent(new window.Event("change"));
+  assert.equal(text.mock.callCount(), 0);
+  assert.match(error.textContent, /exceeds 256 KiB/);
+  assert.equal(controller.snapshot, before);
+});
 
 test("output matching drains a burst beyond the worker queue cap without dropping unchanged rows", async (t) => {
   const { controller, doc, window, client } = await fixture(t);
