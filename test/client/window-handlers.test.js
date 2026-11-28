@@ -309,3 +309,56 @@ test("window close confirms and sends quit only while the game is connected", (t
 
   assert.deepEqual(emit.mock.calls.map(call => call.arguments), [["input", "@quit\r\n"]]);
 });
+
+test("the first user gesture primes alert audio silently and restores its state", async (t) => {
+  for (const [gesture, outcome] of [
+    ["pointerdown", "resolved"],
+    ["keydown", "rejected"],
+    ["touchstart", "no promise"]
+  ]) {
+    await t.test(gesture, async (t) => {
+      const { window } = new JSDOM(`<!doctype html>
+        <div id="client"><div id="buffer"></div></div>
+      `);
+      t.after(() => window.close());
+      const { document } = window;
+      const playback = Promise.withResolvers();
+      const tone = {
+        muted: false,
+        currentTime: 3,
+        play: t.mock.fn(() => outcome === "no promise" ? undefined : playback.promise),
+        pause: t.mock.fn()
+      };
+      window.Audio = class {
+        constructor(src) {
+          assert.equal(src, "/notice.wav");
+          return tone;
+        }
+      };
+
+      const client = createClientState();
+      Object.assign(client, {
+        client: document.querySelector("#client"),
+        buffer: document.querySelector("#buffer")
+      });
+      setupWindowHandlers({ client, win: window, doc: document, AudioCtor: null });
+      assert.equal(tone.play.mock.callCount(), 0);
+
+      window.dispatchEvent(new window.Event(gesture));
+      assert.equal(tone.play.mock.callCount(), 1);
+      assert.equal(tone.muted, outcome !== "no promise");
+      for (const other of ["pointerdown", "keydown", "touchstart"]) {
+        window.dispatchEvent(new window.Event(other));
+      }
+      assert.equal(tone.play.mock.callCount(), 1);
+
+      if (outcome === "resolved") playback.resolve();
+      if (outcome === "rejected") playback.reject(new Error("Fixture audio permission denied"));
+      await new Promise(resolve => setImmediate(resolve));
+
+      assert.equal(tone.muted, false);
+      assert.equal(tone.pause.mock.callCount(), outcome === "resolved" ? 1 : 0);
+      assert.equal(tone.currentTime, outcome === "resolved" ? 0 : 3);
+    });
+  }
+});
