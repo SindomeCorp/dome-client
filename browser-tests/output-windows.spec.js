@@ -833,6 +833,12 @@ test("the real client reports a browser log download failure and can retry", asy
   await feed("Log line before failed export");
   await expect(output).toContainText("Log line before failed export");
 
+  await page.locator("#button-output-split").click();
+  const popup = await popOut(page);
+  const companionStatus = popup.locator("#output-popout-status");
+  await expect(companionStatus).toBeEmpty();
+  await page.bringToFront();
+
   await page.evaluate(() => {
     const create = window.URL.createObjectURL;
     window.URL.createObjectURL = () => {
@@ -845,7 +851,10 @@ test("the real client reports a browser log download failure and can retry", asy
   const save = page.getByRole("button", { name: "Save session log" });
   const status = page.locator("#output-announcements");
   await save.click();
-  await expect(status).toHaveText("Preparing log… failed: Fixture browser download failure");
+  const failure = "Preparing log… failed: Fixture browser download failure";
+  await expect(status).toHaveText(failure);
+  await expect(companionStatus).toHaveText(failure);
+  await expect(page.locator("#output-rule-error")).toBeEmpty();
   await expect(page.locator("#output-operation")).toBeHidden();
   expect(downloads).toHaveLength(0);
 
@@ -858,8 +867,54 @@ test("the real client reports a browser log download failure and can retry", asy
   for await (const part of await download.createReadStream()) html += part;
   expect(html).toMatch(/Log line before failed export[\s\S]+Log line after failed export/);
   await expect(status).toHaveText("Log saved.");
+  await expect(companionStatus).toHaveText("Log saved.");
   await expect(page.locator("#output-operation")).toBeHidden();
   expect(downloads).toHaveLength(1);
+});
+
+test("the real client reports a routing worker failure in Options and the pop-out", async ({ page }) => {
+  let requests = 0;
+  await page.route("**/output-rules-worker.js*", (route) => ++requests === 1
+    ? route.fulfill({ status: 503, body: "Fixture routing worker unavailable" })
+    : route.continue());
+  const connections = async () => (await (await page.request.get("/fixture/state")).json()).connections;
+  const previous = await connections();
+  await page.goto("/?entry=real");
+  await expect.poll(connections).toBeGreaterThan(previous);
+  await page.locator("#button-output-split").click();
+  const openFilters = async () => {
+    await page.locator("#button-client-options").click();
+    await page.getByRole("tab", { name: "Output Windows", exact: true }).click();
+    await page.getByRole("tab", { name: /^Player Filters/ }).click();
+  };
+  const closeOptions = () => page.locator("#button-client-options-close").click();
+  const grid = page.getByLabel("Grid Output", { exact: true });
+  await openFilters();
+  await grid.check();
+  await closeOptions();
+  const popup = await popOut(page);
+  const main = page.locator("#lineBuffer");
+  const secondary = popup.locator("#secondaryBuffer");
+  const feed = (text) => page.request.post("/fixture/data", { data: { text: text + "\n" } });
+  const failure = "Output routing worker failed. Unresolved output stays in main.";
+
+  await feed("[g] Grid during worker failure");
+  await expect(main).toContainText("[g] Grid during worker failure");
+  await expect(secondary).not.toContainText("[g] Grid during worker failure");
+  await expect(page.locator("#output-announcements")).toHaveText(failure);
+  await expect(popup.locator("#output-popout-status")).toHaveText(failure);
+
+  await page.bringToFront();
+  await openFilters();
+  await expect(page.locator("#output-rule-error")).toHaveText(failure);
+  await grid.uncheck();
+  await grid.check();
+  await closeOptions();
+  await feed("[g] Grid after worker recovery");
+  await expect(secondary).toContainText("[g] Grid after worker recovery");
+  await expect(main).toContainText("[g] Grid during worker failure");
+  await expect(main).not.toContainText("[g] Grid after worker recovery");
+  expect(requests).toBe(2);
 });
 
 test("a failing native log download falls back to the same browser download", async ({ page }) => {
