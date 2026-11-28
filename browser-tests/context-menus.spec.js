@@ -1075,6 +1075,37 @@ test("context menus: profile notice is a centered translucent overlay without st
   await expect(notice).toHaveCSS("visibility", "visible");
 });
 
+test("context menus: a replacement profile notice gets its full display time", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const activeProfile = page.locator("#context-menu-active");
+  await expect(activeProfile).toHaveText("Active Profile: Player (Fallback)");
+
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await page.locator("#context-menu-override").check();
+  const profiles = page.locator("#context-menu-profile");
+  await expect(profiles).toBeEnabled();
+
+  const time = new Date();
+  await page.clock.install({ time });
+  await page.clock.pauseAt(new Date(time.getTime() + 1000));
+  const notice = page.locator("#context-menu-notice");
+  await profiles.selectOption("programmer");
+  await expect(notice).toHaveText("Switched to Programmer context menus.");
+  await page.clock.runFor(3000);
+  await profiles.selectOption("gm");
+  await expect(notice).toHaveText("Switched to GM context menus.");
+
+  await page.clock.runFor(1100);
+  await expect(notice).toHaveText("Switched to GM context menus.");
+  await expect(notice).toBeVisible();
+  await page.clock.runFor(2900);
+  await expect(notice).toBeEmpty();
+  await expect(activeProfile).toHaveText("Active Profile: GM (Override)");
+});
+
 test("context menus: Programmer override opens reference actions on the first right-click without automatic selection", async ({ page }) => {
   await page.context().addInitScript(() => {
     window.contextMatchedRows = new Set();
