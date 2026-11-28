@@ -1446,3 +1446,37 @@ test("the real IDE keeps display preferences usable when storage rejects writes 
   await page.getByRole("button", { name: "Switch to light mode" }).click();
   await expect(page.getByRole("button", { name: "Switch to dark mode" })).toBeVisible();
 });
+
+test("the real IDE blocks invalid MOO source and saves corrected source after worker diagnostics clear", async ({ page }) => {
+  await page.context().route("**/editor/ide/", async (route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("parser", "moo");
+    const response = await route.fetch({ url: url.href });
+    await route.fulfill({ response });
+  });
+
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const before = (await fixtureState(page)).commands;
+  const opened = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: syntax fixture upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
+  const ide = await opened;
+  const editor = ide.locator(".ace_editor");
+  const getAnnotations = () => editor.evaluate((element) => element.env.editor.getSession().getAnnotations());
+
+  await expect(editor).toBeVisible();
+  await editor.evaluate((element) => element.env.editor.setValue("if (1)\n  return 1;", -1));
+  await expect.poll(getAnnotations).toContainEqual(expect.objectContaining({ type: "error", text: "Missing endif" }));
+
+  const save = ide.getByRole("button", { name: "Save", exact: true });
+  await save.click();
+  await expect(ide.getByText("Unsaved", { exact: true })).toBeVisible();
+  expect((await fixtureState(page)).commands).toEqual(before);
+
+  await editor.evaluate((element) => element.env.editor.setValue("return 2;", -1));
+  await expect.poll(getAnnotations).toEqual([]);
+  await save.click();
+  await expect.poll(async () => (await fixtureState(page)).commands.slice(before.length))
+    .toEqual(["@program #12:preview", "return 2;\n."]);
+});
