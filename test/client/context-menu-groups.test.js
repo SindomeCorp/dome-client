@@ -158,6 +158,20 @@ test("context menu validation accepts exact registry limits and rejects the next
   for (const flags of ["g", "m", "ii"]) assert.throws(() => updateFirstRule({ flags }), /rules\[0\]\.flags/);
 });
 
+test("matching sorts by priority, match length, and supplied rule order", () => {
+  const rules = compileContextRules([
+    { id: "shorter", pattern: "#23", priority: 10, captures: {} },
+    { id: "earlier-tie", pattern: "tie#42", priority: 10, captures: {} },
+    { id: "longer", pattern: "beta#23tail", priority: 10, captures: {} },
+    { id: "later-tie", pattern: "tie#42", priority: 10, captures: {} },
+    { id: "low", pattern: "alpha#17", priority: -10, captures: {} },
+    { id: "high", pattern: "#17", priority: 20, captures: {} }
+  ]);
+  const rank = (ordered) => matchContextRules("alpha#17 beta#23tail tie#42", ordered).map(({ rule }) => rule);
+  assert.deepEqual(rank(rules), ["high", "longer", "earlier-tie", "later-tie", "shorter", "low"]);
+  assert.deepEqual(rank(rules.toReversed()), ["high", "longer", "later-tie", "earlier-tie", "shorter", "low"]);
+});
+
 test("context rule matching bounds line and match counts, including reused compiled rules", () => {
   const [rule] = compileContextRules([{ id: "marker", priority: 0, pattern: "x", captures: {} }]);
   const line = "x".repeat(512).padEnd(32768, ".");

@@ -1999,6 +1999,67 @@ test("context menus: a slow JSON import cannot overwrite the latest Options rule
   await expect.poll(() => page.evaluate(() => JSON.parse(window.localStorage.getItem("dc-context-menus")).profiles[0].label)).toBe("Latest rules");
 });
 
+test("context menus: the real client resolves overlapping matches by priority, length, and profile order", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  const order = ["low", "high", "shorter", "longer", "second", "first"];
+  const config = {
+    version: 1,
+    rules: [
+      ["low", "alpha#17", 10, "Lower priority"],
+      ["high", "#17", 20, "Higher priority"],
+      ["shorter", "#23", 10, "Shorter match"],
+      ["longer", "beta#23tail", 10, "Longer match"],
+      ["first", "tie#42", 10, "First listed rule"],
+      ["second", "tie#42", 10, "Second listed rule"]
+    ].map(([id, pattern, priority, label]) => ({
+      id, pattern, priority, captures: {},
+      actions: [{ id: "copy", label, type: "client-action", action: "clipboard.copy", input: "target" }]
+    })),
+    profiles: [
+      { id: "local-order", label: "Local order", rules: order },
+      { id: "reverse-tie", label: "Reverse tie", rules: [...order.slice(0, -2), "first", "second"] }
+    ]
+  };
+  const openOptions = async () => {
+    await page.locator("#button-client-options").click();
+    await page.locator("#client-options-tab-context").click();
+  };
+  const closeOptions = () => page.locator("#button-client-options-close").click();
+  const profiles = page.locator("#context-menu-profile");
+  await openOptions();
+  await setContextSection(page, "advanced");
+  await page.locator("#context-menu-json").fill(JSON.stringify(config));
+  await page.locator("#context-menu-reload").click();
+  await setContextSection(page, "basic");
+  await page.locator("#context-menu-override").check();
+  await profiles.selectOption("local-order");
+  await closeOptions();
+
+  await socketFeed(page, "alpha#17\nbeta#23tail\ntie#42\n");
+  const match = async (text, chosen) => {
+    const row = page.locator("#lineBuffer [data-output-id]").getByText(text, { exact: true });
+    const items = page.getByRole("menuitem");
+    await expect.poll(async () => {
+      if (!await items.count()) await rightText(page, row, text.indexOf("#") + 1);
+      return items.allTextContents();
+    }).toEqual([chosen]);
+    await page.keyboard.press("Escape");
+    await expect(items).toHaveCount(0);
+  };
+  await match("alpha#17", "Higher priority");
+  await match("beta#23tail", "Longer match");
+  await match("tie#42", "Second listed rule");
+
+  await openOptions();
+  await profiles.selectOption("reverse-tie");
+  await closeOptions();
+  await match("tie#42", "First listed rule");
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
+});
+
 test("context menus: real Options reload rejects malformed capture declarations", async ({ page }) => {
   const initial = await fixtureState(page);
   await page.goto("/?entry=real");
