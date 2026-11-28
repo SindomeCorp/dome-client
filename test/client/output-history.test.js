@@ -100,16 +100,60 @@ test("height index supports measured rows, offsets, pruning and compaction", () 
   assert.equal(index.prefix(2), 50);
   assert.equal(index.indexOfId(9000), 8999);
   assert.equal(index.indexOfId(10001), -1);
+  const backingRows = index.rows;
+  index.prune(4500);
+  assert.equal(index.rows, backingRows, "keep the backing array while most rows are still retained");
   index.prune(7000);
   assert.equal(index.length, 3001);
   assert.equal(index.total, 30_010);
   assert.equal(index.at(0).id, 7000);
+  assert.ok(index.rows.length <= index.length * 2, "mostly pruned scrollback releases its backing row slots");
   assert.equal(index.offsetIndex(1e9), 3000);
   index.measure(-1, 20);
   index.measure(0, 0);
   assert.equal(index.total, 30_010);
   index.prune(10001);
   assert.equal(index.offsetIndex(0), 0);
+});
+
+test("height index keeps offsets relative to live scrollback after partial pruning", () => {
+  const index = new HeightIndex();
+  const checkLayout = (rows) => {
+    assert.equal(index.length, rows.length);
+    let top = 0;
+    for (const [position, [id, height]] of rows.entries()) {
+      assert.equal(index.at(position).id, id);
+      assert.equal(index.indexOfId(id), position);
+      assert.equal(index.prefix(position), top);
+      assert.equal(index.offsetIndex(top), position);
+      assert.equal(index.offsetIndex(top + height - 0.25), position);
+      top += height;
+    }
+    assert.equal(index.prefix(rows.length), top);
+    assert.equal(index.total, top);
+    assert.equal(index.offsetIndex(-10), 0);
+    assert.equal(index.offsetIndex(top + 10), rows.length - 1);
+  };
+
+  index.append({ id: 10 }, 21);
+  index.append({ id: 20 }, 7.5);
+  index.append({ id: 40 }, 31);
+  index.append({ id: 80 }, 12);
+  checkLayout([[10, 21], [20, 7.5], [40, 31], [80, 12]]);
+
+  const backingRows = index.rows;
+  index.prune(15);
+  assert.equal(index.indexOfId(10), -1);
+  assert.equal(index.indexOfId(30), -1);
+  index.measure(index.length, 999);
+  index.append({ id: 90 });
+  index.measure(1, 42.5);
+  index.measure(3, 19);
+  checkLayout([[20, 7.5], [40, 42.5], [80, 12], [90, 19]]);
+
+  index.prune(41);
+  assert.equal(index.rows, backingRows, "small prunes advance a cursor without copying the backing array");
+  checkLayout([[80, 12], [90, 19]]);
 });
 
 test("search, copy and HTML exports include unmounted history in arrival order", async () => {
