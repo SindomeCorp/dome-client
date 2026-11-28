@@ -9,6 +9,24 @@ const start = "#$# SDWC-START-NOWRAP\n";
 const end = "#$# SDWC-END-NOWRAP\n";
 const lines = (view) => Array.from({ length: view.index.length }, (_, i) => recordText(view.index.at(i)));
 
+test("panel routing uses group decisions and respects the captured split generation", async (t) => {
+  const { manager } = await createOutputApp(t);
+  const fromClosedSplit = { generation: manager.routeState().generation, secondary: true };
+  assert.equal(manager.panelFor(fromClosedSplit), "main");
+
+  manager.updateSettings({ open: true });
+  const opened = manager.routeState();
+  const routed = { generation: opened.generation, secondary: true };
+  assert.equal(manager.panelFor(fromClosedSplit), "main");
+  assert.equal(manager.panelFor(routed), "secondary");
+  assert.equal(manager.panelFor({ ...routed, group: { ...routed, secondary: false } }), "main");
+  assert.equal(manager.panelFor({ ...routed, secondary: false, group: routed }), "secondary");
+
+  manager.updateSettings({ open: false });
+  assert.equal(manager.panelFor(routed), "main");
+  assert.equal(manager.panelFor(routed, opened), "secondary");
+});
+
 test("grid blocks route using the first nonblank ANSI-stripped line and stream before END", async (t) => {
   const { manager, client, feed } = await createOutputApp(t);
   client.preferences.sdwcNowrapBlocks = true;
