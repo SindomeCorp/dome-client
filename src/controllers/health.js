@@ -49,9 +49,6 @@ function formatCpuLoad(loadAvg) {
 }
 
 function resolveLastRestart(startTime) {
-  if (startTime instanceof Date) {
-    return startTime.toISOString();
-  }
   if (startTime) {
     const parsed = new Date(startTime);
     if (!Number.isNaN(parsed.getTime())) {

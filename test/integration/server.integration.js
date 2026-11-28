@@ -621,7 +621,7 @@ test("integration: health endpoint response schema stays stable", async (t) => {
 
   mockStatusOk();
 
-  const { baseUrl } = await bootServer(t);
+  const { baseUrl, runtime } = await bootServer(t);
   const http = request(baseUrl);
   const res = await http.get("/health/").expect(200);
 
@@ -637,6 +637,10 @@ test("integration: health endpoint response schema stays stable", async (t) => {
   assert.equal(typeof res.body.cpuLoad["5m"], "number");
   assert.equal(typeof res.body.cpuLoad["15m"], "number");
   assert.ok(!Number.isNaN(Date.parse(res.body.lastRestart)));
+  runtime.app.set("appStartTime", new Date(NaN));
+  const fallback = await http.get("/health/").expect(200);
+  const expectedRestart = Date.now() - process.uptime() * 1000;
+  assert.ok(Math.abs(Date.parse(fallback.body.lastRestart) - expectedRestart) < 1000);
 });
 
 test("integration: website login network failure sets session error and redirects", async (t) => {

@@ -95,6 +95,7 @@ test("accepts a serialized restart timestamp and falls back when the app has no 
 
   assert.equal(get({ app: { get: () => parsedTime } }, response).lastRestart, new Date(parsedTime).toISOString());
   assert.equal(get({ app: { get: () => "not a timestamp" } }, response).lastRestart, fallback);
+  assert.equal(get({ app: { get: () => new Date(NaN) } }, response).lastRestart, fallback);
   assert.equal(get({ app: { get: () => null } }, response).lastRestart, fallback);
   assert.equal(get({ app: {} }, response).lastRestart, fallback);
   const missingApp = get({}, response);

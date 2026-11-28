@@ -27,13 +27,17 @@ test("overlapping refreshes share one request and an old response cannot replace
 });
 
 test("the poller gives a stalled request a deadline and reports a timeout", async () => {
-  const keepAlive = setTimeout(() => {}, 1000);
+  let guard;
+  const deadline = new Promise((_resolve, reject) => {
+    guard = setTimeout(() => reject(new Error("poller did not abort the request")), 500);
+  });
   try {
     const poller = createStatusPoller({ serviceUrl, logger, timeoutMs: 5, fetchStatus: (_url, { signal }) =>
       new Promise((_resolve, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true })) });
-    assert.match((await poller.refresh()).message, /too long/);
+    const status = await Promise.race([poller.refresh(), deadline]);
+    assert.match(status.message, /too long/);
   } finally {
-    clearTimeout(keepAlive);
+    clearTimeout(guard);
   }
 });
 
@@ -83,6 +87,15 @@ test("normalizes a configured HTTP URL and classifies the cause of a fetch timeo
   assert.match(result.message, /too long to respond/);
   assert.deepEqual(debug.mock.calls[0].arguments, ["getting health status from " + url]);
   assert.match(warn.mock.calls[0].arguments[0], /code=ETIMEDOUT message=fetch failed$/);
+});
+
+test("defaults to HTTPS when only the query contains a scheme", async (t) => {
+  const serviceUrl = "fixture.invalid/relay?upstream=https://game.invalid/status";
+  const fetchStatus = t.mock.fn(async () => response(25));
+  const poller = createStatusPoller({ serviceUrl, fetchStatus, logger });
+
+  assert.equal((await poller.refresh()).checked, 25);
+  assert.equal(fetchStatus.mock.calls[0].arguments[0], "https://" + serviceUrl);
 });
 
 test("diagnostics cap upstream body previews and handle missing headers", async (t) => {
