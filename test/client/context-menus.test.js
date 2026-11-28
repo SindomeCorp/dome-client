@@ -308,6 +308,7 @@ test("pointer targeting handles both caret APIs and the edges of split display t
   const projection = projectOutputRow(row);
   const { node } = projection.nodes[1];
 
+  let visible = true;
   const createRange = doc.createRange.bind(doc);
   doc.createRange = () => {
     const range = createRange();
@@ -315,7 +316,7 @@ test("pointer targeting handles both caret APIs and the edges of split display t
       assert.equal(range.startContainer, node);
       assert.equal(range.endOffset, range.startOffset + 1);
       const left = 10 + 10 * range.startOffset;
-      return [{ left, right: left + 10, top: 10, bottom: 20 }];
+      return visible ? [{ left, right: left + 10, top: 10, bottom: 20 }] : [];
     };
     return range;
   };
@@ -332,6 +333,9 @@ test("pointer targeting handles both caret APIs and the edges of split display t
   for (const [x, y] of [[9, 15], [21, 15], [15, 9], [15, 21]]) {
     assert.equal(characterAtPoint(doc, projection, x, y), null, "adjacent whitespace is outside the glyph");
   }
+
+  visible = false;
+  assert.equal(characterAtPoint(doc, projection, 15, 15), null, "an unpainted glyph cannot be hit");
 
   doc.caretPositionFromPoint = () => ({ offsetNode: row.querySelector("button").firstChild, offset: 0 });
   assert.equal(characterAtPoint(doc, projection, 15, 15), null, "excluded controls have no text match offset");
@@ -930,6 +934,58 @@ test("temporary worker saturation retries unchanged output but terminal failures
   assert.equal(native.defaultPrevented, false);
 });
 
+
+test("output menus wait for current matches on initial render and profile changes", { timeout: 5000 }, async (t) => {
+  const config = referenceContextMenus();
+  config.profiles.push({ ...config.profiles[0], id: "staff", label: "Staff" });
+  const { controller, doc, window } = await fixture(t, JSON.stringify(config));
+  Object.defineProperty(window.navigator, "clipboard", { value: { async writeText() {} } });
+  const output = doc.createElement("div");
+  const row = doc.createElement("div");
+  row.textContent = "Preview #123";
+  output.append(row);
+  doc.body.append(output);
+
+  let offset = row.textContent.indexOf("#");
+  doc.caretPositionFromPoint = () => ({ offsetNode: row.firstChild, offset });
+  const createRange = doc.createRange.bind(doc);
+  doc.createRange = () => {
+    const range = createRange();
+    range.getClientRects = () => [{ left: 10, right: 20, top: 10, bottom: 20 }];
+    return range;
+  };
+  const errors = [];
+  window.addEventListener("error", (event) => { errors.push(event.error); event.preventDefault(); });
+  const click = () => {
+    const event = new window.MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 15, clientY: 15 });
+    row.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+
+  const started = Promise.withResolvers();
+  const pending = Promise.withResolvers();
+  const match = controller.match.bind(controller);
+  controller.match = async (text) => {
+    started.resolve();
+    await pending.promise;
+    return match(text);
+  };
+  controller.bindOutput(output, window);
+  assert.equal(click(), false, "an unprocessed row keeps the native menu");
+  await started.promise;
+  assert.equal(click(), false, "a pending worker match keeps the native menu");
+  pending.resolve();
+  await new Promise(resolve => setImmediate(resolve));
+  offset = 0;
+  assert.equal(click(), false, "text before the reference keeps the native menu");
+  offset = row.textContent.indexOf("#");
+  assert.equal(click(), true, "the current match opens its menu");
+  controller.update({ override: true, profile: "staff" });
+  assert.equal(controller.active().profile.id, "staff");
+  assert.equal(click(), false, "an older profile's match cannot open a menu");
+  assert.equal(doc.querySelector("[role=menu]"), null);
+  assert.deepEqual(errors, []);
+});
 
 test("queued output removed and reattached before matching is not stranded in a pending cache entry", async (t) => {
   const { controller, doc, window } = await fixture(t);
