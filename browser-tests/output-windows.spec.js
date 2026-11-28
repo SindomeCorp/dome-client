@@ -973,17 +973,33 @@ test("the real client Page Up and Page Down move focus through virtual scrollbac
   const previousConnections = await connections();
   await page.goto("/?entry=real");
   await expect.poll(connections).toBeGreaterThan(previousConnections);
+  await page.setViewportSize({ ...page.viewportSize(), height: 235 });
+  const output = page.locator("#lineBuffer");
+  await expect(output).toHaveAttribute("tabindex", "0");
+  const handled = (element, key) => !element.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key, bubbles: true, cancelable: true
+  }));
+  expect(await output.evaluate(handled, "PageDown")).toBe(false);
   const lines = Array.from({ length: 79 }, (_, index) => "Keyboard fixture row " + (index + 1));
   lines[1] += " https://example.invalid/navigation";
   await page.request.post("/fixture/data", { data: { text: lines.join("\n") + "\n" } });
-  const output = page.locator("#lineBuffer");
   const exactRow = (number) => output.locator(`[data-output-id="${number}"]`);
   await expect(exactRow(79)).toHaveText(lines[78]);
+  await expect(exactRow(59)).toHaveCount(0);
   await exactRow(79).focus();
+  expect(await exactRow(79).evaluate(handled, "x")).toBe(false);
+
+  await exactRow(79).evaluate((row) => {
+    row.addEventListener("keydown", (event) => event.preventDefault(), { once: true });
+  });
+  await page.keyboard.press("PageUp");
+  await expect(exactRow(79)).toBeFocused();
+  await expect(exactRow(59)).toHaveCount(0);
 
   const move = async (key, number) => {
     await page.keyboard.press(key);
     await expect(exactRow(number)).toBeFocused();
+    await expect(exactRow(number)).toBeInViewport();
     await expect(exactRow(number)).toHaveText(lines[number - 1]);
     await expect(exactRow(number)).toHaveAttribute("aria-posinset", String(number));
     await expect(exactRow(number)).toHaveAttribute("aria-setsize", "79");
@@ -1000,16 +1016,13 @@ test("the real client Page Up and Page Down move focus through virtual scrollbac
 
   const link = exactRow(2).getByRole("link");
   await link.focus();
-  const handled = (element) => !element.dispatchEvent(new window.KeyboardEvent("keydown", {
-    key: "PageDown", bubbles: true, cancelable: true
-  }));
-  expect(await link.evaluate(handled)).toBe(false);
+  expect(await link.evaluate(handled, "PageDown")).toBe(false);
   await expect(link).toBeFocused();
 
   await exactRow(2).focus();
   for (const number of [22, 42, 62, 79]) await move("PageDown", number);
   await move("ArrowDown", 79);
-  expect(await exactRow(79).evaluate(handled)).toBe(true);
+  expect(await exactRow(79).evaluate(handled, "PageDown")).toBe(true);
   await page.getByRole("button", { name: "Resume main scrolling" }).click();
   await expect(page.getByRole("button", { name: "Pause main scrolling" })).toBeVisible();
   await page.request.post("/fixture/data", { data: { text: "Keyboard fixture row 80\n" } });
