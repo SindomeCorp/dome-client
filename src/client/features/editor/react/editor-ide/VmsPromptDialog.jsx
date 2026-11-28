@@ -1,5 +1,16 @@
 import React from "react";
 
+function wrapDialogFocus(event) {
+  if (event.key !== "Tab") return;
+  const controls = event.currentTarget.querySelectorAll("input, button");
+  const first = controls[0];
+  const last = controls[controls.length - 1];
+  const boundary = event.shiftKey ? first : last;
+  if (event.target !== boundary) return;
+  event.preventDefault();
+  (event.shiftKey ? last : first).focus();
+}
+
 export function VmsPromptDialog({
   enabled,
   inputRef,
@@ -15,12 +26,17 @@ export function VmsPromptDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50"
       onClick={onCancel}
     >
-      <div
+      <form
         role="dialog"
         aria-modal="true"
         aria-label="VMS save note prompt"
         className="bg-bg-surface text-ink rounded-lg border border-line-subtle shadow-card p-6 w-full max-w-2xl"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={wrapDialogFocus}
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit();
+        }}
       >
         <h2 className="text-3xl font-semibold mb-2">VMS Save Note</h2>
         <p className="text-lg text-ink-muted mb-4">Add a note for this verb save. Press Enter to submit or Esc to cancel.</p>
@@ -42,14 +58,13 @@ export function VmsPromptDialog({
             Cancel
           </button>
           <button
-            type="button"
-            onClick={onSubmit}
+            type="submit"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-600 text-ink-invert hover:bg-brand-500 active:translate-y-[0.5px] transition text-base focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500/50"
           >
             Submit
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

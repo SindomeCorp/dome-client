@@ -308,7 +308,6 @@ export default function EditorIDE() {
     setShowShortcuts,
     setVimMode,
     showShortcuts,
-    submitVmsPrompt,
     tabs,
     toggleWordWrap,
     vmsPrompt

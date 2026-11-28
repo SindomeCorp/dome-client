@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Keep output context menus responsive when Find changes how a reference is highlighted.
 - Leave missing note metadata blank and show save and validation feedback in the note viewer.
 - Keep rejected pastes and newlines out of undo history when a local IDE editor reaches its line limit.
+- Keep keyboard focus inside the VMS save dialog, restore it on close, and let Enter activate Cancel without saving.
 
 ## 2026-11-27
 

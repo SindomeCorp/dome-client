@@ -77,6 +77,7 @@ app.get("/editor/:type/", async (req, res) => {
         localSaveNodeAdminMaxLines: 4
       } : {}),
       ideScratchEnabled: req.query.scratch !== "off",
+      ideVmsNoteEnabled: req.query.vms === "on",
       ideHoverOverlaysEnabled: true,
       ideObjectBrowserEnabled: req.query.browsers === "on",
       idePropertyBrowserEnabled: req.query.browsers === "on",

@@ -465,7 +465,6 @@ test("useIdeKeyboardShortcuts routes keydown commands", async (t) => {
         calls.push(["vim", value]);
       },
       showShortcuts,
-      submitVmsPrompt: () => calls.push(["submit-vms"]),
       tabs: [
         { id: 1, commandTarget: "#1:a" },
         { id: 2, commandTarget: "#1:b" },
@@ -514,7 +513,7 @@ test("useIdeKeyboardShortcuts routes keydown commands", async (t) => {
     window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape" }));
     window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter" }));
   });
-  assert.deepEqual(calls, [["cancel-vms"], ["submit-vms"]]);
+  assert.deepEqual(calls, [["cancel-vms"]]);
 
   calls.length = 0;
   await act(async () => {

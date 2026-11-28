@@ -14,7 +14,7 @@ export function getShortcutCommand(event, {
 } = {}) {
   if (isVmsPromptOpen) {
     if (event.key === "Escape") return "cancel-vms-prompt";
-    if (event.key === "Enter") return "submit-vms-prompt";
+    return "";
   }
 
   if (event.key === "Escape" && showShortcuts) return "hide-shortcuts";
@@ -51,7 +51,6 @@ export function useIdeKeyboardShortcuts({
   setShowShortcuts,
   setVimMode,
   showShortcuts,
-  submitVmsPrompt,
   tabs,
   toggleWordWrap,
   vmsPrompt,
@@ -69,9 +68,6 @@ export function useIdeKeyboardShortcuts({
       if (command === "cancel-vms-prompt") {
         event.preventDefault();
         cancelVmsPrompt();
-      } else if (command === "submit-vms-prompt") {
-        event.preventDefault();
-        submitVmsPrompt();
       } else if (command === "hide-shortcuts") {
         setShowShortcuts(false);
       } else if (command === "toggle-shortcuts") {
@@ -125,7 +121,6 @@ export function useIdeKeyboardShortcuts({
     setShowShortcuts,
     setVimMode,
     showShortcuts,
-    submitVmsPrompt,
     tabs,
     toggleWordWrap,
     vmsPrompt

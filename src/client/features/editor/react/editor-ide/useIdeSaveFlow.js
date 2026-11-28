@@ -54,8 +54,12 @@ export function useIdeSaveFlow({
   useEffect(() => {
     if (!ideVmsNoteEnabled) return;
     if (!vmsPrompt.open) return;
+    const opener = vmsPromptInputRef.current?.ownerDocument.activeElement;
     const id = setTimeout(() => vmsPromptInputRef.current?.focus(), 0);
-    return () => clearTimeout(id);
+    return () => {
+      clearTimeout(id);
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
   }, [ideVmsNoteEnabled, vmsPrompt.open]);
 
   const runSave = (tab, vmsNoteLine = null) => saveTab({

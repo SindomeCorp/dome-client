@@ -1731,3 +1731,58 @@ for (const [command, limit] of [["@local-save-note", 2], ["@local-save-node", 3]
       .toEqual([command + " fixture", saved + "\n."]);
   });
 }
+
+test("the real VMS save dialog keeps keyboard focus and uploads only on submit", async ({ page }) => {
+  await page.context().route("**/editor/ide/", async (route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("vms", "on");
+    await route.fulfill({ response: await route.fetch({ url: url.href }) });
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const before = (await fixtureState(page)).commands;
+  const opened = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: VMS fixture upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
+  const ide = await opened;
+  const save = ide.getByRole("button", { name: "Save", exact: true });
+  const dialog = ide.getByRole("dialog", { name: "VMS save note prompt" });
+  const input = dialog.getByRole("textbox", { name: "VMS note prompt input" });
+  await save.click();
+  await expect(input).toBeFocused();
+  await ide.keyboard.press("Shift+Tab");
+  await expect(dialog.getByRole("button", { name: "Submit" })).toBeFocused();
+  await ide.keyboard.press("Tab");
+  await expect(input).toBeFocused();
+  await input.click();
+  await input.fill("discarded note");
+  await ide.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(save).toBeFocused();
+  expect((await fixtureState(page)).commands).toEqual(before);
+
+  await save.click();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("");
+  await ide.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await ide.keyboard.press("Enter");
+  await expect(dialog).toHaveCount(0);
+  await expect(save).toBeFocused();
+  expect((await fixtureState(page)).commands).toEqual(before);
+
+  await save.click();
+  await expect(input).toBeFocused();
+  await ide.mouse.click(4, 4);
+  await expect(dialog).toHaveCount(0);
+  await expect(save).toBeFocused();
+  expect((await fixtureState(page)).commands).toEqual(before);
+
+  await save.click();
+  await input.fill("Fixture VMS note");
+  await ide.keyboard.press("Enter");
+  await expect(dialog).toHaveCount(0);
+  await expect(save).toBeFocused();
+  await expect.poll(async () => (await fixtureState(page)).commands.slice(before.length))
+    .toEqual(["@program #12:preview", "return 1;\n.", "Fixture VMS note"]);
+});

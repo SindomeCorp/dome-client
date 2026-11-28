@@ -668,7 +668,8 @@ test("editor IDE save helpers preserve prompt and emit behavior", () => {
 
 test("editor IDE keyboard helpers select shortcut commands", () => {
   assert.equal(getShortcutCommand({ key: "Escape" }, { isVmsPromptOpen: true }), "cancel-vms-prompt");
-  assert.equal(getShortcutCommand({ key: "Enter" }, { isVmsPromptOpen: true }), "submit-vms-prompt");
+  assert.equal(getShortcutCommand({ key: "Enter" }, { isVmsPromptOpen: true }), "");
+  assert.equal(getShortcutCommand({ key: "e", ctrlKey: true }, { isVmsPromptOpen: true }), "");
   assert.equal(getShortcutCommand({ key: "Escape" }, { showShortcuts: true }), "hide-shortcuts");
   assert.equal(getShortcutCommand({ key: "/", ctrlKey: true }, { platform: "Win32" }), "toggle-shortcuts");
   assert.equal(getShortcutCommand({ key: "/", metaKey: true }, { platform: "MacIntel" }), "toggle-shortcuts");
