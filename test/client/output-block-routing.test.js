@@ -85,6 +85,23 @@ test("output indexing drains later slices without repeating an announcement", as
   assert.deepEqual(lines(manager.views.main), rows);
 });
 
+test("output commitment resumes on its next turn even without more socket traffic", async (t) => {
+  const { manager, win } = await createOutputApp(t);
+  const timers = t.mock.method(win, "setTimeout", () => 1);
+  const clock = t.mock.method(win.performance, "now", () => 109);
+  clock.mock.mockImplementationOnce(() => 100);
+  const rows = Array.from({ length: 65 }, (_, i) => `committed row ${i + 1}`);
+
+  manager.appendRuns([{ text: rows.join("\n") + "\n", classes: [], inlineStyles: [] }], { local: true });
+  assert.equal(timers.mock.callCount(), 2, "the budget queues both more commitment and indexing");
+  assert.equal(manager.views.main.index.length, 0);
+
+  timers.mock.calls[0].arguments[0]();
+  timers.mock.calls[1].arguments[0]();
+  assert.equal(timers.mock.callCount(), 2, "draining the final row schedules no additional work");
+  assert.deepEqual(lines(manager.views.main), rows);
+});
+
 test("grid blocks route using the first nonblank ANSI-stripped line and stream before END", async (t) => {
   const { manager, client, feed } = await createOutputApp(t);
   client.preferences.sdwcNowrapBlocks = true;
@@ -108,6 +125,38 @@ test("grid blocks route using the first nonblank ANSI-stripped line and stream b
   assert.ok(html.indexOf("Header") < html.indexOf("Body"));
   assert.ok(html.indexOf("Body") < html.indexOf("&gt;look"));
   assert.ok(html.indexOf("&gt;look") < html.indexOf("after"));
+});
+
+test("a duplicate nowrap start preserves the original block and its routing", async (t) => {
+  const { manager, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["grid-output"] });
+  await feed(start + "[g] header\n");
+  const block = manager.views.secondary.index.at(0).group;
+  manager.updateSettings({ selected: [] });
+  await feed(start + "continuation\n" + end + "ordinary output\n");
+
+  assert.deepEqual(lines(manager.views.secondary), ["[g] header", "continuation"]);
+  assert.equal(manager.views.secondary.index.at(1).group === block, true);
+  assert.deepEqual(lines(manager.views.main), ["ordinary output"]);
+});
+
+test("a standalone nowrap end releases held rows and an extra end leaves ordinary output intact", async (t) => {
+  const { client, feed, manager } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["grid-output"] });
+
+  client.parseSocketData(start + "  \n");
+  await manager.inputQueue.idle();
+  await manager.whenIndexed();
+  assert.deepEqual(lines(manager.views.main), []);
+
+  client.parseSocketData(end);
+  await manager.inputQueue.idle();
+  await manager.whenIndexed();
+  assert.deepEqual(lines(manager.views.main), ["  "]);
+
+  await feed(end + "ordinary output\n");
+  assert.deepEqual(lines(manager.views.main), ["  ", "ordinary output"]);
+  assert.deepEqual(lines(manager.views.secondary), []);
 });
 
 test("blank-only blocks finish in main and later matching lines cannot split a nonmatching block", async (t) => {
