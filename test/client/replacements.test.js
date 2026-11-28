@@ -165,3 +165,36 @@ test("inverse swaps fg and bg classes", () => {
       `<span class="xterm256-${xterm256Colors[1]} xterm256-bg-${xterm256Colors[4]}">C</span>`
   );
 });
+
+test("ANSI effects clear independently on the same line and at stream reset", () => {
+  const renderer = createAnsiRenderer();
+  assert.deepEqual(renderer.renderRuns(
+    "\u001b[1;2;3;4;5;7;91;104mall\u001b[22;23mdecorated\u001b[24;25;27mcolors\u001b[mplain"
+  ), [
+    {
+      text: "all",
+      classes: ["xterm256-BlueBright", "xterm256-bg-RedBright", "ansi-bold", "ansi-faint", "ansi-underline", "ansi-slow-blink"],
+      inlineStyles: ["font-weight: bold", "font-style: italic"]
+    },
+    {
+      text: "decorated",
+      classes: ["xterm256-BlueBright", "xterm256-bg-RedBright", "ansi-underline", "ansi-slow-blink"],
+      inlineStyles: []
+    },
+    { text: "colors", classes: ["xterm256-RedBright", "xterm256-bg-BlueBright"], inlineStyles: [] },
+    { text: "plain", classes: [], inlineStyles: [] }
+  ]);
+  assert.equal(renderer.renderChunk("\u001b[1;2;3;4;5;7;30;40m\u001b[38;"), "");
+  renderer.resetState();
+  assert.deepEqual(renderer.renderRuns("<fresh>"), [{ text: "<fresh>", classes: [], inlineStyles: [] }]);
+});
+
+test("ANSI boundaries clamp truecolor and ignore invalid palette indexes without losing text", () => {
+  const input = "\u001b[30;47mordinary\u001b[97;100mbright\u001b[38;5;-1;48;5;256mheld\u001b[38;2;-2;256;128;48;2;255;0;1m<rgb>\u001b[2J&";
+  assert.equal(applyAnsi(input),
+    "<span class=\"xterm256-Black xterm256-bg-White\">ordinary</span>" +
+    "<span class=\"xterm256-WhiteBright xterm256-bg-Grey\">bright</span>" +
+    "<span class=\"xterm256-WhiteBright xterm256-bg-Grey\">held</span>" +
+    "<span style=\"color: rgb(0 255 128); background-color: rgb(255 0 1)\">&lt;rgb&gt;&amp;</span>");
+  assert.equal(applyAnsi("\u001b[90;107mfirst"), "<span class=\"xterm256-Grey xterm256-bg-WhiteBright\">first</span>");
+});

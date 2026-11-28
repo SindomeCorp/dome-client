@@ -63,6 +63,15 @@ test("ANSI extended xterm colors reach the real output stylesheet", async ({ pag
   const text = page.locator("#lineBuffer").getByText("extended palette row", { exact: true });
   await expect(text).toHaveCSS("color", "rgb(0, 0, 255)");
   await expect(text).toHaveCSS("background-color", "rgb(255, 0, 0)");
+
+  await page.evaluate(() => window.outputTest.feed("\u001b[3;4;38;2;-2;256;128mstyled truecolor\u001b[23;24;39m plain again\n"));
+  const styled = page.locator("#lineBuffer").getByText("styled truecolor", { exact: true });
+  await expect(styled).toHaveCSS("color", "rgb(0, 255, 128)");
+  await expect(styled).toHaveCSS("font-style", "italic");
+  await expect(styled).toHaveCSS("text-decoration-line", "underline");
+  const plain = page.locator("#lineBuffer .output-row").filter({ hasText: "plain again" });
+  await expect(plain).toHaveText("styled truecolor plain again");
+  await expect(plain).toHaveCSS("font-style", "normal");
 });
 
 test("docked and detached output keep named keyboard regions and list positions", async ({ page }) => {
