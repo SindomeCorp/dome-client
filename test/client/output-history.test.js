@@ -187,6 +187,23 @@ test("search, copy and HTML exports include unmounted history in arrival order",
   await assert.rejects(copyOutputSelection(snapshot, { start: { id: 1, offset: 0 }, end: { id: 4, offset: 11 } }, { signal: controller.signal }), { name: "AbortError" });
 });
 
+test("HTML export preserves each row and nowrap grouping across its batch boundary", async (t) => {
+  const history = new OutputHistory();
+  const group = {};
+  const rows = Array.from({ length: 260 }, (_, i) => i + 1);
+  for (const id of rows) {
+    history.append(runs("row " + id), { group: id >= 254 && id <= 257 ? group : null });
+  }
+  const snapshot = history.snapshot();
+  const client = { preferences: { sdwcNowrapBlocks: true }, parseYouTubeID: () => false };
+  const progress = t.mock.fn();
+  const html = (await exportSnapshot(snapshot, { client, progress })).join("");
+
+  assert.deepEqual([...html.matchAll(/<div>row ([0-9]+)<\/div>/g)].map(([, id]) => Number(id)), rows);
+  assert.match(html, /<div class="sdwc-nowrap-block"><div>row 254<\/div><div>row 255<\/div><div>row 256<\/div><div>row 257<\/div><\/div>/);
+  assert.deepEqual(progress.mock.calls.map(({ arguments: args }) => args), [[256, 260], [260, 260]]);
+});
+
 test("option normalization rejects malformed rules and preserves disabled feature preferences", () => {
   assert.equal(validateOutputRule({}).rule, undefined);
   assert.equal(validateOutputRule({ id: "x", name: "X", pattern: "[", ignoreCase: false }).rule, undefined);
