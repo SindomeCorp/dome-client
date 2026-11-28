@@ -11,6 +11,8 @@ import {
   getPreferenceNameForOptionKey
 } from "../../src/shared/client-options.js";
 import {
+  buildClientOptionsHelp,
+  getClientOptionDefinition,
   parseClientOptionCommandIntent,
   readClientPreferences,
   translateClientOptionName,
@@ -123,6 +125,24 @@ test("client option schema includes labels for every option surface", () => {
     assert.equal(CLIENT_OPTION_VIEW[option.key].label, option.label);
     assert.equal(optionState[option.key].label, option.label);
     assert.ok(Object.prototype.hasOwnProperty.call(defaults, option.preferenceName));
+  });
+});
+
+test("every configured option is documented and resolves through its command aliases", () => {
+  const helpLines = buildClientOptionsHelp().slice(5);
+  assert.equal(helpLines.length, CLIENT_OPTION_DEFINITIONS.length);
+
+  CLIENT_OPTION_DEFINITIONS.forEach((option, index) => {
+    const { key, param, preferenceName } = option;
+    assert.equal(helpLines[index], "   [" + param + "] " + preferenceName + "\n");
+    for (const alias of new Set([key, param, preferenceName])) {
+      assert.match(alias, /^[a-z][A-Za-z0-9]*$/);
+      assert.equal(getClientOptionDefinition(alias), option, alias);
+      assert.deepEqual(parseClientOptionCommandIntent("@client-option " + alias), {
+        type: "read",
+        optionName: preferenceName
+      });
+    }
   });
 });
 

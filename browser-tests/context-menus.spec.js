@@ -798,9 +798,20 @@ test("right-click copies a reverse selection and leaves unrelated plain text nat
 });
 
 test("dismissing selected-output actions restores the original ANSI-split range", async ({ page }) => {
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
   await start(page);
   await feed(page, "before #12\u001b[31m3:name\u001b[0m after\n");
   const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "before #123:name after" });
+  await row.evaluate((element) => {
+    // Model the live selection changing as focus shifts to the menu.
+    document.addEventListener("focusin", (event) => {
+      if (event.target.closest("[role=menu]")?.getAttribute("aria-label") !== "Selected output actions") return;
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const first = walker.nextNode();
+      document.getSelection().setBaseAndExtent(first, 0, first, 6);
+    });
+  });
   const buffer = page.locator("#lineBuffer");
   const menu = page.getByRole("menu", { name: "Selected output actions" });
   const selectedText = () => page.evaluate(() => document.getSelection().toString());
@@ -821,15 +832,32 @@ test("dismissing selected-output actions restores the original ANSI-split range"
     await openSelection(page);
     await expect(menu.getByRole("menuitem", { name: "Copy selected text" })).toBeFocused();
     await expect.poll(selectedText).toBe("#123:name");
-    // The browser can move or drop the live range while focus is in the menu.
-    await page.evaluate(() => document.getSelection().removeAllRanges());
-    await expect.poll(selectedText).toBe("");
+    // Exercise both a dropped and a replaced live range while focus is in the menu.
+    await row.evaluate((element, replace) => {
+      const selection = document.getSelection();
+      selection.removeAllRanges();
+      if (!replace) return;
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const first = walker.nextNode();
+      selection.setBaseAndExtent(first, 0, first, 6);
+    }, key === "Tab");
+    await expect.poll(selectedText).toBe(key === "Tab" ? "before" : "");
     await page.keyboard.press(key);
     await expect(menu).toHaveCount(0);
     await expect(buffer).toBeFocused();
     await expect.poll(selectedText).toBe("#123:name");
   }
 
+  await page.evaluate(() => document.getSelection().removeAllRanges());
+  await row.focus();
+  const referenceMenu = page.getByRole("menu", { name: "Reference actions" });
+  await expect.poll(async () => {
+    if (!await referenceMenu.count()) await page.keyboard.press("Shift+F10");
+    return referenceMenu.count();
+  }).toBe(1);
+  await page.keyboard.press("Escape");
+  await expect(row).toBeFocused();
+  expect(pageErrors).toEqual([]);
   expect(await page.evaluate(() => window.contextCopied)).toBeUndefined();
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
 });
