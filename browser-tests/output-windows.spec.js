@@ -765,6 +765,74 @@ test("routing, split positions, keyboard resize and close preserve output", asyn
   expect(errors).toEqual([]);
 });
 
+test("the real layout picker redocks without stealing focus and can cancel a split close", async ({ page }) => {
+  const connections = async () => (await (await page.request.get("/fixture/state")).json()).connections;
+  const previous = await connections();
+  await page.goto("/?entry=real");
+  await expect.poll(connections).toBeGreaterThan(previous);
+  await page.locator("#button-output-split").click();
+  const openOptions = async () => {
+    await page.locator("#button-client-options").click();
+    await page.getByRole("tab", { name: "Output Windows", exact: true }).click();
+  };
+  const closeOptions = () => page.locator("#button-client-options-close").click();
+  const feed = (line) => page.request.post("/fixture/data", { data: { text: line + "\n" } });
+  const layout = page.getByLabel("Output layout", { exact: true });
+  const main = page.locator("#lineBuffer");
+  const dock = page.locator("#secondaryBuffer");
+
+  await openOptions();
+  await page.getByRole("tab", { name: /^Player Filters/ }).click();
+  await page.getByLabel("Grid Output", { exact: true }).check();
+  await layout.selectOption("right");
+  await closeOptions();
+
+  const retained = "[g] Retained split fixture";
+  let popup = await popOut(page);
+  await feed(retained);
+  await expect(popup.locator("#secondaryBuffer")).toContainText(retained);
+  await page.bringToFront();
+  await openOptions();
+  await layout.focus();
+  await layout.selectOption("left");
+  await expect.poll(() => popup.isClosed()).toBe(true);
+  await expect(layout).toBeFocused();
+  await expect(page.locator("#output-workspace")).toHaveAttribute("data-position", "left");
+  await expect(dock).toContainText(retained);
+  await closeOptions();
+
+  popup = await popOut(page);
+  await expect(popup.locator("#secondaryBuffer")).toContainText(retained);
+  await page.bringToFront();
+  await openOptions();
+  page.removeAllListeners("dialog");
+  const chooseSingle = async (accept) => {
+    const confirmation = page.waitForEvent("dialog", { timeout: 5000 }).then(async (dialog) => {
+      const message = dialog.message();
+      if (accept) await dialog.accept();
+      else await dialog.dismiss();
+      return message;
+    });
+    const [message] = await Promise.all([confirmation, layout.selectOption("single")]);
+    expect(message).toContain("retained output will return to the main window");
+  };
+  await chooseSingle(false);
+  await expect(layout).toHaveValue("left");
+  await expect(popup.locator("#secondaryBuffer")).toContainText(retained);
+  await chooseSingle(true);
+  await expect.poll(() => popup.isClosed()).toBe(true);
+  await expect(layout).toHaveValue("single");
+  await expect(main).toContainText(retained);
+
+  await layout.selectOption("bottom");
+  await closeOptions();
+  const fresh = "[g] Fresh split fixture";
+  await feed(fresh);
+  await expect(dock).toContainText(fresh);
+  await expect(dock).not.toContainText(retained);
+  await expect(main).toContainText(retained);
+});
+
 test("large history stays bounded and Find locates an unmounted message", async ({ page }) => {
   await page.evaluate(() => window.outputTest.feed(Array.from({ length: 20_000 }, (_, i) => "history message " + i).join("\n") + "\n"));
   expect(await page.locator("[data-output-id]").count()).toBeLessThan(400);
