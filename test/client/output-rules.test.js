@@ -143,3 +143,37 @@ test("routing queue has a fixed line budget and overflow safely stays in main", 
   assert.equal(runner.pendingLines, 0);
   runner.cancel();
 });
+
+test("a worker failure from old settings does not disable newer routing", async (t) => {
+  const workers = [];
+  const errors = [];
+  const runner = createRuleRunner({
+    onError: (message) => errors.push(message),
+    workerFactory: () => {
+      const worker = {
+        addEventListener(name, listener) { this[name] = listener; },
+        postMessage(message) { this.sent = message; },
+        terminate() { this.terminated = true; }
+      };
+      workers.push(worker);
+      return worker;
+    }
+  });
+  t.after(() => runner.cancel());
+
+  const oldBatch = runner.match(["old settings"], rules);
+  runner.reset();
+  const newBatch = runner.match(["new settings"], rules);
+  workers[0].error();
+  assert.deepEqual(await oldBatch, [false]);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(workers[0].terminated, true);
+  assert.equal(workers.length, 2);
+  workers[0].error();
+  workers[1].message({ data: { id: workers[0].sent.id, matches: [false] } });
+  assert.equal(runner.pendingLines, 1);
+  assert.equal(workers[1].terminated, undefined);
+  workers[1].message({ data: { id: workers[1].sent.id, matches: [true] } });
+  assert.deepEqual(await newBatch, [true]);
+  assert.deepEqual(errors, []);
+});

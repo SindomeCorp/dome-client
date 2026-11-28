@@ -2096,3 +2096,43 @@ test("the real IDE recovers after a temporary parser grammar load failure", asyn
   expect(grammarRequests).toBe(2);
   expect((await fixtureState(page)).commands).toEqual(before);
 });
+
+test("real split output uses updated filters after an obsolete routing worker fails", async ({ page }) => {
+  await page.context().addInitScript(() => {
+    const send = window.Worker.prototype.postMessage;
+    window.Worker.prototype.postMessage = function (message, ...args) {
+      send.call(this, message, ...args);
+      if (message.lines?.includes("[g] older routing settings")) {
+        // Change settings in the same turn, before the worker's asynchronous failure.
+        document.querySelector("[data-output-rule-id=sic]").click();
+      }
+    };
+  });
+  let workerRequests = 0;
+  await page.context().route("**/output-rules-worker.js*", async (route) => {
+    if (++workerRequests === 1) {
+      await route.fulfill({ status: 503, body: "Fixture output rules worker unavailable" });
+    } else {
+      await route.continue();
+    }
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await page.locator("#button-output-split").click();
+  await page.locator("#button-client-options").click();
+  await page.getByRole("tab", { name: "Output Windows", exact: true }).click();
+  await page.getByRole("tab", { name: /^Player Filters/ }).click();
+  await page.getByLabel("Grid Output", { exact: true }).check();
+  const sic = page.getByLabel("SIC", { exact: true });
+  await expect(sic).not.toBeChecked();
+
+  await socketFeed(page, "[g] older routing settings\n");
+  await expect(sic).toBeChecked();
+  await page.locator("#button-client-options-close").click();
+  await expect(page.locator("#lineBuffer")).toContainText("[g] older routing settings");
+
+  await socketFeed(page, "|C| updated routing settings\n");
+  await expect(page.locator("#secondaryBuffer")).toContainText("|C| updated routing settings");
+  expect(workerRequests).toBe(2);
+});

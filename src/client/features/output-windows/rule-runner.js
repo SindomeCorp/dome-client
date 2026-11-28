@@ -39,8 +39,12 @@ export function createRuleRunner({
   }
   function fail(message) {
     if (!active) return;
-    if (!active.resolve) { stop(); finish(); return; }
-    if (active.ruleId && active.configuration === configuration) suspended.add(active.ruleId);
+    if (!active.resolve || active.configuration !== configuration) {
+      stop();
+      finish();
+      return;
+    }
+    if (active.ruleId) suspended.add(active.ruleId);
     if (!active.ruleId) unavailable = true;
     stop();
     onError(message, active.ruleId);
