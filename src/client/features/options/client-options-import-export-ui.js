@@ -64,14 +64,17 @@ export async function importClientOptionsJson({
   actions,
   applyOptionValue,
   refreshClientOptions,
-  showToast
+  showToast,
+  isCurrent = () => true
 }) {
   if (!file) return;
   let parsed;
   try {
     const text = await file.text();
+    if (!isCurrent()) return;
     parsed = JSON.parse(text);
   } catch {
+    if (!isCurrent()) return;
     actions.appendOutput("Client options import error: invalid JSON file.\n");
     actions.scrollBuffer();
     showToast("Import failed.", true);
@@ -127,6 +130,7 @@ export function bindImportExportControls({
   const importFileInput = doc.getElementById("client-options-import-file");
   const resetDefaultsButton = doc.getElementById("client-options-reset-defaults");
   if (!exportButton || !importButton || !importFileInput || !resetDefaultsButton) return;
+  let importRevision = 0;
 
   exportButton.addEventListener("click", () => {
     downloadClientOptionsJson({ doc, options, actions, showToast });
@@ -140,21 +144,26 @@ export function bindImportExportControls({
 
   importFileInput.addEventListener("change", async () => {
     const [file] = importFileInput.files || [];
+    if (!file) return;
+    // Clear the picker before awaiting so the same file can be selected again.
+    importFileInput.value = "";
+    const revision = ++importRevision;
     await importClientOptionsJson({
       file,
       options,
       actions,
       applyOptionValue,
       refreshClientOptions,
-      showToast
+      showToast,
+      isCurrent: () => revision === importRevision
     });
-    importFileInput.value = "";
   });
 
   resetDefaultsButton.addEventListener("click", () => {
     const message = "Resetting to defaults will overwrite your current settings. This is destructive. Export a backup first. Continue?";
     if (typeof win !== "undefined" && typeof win.confirm === "function" && !win.confirm(message)) return;
 
+    importRevision++;
     Object.entries(options.options).forEach(([name, optionDef]) => {
       applyOptionValue(name, optionDef.def);
     });

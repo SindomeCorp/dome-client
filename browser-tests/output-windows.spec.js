@@ -223,6 +223,66 @@ test("the real Options import distinguishes malformed files from a partial impor
   expect(accepted.outputWindows).toMatchObject({ open: true, position: "left", custom: [] });
 });
 
+test("the real Options import keeps newer imports and resets when an older file finishes late", async ({ page }) => {
+  const connections = async () => (await (await page.request.get("/fixture/state")).json()).connections;
+  const previous = await connections();
+  await page.goto("/?entry=real");
+  await expect.poll(connections).toBeGreaterThan(previous);
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-importexport").click();
+  const file = page.locator("#client-options-import-file");
+  const toast = page.locator("#client-options-import-export-indicator");
+  const output = page.locator("#lineBuffer");
+  const imported = output.getByText("Imported 1 client option.", { exact: true });
+  const exportFontSize = async () => {
+    const pending = page.waitForEvent("download");
+    await page.locator("#client-options-export").click();
+    let json = "";
+    for await (const part of await (await pending).createReadStream()) json += part;
+    return JSON.parse(json).preferences.outfontsize;
+  };
+  const defaultSize = await exportFontSize();
+  const select = (name, outfontsize) => file.setInputFiles({
+    name, mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ outfontsize }))
+  });
+  // Hold just the fixture file read, while the real Options controls stay usable.
+  await page.evaluate(() => {
+    const read = File.prototype.text;
+    File.prototype.text = async function () {
+      const text = await read.call(this);
+      if (this.name.startsWith("slow-")) {
+        await new Promise((resolve) => { window.releasePreferenceRead = resolve; });
+      }
+      if (this.name === "slow-read-failure.json") throw new Error("Fixture file read failure");
+      return text;
+    };
+  });
+  const release = () => page.evaluate(() => {
+    window.releasePreferenceRead();
+    delete window.releasePreferenceRead;
+  });
+  await select("slow-first.json", 18.5);
+  await expect.poll(() => page.evaluate(() => typeof window.releasePreferenceRead)).toBe("function");
+  await select("newer.json", 12.5);
+  await expect(imported).toHaveCount(1);
+  await release();
+  await expect(file).toHaveValue("");
+  expect(await exportFontSize()).toBe(12.5);
+  await expect(imported).toHaveCount(1);
+
+  for (const name of ["slow-before-reset.json", "slow-read-failure.json"]) {
+    await select(name, 18.5);
+    await expect.poll(() => page.evaluate(() => typeof window.releasePreferenceRead)).toBe("function");
+    await page.locator("#client-options-reset-defaults").click();
+    await expect(toast).toHaveText("Defaults restored.");
+    await release();
+    await expect(file).toHaveValue("");
+    expect(await exportFontSize()).toBe(defaultSize);
+    await expect(imported).toHaveCount(1);
+    await expect(output.getByText("Client options import error: invalid JSON file.", { exact: true })).toHaveCount(0);
+  }
+});
+
 test("the real Options export reports a failed download and releases the abandoned URL", async ({ page }) => {
   const connections = async () => (await (await page.request.get("/fixture/state")).json()).connections;
   const previous = await connections();
