@@ -160,6 +160,10 @@ export function useAceEditors({
       const editCommand = formatOpenReferenceCommand(target, { openParent: ideEditOpenParent });
       if (editCommand) emitInput(editCommand);
     });
+    const clearHover = () => {
+      onHoverOverlayClear(id);
+      pendingOverlayKey.current = "";
+    };
     ed.on("mousemove", (event) => {
       if (contextScratch) return;
       if (!ideHoverOverlaysEnabled) return;
@@ -170,8 +174,7 @@ export function useAceEditors({
       const target = resolveThisReference(getDefinitionTargetAtPosition(line, pos.column), editingObjectId);
       const parsed = splitReferenceTarget(target);
       if (!parsed) {
-        onHoverOverlayClear(id);
-        pendingOverlayKey.current = "";
+        clearHover();
         return;
       }
       const key = `${parsed.objectId}::${parsed.itemName}`;
@@ -194,10 +197,8 @@ export function useAceEditors({
         : formatPropertyOverlayCommand(parsed.objectId, parsed.itemName);
       emitInput(overlayCommand);
     });
-    ed.on("mouseout", () => {
-      onHoverOverlayClear(id);
-      pendingOverlayKey.current = "";
-    });
+    node.addEventListener("mouseleave", clearHover);
+    ed.on("destroy", () => node.removeEventListener("mouseleave", clearHover));
     editors.current[id] = ed;
   };
 

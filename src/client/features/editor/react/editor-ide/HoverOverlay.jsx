@@ -9,7 +9,7 @@ export function HoverOverlay({ overlay }) {
 
   return (
     <div
-      className="sdwc-hover-overlay fixed z-50 min-w-[90ch] max-w-[110ch] rounded-md border border-line-subtle bg-bg-surface/95 shadow-card p-4 text-lg"
+      className="sdwc-hover-overlay pointer-events-none fixed z-50 min-w-[90ch] max-w-[110ch] rounded-md border border-line-subtle bg-bg-surface/95 shadow-card p-4 text-lg"
       style={{ left: overlay.x, top: overlay.y }}
     >
       <div className="font-semibold text-ink mb-2">

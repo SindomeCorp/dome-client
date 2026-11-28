@@ -1857,3 +1857,49 @@ test("the real IDE modifier click resolves this without opening lookalike variab
   await clickCode(2, 9, true);
   await expect.poll(commands).toEqual(["@edit #12:preview", "@edit $tools.label"]);
 });
+
+test("the real IDE requests and caches verb and property hover previews", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const before = (await fixtureState(page)).commands.length;
+  const opened = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: hover fixture upload: @program #12:look\r\nthis:preview();\r\n$tools.label;\r\n.\r\n");
+  const ide = await opened;
+  const editor = ide.locator(".ace_editor");
+  await expect(editor).toBeVisible();
+  const hoverCode = async (row, column) => {
+    const point = await editor.evaluate((element, position) => {
+      const renderer = element.env.editor.renderer;
+      const { pageX, pageY } = renderer.textToScreenCoordinates(position.row, position.column);
+      return { x: pageX - window.scrollX + 2, y: pageY - window.scrollY + renderer.lineHeight / 2 };
+    }, { row, column });
+    await ide.mouse.move(point.x, point.y);
+  };
+  await ide.mouse.move(4, 4);
+  const commands = async () => (await fixtureState(page)).commands.slice(before);
+  const overlay = ide.locator(".sdwc-hover-overlay");
+  await hoverCode(0, 7);
+  const verbRequest = "#$# SDWC%%VERB-OVERLAY%%#12%%preview";
+  await expect.poll(commands).toEqual([verbRequest]);
+  await expect(overlay).toContainText("Loading...");
+  await hoverCode(0, 8);
+  await socketFeed(page, "#$# SDWC%%VERB-OVERLAY%%" + JSON.stringify({
+    object: "#12", verb: "preview", value: ["First fixture line", "Second fixture line"]
+  }) + "\n");
+  await expect(overlay.locator("pre")).toHaveText("First fixture line\nSecond fixture line");
+  await ide.mouse.move(4, 4);
+  await expect(overlay).toHaveCount(0);
+  await hoverCode(0, 7);
+  await expect(overlay.locator("pre")).toHaveText("First fixture line\nSecond fixture line");
+
+  await hoverCode(1, 9);
+  const propertyRequest = "#$# SDWC%%PROP-OVERLAY%%$tools%%label";
+  await expect.poll(commands).toEqual([verbRequest, propertyRequest]);
+  await socketFeed(page, "#$# SDWC%%PROP-OVERLAY%%" + JSON.stringify({
+    object: "$tools", property: "label", value: "Fixture property"
+  }) + "\n");
+  await expect(overlay).toContainText("$tools.label");
+  await expect(overlay.locator("pre")).toHaveText("Fixture property");
+  expect(await commands()).toEqual([verbRequest, propertyRequest]);
+});

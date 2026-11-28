@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - Open the correct IDE reference on modifier-click when a variable or property name includes `this`.
 - Prevent delayed Find jumps from restoring an old highlight after closing Find, changing the query, or jumping again.
 - Keep MOO block indentation correct when earlier multiline comments or strings contain block keywords.
+- Hide IDE reference previews when the pointer leaves the editor and keep nearby references reachable.
 
 ## 2026-11-27
 

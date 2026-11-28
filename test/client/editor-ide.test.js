@@ -137,6 +137,7 @@ function createEditor(node) {
     },
     destroy() {
       this.destroyed = true;
+      handlers.destroy?.();
     }
   };
 }
@@ -735,7 +736,11 @@ test("EditorIDE hover overlays request and reuse cached SDWC payloads", async (t
     }
   });
   await act(async () => {
-    editor.emitEditorEvent("mouseout");
+    editor.node.dispatchEvent(new window.MouseEvent("mouseleave"));
+  });
+  assert.equal(window.document.querySelector(".sdwc-hover-overlay"), null);
+
+  await act(async () => {
     editor.emitEditorEvent("mousemove", {
       getDocumentPosition: () => ({ row: 0, column: 13 }),
       domEvent: { clientX: 30, clientY: 40 }
