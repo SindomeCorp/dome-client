@@ -1785,6 +1785,16 @@ test("the real VMS save dialog keeps keyboard focus and uploads only on submit",
   await expect(save).toBeFocused();
   await expect.poll(async () => (await fixtureState(page)).commands.slice(before.length))
     .toEqual(["@program #12:preview", "return 1;\n.", "Fixture VMS note"]);
+
+  const inlineNote = ide.getByRole("textbox", { name: "VMS note", exact: true });
+  await expect(inlineNote).toHaveValue("Fixture VMS note");
+  await inlineNote.fill("");
+  await expect(inlineNote).toBeFocused();
+  await expect(inlineNote).toBeVisible();
+  await ide.locator(".ace_editor").click();
+  await expect(inlineNote).toHaveCount(0);
+  expect((await fixtureState(page)).commands.slice(before.length))
+    .toEqual(["@program #12:preview", "return 1;\n.", "Fixture VMS note"]);
 });
 
 test("the real IDE modifier click resolves this without opening lookalike variables", async ({ page }) => {
