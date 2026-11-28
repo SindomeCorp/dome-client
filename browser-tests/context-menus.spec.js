@@ -1920,6 +1920,18 @@ for (const [command, limit] of [["@local-save-note", 2], ["@local-save-node", 3]
     });
     const replaced = accepted.replace(/[^\n]+$/, "Replacement");
     await expect.poll(async () => (await contents()).replace(/\r\n/g, "\n")).toBe(replaced);
+    await editor.evaluate((element) => {
+      const aceEditor = element.env.editor;
+      window.copiedLineCommands = 0;
+      aceEditor.commands.on("exec", (event) => {
+        if (event.command.name === "copylinesdown") window.copiedLineCommands++;
+      });
+      aceEditor.navigateFileEnd();
+      aceEditor.focus();
+    });
+    await ide.keyboard.press("Alt+Shift+ArrowDown");
+    expect(await ide.evaluate(() => window.copiedLineCommands)).toBe(1);
+    await expect.poll(async () => (await contents()).replace(/\r\n/g, "\n")).toBe(replaced);
     const saved = await contents();
 
     expect((await fixtureState(page)).commands).toEqual(before);
