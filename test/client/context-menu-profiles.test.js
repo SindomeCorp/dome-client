@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import { JSDOM } from "jsdom";
 import ejs from "ejs";
 import { contextProfileRegistry, loadContextProfiles } from "../../src/shared/context-menu-profiles.js";
-import { validateContextMenus, compileContextRules, matchContextRules, interpolateCommand, validCaptures } from "../../src/shared/context-menus.js";
+import { CONTEXT_MENUS_KEY, validateContextMenus, compileContextRules, matchContextRules, interpolateCommand, validCaptures } from "../../src/shared/context-menus.js";
 import { setupContextMenus } from "../../src/client/features/context-menus/controller.js";
 
 async function files() {
@@ -28,9 +28,10 @@ function matcher() {
   };
 }
 
-async function app(t, profileLoader, matcherFactory = matcher) {
+async function app(t, profileLoader, matcherFactory = matcher, savedRules = null) {
   const html = await ejs.renderFile("views/partials/context-menus-options.ejs", {});
   const { window } = new JSDOM("<div id='context-menu-notice'></div>" + html, { url: "https://example.com" });
+  if (savedRules !== null) window.localStorage.setItem(CONTEXT_MENUS_KEY, savedRules);
   const controller = setupContextMenus({ client: {}, win: window, doc: window.document, matcherFactory, profileLoader });
   t.after(() => { controller.destroy(); window.close(); });
   return { controller, window };
@@ -322,6 +323,52 @@ test("startup worker validation isolates broken files and never invents a bundle
   assert.equal(broken.controller.active().profile, null);
   assert.equal(broken.controller.snapshot.profiles.size, 0);
   assert.match(broken.window.document.querySelector("#context-menu-error").textContent, /zero-length/);
+});
+
+test("profile startup installs a successful snapshot just once without warnings", async (t) => {
+  const { controller, window } = await app(t, null);
+  await controller.ready;
+  assert.equal(controller.revision, 1);
+  assert.equal(controller.active().profile.id, "player");
+  assert.equal(controller.active().source, "Fallback");
+  assert.equal(window.document.querySelector("#context-menu-error").textContent, "");
+});
+
+test("profile startup recovers invalid saved rules with the registered files and reports the failure", async (t) => {
+  const documents = await files();
+  let loads = 0;
+  const { controller, window } = await app(t, async () => {
+    loads++;
+    return { documents, errors: [] };
+  }, matcher, "{");
+  await controller.ready;
+  assert.equal(loads, 1);
+  assert.equal(controller.revision, 1);
+  assert.equal(controller.active().profile.id, "player");
+  assert.match(window.document.querySelector("#context-menu-error").textContent, /Previous valid context menus remain active/);
+});
+
+test("profile startup cannot recover over a newer successful reload", async (t) => {
+  const documents = await files();
+  const initial = Promise.withResolvers();
+  let loads = 0;
+  const { controller, window } = await app(t, () => {
+    if (++loads === 1) return initial.promise;
+    return Promise.resolve({ documents, errors: [] });
+  });
+  assert.equal(loads, 1);
+  const loaded = await controller.reload(JSON.stringify(controller.config));
+  assert.equal(loaded, true);
+  controller.update({ override: true, profile: "gm" });
+  const revision = controller.revision;
+
+  initial.reject(new Error("Obsolete startup load failed"));
+  await controller.ready;
+  assert.equal(loads, 2);
+  assert.equal(controller.revision, revision);
+  assert.equal(controller.active().profile.id, "gm");
+  assert.equal(controller.active().source, "Override");
+  assert.equal(window.document.querySelector("#context-menu-error").textContent, "");
 });
 
 test("an obsolete server profile compilation cannot undo a newer Options reload", { timeout: 5000 }, async (t) => {
