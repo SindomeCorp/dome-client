@@ -323,6 +323,8 @@ test("pointer targeting handles both caret APIs and the edges of split display t
   assert.equal(characterAtPoint(doc, projection, 30, 20), 4, "a caret after the span can still hit its last glyph");
   doc.caretPositionFromPoint = () => null;
   assert.equal(characterAtPoint(doc, projection, 25, 15), 4, "fall back when the newer API finds nothing");
+  delete doc.caretRangeFromPoint;
+  assert.equal(characterAtPoint(doc, projection, 25, 15), null, "keep native interaction if neither caret API has a position");
 
   doc.caretRangeFromPoint = () => assert.fail("the newer caret result should take precedence");
   doc.caretPositionFromPoint = () => ({ offsetNode: node, offset: 0 });
@@ -454,6 +456,15 @@ test("real output parser and menu events target ANSI spans, execute one command,
   contextClick();
   [...doc.querySelectorAll("[role=menuitem]")].find((item) => item.textContent === "List verb").click();
   assert.deepEqual(sends, [["input", "@list #123:look"]]);
+
+  const projection = projectOutputRow(row);
+  const followingOffset = "#123:look".length;
+  assert.equal(projection.text[followingOffset], " ");
+  const following = projection.nodes.find(({ start, end }) => start <= followingOffset && followingOffset < end);
+  doc.caretPositionFromPoint = () => ({ offsetNode: following.node, offset: followingOffset - following.start });
+  assert.equal(contextClick().defaultPrevented, false, "a click just after the reference remains native");
+  assert.equal(doc.querySelector("[role=menu]"), null);
+  doc.caretPositionFromPoint = () => ({ offsetNode: textNode, offset: 0 });
 
   // Markup can replace a text node without changing the match offsets.
   const replacement = textNode.cloneNode();
