@@ -55,7 +55,7 @@ test("the real asset build preserves the served release on failure and publishes
   assert.equal(await fs.readFile(path.join(js, "custom.js"), "utf8"), "custom script");
 });
 
-test("a failed asset rollback preserves the last good backup and both errors", async (t) => {
+test("a failed asset rollback preserves backups and reports restoration errors in rollback order", async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "dome-assets-test-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const output = path.join(directory, "public");
@@ -63,25 +63,31 @@ test("a failed asset rollback preserves the last good backup and both errors", a
   const client = path.join(css, "client.css");
   await fs.mkdir(css, { recursive: true });
   await fs.writeFile(client, "previous stylesheet");
+  const ide = path.join(css, "ide.css");
+  await fs.writeFile(ide, "previous editor stylesheet");
 
   const publishError = new Error("fixture publication failure");
-  const rollbackError = new Error("fixture restoration failure");
+  const clientRestoreError = new Error("fixture client restoration failure");
+  const ideRestoreError = new Error("fixture editor restoration failure");
   const rename = fs.rename.bind(fs);
-  let backup;
+  const backups = new Map();
   t.mock.method(fs, "rename", (source, target) => {
-    if (source === client) backup = target;
-    if (target === path.join(css, "ide.css")) throw publishError;
-    if (source === backup) throw rollbackError;
+    if (source === client || source === ide) backups.set(source, target);
+    if (source === backups.get(ide)) throw ideRestoreError;
+    if (source === backups.get(client)) throw clientRestoreError;
+    if (target === ide) throw publishError;
     return rename(source, target);
   });
 
   await assert.rejects(build({ output }), (error) => {
     assert.match(error.message, /Asset rollback failed/);
-    assert.deepEqual(error.errors, [publishError, rollbackError]);
+    assert.deepEqual(error.errors, [publishError, ideRestoreError, clientRestoreError]);
     assert.equal(error.cause, publishError);
     return true;
   });
-  assert.equal(await fs.readFile(backup, "utf8"), "previous stylesheet");
+  assert.equal(path.dirname(path.dirname(backups.get(client))), directory);
+  assert.equal(await fs.readFile(backups.get(client), "utf8"), "previous stylesheet");
+  assert.equal(await fs.readFile(backups.get(ide), "utf8"), "previous editor stylesheet");
 });
 
 test("an asset backup failure stops publication and preserves served assets", async (t) => {

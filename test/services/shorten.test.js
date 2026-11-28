@@ -314,3 +314,18 @@ test("a cache hit refreshes recency without evicting at the configured capacity"
   assert.equal(await urls(b), link("second-again"));
   requested.done();
 });
+
+test("an unexpected fetch rejection is logged and does not discard other matches", async (t) => {
+  const { urls } = await loadShorten();
+  const failed = "https://fixture.test/" + "a".repeat(85);
+  const valid = "https://fixture.test/" + "b".repeat(85);
+  const warn = t.mock.method(logger, "warn", () => {});
+  t.mock.method(globalThis, "fetch", async (_endpoint, { body }) => {
+    const url = new URLSearchParams(body).get("url");
+    if (url === failed) return Promise.reject(undefined);
+    return Response.json({ url, key: "worked" });
+  });
+
+  assert.equal(await urls(failed + " " + valid), failed + " https://" + config.shorten.domain + "/worked");
+  assert.equal(warn.mock.calls[0].arguments[0], "failed to shorten url");
+});

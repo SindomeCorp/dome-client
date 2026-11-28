@@ -12,6 +12,8 @@ test("the public router connects the landing, editor, output, autocomplete and l
   const http = request(baseUrl);
   await http.get("/").expect(200);
   await http.post("/").expect(200);
+  await http.get("//").expect(200);
+  await http.post("//").expect(200);
   const player = await http.get("/player-client/").expect(200);
   assert.match(player.text, /player-client\.(?:min\.)?js/);
   const output = await http.get("/output-window/").expect(200);

@@ -324,3 +324,16 @@ test("concurrent builds for different output directories remain independent", as
   ]);
   assert.deepEqual(mkdir.mock.calls.map(({ arguments: [dir] }) => dir), [firstOutput, secondOutput]);
 });
+
+test("standalone asset helpers default to the corresponding public directories", async (t) => {
+  const failure = new Error("fixture blocks the default destination before writing");
+  const mkdir = t.mock.method(fs, "mkdir", async () => { throw failure; });
+  t.mock.method(fs, "rm", async () => {});
+  for (const helper of [buildModule.compileReactCss, buildModule.compileJs, buildModule.copyAce, buildModule.copyMooParserWasm]) {
+    await assert.rejects(helper(), error => error === failure);
+  }
+  const publicRoot = path.dirname(realCssDir);
+  assert.deepEqual(mkdir.mock.calls.map(({ arguments: [directory] }) => directory), [
+    realCssDir, path.join(publicRoot, "js"), path.join(publicRoot, "js", "ace"), path.join(publicRoot, "js", "parsers")
+  ]);
+});
