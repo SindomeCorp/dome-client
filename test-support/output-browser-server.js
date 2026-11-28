@@ -66,8 +66,8 @@ app.get("/editor/:type/", async (req, res) => {
     editor: {
       ideScratchEnabled: req.query.scratch !== "off",
       ideHoverOverlaysEnabled: true,
-      ideObjectBrowserEnabled: false,
-      idePropertyBrowserEnabled: false,
+      ideObjectBrowserEnabled: req.query.browsers === "on",
+      idePropertyBrowserEnabled: req.query.browsers === "on",
       ideReferenceNavigationEnabled: false,
       parser: req.query.parser === "moo" ? "moo" : "",
       parserBlockSave: req.query.parser === "moo"

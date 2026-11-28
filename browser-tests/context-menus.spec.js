@@ -1485,3 +1485,84 @@ test("the real IDE blocks invalid MOO source and saves corrected source after wo
   await expect.poll(async () => (await fixtureState(page)).commands.slice(before.length))
     .toEqual(["@program #12:preview", "return 2;\n."]);
 });
+
+test("the real IDE browses and edits object verbs and properties through the fixture transport", async ({ page }) => {
+  await page.context().route("**/editor/ide/", async (route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("browsers", "on");
+    await route.fulfill({ response: await route.fetch({ url: url.href }) });
+  });
+
+  const { connections } = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(connections);
+  const before = (await fixtureState(page)).commands.length;
+  const commands = () => fixtureState(page).then(({ commands }) => commands.slice(before));
+
+  const opened = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: verb fixture upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
+  const ide = await opened;
+  await ide.getByRole("tab", { name: "Object Browser" }).click();
+  await expect(ide.getByRole("heading", { name: "Object Browser" })).toBeVisible();
+  const preview = ide.getByRole("button", { name: "preview", exact: true });
+  await expect(preview).toHaveCount(0);
+  await ide.getByRole("button", { name: "Load Verbs" }).click();
+  await expect(preview).toBeVisible();
+  await expect.poll(commands).toEqual(["#$# SDWC%%VERBS%%#12"]);
+
+  await socketFeed(page, "#$# SDWC%%VERBS%%" + JSON.stringify({
+    id: "#12",
+    verbs: {
+      first: { name: "look* examine", args: ["this", "none", "none"], owner: "#42", permissions: "rx", lastUpdated: "fixture date" },
+      second: { name: "wait" }
+    }
+  }) + "\r\n");
+  const look = ide.getByRole("button", { name: "look*", exact: true });
+  await expect(look).toBeVisible();
+  await expect(preview).toHaveCount(0);
+  await expect(ide.getByText("^ examine", { exact: true })).toBeVisible();
+  await expect(ide.getByText("this none none", { exact: true })).toBeVisible();
+  await expect(ide.getByText("#42", { exact: true })).toBeVisible();
+  await expect(ide.getByText("rx", { exact: true })).toBeVisible();
+  await expect(ide.getByText("fixture date", { exact: true })).toBeVisible();
+  await ide.getByRole("button", { name: "Collapse #12" }).click();
+  await expect(look).toHaveCount(0);
+  await ide.getByRole("button", { name: "Expand #12" }).click();
+  await look.click();
+  await expect.poll(commands).toEqual(["#$# SDWC%%VERBS%%#12", "@edit #12:look"]);
+
+  await socketFeed(page, "#$# edit name: property fixture upload: @set-note-text #12.preview\r\noriginal\r\n.\r\n");
+  await ide.getByRole("tab", { name: "Property Browser" }).click();
+  await expect(ide.getByRole("heading", { name: "Property Browser" })).toBeVisible();
+  await expect(preview).toHaveCount(0);
+  await ide.getByRole("button", { name: "load props" }).click();
+  await expect(preview).toBeVisible();
+  await expect.poll(commands).toEqual(["#$# SDWC%%VERBS%%#12", "@edit #12:look", "#$# SDWC%%PROPS%%#12"]);
+
+  await socketFeed(page, "#$# SDWC%%PROPS%%" + JSON.stringify({
+    id: "#12",
+    name: "Fixture object",
+    owner: "#42",
+    parent: "#7",
+    flags: { r: 1, w: true },
+    props: { label: { clear: 1, owner: "#8", permissions: "rw" }, title: { clear: 0 } }
+  }) + "\r\n");
+  const summary = ide.getByRole("button", { name: "Collapse #12" });
+  await expect(summary).toContainText("Fixture object (#12) | Owner: #42 | Parent: #7 | Permissions: +rw");
+  await expect(preview).toHaveCount(0);
+  const label = ide.getByRole("button", { name: "label", exact: true });
+  await expect(label).toBeVisible();
+  await expect(ide.getByText("clear", { exact: true })).toHaveCount(1);
+  await expect(ide.getByText("#8", { exact: true })).toBeVisible();
+  await expect(ide.getByText("rw", { exact: true })).toBeVisible();
+  await summary.click();
+  await expect(label).toHaveCount(0);
+  await ide.getByRole("button", { name: "Expand #12" }).click();
+  await label.click();
+  await expect.poll(commands).toEqual([
+    "#$# SDWC%%VERBS%%#12",
+    "@edit #12:look",
+    "#$# SDWC%%PROPS%%#12",
+    "@edit #12.label"
+  ]);
+});
