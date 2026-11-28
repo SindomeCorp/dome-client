@@ -1681,6 +1681,14 @@ test("the real IDE adds a blank Scratch tab and explicitly requests the saved Sc
   const saved = ["@scratch Temporary Scratch Pad", "toolbar scratch fixture\n."];
   await expect.poll(commands).toEqual(saved);
 
+  await ide.getByRole("button", { name: "Add Scratch", exact: true }).click();
+  await expect(scratch).toHaveCount(2);
+  await expect(scratch.last()).toHaveAttribute("aria-selected", "true");
+  await expect.poll(() => scratchEditor.evaluate((element) => element.env.editor.getValue())).toBe("");
+  await scratch.first().click();
+  await expect.poll(() => scratchEditor.evaluate((element) => element.env.editor.getValue())).toBe("toolbar scratch fixture");
+  expect(await commands()).toEqual(saved);
+
   await original.click();
   await expect(original).toHaveAttribute("aria-selected", "true");
   await expect.poll(() => scratchEditor.evaluate((element) => element.env.editor.getValue())).toBe("return 1;");
