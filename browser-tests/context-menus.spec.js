@@ -2244,13 +2244,21 @@ test("the real VMS save dialog keeps keyboard focus and uploads only on submit",
   await expect(inlineNote).toHaveCount(0);
   expect(await saves()).toEqual([...programSave, ...programSave]);
 
+  await save.click();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("");
+  await dialog.getByRole("button", { name: "Submit", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  const savesThroughBlankNote = [...programSave, ...programSave, ...programSave.slice(0, 2)];
+  await expect.poll(saves).toEqual(savesThroughBlankNote);
+
   await ide.getByRole("button", { name: "Add Scratch", exact: true }).click();
   await expect(ide.getByRole("tab", { name: /Temporary Scratch Pad/ })).toHaveAttribute("aria-selected", "true");
   await ide.locator(".ace_editor:visible").click();
   await ide.keyboard.insertText("fixture scratch");
   await save.click();
   await expect(dialog).toHaveCount(0);
-  await expect.poll(saves).toEqual([...programSave, ...programSave, "@scratch Temporary Scratch Pad", "fixture scratch\n."]);
+  await expect.poll(saves).toEqual([...savesThroughBlankNote, "@scratch Temporary Scratch Pad", "fixture scratch\n."]);
 });
 
 test("the VMS prompt saves its original verb after another editor tab arrives", async ({ page }) => {
