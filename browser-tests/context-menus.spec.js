@@ -580,6 +580,7 @@ test("context menus: selection Scratchpad opens unsaved, warns immediately, and 
   await page.getByRole("menuitem", { name: "Open in Scratchpad" }).click();
   const ide = await popupPromise;
   await expect(ide.getByRole("tab")).toHaveCount(1);
+  await expect(ide.getByRole("tab")).toContainText("Temporary Scratch Pad");
   await expect(ide.locator("body")).toHaveCSS("background-color", "rgb(15, 23, 42)");
   const editorShell = ide.locator("#root > div > div > div");
   await expect(editorShell).toHaveCSS("background-color", "rgb(17, 24, 39)");
@@ -609,12 +610,18 @@ test("context menus: selection Scratchpad opens unsaved, warns immediately, and 
   await expect.poll(async () => { await page.keyboard.press("Shift+F10"); return page.getByRole("menuitem", { name: "Open in Scratchpad" }).count(); }).toBe(1);
   await page.getByRole("menuitem", { name: "Open in Scratchpad" }).click();
   await expect(ide.getByRole("tab")).toHaveCount(2);
+  const statusDot = ide.getByRole("tab", { selected: true }).locator("span[aria-hidden=true]");
+  const transparent = "rgba(0, 0, 0, 0)";
+  await expect(statusDot).not.toHaveCSS("background-color", transparent);
+  const unsavedColor = await statusDot.evaluate((element) => window.getComputedStyle(element).backgroundColor);
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
   await ide.getByRole("button", { name: "Save", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.contextSent.length)).toBe(2);
   const saved = [["input", "@scratch Temporary Scratch Pad"], ["input", "second selection\n."]];
   expect(await page.evaluate(() => window.contextSent)).toEqual(saved);
   await expect(ide.getByText("Saved", { exact: true })).toBeVisible();
+  await expect(statusDot).not.toHaveCSS("background-color", transparent);
+  await expect(statusDot).not.toHaveCSS("background-color", unsavedColor);
 
   const unexpectedDialogs = [];
   const recordDialog = async (dialog) => {
