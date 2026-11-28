@@ -27,6 +27,31 @@ test("panel routing uses group decisions and respects the captured split generat
   assert.equal(manager.panelFor(routed, opened), "secondary");
 });
 
+test("output indexing releases waiters only after the new row is indexed", async (t) => {
+  const { manager, win } = await createOutputApp(t);
+  let ready = false;
+  const watchIndex = () => {
+    manager.whenIndexed().then(() => { ready = true; });
+  };
+  watchIndex();
+  await Promise.resolve();
+  assert.equal(ready, true, "idle indexing resolves immediately");
+
+  ready = false;
+  const timers = t.mock.method(win, "setTimeout", () => 1);
+  manager.appendRuns([{ text: "queued output\n", classes: [], inlineStyles: [] }], { local: true });
+  assert.equal(manager.views.main.index.length, 0);
+  watchIndex();
+  await Promise.resolve();
+  assert.equal(ready, false);
+
+  assert.equal(timers.mock.callCount(), 1);
+  timers.mock.calls[0].arguments[0]();
+  await Promise.resolve();
+  assert.equal(ready, true);
+  assert.deepEqual(lines(manager.views.main), ["queued output"]);
+});
+
 test("grid blocks route using the first nonblank ANSI-stripped line and stream before END", async (t) => {
   const { manager, client, feed } = await createOutputApp(t);
   client.preferences.sdwcNowrapBlocks = true;
