@@ -694,6 +694,9 @@ test("editor IDE keyboard helpers select shortcut commands", () => {
   assert.equal(getShortcutCommand({ key: "Escape" }, { showShortcuts: true }), "hide-shortcuts");
   assert.equal(getShortcutCommand({ key: "/", ctrlKey: true }, { platform: "Win32" }), "toggle-shortcuts");
   assert.equal(getShortcutCommand({ key: "/", metaKey: true }, { platform: "MacIntel" }), "toggle-shortcuts");
+  assert.equal(getShortcutCommand({ key: "/", ctrlKey: true }, { platform: "MacIntel" }), "");
+  assert.equal(getShortcutCommand({ key: "/", metaKey: true }, { platform: "Win32" }), "");
+  assert.equal(getShortcutCommand({ key: "/" }, { platform: "Linux" }), "");
   assert.equal(getShortcutCommand({ key: "s", ctrlKey: true }), "save");
   assert.equal(getShortcutCommand({ key: "e", ctrlKey: true }), "close");
   assert.equal(getShortcutCommand({ key: "1", ctrlKey: true }), "enable-vim");
@@ -703,6 +706,8 @@ test("editor IDE keyboard helpers select shortcut commands", () => {
   assert.equal(getShortcutCommand({ key: "L", ctrlKey: true, shiftKey: true }), "toggle-word-wrap");
   assert.equal(getShortcutCommand({ key: "X", ctrlKey: true, shiftKey: true }), "toggle-orientation");
   assert.equal(getShortcutCommand({ key: "s" }), "");
+  assert.equal(getShortcutCommand({ key: "e", ctrlKey: true, shiftKey: true }), "");
+  assert.equal(getShortcutCommand({ key: "x", ctrlKey: true }), "");
 
   const tabs = [{ id: 1 }, { id: 2 }, { id: 3 }];
   assert.equal(getAdjacentTabId(tabs, 2, -1), 1);

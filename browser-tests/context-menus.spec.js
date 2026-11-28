@@ -2376,6 +2376,8 @@ test("the real individual verb editor applies MOO mode and clears corrected diag
   const popup = page.waitForEvent("popup");
   await socketFeed(page, "#$# edit name: Classic diagnostics upload: @program #12:preview\r\nreturn 3 4;\r\n.\r\n");
   const editor = await popup;
+  const pageErrors = [];
+  editor.on("pageerror", (error) => pageErrors.push(error.message));
   const holder = editor.locator("#verb-editor-holder");
   await expect.poll(() => holder.evaluate((element) => {
     const aceEditor = element.env?.editor;
@@ -2386,6 +2388,7 @@ test("the real individual verb editor applies MOO mode and clears corrected diag
   await expect.poll(annotations).toContainEqual({ row: 0, column: 9, text: "MOO syntax error", type: "error" });
   await holder.evaluate((element) => element.env.editor.setValue("return 3;", -1));
   await expect.poll(annotations).toEqual([]);
+  expect(pageErrors).toEqual([]);
   expect((await fixtureState(page)).commands).toEqual(connected.commands);
 });
 
@@ -2595,6 +2598,16 @@ test("the real IDE applies wrap, Vim and Options font changes to both mounted ta
   await ide.keyboard.press("Control+1");
   await expectSettings(true, true, "Source Code Pro");
 
+  await socketFeed(page, "#$# edit name: Inherited settings tab upload: @program #15:inherit\r\nreturn 15;\r\n.\r\n");
+  const inherited = ide.getByRole("tab", { name: /Inherited settings tab/ });
+  await expect(inherited).toHaveAttribute("aria-selected", "true");
+  await expect.poll(() => ide.locator(".ace_editor:visible").evaluate((element) => {
+    const ace = element.env.editor;
+    return [ace.getOption("wrap"), ace.getKeyboardHandler()?.$id, ace.getValue()];
+  })).toEqual(["free", "ace/keyboard/vim", "return 15;"]);
+  await inherited.getByRole("button", { name: /Close Inherited settings tab/ }).click();
+  await expect(editors).toHaveCount(2);
+
   await page.locator("#button-client-options").click();
   await page.getByRole("tab", { name: "Presentation", exact: true }).click();
   await page.locator("#editorfont-option select").selectOption("monaco");
@@ -2652,10 +2665,21 @@ test("the real IDE applies wrap, Vim and Options font changes to both mounted ta
   await ide.keyboard.press("Control+BracketRight");
   await expect(secondTab).toHaveAttribute("aria-selected", "true");
 
+  const strip = ide.getByRole("tablist");
+  const layout = async () => {
+    const [tabs, editor] = await Promise.all([strip.boundingBox(), ide.locator(".ace_editor:visible").boundingBox()]);
+    return {
+      beside: editor.x >= tabs.x + tabs.width - 2,
+      below: editor.y >= tabs.y + tabs.height - 2
+    };
+  };
+  await expect.poll(layout).toEqual({ beside: false, below: true });
   await ide.keyboard.press("Control+Shift+X");
-  await expect(ide.getByRole("tablist")).toHaveAttribute("aria-orientation", "vertical");
+  await expect(strip).toHaveAttribute("aria-orientation", "vertical");
+  await expect.poll(layout).toEqual({ beside: true, below: false });
   await ide.keyboard.press("Control+Shift+X");
-  await expect(ide.getByRole("tablist")).toHaveAttribute("aria-orientation", "horizontal");
+  await expect(strip).toHaveAttribute("aria-orientation", "horizontal");
+  await expect.poll(layout).toEqual({ beside: false, below: true });
   await expect(ide.getByRole("button", { name: "Horizontal tabs (top)" })).toHaveAttribute("aria-pressed", "true");
   await expect(secondTab).toHaveAttribute("aria-selected", "true");
 

@@ -50,6 +50,20 @@ test("attachMooParserDiagnostics does nothing when parser is disabled", () => {
   }
 });
 
+test("enabled diagnostics leave the editor untouched when workers are unavailable", () => {
+  const previousWorker = globalThis.Worker;
+  globalThis.Worker = undefined;
+  try {
+    const editor = createEditor();
+    const cleanup = attachMooParserDiagnostics(editor, "moo");
+    cleanup();
+    assert.deepEqual(editor.handlers, {});
+    assert.equal(editor.session.annotations, null);
+  } finally {
+    globalThis.Worker = previousWorker;
+  }
+});
+
 test("attachMooParserDiagnostics posts editor content and applies current annotations", (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const previousWorker = globalThis.Worker;
