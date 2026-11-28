@@ -62,15 +62,16 @@ test("Find keeps pending jumps scoped to the active search and route", async (t)
       const previous = view.highlight;
       assert.equal(previous.id, 1);
 
-      let queued = Promise.withResolvers();
       let indexed = Promise.withResolvers();
       const waitForIndex = manager.whenIndexed.bind(manager);
-      t.mock.method(manager, "whenIndexed", () => {
-        queued.resolve();
-        return indexed.promise;
-      });
-      form.dispatchEvent(new win.Event("submit", { cancelable: true }));
-      await queued.promise;
+      const heldIndex = t.mock.method(manager, "whenIndexed", () => indexed.promise);
+      const submit = (calls) => {
+        const event = new win.Event("submit", { cancelable: true });
+        form.dispatchEvent(event);
+        assert.equal(event.defaultPrevented, true, "Find must keep the page open when submitted");
+        assert.equal(heldIndex.mock.callCount(), calls, "submission must queue the next match");
+      };
+      submit(1);
       const stale = indexed;
       if (action === "close") {
         doc.querySelector("#output-find-close").click();
@@ -78,10 +79,8 @@ test("Find keeps pending jumps scoped to the active search and route", async (t)
         query.value = "replacement";
         query.dispatchEvent(new win.Event("input"));
       } else if (action === "newer result") {
-        queued = Promise.withResolvers();
         indexed = Promise.withResolvers();
-        form.dispatchEvent(new win.Event("submit", { cancelable: true }));
-        await queued.promise;
+        submit(2);
         indexed.resolve();
         await new Promise(resolve => setImmediate(resolve));
         assert.deepEqual(view.highlight, previous);
