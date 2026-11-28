@@ -12,7 +12,13 @@ export function normalizeClientIp(value) {
   if (typeof value !== "string") {
     return "";
   }
-  return value.trim().replace(/^::ffff:/i, "");
+  const address = value.trim();
+  const mappedPrefix = "::ffff:";
+  if (address.toLowerCase().startsWith(mappedPrefix)) {
+    const ipv4 = address.slice(mappedPrefix.length);
+    if (net.isIPv4(ipv4)) return ipv4;
+  }
+  return address;
 }
 
 export function loadIpBlocklist({ filePath, fs, logger }) {

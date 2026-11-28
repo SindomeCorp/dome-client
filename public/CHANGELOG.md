@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - Shorten complete links independently and keep original links when the shortening service returns an error or no key.
 - Use the legacy stylesheet for log exports if the compiled stylesheet is blank.
 - Clean up HTTP and HTTPS startup listeners after a failed bind so the server can retry cleanly.
+- Match equivalent IPv4-mapped IPv6 spellings in the IP blocklist.
 
 ### Added
 - Add wildcard @rewind menus for `[+][channel]` and `[-][channel]` tags in Player, GM and Programmer profiles.

@@ -34,18 +34,17 @@ test("loadIpBlocklist parses exact IP entries and ignores invalid lines", () => 
   assert.match(infos[0], /Loaded 3 IP blocklist entries/);
 });
 
-test("loadIpBlocklist disables matching when no path is configured", () => {
-  const fs = {
-    readFileSync() {
-      throw new Error("should not read");
-    }
-  };
-  const logger = { info() {}, warn() {} };
+test("loadIpBlocklist disables matching quietly when no path is configured", (t) => {
+  const fs = { readFileSync: t.mock.fn(() => { throw new Error("should not read"); }) };
+  const logger = { info: t.mock.fn(), warn: t.mock.fn() };
 
   const blocklist = loadIpBlocklist({ filePath: "", fs, logger });
 
   assert.equal(blocklist.size, 0);
   assert.equal(blocklist.has("203.0.113.10"), false);
+  assert.equal(fs.readFileSync.mock.callCount(), 0);
+  assert.equal(logger.info.mock.callCount(), 0);
+  assert.equal(logger.warn.mock.callCount(), 0);
 });
 
 test("loadIpBlocklist logs and disables matching when file cannot be read", () => {
@@ -111,4 +110,25 @@ test("matches IPv6 exactly and treats unusable lookup values as absent", () => {
   assert.equal(list.has("2001:db8::8"), false);
   assert.equal(list.has("not-an-ip"), false);
   assert.equal(list.has(null), false);
+});
+
+test("IPv4-mapped IPv6 address spellings match the same exact IP", () => {
+  const list = loadIpBlocklist({
+    filePath: "fixture-ip-list",
+    fs: { readFileSync: () => "203.0.113.10\r\n::ffff:c633:6407" },
+    logger: { info() {}, warn() {} }
+  });
+
+  assert.equal(list.size, 2);
+  assert.equal(list.has("::FFFF:cb00:710a"), true);
+  assert.equal(list.has("0:0:0:0:0:ffff:cb00:710a"), true);
+  assert.equal(list.has("198.51.100.7"), true);
+  assert.equal(list.has("::ffff:c633:6408"), false);
+});
+
+test("address normalization unwraps dotted mapped IPv4 and preserves other IPv6 addresses", () => {
+  assert.equal(normalizeClientIp("  ::FFFF:192.0.2.1  "), "192.0.2.1");
+  assert.equal(normalizeClientIp("::ffff:c000:201"), "::ffff:c000:201");
+  assert.equal(normalizeClientIp("2001:db8::ffff:192.0.2.1"), "2001:db8::ffff:192.0.2.1");
+  assert.equal(normalizeClientIp("1:2:3::192.0.2.1"), "1:2:3::192.0.2.1");
 });
