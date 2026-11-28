@@ -1,10 +1,21 @@
 export function listen(server, ...args) {
   return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(...args, () => {
-      server.removeListener("error", reject);
+    const onListening = () => {
+      server.removeListener("error", onError);
       resolve();
-    });
+    };
+    const onError = (error) => {
+      server.removeListener("error", onError);
+      server.removeListener("listening", onListening);
+      reject(error);
+    };
+
+    server.on("error", onError);
+    try {
+      server.listen(...args, onListening);
+    } catch (error) {
+      onError(error);
+    }
   });
 }
 

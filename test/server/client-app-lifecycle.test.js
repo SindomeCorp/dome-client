@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { createServer } from "node:http";
 import { close, listen, resolveBoundAddress } from "../../src/server/lifecycle.js";
 
 test("listen passes binding arguments and removes its temporary error listener", { timeout: 1000 }, async (t) => {
@@ -17,6 +18,39 @@ test("listen rejects with the original binding error", { timeout: 1000 }, async 
   server.listen = () => server.emit("error", error);
   await assert.rejects(listen(server, 0), (caught) => caught === error);
   assert.equal(server.listenerCount("error"), 0);
+});
+
+test("listen clears the error listener when Node rejects invalid bind arguments", { timeout: 1000 }, async () => {
+  const server = createServer();
+  const previous = server.listeners("error");
+
+  await assert.rejects(listen(server, -1, "127.0.0.1"), { code: "ERR_SOCKET_BAD_PORT" });
+  assert.deepEqual(server.listeners("error"), previous);
+});
+
+test("a failed HTTP bind releases listeners before a successful retry", { timeout: 3000 }, async (t) => {
+  const owner = createServer();
+  const server = createServer((_request, response) => response.end("retry worked"));
+  t.after(async () => {
+    for (const instance of [owner, server]) {
+      await new Promise(resolve => instance.close(() => resolve()));
+    }
+  });
+
+  const onError = () => {};
+  server.on("error", onError);
+  const existingListening = server.listeners("listening");
+  await listen(owner, 0, "127.0.0.1");
+  const { port } = owner.address();
+  await assert.rejects(listen(server, port, "127.0.0.1"), { code: "EADDRINUSE" });
+  assert.deepEqual(server.listeners("error"), [onError]);
+  assert.deepEqual(server.listeners("listening"), existingListening);
+
+  await listen(server, 0, "127.0.0.1");
+  const response = await fetch("http://127.0.0.1:" + server.address().port, { signal: AbortSignal.timeout(1000) });
+  assert.equal(await response.text(), "retry worked");
+  assert.deepEqual(server.listeners("error"), [onError]);
+  assert.deepEqual(server.listeners("listening"), existingListening);
 });
 
 test("bound addresses retain the transport fields and handle inactive servers", () => {
@@ -117,4 +151,8 @@ test("server wiring passes TLS options and applies the same admission rule to bo
   const reply = t.mock.fn();
   plain.httpMgr.options.allowRequest({ socket: { remoteAddress: "127.0.0.1" }, headers: {} }, reply);
   assert.deepEqual(reply.mock.calls[0].arguments, [null, true]);
+
+  const { key, cert } = ssl;
+  createHttpServers({ ...dependencies, config: { ssl: { key, cert }, node: {} } });
+  assert.deepEqual(https.createServer.mock.calls[1].arguments, [{ key: tls.key, cert: tls.cert }, app]);
 });
