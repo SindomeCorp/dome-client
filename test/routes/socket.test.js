@@ -66,34 +66,30 @@ test("error utility logs via stub logger", async (t) => {
   childMock.mock.restore();
 });
 
-test("handles net.connect failure", async () => {
+test("handles net.connect failure and releases the provisional socket", async (t) => {
   const moo = new EventEmitter();
   const err = new Error("connect fail");
-  const original = {
-    connect: net.connect,
-    reverse: dns.promises.reverse,
-    child: logger.child,
-  };
   const errorLogs = [];
-  logger.child = () => ({
-    error: msg => errorLogs.push(msg),
+  t.mock.method(logger, "child", () => ({
+    error: (message) => errorLogs.push(message),
     info: () => {},
-    debug: () => {},
-  });
-  net.connect = () => {
+    debug: () => {}
+  }));
+  t.mock.method(net, "connect", () => {
     process.nextTick(() => moo.emit("error", err));
     return moo;
-  };
-  dns.promises.reverse = async () => ["host"];
+  });
+  const reverse = t.mock.method(dns.promises, "reverse", async () => ["host"]);
   const route = await loadRoute();
   const { socket, events } = createSocket();
   await route.connection(socket);
-  assert.ok(errorLogs.some(m => m.includes("error while connecting to moo")));
-  assert.ok(errorLogs.some(m => m.includes("ERR 127.0.0.1") && m.endsWith("connect fail")));
-  assert.ok(events.some(e => e[0] === "error" && e[1] === err.toString()));
-  net.connect = original.connect;
-  dns.promises.reverse = original.reverse;
-  logger.child = original.child;
+
+  assert.ok(errorLogs.some((message) => message.includes("error while connecting to moo")));
+  assert.ok(errorLogs.some((message) => message.includes("ERR 127.0.0.1") && message.endsWith("connect fail")));
+  assert.deepEqual(events, [["error", err.toString()]]);
+  assert.equal(reverse.mock.callCount(), 0);
+  assert.equal(socket.listenerCount("disconnect"), 0);
+  assert.equal(moo.listenerCount("data"), 0);
 });
 
 test("connection emits error when connect handshake times out", async (t) => {
@@ -1474,9 +1470,15 @@ test("socket route connection lifecycle", async (t) => {
 });
 
 test("provisional socket handles browser disconnect, game termination, and successful DNS", async (t) => {
-  for (const action of ["browser disconnect", "game end", "game close", "establish"]) {
+  for (const action of ["browser disconnect", "late DNS failure", "game end", "game close", "establish"]) {
     await t.test(action, { timeout: 1000 }, async (t) => {
       const lookup = Promise.withResolvers();
+      const logEntries = [];
+      t.mock.method(logger, "child", () => ({
+        info: (message) => logEntries.push(message),
+        error: (message) => logEntries.push(message),
+        debug: (message) => logEntries.push(message)
+      }));
       const moo = new EventEmitter();
       moo.destroy = t.mock.fn(() => { moo.emit("close"); });
       t.mock.method(net, "connect", () => {
@@ -1494,13 +1496,19 @@ test("provisional socket handles browser disconnect, game termination, and succe
       assert.equal(settled, false, "connection remains provisional while DNS is pending");
       assert.equal(moo.listenerCount("data"), 0);
 
-      if (action === "browser disconnect") socket.emit("disconnect", "transport close");
+      const rejectedAfterDisconnect = action === "late DNS failure";
+      const browserDisconnected = action === "browser disconnect" || rejectedAfterDisconnect;
+      if (browserDisconnected) socket.emit("disconnect", "transport close");
       if (action === "game end") {
         moo.emit("end");
-        moo.emit("close");
+        assert.deepEqual(events, [["disconnected"]]);
       }
       if (action === "game close") moo.emit("close");
-      lookup.resolve(["resolved.fixture.invalid"]);
+      if (rejectedAfterDisconnect) {
+        lookup.reject(Object.assign(new Error("fixture reverse lookup failed"), { code: "ENOTFOUND" }));
+      } else {
+        lookup.resolve(["resolved.fixture.invalid"]);
+      }
       await starting;
       assert.equal(settled, true);
       assert.equal(moo.listenerCount("close"), 1);
@@ -1519,8 +1527,13 @@ test("provisional socket handles browser disconnect, game termination, and succe
         assert.equal(Boolean(socket.isActive), false);
         assert.equal(moo.listenerCount("data"), 0);
         moo.emit("data", Buffer.from("stale output\n"));
-        assert.deepEqual(events.map(([event]) => event), action === "browser disconnect" ? ["disconnect"] : ["disconnected"]);
-        assert.equal(moo.destroy.mock.callCount(), action === "browser disconnect" ? 1 : 0);
+        assert.deepEqual(events.map(([event]) => event), browserDisconnected ? ["disconnect"] : ["disconnected"]);
+        assert.equal(moo.destroy.mock.callCount(), browserDisconnected ? 1 : 0);
+        if (action === "game end") {
+          moo.emit("close");
+          assert.deepEqual(events, [["disconnected"]]);
+        }
+        assert.ok(!logEntries.some((message) => /DNS|fixture reverse lookup failed/.test(message)));
       }
     });
   }

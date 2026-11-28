@@ -797,6 +797,43 @@ test("right-click copies a reverse selection and leaves unrelated plain text nat
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
 });
 
+test("dismissing selected-output actions restores the original ANSI-split range", async ({ page }) => {
+  await start(page);
+  await feed(page, "before #12\u001b[31m3:name\u001b[0m after\n");
+  const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "before #123:name after" });
+  const buffer = page.locator("#lineBuffer");
+  const menu = page.getByRole("menu", { name: "Selected output actions" });
+  const selectedText = () => page.evaluate(() => document.getSelection().toString());
+
+  for (const key of ["Escape", "Tab"]) {
+    await row.evaluate((element) => {
+      element.focus();
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const locate = (offset) => {
+        walker.currentNode = element;
+        let node = walker.nextNode();
+        while (offset > node.length) { offset -= node.length; node = walker.nextNode(); }
+        return [node, offset];
+      };
+      document.getSelection().setBaseAndExtent(...locate(16), ...locate(7));
+    });
+    await expect.poll(selectedText).toBe("#123:name");
+    await openSelection(page);
+    await expect(menu.getByRole("menuitem", { name: "Copy selected text" })).toBeFocused();
+    await expect.poll(selectedText).toBe("#123:name");
+    // The browser can move or drop the live range while focus is in the menu.
+    await page.evaluate(() => document.getSelection().removeAllRanges());
+    await expect.poll(selectedText).toBe("");
+    await page.keyboard.press(key);
+    await expect(menu).toHaveCount(0);
+    await expect(buffer).toBeFocused();
+    await expect.poll(selectedText).toBe("#123:name");
+  }
+
+  expect(await page.evaluate(() => window.contextCopied)).toBeUndefined();
+  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+});
+
 for (const [reason, clipboardUnavailable] of [
   ["the active profile has no Copy action", false],
   ["the Clipboard API is unavailable", true]
