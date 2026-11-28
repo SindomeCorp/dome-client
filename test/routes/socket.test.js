@@ -86,6 +86,7 @@ test("handles net.connect failure", async () => {
   const { socket, events } = createSocket();
   await route.connection(socket);
   assert.ok(errorLogs.some(m => m.includes("error while connecting to moo")));
+  assert.ok(errorLogs.some(m => m.includes("ERR 127.0.0.1") && m.endsWith("connect fail")));
   assert.ok(events.some(e => e[0] === "error" && e[1] === err.toString()));
   net.connect = original.connect;
   dns.promises.reverse = original.reverse;
@@ -209,6 +210,50 @@ test("connection uses query host/port only when multi-mud is enabled", async () 
   await fs.rm(metricsPath, { force: true });
 });
 
+test("disconnect during connection setup releases the transport without starting a session", async (t) => {
+  for (const stage of ["pending", "transport ready", "already disconnected"]) {
+    await t.test(stage, { timeout: 1000 }, async (t) => {
+      const mud = new EventEmitter();
+      mud.destroy = t.mock.fn();
+      t.mock.method(net, "connect", () => mud);
+      const reverse = t.mock.method(dns.promises, "reverse", async () => []);
+      const { connection } = await loadRoute({ multiMud: false, mudTlsEnabled: false });
+      const { socket, events } = createSocket();
+
+      const pending = connection(socket);
+      if (stage === "pending") socket.emit("disconnect");
+      mud.emit("connect");
+      if (stage === "transport ready") socket.emit("disconnect");
+      if (stage === "already disconnected") socket.disconnected = true;
+      await pending;
+
+      assert.equal(mud.destroy.mock.callCount(), 1);
+      assert.equal(reverse.mock.callCount(), 0);
+      assert.equal(mud.listenerCount("data"), 0);
+      assert.equal(socket.listenerCount("disconnect"), 0);
+      assert.deepEqual(events.filter(([event]) => event !== "disconnect"), []);
+    });
+  }
+});
+
+test("the socket route strips and logs Telnet negotiation while forwarding text", async (t) => {
+  const mud = new EventEmitter();
+  t.mock.method(net, "connect", () => mud);
+  t.mock.method(dns.promises, "reverse", async () => []);
+  const debug = t.mock.fn();
+  t.mock.method(logger, "child", () => ({ debug, info() {} }));
+  const { connection } = await loadRoute({ multiMud: false, mudTlsEnabled: false });
+  const { socket, events } = createSocket();
+
+  const pending = connection(socket);
+  mud.emit("connect");
+  await pending;
+  mud.emit("data", Buffer.concat([Buffer.from([255, 251, 1]), Buffer.from("fixture text")]));
+
+  assert.deepEqual(events.filter(([event]) => event === "data"), [["data", "fixture text"]]);
+  assert.ok(debug.mock.calls.some(({ arguments: [message] }) => message === "telnet iac command: WILL 1"));
+});
+
 test("connection selects TLS connector from single-MUD env config", async () => {
   const moo = new EventEmitter();
   moo.write = () => {};
@@ -330,7 +375,8 @@ test("logUser formats info messages", async (t) => {
   const route = await loadRoute();
   const { socket } = createSocket();
   route.logUser(socket, "HI", ["there"]);
-  assert.deepEqual(entries, ["HI 127.0.0.1 there"]);
+  route.logUser(socket);
+  assert.deepEqual(entries, ["HI 127.0.0.1 there", " 127.0.0.1"]);
   childMock.mock.restore();
 });
 
@@ -358,6 +404,21 @@ test("logError logs error details", async (t) => {
   assert.match(msg, /fail/);
   assert.equal(obj, err);
   childMock.mock.restore();
+});
+
+test("network error codes remain visible for connections without device details", async (t) => {
+  const error = t.mock.fn();
+  t.mock.method(logger, "child", () => ({ error }));
+  const route = await loadRoute();
+  const { socket } = createSocket();
+  const failure = { code: "ENOTFOUND" };
+
+  route.logError(socket, failure);
+
+  const { arguments: [message, detail] } = error.mock.calls[0];
+  assert.match(message, /^ERR 127\.0\.0\.1 .*ENOTFOUND$/);
+  assert.equal(message.match(/Other 0\.0\.0/g)?.length, 1);
+  assert.equal(detail, failure);
 });
 
 test("logUser handles error objects", async (t) => {
@@ -457,7 +518,7 @@ test("dns reverse handling", async (t) => {
     moo.emit("connect");
     await p;
     assert.equal(socket.hostname, "host.name");
-    assert.ok(infoLogs.some(m => m.includes("DNS") && m.includes("host.name")));
+    assert.ok(infoLogs.includes("DNS 127.0.0.1 host.name "));
     net.connect = original.connect;
     dns.promises.reverse = original.reverse;
     logger.child = original.child;
@@ -1339,7 +1400,8 @@ test("socket route connection lifecycle", async (t) => {
     const p = route.connection(socket);
     moo.emit("connect");
     await p;
-    assert.ok(infoLogs.some(m => m.includes("5.6.7.8") && m.includes("iPhone")));
+    assert.ok(infoLogs.some(m => m.startsWith("HI ") && m.includes("5.6.7.8") && m.includes("iPhone")));
+    assert.ok(infoLogs.some(m => m.startsWith("DNS 5.6.7.8 resolved.host") && m.includes("iPhone")));
 
     const err = new Error("fail");
     moo.emit("error", err);
