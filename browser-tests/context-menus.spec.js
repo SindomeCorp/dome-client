@@ -596,6 +596,11 @@ test("legacy output keyboard navigation clamps to its rows and opens each refere
     await page.keyboard.press("ArrowDown");
     await expect(row).toBeFocused();
   }
+  const handledPrintableKey = await last.evaluate((element) => !element.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key: "x", bubbles: true, cancelable: true
+  })));
+  expect(handledPrintableKey).toBe(false);
+  await expect(last).toBeFocused();
   const boundaryKeepsDefault = await last.evaluate((element) => element.dispatchEvent(new window.KeyboardEvent("keydown", {
     key: "ArrowDown", bubbles: true, cancelable: true
   })));
@@ -627,7 +632,7 @@ test("legacy output keyboard navigation clamps to its rows and opens each refere
   await expect(first).toBeFocused();
 
   await expect.poll(async () => {
-    await page.keyboard.press("Shift+F10");
+    if (!await page.getByRole("menuitem").count()) await page.keyboard.press("ContextMenu");
     return page.getByRole("menuitem").allTextContents();
   }).toEqual(["#123", "#456"]);
   await page.keyboard.press("End");
