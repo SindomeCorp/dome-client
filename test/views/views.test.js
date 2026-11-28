@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert";
 import ejs from "ejs";
+import { JSDOM } from "jsdom";
 import { glob } from "glob";
 import fs from "node:fs/promises";
-import { CLIENT_OPTION_GROUPS, CLIENT_OPTION_LABELS, CLIENT_OPTION_VIEW } from "../../src/shared/client-options.js";
+import { CLIENT_OPTION_DEFINITIONS, CLIENT_OPTION_GROUPS, CLIENT_OPTION_LABELS, CLIENT_OPTION_VIEW } from "../../src/shared/client-options.js";
 
 const sampleData = {
   "views/partials/output-window-panel.ejs": { panelName: "main" },
@@ -161,6 +162,37 @@ for (const file of files) {
     }
   });
 }
+
+test("every client option renders a usable control in the Options dialog", async (t) => {
+  const view = "views/partials/client-options-overlay.ejs";
+  const html = await ejs.renderFile(view, { ...sampleData[view], shortenEnabled: true });
+  const { window } = new JSDOM(html);
+  t.after(() => window.close());
+  const { document } = window;
+  const rows = [...document.querySelectorAll(".option-row[id$='-option']")];
+  assert.equal(rows.length, CLIENT_OPTION_DEFINITIONS.length);
+  const names = new Set();
+
+  for (const { key } of CLIENT_OPTION_DEFINITIONS) {
+    const row = document.getElementById(key + "-option");
+    assert.ok(row, "Missing Options row for " + key);
+    const controls = [...row.querySelectorAll("button, select, input")];
+    assert.ok(controls.length, "Missing Options control for " + key);
+    for (const control of controls) {
+      if (control.matches("button")) {
+        assert.match(control.dataset.val, /^(true|false)$/);
+        continue;
+      }
+      assert.match(control.name, /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/);
+      assert.ok(!names.has(control.name), "Duplicate Options field name " + control.name);
+      names.add(control.name);
+      if (control.matches("select")) {
+        assert.ok(control.value, "Missing selected default for " + key);
+        assert.ok([...control.options].every((option) => option.value.trim() && option.text.trim()));
+      }
+    }
+  }
+});
 
 test("connect-as multi-mud render treats missing mudTlsEnabled as disabled", async () => {
   const data = {
