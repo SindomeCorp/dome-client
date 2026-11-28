@@ -192,25 +192,32 @@ test("file selection reuses compiled revisions, falls back on failure, preserves
 
 test("late file results cannot restore a session or overwrite newer JSON; hyphens and underscores stay distinct", async (t) => {
   const documents = await files();
-  let finish;
-  let delay = false;
-  const { controller } = await app(t, async () => delay ? new Promise((resolve) => { finish = resolve; }) : { documents, errors: [] });
+  const requests = [];
+  let pendingRead;
+  const { controller } = await app(t, async (ids) => {
+    requests.push(ids);
+    return pendingRead?.promise ?? { documents, errors: [] };
+  });
   await controller.ready;
-  delay = true;
+
+  const sessionRead = pendingRead = Promise.withResolvers();
   const selection = controller.setServerProfile("programmer");
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await Promise.resolve();
+  assert.deepEqual(requests.at(-1), ["programmer"]);
   controller.resetSession();
-  finish({ documents, errors: [] });
+  pendingRead = undefined;
+  sessionRead.resolve({ documents, errors: [] });
   await selection;
   assert.equal(controller.active().source, "Fallback");
+
+  const oldRead = pendingRead = Promise.withResolvers();
   const slow = controller.reload(JSON.stringify(referenceContextMenus()));
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  const finishSlow = finish;
-  delay = false;
+  assert.equal(requests.at(-1), undefined);
+  pendingRead = undefined;
   const local = referenceContextMenus();
   local.profiles.push({ ...local.profiles[0], id: "support-gm", label: "Hyphen" }, { ...local.profiles[0], id: "support_gm", label: "Underscore" });
   await controller.reload(JSON.stringify(local));
-  finishSlow({ documents, errors: [] });
+  oldRead.resolve({ documents, errors: [] });
   assert.equal(await slow, false);
   await controller.setServerProfile("support-gm");
   assert.equal(controller.active().profile.label, "Hyphen");
@@ -218,12 +225,14 @@ test("late file results cannot restore a session or overwrite newer JSON; hyphen
   assert.equal(controller.active().profile.label, "Underscore");
   await controller.setServerProfile("support/gm");
   assert.equal(controller.active().source, "Fallback");
-  delay = true;
+  const latestRead = pendingRead = Promise.withResolvers();
   local.profiles[0].label = "Latest local draft";
   const editing = controller.reload(JSON.stringify(local));
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  pendingRead = undefined;
+  const readsDuringReload = requests.length;
   await controller.setServerProfile("gm");
-  finish({ documents, errors: [] });
+  assert.equal(requests.length, readsDuringReload);
+  latestRead.resolve({ documents, errors: [] });
   assert.equal(await editing, true);
   assert.equal(controller.config.profiles[0].label, "Latest local draft");
   assert.equal(controller.active().profile.id, "gm");
@@ -256,21 +265,26 @@ test("registered Player JSON is the baseline, including edits and reloads, unles
 
 test("failed reload applies the latest recognized OOB choice while preserving override, reset and snapshot", async (t) => {
   const documents = await files();
-  let release;
-  let delay = false;
-  const { controller } = await app(t, async () => delay ? new Promise((resolve) => { release = resolve; }) : { documents, errors: [] });
+  const requests = [];
+  let pendingReload;
+  const { controller } = await app(t, async (ids) => {
+    requests.push(ids);
+    return !ids && pendingReload ? pendingReload.promise : { documents, errors: [] };
+  });
   await controller.ready;
   const revision = controller.revision;
   const snapshot = controller.snapshot;
   async function failDuring(action) {
-    delay = true;
+    const read = pendingReload = Promise.withResolvers();
     const reload = controller.reload(JSON.stringify(controller.config));
+    const readsDuringReload = requests.length;
     await action();
-    release({ documents: [], errors: ["gm: HTTP 500"] });
+    assert.equal(requests.length, readsDuringReload, "a pending reload owns the profile lookup");
+    read.resolve({ documents: [], errors: ["gm: HTTP 500"] });
     assert.equal(await reload, false);
     assert.equal(controller.revision, revision);
     assert.equal(controller.snapshot, snapshot);
-    delay = false;
+    pendingReload = undefined;
   }
   await failDuring(async () => {
     await controller.setServerProfile("gm");

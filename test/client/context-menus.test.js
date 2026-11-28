@@ -276,6 +276,7 @@ test("explicit typed actions reject stale sessions and never substitute selectio
 test("saved invalid JSON falls back safely and OOB accepts only IDs across fragments", async (t) => {
   const { controller, doc } = await fixture(t, "{");
   assert.equal(controller.active().profile.id, "player");
+  assert.equal((await controller.match("[-][SIC-PM] Example"))[0]?.text, "[-][SIC-PM]");
   assert.match(doc.querySelector("#context-menu-error").textContent, /Previous valid/);
   const parser = createSocketOutputProtocolParser();
   assert.deepEqual(parser.parse("#$# SDWC%%CONTEXT-PRO"), []);
@@ -634,6 +635,46 @@ test("JSON import uses the real file control and failed edits keep the last pers
 });
 
 
+test("an older JSON file read cannot supersede a newer import, reload or teardown", async (t) => {
+  for (const replace of ["file", "read error", "editor", "destroy"]) {
+    await t.test(replace, async (t) => {
+      const { controller, doc, window: win } = await fixture(t);
+      const file = doc.querySelector("#context-menu-file");
+      const editor = doc.querySelector("#context-menu-json");
+      const original = win.localStorage.getItem(CONTEXT_MENUS_KEY);
+      const previous = referenceContextMenus();
+      previous.profiles[0].label = "Older import";
+      const next = referenceContextMenus();
+      next.profiles[0].label = "Latest rules";
+      const slow = Promise.withResolvers();
+      const choose = (text) => {
+        Object.defineProperty(file, "files", { configurable: true, value: [{ size: 1000, text }] });
+        file.dispatchEvent(new win.Event("change"));
+      };
+
+      choose(() => slow.promise);
+      if (replace === "file" || replace === "read error") choose(async () => JSON.stringify(next));
+      if (replace === "editor") {
+        editor.value = JSON.stringify(next);
+        doc.querySelector("#context-menu-reload").click();
+      }
+      if (replace === "destroy") controller.destroy();
+      await new Promise((resolve) => setImmediate(resolve));
+      const expected = replace === "destroy" ? original : JSON.stringify(next);
+      const draft = editor.value;
+      assert.equal(win.localStorage.getItem(CONTEXT_MENUS_KEY), expected);
+
+      if (replace === "read error") slow.reject(new Error("Canceled older read"));
+      else slow.resolve(JSON.stringify(previous));
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(editor.value, draft);
+      assert.equal(win.localStorage.getItem(CONTEXT_MENUS_KEY), expected);
+      assert.equal(doc.querySelector("#context-menu-error").textContent, "");
+      if (replace !== "destroy") assert.equal(controller.active().profile.label, "Latest rules");
+    });
+  }
+});
+
 test("local rules and override remain usable for the session when storage is read-only", async (t) => {
   const { controller, doc, window } = await fixture(t);
   const saved = window.localStorage.getItem(CONTEXT_MENUS_KEY);
@@ -656,6 +697,60 @@ test("local rules and override remain usable for the session when storage is rea
   assert.equal(doc.querySelector("#context-menu-active").textContent, "Active Profile: Session tools (Override)");
   assert.match(doc.querySelector("#context-menu-error").textContent, /preferences could not be saved/);
   assert.equal(window.localStorage.getItem(CONTEXT_MENUS_KEY + "-preferences"), null);
+});
+
+test("the file control preserves the current configuration and reports a failed read", async (t) => {
+  const { controller, doc, window } = await fixture(t);
+  const before = controller.snapshot;
+  const editor = doc.querySelector("#context-menu-json");
+  const draft = editor.value;
+  const file = doc.querySelector("#context-menu-file");
+  const error = doc.querySelector("#context-menu-error");
+
+  file.dispatchEvent(new window.Event("change"));
+  assert.equal(error.textContent, "");
+  Object.defineProperty(file, "files", {
+    value: [{ size: 1000, async text() { throw new Error("File is no longer readable"); } }]
+  });
+  file.dispatchEvent(new window.Event("change"));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.match(error.textContent, /File is no longer readable.*Previous valid/);
+  assert.equal(editor.value, draft);
+  assert.equal(controller.snapshot, before);
+});
+
+test("the JSON editor and file control accept exactly 256 KiB", async (t) => {
+  const { controller, doc, window } = await fixture(t);
+  const config = referenceContextMenus();
+  const limit = 262144;
+  config.profiles[0].label = "Editor limit";
+  assert.equal(await controller.reload(JSON.stringify(config).padEnd(limit)), true);
+  assert.equal(controller.active().profile.label, "Editor limit");
+
+  config.profiles[0].label = "File limit";
+  const content = JSON.stringify(config).padEnd(limit);
+  const file = doc.querySelector("#context-menu-file");
+  Object.defineProperty(file, "files", { value: [{ size: limit, async text() { return content; } }] });
+  file.dispatchEvent(new window.Event("change"));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(controller.active().profile.label, "File limit");
+  assert.equal(doc.querySelector("#context-menu-error").textContent, "");
+});
+
+test("an invalid saved draft cannot start a fallback over a newer manual reload", async (t) => {
+  const { window: win } = new JSDOM("<p id='context-menu-error'></p>", { url: "https://example.com" });
+  win.localStorage.setItem(CONTEXT_MENUS_KEY, "{");
+  const controller = setupContextMenus({ doc: win.document, win, matcherFactory: localMatcher });
+  t.after(() => { controller.destroy(); win.close(); });
+
+  const config = referenceContextMenus();
+  config.profiles[0].label = "Corrected draft";
+  const manual = controller.reload(JSON.stringify(config));
+  await controller.ready;
+  assert.equal(await manual, true);
+  assert.equal(controller.revision, 1);
+  assert.equal(controller.active().profile.label, "Corrected draft");
+  assert.equal(win.document.querySelector("#context-menu-error").textContent, "");
 });
 
 test("oversized JSON editor values and files leave the last context-menu snapshot active", async (t) => {

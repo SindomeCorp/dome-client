@@ -14,6 +14,7 @@ export function setupContextMenus({ client, doc = document, win = window, matche
   let matcher;
   let revision = 0;
   let reloadId = 0;
+  let importId = 0;
   let pendingUserReload = false;
   let server = null;
   let requestedServer = null;
@@ -249,7 +250,7 @@ export function setupContextMenus({ client, doc = document, win = window, matche
         return client.openIDE({ contextScratch: true, buffer: context.text });
       }
     },
-    destroy() { reloadId++; serverRequest++; matcher?.destroy(); for (const dispose of bindings.values()) dispose(); bindings.clear(); subscribers.clear(); uiBindings.splice(0).forEach((remove) => remove()); win.clearTimeout(noticeTimer); }
+    destroy() { reloadId++; importId++; serverRequest++; matcher?.destroy(); for (const dispose of bindings.values()) dispose(); bindings.clear(); subscribers.clear(); uiBindings.splice(0).forEach((remove) => remove()); win.clearTimeout(noticeTimer); }
   };
   if (client) client.contextMenus = controller;
   const editor = doc.querySelector("#context-menu-json");
@@ -263,18 +264,25 @@ export function setupContextMenus({ client, doc = document, win = window, matche
   bindUI(doc.querySelector("#context-menu-override"), "change", (event) => update({ override: event.target.checked }));
   bindUI(doc.querySelector("#context-menu-profile"), "change", (event) => update({ profile: event.target.value }));
   bindUI(doc.querySelector("#context-menu-underline"), "change", (event) => update({ underline: event.target.checked }));
-  bindUI(doc.querySelector("#context-menu-reload"), "click", () => reload(editor.value));
+  bindUI(doc.querySelector("#context-menu-reload"), "click", () => {
+    importId++;
+    return reload(editor.value);
+  });
   const fileInput = doc.querySelector("#context-menu-file");
   bindUI(fileInput, "change", async () => {
+    const request = ++importId;
     const file = fileInput.files?.[0];
-    try {
-      if (file) {
-        if (file.size > 262144) throw new Error("Configuration exceeds 256 KiB.");
-        editor.value = await file.text();
-        await reload(editor.value);
-      }
-    } catch (error) { report(error.message + " Previous valid context menus remain active."); }
     fileInput.value = "";
+    if (!file) return;
+    try {
+      if (file.size > 262144) throw new Error("Configuration exceeds 256 KiB.");
+      const text = await file.text();
+      if (request !== importId) return;
+      editor.value = text;
+      await reload(text);
+    } catch (error) {
+      if (request === importId) report(error.message + " Previous valid context menus remain active.");
+    }
   });
   bindUI(doc.querySelector("#context-menu-export"), "click", () => {
     const url = win.URL.createObjectURL(new win.Blob([JSON.stringify(config, null, 2)], { type: "application/json" }));

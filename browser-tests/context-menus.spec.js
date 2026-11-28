@@ -1320,6 +1320,42 @@ test("context menus: a mounted burst beyond the worker queue cap retains first a
   await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(["@rewind SIC-PM"]);
 });
 
+test("context menus: a slow JSON import cannot overwrite the latest Options rules", async ({ page }) => {
+  await page.addInitScript(() => {
+    const readText = window.File.prototype.text;
+    window.File.prototype.text = async function () {
+      const text = await readText.call(this);
+      if (this.name === "older.json") {
+        await new Promise((resolve) => { window.releaseContextFile = resolve; });
+      }
+      return text;
+    };
+  });
+  await page.goto("/?entry=real");
+  await expect(page.locator("#context-menu-profile option")).toHaveCount(3);
+  await page.locator("#button-client-options").click();
+  await page.locator("#client-options-tab-context").click();
+  await setContextSection(page, "advanced");
+
+  const config = referenceContextMenus();
+  const file = page.locator("#context-menu-file");
+  const editor = page.locator("#context-menu-json");
+  const choose = (name) => file.setInputFiles({
+    name, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(config))
+  });
+  config.profiles[0].label = "Older import";
+  await choose("older.json");
+  await expect(file).toHaveValue("");
+  await expect.poll(() => page.evaluate(() => typeof window.releaseContextFile)).toBe("function");
+  config.profiles[0].label = "Latest rules";
+  await choose("latest.json");
+  await expect(page.locator("#context-menu-profile option[value=player]")).toHaveText("Latest rules");
+
+  await page.evaluate(() => window.releaseContextFile());
+  await expect(editor).toHaveValue(JSON.stringify(config));
+  await expect.poll(() => page.evaluate(() => JSON.parse(window.localStorage.getItem("dc-context-menus")).profiles[0].label)).toBe("Latest rules");
+});
+
 test("context menus: failed Options reload applies intervening OOB and cannot restore a reset session", async ({ page }) => {
   let paused = false;
   let release;
