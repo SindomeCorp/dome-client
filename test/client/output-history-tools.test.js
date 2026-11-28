@@ -278,15 +278,39 @@ test("saved logs expand and release inert image, video, and YouTube previews wit
   assert.equal(controls.length, 3);
   for (const [index, tag] of ["img", "video", "iframe"].entries()) {
     const control = controls[index];
+    assert.equal(control.textContent, "▸");
     control.click();
     assert.equal(control.getAttribute("aria-expanded"), "true");
+    assert.equal(control.textContent, "▾");
     assert.ok(control.nextElementSibling.querySelector(tag));
     if (tag === "video") assert.match(doc.querySelector("source").src, /movie\.mp4$/);
     if (tag === "iframe") assert.match(doc.querySelector("iframe").src, /youtube\.com\/embed\/abcdefghijk$/);
     control.click();
     assert.equal(control.getAttribute("aria-expanded"), "false");
+    assert.equal(control.textContent, "▸");
+    assert.equal(control.nextElementSibling.childNodes.length, 0);
     assert.equal(doc.querySelectorAll("img, video, iframe").length, 0);
   }
+  const invalidMediaMarkup = doc.createElement("div");
+  invalidMediaMarkup.innerHTML = `
+    <div><button aria-expanded="false">unrelated</button></div>
+    <div><button data-output-media aria-expanded="false">no slot</button></div>
+    <div><button data-output-media aria-expanded="false">no template</button><span data-preview-for></span></div>
+    <div><button data-output-media aria-expanded="false">wrong slot</button><span></span><template><img></template></div>
+    <div><button data-output-media aria-expanded="false">wrong template</button><span data-preview-for></span><span></span></div>`;
+  doc.body.append(invalidMediaMarkup);
+  const errors = [];
+  exported.window.addEventListener("error", (event) => {
+    errors.push(event.message);
+    event.preventDefault();
+  });
+  doc.dispatchEvent(new exported.window.MouseEvent("click", { bubbles: true }));
+  for (const button of invalidMediaMarkup.querySelectorAll("button")) {
+    button.click();
+    assert.equal(button.getAttribute("aria-expanded"), "false");
+  }
+  assert.deepEqual(errors, []);
+  assert.equal(invalidMediaMarkup.querySelectorAll("img, video, iframe").length, 0);
 });
 
 test("an offscreen export keeps its chronology while a split closes, history is pruned, and output arrives", async (t) => {
