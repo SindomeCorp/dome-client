@@ -391,6 +391,32 @@ test("pop-out transfers one secondary index and preserves paused history through
   }
 });
 
+test("detached Pause toggles only secondary scrolling and honors prevented shortcuts", async ({ page }) => {
+  await page.evaluate(() => {
+    window.outputTest.manager.updateSettings({ open: true, selected: ["team-chat"] });
+    return window.outputTest.feed("main output\n[-][Team-Chat] secondary output\n");
+  });
+  const popup = await popOut(page);
+  const secondary = popup.getByRole("region", { name: "Secondary output", exact: true });
+  const paused = () => page.evaluate(() => {
+    const { views } = window.outputTest.manager;
+    return [views.main.paused, views.secondary.paused];
+  });
+  await secondary.focus();
+  await expect.poll(paused).toEqual([false, false]);
+  await popup.keyboard.press("Pause");
+  await expect.poll(paused).toEqual([false, true]);
+
+  await secondary.evaluate((element) => {
+    element.addEventListener("keydown", (event) => { event.preventDefault(); }, { once: true });
+  });
+  await popup.keyboard.press("Pause");
+  expect(await paused()).toEqual([false, true]);
+
+  await popup.keyboard.press("Pause");
+  await expect.poll(paused).toEqual([false, false]);
+});
+
 test("companion Find, filters, themes, media, pruning and clearing use the shared session", async ({ page }) => {
   await page.route("https://media.example/popout.png", (route) => route.fulfill({ contentType: "image/svg+xml", body: "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'></svg>" }));
   await page.evaluate(async () => {
