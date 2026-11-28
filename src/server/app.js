@@ -72,7 +72,8 @@ export function createApp({
     limit: "50mb"
   }));
   app.use(session({
-    resave: true,
+    // The default store can touch unmodified sessions without rewriting their data.
+    resave: false,
     saveUninitialized: true,
     secret: config.node.session.secret
   }));

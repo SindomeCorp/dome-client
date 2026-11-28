@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - Restore the latest recognized server profile after a failed context-menu reload while preserving session resets and user overrides.
 - Reject unusable profile regexes during bounded startup validation and disable context menus with a logged error when no usable files remain.
 - Preserve output line boundaries around client control messages so login profile selection works regardless of network packet splits, including split CRLF newlines.
+- Keep website session updates when a concurrent read-only request finishes later.
 
 ### Added
 - Add wildcard @rewind menus for `[+][channel]` and `[-][channel]` tags in Player, GM and Programmer profiles.
