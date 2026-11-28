@@ -168,16 +168,20 @@ test("native log export uses history and clear cancels a pending export", async 
   assert.equal(downloads.length, 1);
   assert.match(downloads[0].html, /first<\/div><div>second/);
   assert.ok(!downloads[0].html.includes("class=\"output-spacer\""));
+  const status = doc.querySelector("#output-announcements");
   manager.tools.saveLog();
   manager.clear();
   await settle();
   assert.equal(downloads.length, 1);
   assert.equal(doc.querySelector("#output-operation").classList.contains("hide"), true);
+  assert.doesNotMatch(status.textContent, /failed:/);
   manager.tools.saveLog();
   doc.querySelector("#output-operation-cancel").click();
   await settle();
   assert.equal(downloads.length, 1);
   assert.equal(client.outputWindows.history.length, 0);
+  assert.equal(doc.querySelector("#output-operation").classList.contains("hide"), true);
+  assert.doesNotMatch(status.textContent, /failed:/);
 });
 
 test("clear discards a partial protocol line and later output remains usable", async (t) => {

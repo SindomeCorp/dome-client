@@ -802,6 +802,45 @@ test("unified download includes offscreen history once in arrival order", async 
   expect(html.includes("class=\"output-spacer\"")).toBe(false);
 });
 
+test("the real client reports a browser log download failure and can retry", async ({ page }) => {
+  const connections = async () => (await (await page.request.get("/fixture/state")).json()).connections;
+  const previousConnections = await connections();
+  await page.goto("/?entry=real");
+  await expect.poll(connections).toBeGreaterThan(previousConnections);
+  const feed = (text) => page.request.post("/fixture/data", { data: { text: text + "\n" } });
+  const output = page.locator("#lineBuffer");
+  await feed("Log line before failed export");
+  await expect(output).toContainText("Log line before failed export");
+
+  await page.evaluate(() => {
+    const create = window.URL.createObjectURL;
+    window.URL.createObjectURL = () => {
+      window.URL.createObjectURL = create;
+      throw new Error("Fixture browser download failure");
+    };
+  });
+  const downloads = [];
+  page.on("download", (download) => downloads.push(download));
+  const save = page.getByRole("button", { name: "Save session log" });
+  const status = page.locator("#output-announcements");
+  await save.click();
+  await expect(status).toHaveText("Preparing log… failed: Fixture browser download failure");
+  await expect(page.locator("#output-operation")).toBeHidden();
+  expect(downloads).toHaveLength(0);
+
+  await feed("Log line after failed export");
+  await expect(output).toContainText("Log line after failed export");
+  const downloading = page.waitForEvent("download");
+  await save.click();
+  const download = await downloading;
+  let html = "";
+  for await (const part of await download.createReadStream()) html += part;
+  expect(html).toMatch(/Log line before failed export[\s\S]+Log line after failed export/);
+  await expect(status).toHaveText("Log saved.");
+  await expect(page.locator("#output-operation")).toBeHidden();
+  expect(downloads).toHaveLength(1);
+});
+
 test("a failing native log download falls back to the same browser download", async ({ page }) => {
   await page.evaluate(async () => {
     await window.outputTest.feed("Browser fallback log fixture\n");
