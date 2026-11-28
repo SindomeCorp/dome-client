@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { getEventListeners } from "node:events";
 import { createRuleRunner } from "../../src/client/features/output-windows/rule-runner.js";
 import { compileRules, handleRuleRequest, matchRuleLines } from "../../src/client/features/output-windows/rule-worker.js";
 import { FakeRuleWorker } from "../../test-support/output-app.js";
@@ -18,19 +19,36 @@ test("worker matches selected rules against complete lines and reports progress"
   assert.ok(errors[0].error);
 });
 
-test("runner serializes batches and cancellation resolves queued work", async () => {
-  const runner = createRuleRunner({ workerFactory: () => new FakeRuleWorker() });
+test("runner serializes batches and cancellation resolves queued work", async (t) => {
+  const workers = [];
+  const runner = createRuleRunner({ workerFactory() {
+    const worker = new FakeRuleWorker();
+    workers.push(worker);
+    return worker;
+  } });
+  t.after(() => runner.cancel());
   const first = runner.match(["[-][Team-Chat] hi"], rules);
   const second = runner.match(["normal"], rules);
   assert.deepEqual(await first, [true]);
   assert.deepEqual(await second, [false]);
   assert.deepEqual(await runner.match([], rules), []);
   assert.deepEqual(await runner.match(["x"], []), [false]);
-  const pending = runner.match(["pending"], rules);
-  const queued = runner.match(["queued"], rules);
+  const abort = new AbortController();
+  let pending;
+  let queued;
+  runner.match(["pending"], rules, { signal: abort.signal }).then((value) => { pending = value; });
+  runner.match(["queued"], rules, { signal: abort.signal }).then((value) => { queued = value; });
+  assert.equal(getEventListeners(abort.signal, "abort").length, 2);
   runner.cancel();
-  assert.deepEqual(await pending, [false]);
-  assert.deepEqual(await queued, [false]);
+  assert.equal(runner.pendingLines, 0);
+  assert.equal(workers[0].terminated, true);
+  assert.equal(getEventListeners(abort.signal, "abort").length, 0);
+  await Promise.resolve();
+  assert.deepEqual(pending, [false]);
+  assert.deepEqual(queued, [false]);
+
+  assert.deepEqual(await runner.match(["[-][Team-Chat] after cancel"], rules), [true]);
+  assert.equal(workers.length, 2);
 });
 
 test("a timed-out rule is suspended and unresolved output falls back to main", async () => {
@@ -122,26 +140,42 @@ test("pruning cancels queued routing and releases active input without suspendin
   runner.cancel();
 });
 
-test("routing queue has a fixed line budget and overflow safely stays in main", async () => {
+test("routing queue has a fixed line budget and overflow safely stays in main", async (t) => {
+  t.mock.method(performance, "now", () => 0);
   let worker;
   const runner = createRuleRunner({ maxPendingLines: 3, workerFactory: () => worker = {
     addEventListener(name, fn) { this[name] = fn; },
     postMessage(message) { this.sent = message; },
     terminate() {}
   } });
-  const first = runner.match(["first"], rules);
-  const oldest = runner.match(["old queued"], rules);
-  const latest = runner.match(["latest one", "latest two"], rules);
-  assert.deepEqual(await oldest, [false]);
+  t.after(() => runner.cancel());
+
+  const active = new AbortController();
+  const evicted = new AbortController();
+  let first;
+  let oldest;
+  let latest;
+  runner.match(["first"], rules, { signal: active.signal }).then((value) => { first = value; });
+  assert.deepEqual(worker?.sent.lines, ["first"]);
+  runner.match(["old queued"], rules, { signal: evicted.signal }).then((value) => { oldest = value; });
+  assert.equal(getEventListeners(evicted.signal, "abort").length, 1);
+  runner.match(["latest one", "latest two"], rules).then((value) => { latest = value; });
+
   assert.equal(runner.pendingLines, 3);
+  assert.equal(getEventListeners(evicted.signal, "abort").length, 0);
+  assert.equal(getEventListeners(active.signal, "abort").length, 1);
+  await Promise.resolve();
+  assert.deepEqual(oldest, [false]);
   assert.deepEqual(await runner.match(["a", "b", "c", "d"], rules), [false, false, false, false]);
   worker.message({ data: { id: worker.sent.id, matches: [true] } });
-  assert.deepEqual(await first, [true]);
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(getEventListeners(active.signal, "abort").length, 0);
+  await Promise.resolve();
+  assert.deepEqual(first, [true]);
+  assert.deepEqual(worker.sent.lines, ["latest one", "latest two"]);
   worker.message({ data: { id: worker.sent.id, matches: [true, false] } });
-  assert.deepEqual(await latest, [true, false]);
   assert.equal(runner.pendingLines, 0);
-  runner.cancel();
+  await Promise.resolve();
+  assert.deepEqual(latest, [true, false]);
 });
 
 test("a worker failure from old settings does not disable newer routing", async (t) => {
