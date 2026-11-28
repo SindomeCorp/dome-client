@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-28
 
 ### Fixed
+- Keep Find navigation from jumping to results for the previous query while a new query is pending.
 - Stop a pending Find query from jumping to a result after closing and reopening Find.
 - Prevent a pending Find result from jumping to the old query while typing a new one.
 - Clean up the temporary link and file URL when a browser log download fails to start.

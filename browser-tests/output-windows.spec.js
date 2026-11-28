@@ -869,6 +869,34 @@ test("Find ignores an older snapshot while the next query debounces", async ({ p
   expect(await page.evaluate(() => window.fixtureFindJumps)).toEqual([current]);
 });
 
+test("submitting a newly edited Find query cannot navigate the old results", async ({ page }) => {
+  const connections = async () => (await (await page.request.get("/fixture/state")).json()).connections;
+  const previous = await connections();
+  await page.goto("/?entry=real");
+  await expect.poll(connections).toBeGreaterThan(previous);
+  await page.request.post("/fixture/data", { data: { text: "first needle\r\nsecond needle\r\nnew replacement\r\n" } });
+  const buffer = page.locator("#lineBuffer");
+  await expect(buffer).toContainText("new replacement");
+  await page.locator("#button-output-find").click();
+  const query = page.locator("#output-find-query");
+  const count = page.locator("#output-find-count");
+  await query.fill("needle");
+  await expect(count).toHaveText("1 of 2");
+  await expect(buffer.locator("mark")).toHaveText("needle");
+
+  // Submitting in the same input task keeps the debounce from starting first.
+  const statusBeforeSearch = await query.evaluate(async (input) => {
+    input.value = "replacement";
+    input.dispatchEvent(new Event("input"));
+    input.form.requestSubmit();
+    await Promise.resolve();
+    return document.querySelector("#output-find-count").textContent;
+  });
+  expect(statusBeforeSearch).not.toBe("2 of 2");
+  await expect(count).toHaveText("1 of 1");
+  await expect(buffer.locator("mark")).toHaveText("replacement");
+});
+
 test("reopening Find does not jump on a query typed before closing", async ({ page }) => {
   const connections = async () => (await (await page.request.get("/fixture/state")).json()).connections;
   const previous = await connections();

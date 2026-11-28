@@ -94,8 +94,11 @@ export function setupHistoryTools(manager) {
   function scopePredicate(name = scope.value, state = manager.routeState()) {
     return (record) => name === "all" || manager.panelFor(record, state) === name;
   }
+  function currentSearchSignature() {
+    return JSON.stringify([query.value, scope.value, matchCase.checked]);
+  }
   async function go(delta = 0) {
-    if (disposed || !matches.length) return;
+    if (disposed || !matches.length || searchSignature !== currentSearchSignature()) return;
     selected = ((selected + delta) % matches.length + matches.length) % matches.length;
     const match = matches.at(selected);
     if (!match) return;
@@ -117,7 +120,7 @@ export function setupHistoryTools(manager) {
   }
   async function search({ incremental = false, jump = false } = {}) {
     if (form.classList.contains("hide")) return;
-    const signature = JSON.stringify([query.value, scope.value, matchCase.checked]);
+    const signature = currentSearchSignature();
     if (signature !== searchSignature) incremental = false;
     if (incremental && searching) { searchPending = true; return; }
     searchController?.abort();
