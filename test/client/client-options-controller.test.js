@@ -57,12 +57,25 @@ test("client options controller rejects invalid values without mutating preferen
   });
   client.preferences = controller.readPreferences();
 
-  const result = controller.setOption("lineBufferFontSizePt", 100, { source: "command" });
+  for (const [name, raw, rejected, key] of [
+    ["lineBufferFontSizePt", 100, 100, "outfontsize"],
+    ["lineBufferFontSizePt", "7", 7, "outfontsize"],
+    ["secondaryLineBufferFontSizePt", "bad-size", "bad-size", "secondaryoutfontsize"],
+    ["inputFontColor", "wrong-color", "wrong-color", "inputfontcolor"],
+    ["colorSet", "missing-theme", "missing-theme", "colorset"]
+  ]) {
+    const storageKey = "dc-toggle-" + key;
+    const previous = client.preferences[name];
+    const saved = storage.get(storageKey);
 
-  assert.equal(result.ok, false);
-  assert.equal(result.status, "invalid-value");
-  assert.equal(client.preferences.lineBufferFontSizePt, 9.75);
-  assert.equal(storage.get("dc-toggle-outfontsize"), null);
+    const result = controller.setOption(name, raw, { source: "command" });
+
+    assert.equal(result.ok, false, name);
+    assert.equal(result.status, "invalid-value", name);
+    assert.equal(result.value, rejected, name);
+    assert.equal(client.preferences[name], previous, name);
+    assert.equal(storage.get(storageKey), saved, name);
+  }
 });
 
 test("client options controller handles help, read, unknown, unchanged, and disabled feature branches", () => {

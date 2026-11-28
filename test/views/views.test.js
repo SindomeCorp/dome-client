@@ -173,7 +173,7 @@ test("every client option renders a usable control in the Options dialog", async
   assert.equal(rows.length, CLIENT_OPTION_DEFINITIONS.length);
   const names = new Set();
 
-  for (const { key } of CLIENT_OPTION_DEFINITIONS) {
+  for (const { key, def, min, max, step } of CLIENT_OPTION_DEFINITIONS) {
     const row = document.getElementById(key + "-option");
     assert.ok(row, "Missing Options row for " + key);
     const controls = [...row.querySelectorAll("button, select, input")];
@@ -187,11 +187,27 @@ test("every client option renders a usable control in the Options dialog", async
       assert.ok(!names.has(control.name), "Duplicate Options field name " + control.name);
       names.add(control.name);
       if (control.matches("select")) {
-        assert.ok(control.value, "Missing selected default for " + key);
+        assert.equal(control.querySelectorAll("option[selected]").length, 1, key);
+        assert.equal(control.value, def, key);
         assert.ok([...control.options].every((option) => option.value.trim() && option.text.trim()));
+      } else if (control.type === "number") {
+        assert.equal(control.valueAsNumber, def, key);
+        assert.equal(control.min, String(min), key);
+        assert.equal(control.max, String(max), key);
+        assert.equal(control.step, step === undefined ? "" : String(step), key);
       }
     }
   }
+});
+
+test("the Options dialog hides link shortening when the server disables it", async (t) => {
+  const view = "views/partials/client-options-overlay.ejs";
+  const html = await ejs.renderFile(view, sampleData[view]);
+  const { window } = new JSDOM(html);
+  t.after(() => window.close());
+  const { document } = window;
+  assert.equal(document.getElementById("shorten-option"), null);
+  assert.ok(document.querySelector("#commands-option button[data-val=true]"));
 });
 
 test("connect-as multi-mud render treats missing mudTlsEnabled as disabled", async () => {

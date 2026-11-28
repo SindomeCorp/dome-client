@@ -248,6 +248,11 @@ test("client-options import applies valid values and reports skipped invalid val
           preferences: {
             commands: "false",
             edittheme: "not-a-theme",
+            outfontsize: [12],
+            inputfontsize: true,
+            inputfontcolor: null,
+            buffer: { value: 48 },
+            secondaryoutfontsize: "24",
             unknownOption: true
           }
         })
@@ -258,8 +263,13 @@ test("client-options import applies valid values and reports skipped invalid val
 
     assert.equal(options.clientOptions.get("commands").state, false);
     assert.equal(options.clientOptions.get("edittheme").state, "twilight");
-    assert.ok(output.some((line) => line.includes("Imported 1 client option.")));
-    assert.ok(output.some((line) => line.includes("Skipped 1 invalid imported option value.")));
+    assert.equal(options.clientOptions.get("outfontsize").state, 9.75);
+    assert.equal(options.clientOptions.get("inputfontsize").state, 11);
+    assert.equal(options.clientOptions.get("inputfontcolor").state, "#EEEEEE");
+    assert.equal(options.clientOptions.get("buffer").state, 0);
+    assert.equal(options.clientOptions.get("secondaryoutfontsize").state, 24);
+    assert.ok(output.some((line) => line.includes("Imported 2 client options.")));
+    assert.ok(output.some((line) => line.includes("Skipped 5 invalid imported option values.")));
   } finally {
     window.confirm = originalConfirm;
   }

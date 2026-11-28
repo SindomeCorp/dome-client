@@ -168,6 +168,9 @@ test("secondary presentation supplied by a URL agrees with controls, exported pr
   await page.waitForFunction(() => window.outputTest);
   await page.locator("#button-client-options").click();
   await page.getByRole("tab", { name: "Presentation", exact: true }).click();
+  const mainFontSize = page.locator("#outfontsize-option input");
+  await mainFontSize.fill("15.5");
+  await mainFontSize.press("Tab");
   await page.getByRole("tab", { name: "Secondary Window", exact: true }).click();
   await expect(page.locator("#secondaryoutfont-option select")).toHaveValue("courier");
   await expect(page.locator("#secondarycolorset-option select")).toHaveValue("snow");
@@ -180,13 +183,24 @@ test("secondary presentation supplied by a URL agrees with controls, exported pr
   const prefs = JSON.parse(json).preferences;
   expect([prefs.secondaryoutfont, prefs.secondarycolorset, prefs.secondaryoutfontsize]).toEqual(["courier", "snow", 18]);
   await page.evaluate(() => window.outputTest.client.setClientOption("secondaryLineBufferFont", "lucida"));
-  await page.locator("#client-options-import-file").setInputFiles({ name: "url-options.json", mimeType: "application/json", buffer: Buffer.from(json) });
+  const imported = JSON.stringify({
+    preferences: { ...prefs, outfontsize: [22], inputfontcolor: null, secondaryoutfontsize: "18" }
+  });
+  await page.locator("#client-options-import-file").setInputFiles({
+    name: "url-options.json", mimeType: "application/json", buffer: Buffer.from(imported)
+  });
+  const importedPresentation = () => page.evaluate(() => {
+    const state = window.outputTest.client.preferences;
+    return [state.lineBufferFontSizePt, state.inputFontColor, state.secondaryLineBufferFont];
+  });
+  await expect.poll(importedPresentation).toEqual([15.5, "#EEEEEE", "courier"]);
   await page.goto("/");
   await page.waitForFunction(() => window.outputTest);
   expect(await page.evaluate(() => {
     const prefs = window.outputTest.client.preferences;
     return [prefs.secondaryLineBufferFont, prefs.secondaryColorSet, prefs.secondaryLineBufferFontSizePt];
   })).toEqual(["courier", "snow", 18]);
+  expect(await importedPresentation()).toEqual([15.5, "#EEEEEE", "courier"]);
 
   await page.goto("/?sof=unknown&scl=unknown&soz=24.01&cs=false&ic=sample%23AABBCC");
   await page.waitForFunction(() => window.outputTest);
