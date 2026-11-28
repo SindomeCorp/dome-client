@@ -20,12 +20,11 @@ async function load(t, remoteAuth = { enabled: true, host: "http://localhost:555
 
 test("assigns session user on success", async t => {
   const { login, setupAuth } = await load(t);
-  const { req, res, scope, redirect, done } = setupAuth({
+  const { req, res, scope, redirect } = setupAuth({
     status: 200,
     response: { status: "ok", user: { perms: [1] } }
   });
-  login(req, res);
-  await done;
+  await login(req, res);
   scope.done();
   assert.deepEqual(req.session.user, { perms: [1], chars: [] });
   assert.strictEqual(redirect.url, "/");
@@ -33,12 +32,11 @@ test("assigns session user on success", async t => {
 
 test("handles JSON parse errors", async t => {
   const { login, setupAuth } = await load(t);
-  const { req, res, scope, redirect, done } = setupAuth({
+  const { req, res, scope, redirect } = setupAuth({
     status: 200,
     response: "not json"
   });
-  login(req, res);
-  await done;
+  await login(req, res);
   scope.done();
   assert.match(req.session.error, /Unexpected token/);
   assert.strictEqual(redirect.url, "/");
@@ -177,12 +175,11 @@ test("builds request options for https host", async t => {
 
 test("sets session error on remote error status", async t => {
   const { login, setupAuth } = await load(t);
-  const { req, res, scope, redirect, done } = setupAuth({
+  const { req, res, scope, redirect } = setupAuth({
     status: 200,
     response: { status: "error", message: "fail" }
   });
-  login(req, res);
-  await done;
+  await login(req, res);
   scope.done();
   assert.strictEqual(req.session.error, "fail");
   assert.strictEqual(redirect.url, "/");
