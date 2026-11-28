@@ -2221,3 +2221,39 @@ test("context menus: a late server profile worker cannot undo a newer Options re
   await expect(page.locator("#context-menu-error")).toBeEmpty();
   expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
 });
+
+test("the real IDE preserves exact grammar diagnostics alongside block checks", async ({ page }) => {
+  await page.context().route("**/editor/ide/", async (route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("parser", "moo");
+    await route.fulfill({ response: await route.fetch({ url: url.href }) });
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const before = (await fixtureState(page)).commands;
+  const opened = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: grammar fixture upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
+  const ide = await opened;
+  const editor = ide.locator(".ace_editor");
+  await expect(editor).toBeVisible();
+  const annotations = () => editor.evaluate((element) => element.env.editor.getSession().getAnnotations());
+  const error = (row, column, text = "MOO syntax error") => ({ row, column, text, type: "error" });
+
+  for (const [source, expected] of [
+    ["if (1)\n!\nreturn 1;", [
+      error(0, 0, "Missing endif"), error(2, 9, "Missing block terminator: endif"), error(1, 0)
+    ]],
+    ["return 3 4;\nif (1)\nreturn 1;", [
+      error(1, 0, "Missing endif"), error(2, 9, "Missing block terminator: endif"), error(0, 9), error(1, 0)
+    ]],
+    ["return \"missing\nendwhile", [error(0, 0)]],
+    ["if (1)\nreturn (1 + );", [
+      error(0, 0, "Missing endif"), error(1, 14, "Missing block terminator: endif"), error(1, 11, "Missing identifier")
+    ]]
+  ]) {
+    await editor.evaluate((element, source) => element.env.editor.setValue(source, -1), source);
+    await expect.poll(annotations).toEqual(expected);
+  }
+  expect((await fixtureState(page)).commands).toEqual(before);
+});
