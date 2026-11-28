@@ -540,6 +540,29 @@ test("scaled scrollback redistributes gaps around distant selection endpoints", 
   assert.equal(last.isConnected, true);
 });
 
+test("the first selected row after the render window counts toward the physical scroll height", async (t) => {
+  const { manager, doc, feed } = await createOutputApp(t);
+  const view = manager.views.main;
+  Object.defineProperty(view.element, "clientHeight", { value: 400 });
+  view.element.style.padding = "0px";
+  await feed(Array.from({ length: 32 }, (_, index) => "row " + (index + 1)).join("\n") + "\n");
+  view.jump(1);
+  view.render();
+  const pinned = view.mounted.get(17).firstChild;
+  const last = view.mounted.get(32).firstChild;
+  doc.getSelection().setBaseAndExtent(last, 2, pinned, 1);
+
+  const rowHeight = 500_000;
+  for (let index = 0; index < 32; index++) view.index.measure(index, rowHeight);
+  view.jump(16);
+  view.render();
+  assert.deepEqual([...view.mounted.keys()].sort((left, right) => left - right), [15, 16, 17, 32]);
+  const spacers = view.element.querySelectorAll(".output-spacer");
+  const physicalHeight = [...spacers].reduce((total, spacer) => total + parseFloat(spacer.style.height), view.mounted.size * rowHeight);
+  // CSS can round spacers that are millions of pixels high.
+  assert.ok(Math.abs(physicalHeight - 8_000_000) <= 10, `scroll height was ${physicalHeight}`);
+});
+
 test("selected media endpoints remain selectable but release previews outside the viewport", async (t) => {
   const { manager, client, doc, feed } = await createOutputApp(t);
   client.preferences.imagePreview = true;
@@ -758,24 +781,40 @@ test("virtual output coalesces frames and ignores a late measurement after destr
     return nextFrame;
   });
   const cancelFrame = t.mock.method(win, "cancelAnimationFrame", (id) => frames.delete(id));
+  const setTimer = t.mock.method(win, "setTimeout");
+  const clearTimer = t.mock.method(win, "clearTimeout");
+  const heldPresses = () => setTimer.mock.calls.filter(({ arguments: args }) => args[1] === 2000);
+  const press = () => element.dispatchEvent(new win.MouseEvent("pointerdown", { bubbles: true }));
   let notifyContainer;
   win.ResizeObserver = class {
     constructor(callback) { this.callback = callback; }
     observe(target) { if (target === element) notifyContainer = this.callback; }
+    unobserve() {}
     disconnect() {}
   };
 
-  const view = new VirtualOutputView({ element, client: { preferences: {} }, win, name: "secondary" });
+  const view = new VirtualOutputView({ element, client: { preferences: { autoScroll: "long" } }, win, name: "secondary" });
+  view.append({ id: 1, runs: [{ text: "retained row", classes: [], inlineStyles: [] }] });
+  view.render();
+  const row = element.querySelector("[data-output-id]");
+  assert.equal(row.textContent, "retained row");
   doc.dispatchEvent(new win.Event("selectionchange"));
   notifyContainer([]);
   assert.deepEqual([...frames.keys()], [1], "selection and resize share a pending frame");
+  press();
+  assert.equal(heldPresses().length, 1);
+  const holdTimer = heldPresses()[0].result;
 
   view.destroy();
   assert.deepEqual(cancelFrame.mock.calls.map(({ arguments: args }) => args), [[1]]);
   assert.equal(frames.size, 0);
+  assert.ok(clearTimer.mock.calls.some(({ arguments: [id] }) => id === holdTimer));
+  assert.equal(row.isConnected, false);
   notifyContainer([]);
   doc.dispatchEvent(new win.Event("selectionchange"));
+  press();
   assert.equal(frames.size, 0, "callbacks cannot queue layout for a retired pane");
+  assert.equal(heldPresses().length, 1, "a retired pane no longer starts a long press");
 });
 
 test("the toolbar cancels pending layout work when its output panel is destroyed", async (t) => {

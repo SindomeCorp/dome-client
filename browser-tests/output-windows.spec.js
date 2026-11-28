@@ -1203,6 +1203,37 @@ test("mouse drag and wheel selection crosses unmounted history without losing co
   await copyThroughNativeEvent(page, expected.text);
 });
 
+test("presentation changes preserve active selection and redraw existing previews once unselected", async ({ page }) => {
+  await page.route("https://media.example/presentation.png", (route) => route.fulfill({
+    contentType: "image/svg+xml", body: "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'></svg>"
+  }));
+  await page.evaluate(async () => {
+    const { client, feed } = window.outputTest;
+    client.setClientOption("imagePreview", true);
+    await feed("https://media.example/presentation.png\nSelected output phrase\n");
+  });
+  const output = page.locator("#lineBuffer");
+  await expect(output.locator("img")).toHaveCount(1);
+  const row = output.getByRole("listitem").filter({ hasText: "Selected output phrase" });
+  await row.evaluate((element) => {
+    document.getSelection().selectAllChildren(element);
+    window.outputTest.client.setClientOption("lineBufferFontSizePt", 14);
+  });
+  await expect(output).toHaveCSS("font-size", /18\.66/);
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  expect(await page.evaluate(() => document.getSelection().toString())).toBe("Selected output phrase");
+  await expect(output.locator("img")).toHaveCount(1);
+
+  await page.evaluate(() => document.getSelection().removeAllRanges());
+  await page.locator("#button-client-options").click();
+  await page.getByRole("tab", { name: "General", exact: true }).click();
+  await page.locator("#imageview-option").getByRole("button", { name: "No", exact: true }).click();
+  await page.locator("#button-client-options-close").click();
+  await expect(output.locator("img")).toHaveCount(0);
+  await expect(output.locator("[data-output-media]")).toHaveAttribute("aria-expanded", "false");
+  await expect(row).toHaveText("Selected output phrase");
+});
+
 test("downloaded media previews work independently and load only when opened", async ({ page }) => {
   await page.evaluate(() => window.outputTest.feed("https://media.example/picture.png\nhttps://media.example/movie.mp4\n"));
   const downloadPromise = page.waitForEvent("download");
