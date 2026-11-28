@@ -1383,6 +1383,19 @@ test("Player, GM, Coder, and Custom filter views retain selections across groups
   expect(pageErrors).toEqual([]);
 });
 
+async function observeWindowFocusRequests(page) {
+  // Browser window managers can ignore a request to raise a window.
+  await page.evaluate(() => {
+    const focus = window.focus.bind(window);
+    window.outputFocusRequests = 0;
+    window.focus = () => {
+      window.outputFocusRequests++;
+      focus();
+    };
+  });
+  return () => page.evaluate(() => window.outputFocusRequests);
+}
+
 test("double-clicking either output pane toggles pause and restores the input cursor", async ({ page }) => {
   await page.evaluate(() => {
     window.outputTest.manager.updateSettings({ open: true, position: "bottom", selected: ["ooc-chat"] });
@@ -1390,6 +1403,7 @@ test("double-clicking either output pane toggles pause and restores the input cu
     return window.outputTest.feed("main double click\n[-][OOC-Chat] secondary double click\n");
   });
   await page.locator("#inputBuffer").fill("unfinished command");
+  const focusRequests = await observeWindowFocusRequests(page);
   for (const name of ["main", "secondary"]) {
     const output = page.locator(name === "main" ? "#lineBuffer" : "#secondaryBuffer");
     for (const paused of [true, false]) {
@@ -1399,6 +1413,45 @@ test("double-clicking either output pane toggles pause and restores the input cu
       await expect(page.locator("#inputBuffer")).toHaveValue("unfinished command");
     }
   }
+  expect(await focusRequests()).toBe(0);
+});
+
+test("double-clicking detached output requests focus for the opener command input", async ({ page, browserName }) => {
+  await page.evaluate(() => {
+    const { client, manager, feed } = window.outputTest;
+    client.preferences.autoScroll = "dbl";
+    manager.updateSettings({ open: true, position: "bottom", selected: ["ooc-chat"] });
+    return feed("[-][OOC-Chat] detached double click\n");
+  });
+  const input = page.locator("#inputBuffer");
+  await input.fill("unfinished command");
+  const popup = await popOut(page);
+  const row = popup.getByText("[-][OOC-Chat] detached double click", { exact: true });
+  await expect(row).toBeVisible();
+
+  const focusRequests = await observeWindowFocusRequests(page);
+  await input.evaluate((element) => {
+    const focus = element.focus.bind(element);
+    window.outputInputFocusRequests = [];
+    element.focus = (options) => {
+      if (options !== undefined) window.outputInputFocusRequests.push(options);
+      focus(options);
+    };
+  });
+  for (const paused of [true, false]) {
+    await input.evaluate((element) => element.setSelectionRange(4, 10));
+    await page.locator("#button-output-split").focus();
+    await row.dblclick();
+    await expect.poll(() => page.evaluate(() => window.outputTest.manager.views.secondary.paused)).toBe(paused);
+    expect(await focusRequests()).toBe(paused ? 1 : 2);
+    const inputRequests = await page.evaluate(() => window.outputInputFocusRequests);
+    expect(inputRequests).toEqual(Array.from({ length: paused ? 1 : 2 }, () => ({ preventScroll: true })));
+    if (browserName === "chromium") await expect(input).toBeFocused();
+    await expect(input).toHaveValue("unfinished command");
+    expect(await input.evaluate((element) => [element.selectionStart, element.selectionEnd])).toEqual([4, 10]);
+  }
+  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+  await redockCompanion(popup);
 });
 
 test("empty secondary uses its configured theme on load and shows pause state before its first match", async ({ page }) => {

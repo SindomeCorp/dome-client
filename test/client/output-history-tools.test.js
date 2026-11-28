@@ -136,6 +136,28 @@ test("output selection survives at the pruning boundary until an endpoint is evi
   }
 });
 
+test("pruning does not treat selection endpoints outside the output as lost history", async (t) => {
+  const { manager, client, doc, feed, messages } = await createOutputApp(t);
+  await feed("one\ntwo\nthree\nfour\nfive\n");
+  const outside = doc.createElement("p");
+  outside.textContent = "Text beyond the output pane";
+  doc.body.append(outside);
+  const anchor = manager.views.main.mounted.get(5).firstChild;
+  const selection = doc.getSelection();
+
+  for (const [focus, offset, limit] of [[outside.firstChild, 3, 3], [doc, 0, 2]]) {
+    selection.setBaseAndExtent(anchor, 2, focus, offset);
+    client.preferences.performanceBuffer = limit;
+    manager.prune();
+
+    assert.equal(selection.anchorNode, anchor);
+    assert.equal(selection.focusNode, focus);
+    assert.equal(selection.focusOffset, offset);
+    assert.equal(selection.isCollapsed, false);
+    assert.deepEqual(messages, []);
+  }
+});
+
 test("native log export uses history and clear cancels a pending export", async (t) => {
   const { manager, client, win, feed, doc } = await createOutputApp(t);
   await feed("first\nsecond\n");
