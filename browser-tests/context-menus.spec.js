@@ -1466,13 +1466,18 @@ test("the real IDE blocks invalid MOO source and saves corrected source after wo
   const getAnnotations = () => editor.evaluate((element) => element.env.editor.getSession().getAnnotations());
 
   await expect(editor).toBeVisible();
-  await editor.evaluate((element) => element.env.editor.setValue("if (1)\n  return 1;", -1));
-  await expect.poll(getAnnotations).toContainEqual(expect.objectContaining({ type: "error", text: "Missing endif" }));
-
   const save = ide.getByRole("button", { name: "Save", exact: true });
-  await save.click();
-  await expect(ide.getByText("Unsaved", { exact: true })).toBeVisible();
-  expect((await fixtureState(page)).commands).toEqual(before);
+  for (const [source, text] of [
+    ["if (1)\n  return 1;", "Missing endif"],
+    ["return (1 + );", "Missing identifier"],
+    ["return 3 4;", "MOO syntax error"]
+  ]) {
+    await editor.evaluate((element, source) => element.env.editor.setValue(source, -1), source);
+    await expect.poll(getAnnotations).toContainEqual(expect.objectContaining({ type: "error", text }));
+    await save.click();
+    await expect(ide.getByText("Unsaved", { exact: true })).toBeVisible();
+    expect((await fixtureState(page)).commands).toEqual(before);
+  }
 
   await editor.evaluate((element) => element.env.editor.setValue("return 2;", -1));
   await expect.poll(getAnnotations).toEqual([]);

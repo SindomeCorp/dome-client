@@ -8,6 +8,7 @@ import { setupContextMenus } from "../../src/client/features/context-menus/contr
 import { setupClientOptionsTabs } from "../../src/client/features/options/page/tabs.js";
 import { createContextMatcher } from "../../src/client/features/context-menus/worker.js";
 import { projectOutputRow, characterAtPoint } from "../../src/client/features/context-menus/output.js";
+import { CONTEXT_UNDERLINE } from "../../src/client/features/context-menus/underlines.js";
 import { createSocketOutputProtocolParser } from "../../src/client/features/terminal/socket-output-protocol.js";
 
 test("disabled context menus create no controller, worker or profile requests despite saved overrides", () => {
@@ -518,12 +519,31 @@ test("legacy output parser also supports ANSI-aware keyboard context menus", asy
 test("secondary pop-out and redock retain keyboard menus with one current host binding", async (t) => {
   const { createOutputApp } = await import("../../test-support/output-app.js");
   const { client, doc, win, feed, manager } = await createOutputApp(t);
+  const enableHighlights = (host) => {
+    host.Highlight = Set;
+    host.CSS = { highlights: new Map() };
+  };
+  enableHighlights(win);
+
+  // The underline is published after the row's matches are ready for the first keypress.
+  const matchedRow = async (host, selector) => {
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline) {
+      const row = host.document.querySelector(selector);
+      const ranges = host.CSS.highlights.get(CONTEXT_UNDERLINE) || [];
+      if (row && [...ranges].some(range => row.contains(range.startContainer))) return row;
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    assert.fail("The mounted output row did not receive its context match");
+  };
   const controller = setupContextMenus({ client, doc, win, matcherFactory: localMatcher });
   t.after(() => controller.destroy());
   await controller.ready;
   await controller.reload(JSON.stringify(referenceContextMenus()));
+  controller.update({ underline: true });
   const html = await ejs.renderFile("views/output-window.ejs", {});
   const { window: popup } = new JSDOM(html, { url: "https://example.com/output-window/", pretendToBeVisual: true });
+  enableHighlights(popup);
   let copied;
   Object.defineProperty(popup.navigator, "clipboard", { value: { async writeText(text) { copied = text; } } });
   Object.defineProperty(win.navigator, "clipboard", { value: { async writeText(text) { copied = text; } } });
@@ -537,16 +557,13 @@ test("secondary pop-out and redock retain keyboard menus with one current host b
   await feed("[-][Team-Chat] #123\n");
   manager.popout.open();
   win.dispatchEvent(new win.MessageEvent("message", { source: popup, origin: win.location.origin, data: { type: "output-popout-ready", instance: new URL(request, win.location.href).hash.slice("#instance=".length) } }));
-  await new Promise((resolve) => setTimeout(resolve, 60));
-  const row = popup.document.querySelector("[data-output-id]");
-  assert.ok(row);
+  const row = await matchedRow(popup, "[data-output-id]");
   row.dispatchEvent(new popup.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true }));
   popup.document.querySelector("[role=menuitem]").click();
   assert.equal(copied, "#123");
   manager.popout.redock({ focus: false });
-  await new Promise((resolve) => setTimeout(resolve, 60));
+  const docked = await matchedRow(win, "#secondaryBuffer [data-output-id]");
   assert.equal(popup.document.querySelector("[role=menu]"), null);
-  const docked = doc.querySelector("#secondaryBuffer [data-output-id]");
   docked.dispatchEvent(new win.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true }));
   assert.equal(doc.querySelectorAll("[role=menuitem]").length, 1);
 });
@@ -661,7 +678,7 @@ test("output matching drains a burst beyond the worker queue cap without droppin
   assert.equal(client.socketState, 1);
 });
 
-test("temporary worker saturation retries unchanged output but terminal failures keep native menus", async (t) => {
+test("temporary worker saturation retries unchanged output but terminal failures keep native menus", { timeout: 5000 }, async (t) => {
   const { controller, doc, window } = await fixture(t);
   Object.defineProperty(window.navigator, "clipboard", { value: { async writeText() {} } });
   const output = doc.createElement("div");
@@ -670,23 +687,37 @@ test("temporary worker saturation retries unchanged output but terminal failures
   output.append(row);
   doc.body.append(output);
   const match = controller.match.bind(controller);
+  const timer = t.mock.method(window, "setTimeout");
+  const retryCount = () => timer.mock.calls.filter(call => call.arguments[1] === 25).length;
+  const { promise: retried, resolve: retryMatched } = Promise.withResolvers();
   let calls = 0;
-  controller.match = (text) => {
+  controller.match = async (text) => {
     if (++calls === 1) return Promise.reject(Object.assign(new Error("busy"), { code: "CONTEXT_MATCHER_BUSY" }));
-    return match(text);
+    const matches = await match(text);
+    retryMatched();
+    return matches;
   };
   controller.bindOutput(output, window);
-  await new Promise((resolve) => setTimeout(resolve, 60));
+  await retried;
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(calls, 2);
   const event = new window.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true });
   row.dispatchEvent(event);
   assert.equal(event.defaultPrevented, true);
   assert.equal(doc.querySelector("#context-menu-error").textContent, "");
   doc.querySelector("[role=menuitem]").dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  controller.match = () => { calls++; return Promise.reject(new Error("timed out")); };
+  const originalRetryCount = retryCount();
+  const { promise: rejected, resolve: terminalMatch } = Promise.withResolvers();
+  controller.match = () => {
+    calls++;
+    terminalMatch();
+    return Promise.reject(new Error("timed out"));
+  };
   row.textContent = "#456";
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  assert.equal(calls, 3, "terminal worker failures must not create retry loops");
+  await rejected;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls, 3);
+  assert.equal(retryCount(), originalRetryCount, "terminal worker failures must not schedule a retry");
   const native = new window.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true });
   row.dispatchEvent(native);
   assert.equal(native.defaultPrevented, false);

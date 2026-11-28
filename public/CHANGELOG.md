@@ -25,6 +25,7 @@ All notable changes to this project will be documented in this file.
 - Resume ordinary output after an overlong Telnet subnegotiation ends.
 - Ignore stale output after disconnect or reconnect and close the previous game connection promptly.
 - Keep IDE display preferences usable when browser storage is blocked.
+- Clear the alert when returning to focused output or a context menu without moving keyboard focus.
 
 ### Added
 - Add wildcard @rewind menus for `[+][channel]` and `[-][channel]` tags in Player, GM and Programmer profiles.

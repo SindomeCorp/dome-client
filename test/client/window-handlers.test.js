@@ -244,3 +244,68 @@ test("toggling playDing while unfocused updates alert", async () => {
   assert.equal(dome.alert.active, false);
 
 });
+
+test("returning to focused output or a context menu clears alerts and keeps keyboard focus", (t) => {
+  const { window } = new JSDOM(`<!doctype html><div id="client">
+    <div class="output-scroll" id="buffer"><button id="row">Output</button></div>
+    <div class="context-menu-popup"><button id="menuitem">Copy</button></div>
+    <input id="command">
+  </div>`);
+  const { document } = window;
+  t.after(() => window.close());
+  const client = createClientState();
+  Object.assign(client, {
+    client: document.querySelector("#client"),
+    buffer: document.querySelector("#buffer"),
+    inputReader: document.querySelector("#command"),
+    preferences: { playDing: true }
+  });
+  const interval = t.mock.method(window, "setInterval", () => 23);
+  const clear = t.mock.method(window, "clearInterval", () => {});
+  setupWindowHandlers({ client, win: window, doc: document, AudioCtor: class {} });
+  client.setWindowTitle("Local fixture");
+
+  for (const selector of ["#row", "#menuitem"]) {
+    const focused = document.querySelector(selector);
+    focused.focus();
+    window.dispatchEvent(new window.Event("blur"));
+    client.windowAlert();
+    const [flash] = interval.mock.calls.at(-1).arguments;
+    flash();
+    assert.equal(document.title, "!! Local fixture");
+
+    window.dispatchEvent(new window.Event("focus"));
+    assert.equal(document.activeElement, focused);
+    assert.equal(client.alert.active, false);
+    assert.equal(client.alert.titleProc, null);
+    assert.equal(document.title, "Local fixture");
+  }
+
+  assert.deepEqual(clear.mock.calls.map(call => call.arguments), [[23], [23]]);
+});
+
+test("window close confirms and sends quit only while the game is connected", (t) => {
+  const { window } = new JSDOM(`<!doctype html>
+    <div id="client"><div id="buffer"></div></div>`,
+  );
+  const { document } = window;
+  t.after(() => window.close());
+  const client = createClientState();
+  const emit = t.mock.fn();
+  Object.assign(client, {
+    client: document.querySelector("#client"),
+    buffer: document.querySelector("#buffer"),
+    socket: { emit }
+  });
+  setupWindowHandlers({ client, win: window, doc: document, AudioCtor: class {} });
+
+  for (const state of [SOCKET_STATE_ENUM.BEFORE_FIRST, SOCKET_STATE_ENUM.DISCONNECTED, SOCKET_STATE_ENUM.RECONNECT_FAILED, SOCKET_STATE_ENUM.CONNECTED]) {
+    client.socketState = state;
+    const before = new window.Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(before);
+    assert.equal(before.defaultPrevented, state === SOCKET_STATE_ENUM.CONNECTED);
+    window.dispatchEvent(new window.Event("unload"));
+  }
+
+  assert.deepEqual(emit.mock.calls.map(call => call.arguments), [["input", "@quit\r\n"]]);
+});
