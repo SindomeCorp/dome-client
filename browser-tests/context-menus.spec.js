@@ -1237,24 +1237,28 @@ async function startShippedReferenceProfile(page, browserName, id, label) {
 }
 
 async function openShippedReferenceMenu(page, row, offset, labels) {
+  await expect(row).toBeVisible();
+  const items = page.getByRole("menu", { name: "Reference actions" }).getByRole("menuitem");
   await expect.poll(async () => {
+    const current = await items.allTextContents();
+    if (current.length) return current;
     await rightText(page, row, offset);
-    return page.getByRole("menuitem").allTextContents();
-  }).toEqual(labels);
+    return items.allTextContents();
+  }, { timeout: 10000 }).toEqual(labels);
 }
 
 for (const object of ["#123", "$object"]) {
-  test("context menus: real bundle sends explicit Programmer commands for " + object, async ({ page, browserName }) => {
-    const readSent = await startShippedReferenceProfile(page, browserName, "programmer", "Programmer");
-    const sent = [];
-    const objectLabels = ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"];
-    const objectCommands = ["@show " + object, ";$string_utils:nn(" + object + ")", "@verbs " + object, "@props " + object, "@parents " + object, "@kids " + object + " -lcd", "@siblings " + object, "@tree " + object, "look " + object];
-    for (const [suffix, labels, commands] of [
-      ["", objectLabels, objectCommands],
-      [":inspect", ["@edit", "@list", "@show", "@args", "help"], ["@edit " + object + ":inspect", "@list " + object + ":inspect", "@show " + object + ":inspect", "@args " + object + ":inspect", "help " + object + ":inspect"]],
-      [".name", ["@edit", "@show"], ["@edit " + object + ".name", "@show " + object + ".name"]]
-    ]) {
-      const reference = object + suffix;
+  const objectLabels = ["@show", "Name and Number", "@verbs", "@props", "@parents", "@kids", "@siblings", "@tree", "Look"];
+  const objectCommands = ["@show " + object, ";$string_utils:nn(" + object + ")", "@verbs " + object, "@props " + object, "@parents " + object, "@kids " + object + " -lcd", "@siblings " + object, "@tree " + object, "look " + object];
+  for (const [suffix, labels, commands] of [
+    ["", objectLabels, objectCommands],
+    [":inspect", ["@edit", "@list", "@show", "@args", "help"], ["@edit " + object + ":inspect", "@list " + object + ":inspect", "@show " + object + ":inspect", "@args " + object + ":inspect", "help " + object + ":inspect"]],
+    [".name", ["@edit", "@show"], ["@edit " + object + ".name", "@show " + object + ".name"]]
+  ]) {
+    const reference = object + suffix;
+    test("context menus: real bundle sends explicit Programmer commands for " + reference, async ({ page, browserName }) => {
+      const readSent = await startShippedReferenceProfile(page, browserName, "programmer", "Programmer");
+      const sent = [];
       const expected = ["Copy to Clipboard", ...labels, ...(suffix ? ["Copy to Clipboard", ...objectLabels] : [])];
       const offset = suffix ? 10 + object.length + 1 : 11;
       const primary = suffix ? page.getByRole("group", { name: (suffix.startsWith(":") ? "Verb " : "Property ") + reference, exact: true }) : page;
@@ -1285,8 +1289,8 @@ for (const object of ["#123", "$object"]) {
         await owner.getByRole("menuitem", { name: "Copy to Clipboard", exact: true }).click();
         await expectClipboard(page, object);
       }
-    }
-  });
+    });
+  }
 }
 
 test("context menus: real bundle copies traceback frames without sending a command", async ({ page, browserName }) => {
@@ -2247,6 +2251,42 @@ test("the real VMS save dialog keeps keyboard focus and uploads only on submit",
   await save.click();
   await expect(dialog).toHaveCount(0);
   await expect.poll(saves).toEqual([...programSave, ...programSave, "@scratch Temporary Scratch Pad", "fixture scratch\n."]);
+});
+
+test("the VMS prompt saves its original verb after another editor tab arrives", async ({ page }) => {
+  await page.context().route("**/editor/ide/", async (route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("vms", "on");
+    await route.fulfill({ response: await route.fetch({ url: url.href }) });
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const before = (await fixtureState(page)).commands.length;
+  const opened = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: Existing verb upload: @program #19:existing\r\nreturn 19;\r\n.\r\n");
+  const ide = await opened;
+  const editorTab = (name) => ide.locator("[role=tab]").filter({ hasText: name });
+  await expect(editorTab("Existing verb")).toHaveAttribute("aria-selected", "true");
+
+  await socketFeed(page, "#$# edit name: Save target upload: @program #12:preview\r\nreturn 12;\r\n.\r\n");
+  const target = editorTab("Save target");
+  await expect(target).toHaveAttribute("aria-selected", "true");
+  await ide.getByRole("button", { name: "Save", exact: true }).click();
+  const dialog = ide.getByRole("dialog", { name: "VMS save note prompt" });
+  const note = dialog.getByRole("textbox", { name: "VMS note prompt input" });
+  await note.fill("Target tab note");
+
+  await socketFeed(page, "#$# edit name: Incoming verb upload: @program #23:incoming\r\nreturn 23;\r\n.\r\n");
+  await expect(editorTab("Incoming verb")).toHaveAttribute("aria-selected", "true");
+  await expect(note).toHaveValue("Target tab note");
+  expect((await fixtureState(page)).commands.slice(before)).toEqual([]);
+  await dialog.getByRole("button", { name: "Submit" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(async () => (await fixtureState(page)).commands.slice(before))
+    .toEqual(["@program #12:preview", "return 12;\n.", "Target tab note"]);
+  await target.click();
+  await expect(ide.getByRole("textbox", { name: "VMS note", exact: true })).toHaveValue("Target tab note");
 });
 
 test("the real IDE modifier click resolves this without opening lookalike variables", async ({ page }) => {

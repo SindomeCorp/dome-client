@@ -1226,6 +1226,9 @@ test("Player, GM, Coder, and Custom filter views retain selections across groups
   await expect(customPanel).toBeHidden();
   await expect(player).toHaveAttribute("aria-selected", "true");
   await expect(player).toHaveText("Player Filters [0/13]");
+  await player.press("Shift");
+  await expect(player).toBeFocused();
+  await expect(player).toHaveAttribute("aria-selected", "true");
   await expect(page.getByLabel("Grid Output", { exact: true })).toBeVisible();
   await expect(page.getByLabel("SIC", { exact: true })).toBeVisible();
   await expect(page.getByLabel("XHELP", { exact: true })).toBeVisible();
@@ -1247,9 +1250,6 @@ test("Player, GM, Coder, and Custom filter views retain selections across groups
   await expect(ooc).toBeChecked();
   await expect(ooc).toBeFocused();
   await player.press("ArrowRight");
-  await expect(admin).toBeFocused();
-  await expect(admin).toHaveAttribute("aria-selected", "true");
-  await admin.press("Shift");
   await expect(admin).toBeFocused();
   await expect(admin).toHaveAttribute("aria-selected", "true");
   await admin.press("ArrowRight");
