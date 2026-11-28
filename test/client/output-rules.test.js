@@ -370,3 +370,51 @@ test("routing worker startup fails synchronously and releases the batch", async 
   await Promise.resolve();
   assert.deepEqual(matches, [false]);
 });
+
+test("a canceled routing watchdog cannot time out its replacement batch", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let worker;
+  const onError = t.mock.fn();
+  const runner = createRuleRunner({
+    timeoutMs: 10,
+    onError,
+    workerFactory: () => worker = {
+      addEventListener(name, listener) { this[name] = listener; },
+      postMessage(message) { this.sent = message; },
+      terminate() {}
+    }
+  });
+  t.after(() => runner.cancel());
+
+  let canceled;
+  runner.match(["old"], rules).then((matches) => { canceled = matches; });
+  t.mock.timers.tick(9);
+  runner.cancel();
+  assert.equal(runner.pendingLines, 0);
+  await Promise.resolve();
+  assert.deepEqual(canceled, [false]);
+
+  let next;
+  runner.match(["replacement"], rules).then((matches) => { next = matches; });
+  t.mock.timers.tick(1);
+  assert.equal(runner.pendingLines, 1);
+  assert.equal(onError.mock.callCount(), 0);
+  worker.message({ data: { id: worker.sent.id, matches: [true] } });
+  await Promise.resolve();
+  assert.deepEqual(next, [true]);
+});
+
+test("routing accepts the line limit and skips already aborted batches", async (t) => {
+  const workerFactory = t.mock.fn(() => new FakeRuleWorker());
+  const runner = createRuleRunner({ workerFactory, maxPendingLines: 3 });
+  t.after(() => runner.cancel());
+  let aborted;
+  runner.match(["[-][Team-Chat] stale"], rules, { signal: AbortSignal.abort() })
+    .then((matches) => { aborted = matches; });
+  assert.equal(workerFactory.mock.callCount(), 0);
+  assert.equal(runner.pendingLines, 0);
+  await Promise.resolve();
+  assert.deepEqual(aborted, [false]);
+  assert.deepEqual(await runner.match(["[-][Team-Chat] first", "other", "other too"], rules), [true, false, false]);
+  assert.equal(workerFactory.mock.callCount(), 1);
+});
