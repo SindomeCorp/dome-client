@@ -243,6 +243,27 @@ test("context menus: wildcard channel tags rewind in every profile only after ex
     await expect(page.getByRole("menuitem")).toHaveText(id === "player" ? ["Copy selected text"] : ["Copy selected text", "Open in Scratchpad"]);
     await page.keyboard.press("Escape");
     await page.evaluate(() => document.getSelection().removeAllRanges());
+
+    const valid = "V".repeat(128);
+    const oversized = "L".repeat(129);
+    const boundaryText = "[-][" + valid + "] [+][   ] [-][" + oversized + "] " + id;
+    await socketFeed(page, boundaryText + "\r\n");
+    const boundary = page.locator("#lineBuffer [data-output-id]").last();
+    await expect(boundary).toHaveText(boundaryText);
+    await expect.poll(async () => {
+      await rightText(page, boundary, 5);
+      return page.getByRole("menuitem").allTextContents();
+    }).toEqual(["@rewind"]);
+    expect((await fixtureState(page)).commands.slice(connected.commands.length)).toEqual(sent);
+    await page.getByRole("menuitem", { name: "@rewind", exact: true }).click();
+    sent.push("@rewind " + valid);
+    await expect.poll(async () => (await fixtureState(page)).commands.slice(connected.commands.length)).toEqual(sent);
+
+    for (const invalid of ["   ", oversized]) {
+      await rightText(page, boundary, boundaryText.indexOf(invalid) + 1);
+      await expect(page.getByRole("menu")).toHaveCount(0);
+      await page.keyboard.press("Escape");
+    }
     expect((await fixtureState(page)).commands.slice(connected.commands.length)).toEqual(sent);
   }
 });

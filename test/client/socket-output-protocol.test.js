@@ -246,7 +246,8 @@ test("the streamed editor preserves separate body chunks until the terminator", 
   const parser = createSocketOutputProtocolParser();
   assert.deepEqual(parser.parse("#$# edit name: stream upload: fixture-command\r\n"), []);
   const waiting = [{ type: "fade", message: "<span class=\"warn\">BUFFERING POPUP ...</span>" }];
-  assert.deepEqual(parser.parse("first\r\n"), waiting);
+  assert.deepEqual(parser.parse("fir"), [], "an incomplete body line does not generate another popup notice");
+  assert.deepEqual(parser.parse("st\r\n"), waiting);
   assert.deepEqual(parser.parse("second\r\n"), waiting);
   assert.deepEqual(parser.parse(".\r\n"), [
     { type: "editor-content", updateEditorList: true, editor: {
