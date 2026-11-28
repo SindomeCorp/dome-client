@@ -1276,6 +1276,10 @@ test("the real client reports a browser log download failure and can retry", asy
       throw new Error("Fixture browser download failure");
     };
   });
+  const nativeWarnings = [];
+  page.on("console", (message) => {
+    if (message.type() === "warning" && message.text().startsWith("Native log download failed")) nativeWarnings.push(message.text());
+  });
   const downloads = [];
   page.on("download", (download) => downloads.push(download));
   const save = page.getByRole("button", { name: "Save session log" });
@@ -1339,6 +1343,7 @@ test("the real client reports a browser log download failure and can retry", asy
   expect(savedUrl).toMatch(/^blob:/);
   await expect.poll(async () => (await downloadState()).revoked).toContain(savedUrl);
   expect((await downloadState()).types).toEqual(["text/html;charset=utf-8", "text/html;charset=utf-8"]);
+  expect(nativeWarnings).toEqual([]);
 });
 
 test("the real client reports a routing worker failure in Options and the pop-out", async ({ page }) => {
@@ -1403,9 +1408,15 @@ test("a failing native log download falls back to the same browser download", as
       revoke(url);
     };
   });
+  const warning = page.waitForEvent("console", {
+    predicate: (message) => message.type() === "warning" && message.text().startsWith("Native log download failed"),
+    timeout: 5000
+  });
   const ready = page.waitForEvent("download");
   await page.locator("#button-save-mini").click();
-  const download = await ready;
+  const [download, logged] = await Promise.all([ready, warning]);
+  expect(logged.text()).toContain("Native log download failed; using browser download.");
+  expect(await logged.args()[1].evaluate((error) => error.message)).toBe("Fixture native download failure");
   let html = "";
   for await (const chunk of await download.createReadStream()) html += chunk;
   expect(html).toContain("Browser fallback log fixture");
