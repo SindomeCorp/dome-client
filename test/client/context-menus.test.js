@@ -590,7 +590,8 @@ test("queued output pruning rejects a selection snapshot instead of copying inco
 
   const [first, second] = doc.querySelectorAll("#lineBuffer [data-output-id]");
   client.preferences.performanceBuffer = 3;
-  // The selected rows are still mounted, but incoming output is ahead of the snapshot in the queue.
+  // Keep the two jobs in one queue slice even when instrumentation slows down parsing.
+  t.mock.method(win.performance, "now", () => 0);
   client.parseSocketData("newest\n");
   doc.getSelection().setBaseAndExtent(second.firstChild, 2, first.firstChild, 1);
   doc.dispatchEvent(new win.Event("selectionchange"));
