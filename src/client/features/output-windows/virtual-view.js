@@ -56,6 +56,7 @@ export class VirtualOutputView {
     this.bind(element, "pointerdown", (event) => {
       if (event.button != null && event.button !== 0) return;
       if (client.preferences.autoScroll !== "long" || event.target.closest("button,a")) return;
+      win.clearTimeout(this.longPress);
       this.longPress = win.setTimeout(() => this.setPaused(!this.paused), 2000);
     });
     for (const type of ["pointerup", "pointercancel", "pointerleave"]) {

@@ -2257,3 +2257,26 @@ test("the real IDE preserves exact grammar diagnostics alongside block checks", 
   }
   expect((await fixtureState(page)).commands).toEqual(before);
 });
+
+test("real output does not pause when overlapping long presses are canceled", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&as=long");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await socketFeed(page, "Synthetic long-press target\r\n");
+  const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Synthetic long-press target" });
+  await expect(row).toBeVisible();
+  const pause = page.locator("#button-auto-scroll");
+  await expect(pause).toHaveAttribute("aria-label", "Pause main scrolling");
+  await page.clock.install();
+  await row.dispatchEvent("pointerdown", { pointerId: 1, pointerType: "touch", isPrimary: true, button: 0, bubbles: true });
+  await row.dispatchEvent("pointerdown", { pointerId: 2, pointerType: "touch", isPrimary: false, button: 0, bubbles: true });
+  await row.dispatchEvent("pointercancel", { pointerId: 1, pointerType: "touch", bubbles: true });
+  await row.dispatchEvent("pointercancel", { pointerId: 2, pointerType: "touch", bubbles: true });
+  await page.clock.fastForward(2100);
+  await expect(pause).toHaveAttribute("aria-label", "Pause main scrolling");
+
+  await row.dispatchEvent("pointerdown", { pointerId: 3, pointerType: "touch", isPrimary: true, button: 0, bubbles: true });
+  await page.clock.fastForward(2100);
+  await expect(pause).toHaveAttribute("aria-label", "Resume main scrolling");
+  expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
+});
