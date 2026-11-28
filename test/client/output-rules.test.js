@@ -284,3 +284,55 @@ test("the routing queue resumes after a failure with or without yielding", async
     });
   }
 });
+
+test("the routing worker never acknowledges the batch and falls back at its initial deadline", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const workers = [];
+  const onError = t.mock.fn();
+  const runner = createRuleRunner({
+    timeoutMs: 10,
+    onError,
+    workerFactory() {
+      const worker = {
+        addEventListener(name, listener) { this[name] = listener; },
+        postMessage(message) { this.sent = message; },
+        terminate() { this.terminated = true; }
+      };
+      workers.push(worker);
+      return worker;
+    }
+  });
+  t.after(() => runner.cancel());
+
+  let matches;
+  runner.match(["silent worker"], rules).then((value) => { matches = value; });
+  assert.deepEqual(workers[0]?.sent.lines, ["silent worker"]);
+  t.mock.timers.tick(9);
+  assert.equal(onError.mock.callCount(), 0);
+  assert.equal(runner.pendingLines, 1);
+
+  t.mock.timers.tick(1);
+  assert.equal(runner.pendingLines, 0);
+  assert.equal(workers[0].terminated, true);
+  assert.match(onError.mock.calls[0].arguments[0], /worker did not respond/i);
+  assert.equal(runner.suspended.size, 0);
+  await Promise.resolve();
+  assert.deepEqual(matches, [false]);
+
+  assert.deepEqual(await runner.match(["worker unavailable"], rules), [false]);
+  assert.equal(workers.length, 1);
+});
+
+test("routing worker startup fails synchronously and releases the batch", async (t) => {
+  const workerFactory = t.mock.fn(() => { throw new Error("Fixture worker unavailable"); });
+  const onError = t.mock.fn();
+  const runner = createRuleRunner({ workerFactory, onError });
+  t.after(() => runner.cancel());
+  let matches;
+  runner.match(["startup failure"], rules).then((value) => { matches = value; });
+  assert.equal(workerFactory.mock.callCount(), 1);
+  assert.equal(runner.pendingLines, 0);
+  assert.match(onError.mock.calls[0].arguments[0], /unavailable in this browser/i);
+  await Promise.resolve();
+  assert.deepEqual(matches, [false]);
+});
