@@ -2059,3 +2059,40 @@ test("the real IDE ignores an older Wasm result as soon as the editor changes", 
   expect(await ide.evaluate(() => window.fixtureParserReply())).toEqual([]);
   await expect.poll(() => editor.evaluate((element) => element.env.editor.getSession().getAnnotations())).toEqual([]);
 });
+
+test("the real IDE recovers after a temporary parser grammar load failure", async ({ page }) => {
+  await page.context().route("**/editor/ide/", async (route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("parser", "moo");
+    await route.fulfill({ response: await route.fetch({ url: url.href }) });
+  });
+  let grammarRequests = 0;
+  await page.context().route("**/tree-sitter-moo.wasm", async (route) => {
+    if (++grammarRequests === 1) {
+      await route.fulfill({ status: 503, body: "Fixture parser temporarily unavailable" });
+    } else {
+      await route.continue();
+    }
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const before = (await fixtureState(page)).commands;
+  const opened = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: grammar fixture upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
+  const ide = await opened;
+  const editor = ide.locator(".ace_editor");
+  await expect(editor).toBeVisible();
+  const annotations = () => editor.evaluate((element) => element.env.editor.getSession().getAnnotations());
+  await expect.poll(annotations).toEqual([{
+    row: 0, column: 0, type: "warning", text: expect.stringContaining("Fixture parser temporarily unavailable")
+  }]);
+  expect(grammarRequests).toBe(1);
+  await editor.evaluate((element) => element.env.editor.setValue("if (1)\n  return 1;", -1));
+  await expect.poll(annotations).toContainEqual(expect.objectContaining({ type: "error", text: "Missing endif" }));
+  expect(grammarRequests).toBe(2);
+  await editor.evaluate((element) => element.env.editor.setValue("", -1));
+  await expect.poll(annotations).toEqual([]);
+  expect(grammarRequests).toBe(2);
+  expect((await fixtureState(page)).commands).toEqual(before);
+});

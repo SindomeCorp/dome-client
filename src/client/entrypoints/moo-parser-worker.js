@@ -18,7 +18,10 @@ async function getParser() {
       const parser = new Parser();
       parser.setLanguage(language);
       return parser;
-    })();
+    })().catch((error) => {
+      parserPromise = null;
+      throw error;
+    });
   }
   return parserPromise;
 }

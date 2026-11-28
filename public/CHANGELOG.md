@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - Hide IDE reference previews when the pointer leaves the editor and keep nearby references reachable.
 - Keep editing shortcuts from acting on documents while the IDE shortcut guide is open, and restore focus when it closes.
 - Ignore syntax diagnostics from an older IDE buffer as soon as the document changes.
+- Resume IDE syntax checking after a temporary failure to load the MOO parser.
 
 ## 2026-11-27
 
