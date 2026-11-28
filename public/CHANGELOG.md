@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-11-28
+
+### Fixed
+- Indent MOO blocks after trailing comments and preserve comment and string indentation when typing block keywords.
+
 ## 2026-11-27
 
 ### Fixed

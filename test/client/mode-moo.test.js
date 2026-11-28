@@ -496,3 +496,40 @@ test("MOO mode indents and outdents keyword-terminated blocks", () => {
   assert.equal(endforkDoc.lines[1], "endfork");
   assert.equal(mode.createWorker(), null);
 });
+
+test("MOO mode indents a block opener followed by a comment", () => {
+  const mode = createMode();
+
+  assert.equal(mode.getNextLineIndent("start", "  if (x) // guard", "  "), "    ");
+  assert.equal(mode.getNextLineIndent("start", "  while (x) /* guard */", "  "), "    ");
+  assert.equal(mode.getNextLineIndent("start", "  // if (x)", "  "), "  ");
+  assert.equal(mode.getNextLineIndent("start", "  /* while (x) */", "  "), "  ");
+});
+
+test("MOO mode leaves block keywords inside comments and strings alone", () => {
+  const mode = createMode();
+
+  for (const state of ["comment", "doc-start", "qqstring"]) {
+    assert.equal(mode.checkOutdent(state, "    endi", "f"), false);
+  }
+  assert.equal(mode.checkOutdent("start", "  value = endif", ";"), false);
+  const doc = createDocument(["  if (x)", "    value = endif;"]);
+  mode.autoOutdent("start", doc, 1);
+  assert.deepEqual(doc.replacements, []);
+});
+
+test("MOO mode aligns an outer branch past a completed nested block", () => {
+  const mode = createMode();
+  const doc = createDocument([
+    "  if (outer)",
+    "    if (inner)",
+    "    endif",
+    "",
+    "    // endif",
+    "        else"
+  ]);
+
+  mode.autoOutdent("start", doc, 5);
+  assert.equal(doc.lines[5], "  else");
+  assert.equal(doc.lines[2], "    endif");
+});

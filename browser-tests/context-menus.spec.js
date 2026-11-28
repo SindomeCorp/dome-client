@@ -1603,3 +1603,38 @@ test("the real IDE browses and edits object verbs and properties through the fix
     "@edit #12.label"
   ]);
 });
+
+test("the real MOO editor indents block code and leaves comment text aligned", async ({ page }) => {
+  await page.context().route("**/editor/ide/", async (route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("parser", "moo");
+    await route.fulfill({ response: await route.fetch({ url: url.href }) });
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+
+  const opened = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: indentation fixture upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
+  const ide = await opened;
+  const editor = ide.locator(".ace_editor");
+  await expect(editor).toBeVisible();
+  await expect.poll(() => editor.evaluate((element) => element.env.editor.session.getMode().$id)).toBe("ace/mode/moo");
+  const replace = (text) => editor.evaluate((element, value) => {
+    element.env.editor.setValue(value, 1);
+    element.env.editor.focus();
+  }, text);
+  const contents = () => editor.evaluate((element) => element.env.editor.getValue());
+
+  const opener = "  if (x) // guard";
+  await replace(opener);
+  await ide.keyboard.press("Enter");
+  await expect.poll(contents).toBe(opener + "\n    ");
+
+  const comment = "  if (x)\n    /* literal text\n      endi";
+  await replace(comment);
+  await expect.poll(() => editor.evaluate((element) => element.env.editor.session.getState(2))).toBe("comment");
+  await ide.keyboard.type("f");
+  await expect.poll(contents).toBe(comment + "f");
+  expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
+});
