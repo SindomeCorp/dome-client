@@ -819,6 +819,19 @@ test("the real Find Match case control reindexes matches and navigation wraps", 
   await page.getByRole("button", { name: "Next match" }).click();
   await expect(count).toHaveText("1 of 3");
   await expect(mark).toHaveText("needle");
+
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await query.fill("unmatched query");
+  await expect(count).toHaveText("No matches");
+  await page.getByRole("button", { name: "Next match" }).click();
+  await page.getByRole("button", { name: "Previous match" }).click();
+  await expect(mark).toHaveCount(0);
+  await expect(count).toHaveText("No matches");
+  await query.fill("Needle");
+  await expect(count).toHaveText("1 of 3");
+  await expect(mark).toHaveText("needle");
+  expect(errors).toEqual([]);
 });
 
 test("Find ignores an older snapshot while the next query debounces", async ({ page }) => {

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { setTimeout as delay } from "node:timers/promises";
 import { createOutputApp } from "../../test-support/output-app.js";
 import { JSDOM } from "jsdom";
 import { exportSnapshot } from "../../src/client/features/output-windows/history-tools.js";
@@ -11,6 +12,18 @@ async function expectText(element, expected) {
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
   assert.equal(element.textContent, expected);
+}
+
+async function expectProbe(probe, message) {
+  const deadline = new AbortController();
+  try {
+    await Promise.race([
+      probe,
+      delay(2000, undefined, { signal: deadline.signal }).then(() => assert.fail(message))
+    ]);
+  } finally {
+    deadline.abort();
+  }
 }
 
 test("Find searches unmounted output, scopes results, and clears old highlights", async (t) => {
@@ -362,7 +375,7 @@ test("live Find queues one refresh while the previous output snapshot is pending
   manager.tools.open();
   await expectText(count, "1 of 1");
   await feed("needle first arrival\n");
-  await snapshotStarted.promise;
+  await expectProbe(snapshotStarted.promise, "the first arrival must start a Find snapshot");
   assert.equal(count.textContent, "Searching…");
 
   const refreshAttempted = Promise.withResolvers();
@@ -372,7 +385,7 @@ test("live Find queues one refresh while the previous output snapshot is pending
     return schedule(() => { callback(...args); refreshAttempted.resolve(); }, delay);
   });
   await feed("needle second arrival\nneedle third arrival\n");
-  await refreshAttempted.promise;
+  await expectProbe(refreshAttempted.promise, "more arrivals must schedule a Find refresh");
   assert.deepEqual(starts, [undefined, 2], "more output must not restart an active incremental search");
 
   releaseSnapshot.resolve();
@@ -414,10 +427,10 @@ test("an aborted Find snapshot cannot clear the newer query's searching status",
   const count = doc.querySelector("#output-find-count");
   query.value = "first";
   manager.tools.open();
-  await queries[0].started.promise;
+  await expectProbe(queries[0].started.promise, "opening Find must start the first snapshot");
   query.value = "second";
   query.dispatchEvent(new win.Event("input"));
-  await queries[1].started.promise;
+  await expectProbe(queries[1].started.promise, "the new query must start a replacement snapshot");
   assert.equal(count.textContent, "Searching…");
 
   queries[0].release.resolve();
