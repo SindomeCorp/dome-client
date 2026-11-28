@@ -1840,6 +1840,81 @@ test("the real individual verb editor keeps canceled edits and saves only on exp
   expect(await saved()).toEqual(["@program #12:preview", "return 13;\n."]);
 });
 
+test("the real basic editor keeps local edits when replacement is canceled and uploads only on Save", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=windows");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  const sendEditor = (text) => socketFeed(page, `#$# edit name: Plain fixture upload: @scratch Plain fixture\r\n${text}\r\n.\r\n`);
+  const popup = page.waitForEvent("popup", { timeout: 8000 });
+  await sendEditor("Original line\r\nSecond line");
+  const editor = await popup;
+  await expect(editor).toHaveURL(/\/editor\/basic\//);
+  await expect(editor).toHaveTitle("Editing Plain fixture");
+  const input = editor.getByRole("textbox");
+  await expect(input).toHaveValue("Original line\nSecond line");
+  await input.fill("Local first line\nLocal second line");
+  const warnsOnUnload = () => editor.evaluate(() => !window.dispatchEvent(new Event("beforeunload", { cancelable: true })));
+
+  // The server can reopen the same named editor while it has unsaved text.
+  await editor.evaluate(() => {
+    window.confirm = (message) => { window.fixtureReplacementPrompt = message; return false; };
+  });
+  await sendEditor("Replacement line");
+  await expect.poll(() => editor.evaluate(() => window.fixtureReplacementPrompt)).toContain("Replace existing editor of the same name?");
+  await expect(input).toHaveValue("Local first line\nLocal second line");
+  expect(await warnsOnUnload()).toBe(true);
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
+
+  await editor.getByRole("button", { name: "@scratch Plain fixture", exact: true }).click();
+  const sent = () => fixtureState(page).then(({ commands }) => commands.slice(connected.commands.length));
+  const expected = ["@scratch Plain fixture", "Local first line\nLocal second line\n."];
+  await expect.poll(sent).toEqual(expected);
+  expect(await warnsOnUnload()).toBe(false);
+  const closed = editor.waitForEvent("close", { timeout: 5000 });
+  await editor.getByRole("button", { name: "CLOSE", exact: true }).click();
+  await closed;
+  expect(await sent()).toEqual(expected);
+});
+
+test("the real view-only basic editor displays text without an upload control", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=windows");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  const popup = page.waitForEvent("popup", { timeout: 8000 });
+  await socketFeed(page, "#$# edit name: Viewed fixture upload: \r\nView this fixture\r\n.\r\n");
+  const editor = await popup;
+  await expect(editor).toHaveURL(/\/editor\/basic-readonly\//);
+  await expect(editor).toHaveTitle("Viewing Viewed fixture");
+  await expect(editor.getByRole("textbox")).toHaveValue("View this fixture");
+  await expect(editor.getByRole("button", { name: "READ-ONLY", exact: true })).toBeVisible();
+  await expect(editor.locator(".upload")).toHaveCount(0);
+  const closed = editor.waitForEvent("close", { timeout: 5000 });
+  await editor.getByRole("button", { name: "CLOSE", exact: true }).click();
+  await closed;
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
+});
+
+test("the real classic verb editor updates its font from the parent Options", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=windows");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  const popup = page.waitForEvent("popup", { timeout: 8000 });
+  await socketFeed(page, "#$# edit name: Font fixture upload: @program #12:inspect\r\nreturn 12;\r\n.\r\n");
+  const editor = await popup;
+  const holder = editor.locator("#verb-editor-holder");
+  const font = () => holder.evaluate((element) => element.env?.editor.getOption("fontFamily").replaceAll("'", ""));
+  await expect.poll(font).toBe("Source Code Pro");
+  await page.locator("#button-client-options").click();
+  await page.getByRole("tab", { name: "Presentation", exact: true }).click();
+  await page.locator("#editorfont-option select").selectOption("monaco");
+  await page.locator("#button-client-options-close").click();
+  await expect.poll(font).toBe("Monaco");
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
+});
+
 test("real player drops pre-ready output and profile markers during a transport reconnect", async ({ page }) => {
   const initial = await fixtureState(page);
   await page.goto("/?entry=real");

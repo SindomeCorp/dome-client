@@ -67,10 +67,11 @@ app.get("/editor/:type/", async (req, res) => {
     });
     return res.type("html").send(html.replace(/<link[^>]+fonts\.googleapis[^>]+>/g, ""));
   }
-  if (req.params.type === "verb") {
-    const html = await ejs.renderFile(root + "views/editors/verb.ejs", {
-      req, meta: { title: "Verb fixture", description: "Local test", keywords: "test" }, decache: (value) => value,
-      editor: { readonly: false, parser: "" }
+  if (["verb", "basic", "basic-readonly"].includes(req.params.type)) {
+    const template = req.params.type === "verb" ? "verb" : "basic";
+    const html = await ejs.renderFile(root + `views/editors/${template}.ejs`, {
+      req, meta: { title: "Editor fixture", description: "Local test", keywords: "test" }, decache: (value) => value,
+      editor: { readonly: req.params.type === "basic-readonly", parser: "" }
     });
     return res.type("html").send(html.replace(/<link[^>]+fonts\.googleapis[^>]+>/g, ""));
   }
