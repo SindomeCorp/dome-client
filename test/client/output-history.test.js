@@ -7,7 +7,7 @@ import { SearchResults } from "../../src/client/features/output-windows/search-r
 import { createAnsiRenderer } from "../../src/client/features/terminal/ansi-renderer.js";
 import { exportSnapshot, searchSnapshot } from "../../src/client/features/output-windows/history-tools.js";
 import { normalizeOutputWindows, outputWindowDefaults, validateOutputRule } from "../../src/shared/output-windows.js";
-import { createInputQueue, forEachChunked } from "../../src/client/features/output-windows/work-queue.js";
+import { abortable, createInputQueue, forEachChunked } from "../../src/client/features/output-windows/work-queue.js";
 
 const runs = (text) => [{ text, classes: [], inlineStyles: [] }];
 
@@ -208,6 +208,139 @@ test("option normalization rejects malformed rules and preserves disabled featur
   assert.equal(checked.value.custom[0].name, "One");
   assert.equal(checked.value.secondarySize, 85);
   assert.deepEqual(checked.value.selected, ["custom-one"]);
+});
+
+test("controlled input work preserves frame boundaries and yields before queued tasks", async () => {
+  const scheduled = [];
+  const errors = [];
+  let time = 0;
+  let clockReads = 0;
+  const queue = createInputQueue({
+    now: () => {
+      assert.ok(++clockReads <= 20, "the queue must make progress within a frame");
+      return time;
+    },
+    schedule: (callback) => scheduled.push(callback),
+    onError: (error) => errors.push(error)
+  });
+  const runFrame = () => {
+    assert.equal(scheduled.length, 1);
+    clockReads = 0;
+    scheduled.shift()();
+  };
+  const first = "a".repeat(8191) + "\r\n";
+  const second = "\uFEFF" + "b".repeat(8190) + "🙂";
+  const tail = "end";
+  const completed = [];
+  const chunks = [];
+  const context = { stream: "fixture output" };
+  const failure = new Error("broken queued task");
+
+  queue.text("", () => completed.push("empty text"));
+  assert.equal(scheduled.length, 0);
+  queue.text(first + second + tail, (chunk, metadata) => {
+    chunks.push([chunk, metadata]);
+    time += 8;
+    if (chunks.length === 1) queue.task(() => completed.push("reentrant"));
+  }, context);
+  queue.task(() => { throw failure; });
+  queue.task(() => completed.push("scheduled"));
+  queue.idle().then(() => completed.push("idle"));
+
+  for (const expected of [first, second, tail]) {
+    runFrame();
+    assert.deepEqual(chunks.at(-1), [expected, context]);
+    assert.deepEqual(completed, []);
+  }
+  assert.equal(chunks.length, 3);
+  runFrame();
+  await Promise.resolve();
+  assert.deepEqual(errors, [failure]);
+  assert.deepEqual(completed, ["scheduled", "reentrant", "idle"]);
+  assert.equal(scheduled.length, 0);
+
+  queue.task(() => completed.push("cleared task"));
+  queue.idle().then(() => completed.push("idle after clear"));
+  queue.clear();
+  await Promise.resolve();
+  assert.equal(completed.at(-1), "idle after clear");
+  runFrame();
+  assert.equal(completed.at(-1), "idle after clear");
+});
+
+test("default input scheduling defers tasks and idle resolves immediately after draining", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let clockReads = 0;
+  const queue = createInputQueue({
+    now: () => {
+      assert.ok(++clockReads <= 20, "a single queued task must finish");
+      return 0;
+    }
+  });
+  const events = [];
+  queue.idle().then(() => events.push("initially idle"));
+  await Promise.resolve();
+  assert.deepEqual(events, ["initially idle"]);
+
+  queue.task(() => events.push("task"));
+  queue.idle().then(() => events.push("drained"));
+  assert.deepEqual(events, ["initially idle"]);
+  t.mock.timers.tick(0);
+  await Promise.resolve();
+  assert.deepEqual(events, ["initially idle", "task", "drained"]);
+
+  queue.idle().then(() => events.push("still idle"));
+  await Promise.resolve();
+  assert.deepEqual(events, ["initially idle", "task", "drained", "still idle"]);
+});
+
+test("controlled chunk work yields at the budget and aborts at completion", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let time = 0;
+  const visited = [];
+  const controller = new AbortController();
+  const reason = new Error("selection changed");
+  const work = forEachChunked(Array.from({ length: 65 }, (_, index) => index), (index) => {
+    visited.push(index);
+    if (index === 63) time = 8;
+    if (index === 64) controller.abort(reason);
+  }, { signal: controller.signal, now: () => time });
+  let settled;
+  work.then(() => { settled = "fulfilled"; }, (error) => { settled = error; });
+  assert.equal(visited.length, 64);
+  assert.equal(settled, undefined);
+  t.mock.timers.tick(0);
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(visited.at(-1), 64);
+  assert.equal(settled, reason);
+});
+
+test("abortable output snapshots detach listeners after the underlying operation settles", async (t) => {
+  const controller = new AbortController();
+  const { signal } = controller;
+  const reason = new Error("snapshot superseded");
+  const original = Promise.withResolvers();
+  const add = t.mock.method(signal, "addEventListener");
+  const remove = t.mock.method(signal, "removeEventListener");
+  assert.equal(abortable(original.promise), original.promise);
+  const result = abortable(original.promise, signal);
+  let settled;
+  result.then((value) => { settled = value; }, (error) => { settled = error; });
+  const [type, listener] = add.mock.calls[0].arguments;
+  assert.equal(type, "abort");
+  assert.equal(typeof listener, "function");
+
+  controller.abort(reason);
+  await Promise.resolve();
+  assert.equal(settled, reason);
+  assert.equal(remove.mock.callCount(), 0);
+  original.resolve("unused snapshot");
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(remove.mock.calls[0].arguments, ["abort", listener]);
+  assert.equal(settled, reason);
+  assert.throws(() => abortable(original.promise, signal), (error) => error === reason);
 });
 
 test("input work is ordered, chunked and cancellable; failed tasks do not stop later work", async () => {
