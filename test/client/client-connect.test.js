@@ -265,8 +265,10 @@ test("saved user picker handles preset characters, commands, and menu dismissal"
   };
   const logger = { info: t.mock.fn() };
   const reload = t.mock.fn();
+  const confirm = t.mock.fn(() => true);
+  confirm.mock.mockImplementationOnce(() => false);
   const pickerWindow = {
-    confirm: () => true,
+    confirm,
     prompt: () => "newbie",
     location: { reload }
   };
@@ -297,7 +299,11 @@ test("saved user picker handles preset characters, commands, and menu dismissal"
   picker.querySelector("[data-command='newChar']").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert.equal(window.document.getElementById("moo-username").value, "newbie");
 
-  picker.querySelector("[data-command='purgeAll']").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  const forget = picker.querySelector("[data-command='purgeAll']");
+  forget.click();
+  assert.equal(savedUsersStore.purge.mock.callCount(), 0);
+  assert.equal(reload.mock.callCount(), 0);
+  forget.click();
   assert.equal(savedUsersStore.purge.mock.callCount(), 1);
   assert.equal(reload.mock.callCount(), 1);
 });

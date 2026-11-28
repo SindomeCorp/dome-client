@@ -197,6 +197,7 @@ function bindSavedUserMenu({
       win.location.reload();
     } else if (command === "newChar") {
       const newName = win.prompt("What is your character name?");
+      if (newName === null) return;
       readyUser(newName, "");
       passwordField.focus();
     }
