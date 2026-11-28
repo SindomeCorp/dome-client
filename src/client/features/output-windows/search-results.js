@@ -1,4 +1,4 @@
-import { recordText } from "./history.js";
+import { recordDisplayText } from "./record-renderer.js";
 import { forEachChunked } from "./work-queue.js";
 
 const PAGE_SIZE = 1024;
@@ -85,7 +85,7 @@ export class SearchResults {
     if (!record) return undefined;
     // Sequential Next operations reuse the regex cursor, even on long lines.
     if (this.cached?.id !== row.id || this.cached.occurrence > occurrence) {
-      this.cached = { id: row.id, occurrence: -1, regex: this.expression(), text: recordText(record) };
+      this.cached = { id: row.id, occurrence: -1, regex: this.expression(), text: recordDisplayText(record) };
     }
     while (this.cached.occurrence < occurrence) {
       this.cached.match = this.cached.regex.exec(this.cached.text);

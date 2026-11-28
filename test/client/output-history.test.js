@@ -157,6 +157,21 @@ test("height index keeps offsets relative to live scrollback after partial pruni
   checkLayout([[80, 12], [90, 19]]);
 });
 
+test("search indexes displayed host text and resolves offsets in that same text", async () => {
+  const history = new OutputHistory();
+  const first = history.append(runs("[host=example.invalid] needle"));
+  const second = history.append([...runs("[ho"), ...runs("st=example.invalid"), ...runs("] needle")]);
+  const snapshot = history.snapshot();
+  const matches = await searchSnapshot(snapshot, "needle");
+  assert.equal(matches.length, 2);
+  assert.deepEqual(matches.at(0), { id: first.id, start: "example.invalid ".length, length: 6 });
+  assert.deepEqual(matches.at(1), { id: second.id, start: "[host=example.invalid] ".length, length: 6 });
+
+  const literal = await searchSnapshot(snapshot, "[host=");
+  assert.equal(literal.length, 1);
+  assert.deepEqual(literal.at(0), { id: second.id, start: 0, length: 6 });
+});
+
 test("search, copy and HTML exports include unmounted history in arrival order", async () => {
   const history = new OutputHistory();
   history.append(runs("Alpha <script>alert(1)</script>"));

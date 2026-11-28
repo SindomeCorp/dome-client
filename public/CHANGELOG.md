@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-28
 
 ### Fixed
+- Highlight the correct Find match in output containing host tags.
 - Copy the highlighted output accurately when ANSI styling splits a host tag.
 - Clear displayed MOO syntax errors as soon as the editor text changes, so old errors cannot block a save.
 - Keep the note viewer’s Save button within the viewport on touch-sized screens.

@@ -761,6 +761,34 @@ test("Find highlights only the matching text across styled output spans", async 
   await expect(second).toHaveText("second shorter prefix a few words before needlework at the end");
 });
 
+test("the real Find highlights displayed text after complete and ANSI-split host tags", async ({ page }) => {
+  const connections = async () => (await (await page.request.get("/fixture/state")).json()).connections;
+  const previous = await connections();
+  await page.goto("/?entry=real");
+  await expect.poll(connections).toBeGreaterThan(previous);
+  await page.request.post("/fixture/data", { data: { text:
+    "first [host=example.invalid] needle tail\r\nsecond [ho\u001b[31mst=example.invalid\u001b[0m] needle tail\r\n"
+  } });
+  const first = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "first example.invalid needle tail" });
+  const second = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "second [host=example.invalid] needle tail" });
+  await expect(first).toBeVisible();
+  await expect(second).toBeVisible();
+  await page.locator("#button-output-find").click();
+  const query = page.locator("#output-find-query");
+  const count = page.locator("#output-find-count");
+  await query.fill("needle");
+  await expect(count).toHaveText("1 of 2");
+  await expect(first.locator("mark")).toHaveText("needle");
+  await query.press("Enter");
+  await expect(count).toHaveText("2 of 2");
+  await expect(second.locator("mark")).toHaveText("needle");
+
+  await query.fill("[host=");
+  await expect(count).toHaveText("1 of 1");
+  await expect(first.locator("mark")).toHaveCount(0);
+  await expect(second.locator("mark")).toHaveText(["[ho", "st="]);
+});
+
 test("closing Find clears the highlight even when the next result waits for indexing", async ({ page }) => {
   await page.evaluate(() => window.outputTest.feed("first needle\nsecond needle\n"));
   await page.locator("#button-output-find").click();

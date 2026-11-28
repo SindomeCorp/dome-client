@@ -1,3 +1,4 @@
+import { recordDisplayText } from "./record-renderer.js";
 import { forEachChunked } from "./work-queue.js";
 
 function endpoint(doc, node, offset) {
@@ -27,8 +28,7 @@ export async function copyOutputSelection(snapshot, selection, { scope = () => t
   const parts = [];
   await forEachChunked(snapshot, (record) => {
     if (!scope(record)) return;
-    // The renderer unwraps complete host tags within each ANSI run.
-    let text = record.runs.map(({ text }) => text.replace(/\[host=([^\]]+)\]/gi, "$1")).join("");
+    let text = recordDisplayText(record);
     if (record.id === selection.end.id) text = text.slice(0, selection.end.offset);
     if (record.id === selection.start.id) text = text.slice(selection.start.offset);
     parts.push(text);

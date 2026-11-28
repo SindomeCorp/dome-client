@@ -3,6 +3,13 @@ import * as replacements from "../terminal/replacements.js";
 import { getPreviewMedia } from "../terminal/media-url.js";
 import { buildImagePreviewHtml } from "../terminal/image-preview.js";
 
+const hostTag = /\[host=([^\]]+)\]/gi;
+
+export function recordDisplayText(record) {
+  // Transform whole host tags within each ANSI run, as the renderer does.
+  return record.runs.map(({ text }) => text.replace(hostTag, "$1")).join("");
+}
+
 function escapeAttribute(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -40,7 +47,7 @@ function enrichText(text, { record, state, client, width, exportMode }, counter)
     offset = match.index + encodedUrl.length;
   }
   result += referenceHtml(text.slice(offset));
-  return result.replace(/\[host=([^\]]+)\]/gi, (_match, host) => {
+  return result.replace(hostTag, (_match, host) => {
     const plain = host.replace(/&amp;/g, "&");
     replacements.ipRegex.lastIndex = 0;
     replacements.hostnameRegex.lastIndex = 0;

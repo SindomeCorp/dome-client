@@ -1,6 +1,5 @@
-import { recordText } from "./history.js";
 import { forEachChunked, yieldToBrowser } from "./work-queue.js";
-import { renderRecordHtml } from "./record-renderer.js";
+import { recordDisplayText, renderRecordHtml } from "./record-renderer.js";
 import { buildLogHtml } from "../../../shared/log-template.js";
 import { buildLogDownloadFilename } from "../terminal/log-download.js";
 import { SearchResults } from "./search-results.js";
@@ -14,7 +13,7 @@ export async function searchSnapshot(snapshot, query, { scope = () => true, matc
   const literal = matches.expression();
   await forEachChunked(snapshot, (record) => {
     if (!scope(record)) return;
-    const text = recordText(record);
+    const text = recordDisplayText(record);
     let count = 0;
     literal.lastIndex = 0;
     while (literal.exec(text)) count++;
