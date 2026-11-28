@@ -67,6 +67,40 @@ test("routing is independent of nowrap display and frozen when the START marker 
   assert.equal(manager.views.secondary.rows.querySelector(".output-nowrap-row"), null);
 });
 
+test("queued block data keeps the filters active when it arrived", async (t) => {
+  const { manager, client, feed } = await createOutputApp(t);
+  manager.updateSettings({ open: true, selected: ["grid-output"] });
+
+  client.parseSocketData(start + "[g] queued header\nqueued body\n" + end);
+  manager.updateSettings({ selected: [] });
+  await feed("[g] later output\n");
+
+  assert.deepEqual(lines(manager.views.secondary), ["[g] queued header", "queued body"]);
+  assert.deepEqual(lines(manager.views.main), ["[g] later output"]);
+});
+
+test("the routing worker sees only eligible output and one line per block", async (t) => {
+  const requests = [];
+  class RecordingWorker extends FakeRuleWorker {
+    postMessage(message) {
+      requests.push(message.lines);
+      super.postMessage(message);
+    }
+  }
+  const { manager, feed } = await createOutputApp(t, { workerFactory: () => new RecordingWorker() });
+
+  manager.updateSettings({ selected: ["grid-output"] });
+  await feed("[g] while split is closed\n");
+  manager.updateSettings({ open: true });
+  await feed(start);
+  manager.appendLocal("[g] matching local echo\n", { echo: true });
+  await feed("[g] block first\n[g] block tail\n" + end + "[g] standalone\n");
+
+  assert.deepEqual(requests, [["[g] block first"], ["[g] standalone"]]);
+  assert.deepEqual(lines(manager.views.main), ["[g] while split is closed", "[g] matching local echo"]);
+  assert.deepEqual(lines(manager.views.secondary), ["[g] block first", "[g] block tail", "[g] standalone"]);
+});
+
 test("large streaming blocks test only one line and prune as whole units", async (t) => {
   const requests = [];
   class CountingWorker extends FakeRuleWorker {
