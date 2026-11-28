@@ -553,9 +553,13 @@ test("selected output uses Copy and Scratchpad rather than token command templat
   const rows = doc.querySelectorAll("[data-output-id]");
   rows[1].focus();
   const selection = doc.getSelection();
+  selection.selectAllChildren(rows[0]);
+  doc.dispatchEvent(new win.Event("selectionchange"));
+  // Extend the selection before the first snapshot leaves the output queue.
   selection.setBaseAndExtent(rows[0], 0, rows[1], rows[1].childNodes.length);
   doc.dispatchEvent(new win.Event("selectionchange"));
   await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(doc.querySelector("#context-menu-error").textContent, "");
   assert.equal(selection.isCollapsed, false);
   rows[1].dispatchEvent(new win.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true }));
   assert.deepEqual([...doc.querySelectorAll("[role=menuitem]")].map((item) => item.textContent), ["Copy selected text", "Open in Scratchpad"]);
@@ -571,6 +575,46 @@ test("selected output uses Copy and Scratchpad rather than token command templat
   rows[1].dispatchEvent(nativeMenu);
   assert.equal(nativeMenu.defaultPrevented, false);
   assert.equal(doc.querySelector("[role=menu]"), null);
+});
+
+test("queued output pruning rejects a selection snapshot instead of copying incomplete history", async (t) => {
+  const { createOutputApp } = await import("../../test-support/output-app.js");
+  const { client, doc, win, manager, feed } = await createOutputApp(t);
+  const writes = [];
+  Object.defineProperty(win.navigator, "clipboard", { value: { async writeText(text) { writes.push(text); } } });
+  const controller = setupContextMenus({ client, doc, win, matcherFactory: localMatcher });
+  t.after(() => controller.destroy());
+  await controller.ready;
+  await controller.reload(JSON.stringify(referenceContextMenus()));
+  await feed("oldest\nsecond\nthird\n");
+
+  const [first, second] = doc.querySelectorAll("#lineBuffer [data-output-id]");
+  client.preferences.performanceBuffer = 3;
+  // The selected rows are still mounted, but incoming output is ahead of the snapshot in the queue.
+  client.parseSocketData("newest\n");
+  doc.getSelection().setBaseAndExtent(second.firstChild, 2, first.firstChild, 1);
+  doc.dispatchEvent(new win.Event("selectionchange"));
+  await manager.idle();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(manager.history.first, 2);
+  assert.equal(doc.querySelector("#context-menu-error").textContent, "Selected history was removed. Select the text again.");
+  const menuKey = () => new win.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true });
+  const expired = menuKey();
+  second.dispatchEvent(expired);
+  assert.equal(expired.defaultPrevented, false);
+  assert.equal(doc.querySelector("[role=menu]"), null);
+  assert.deepEqual(writes, []);
+
+  doc.getSelection().setBaseAndExtent(second.firstChild, 0, second.firstChild, 6);
+  doc.dispatchEvent(new win.Event("selectionchange"));
+  await manager.idle();
+  await new Promise((resolve) => setImmediate(resolve));
+  const fresh = menuKey();
+  second.dispatchEvent(fresh);
+  assert.equal(fresh.defaultPrevented, true);
+  doc.querySelector("[role=menuitem]").click();
+  assert.deepEqual(writes, ["second"]);
 });
 
 test("legacy output parser also supports ANSI-aware keyboard context menus", async (t) => {
