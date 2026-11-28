@@ -38,7 +38,7 @@ const setupCompositionDom = () => {
 test("initClient composes setup hooks with explicit client context", () => {
   const window = setupCompositionDom();
   const calls = [];
-  const socket = { on: (event, handler) => calls.push(["socket.on", event, handler]) };
+  const socket = {};
   const client = {
     readPreferences: () => ({
       lineBufferFont: "standard",
@@ -108,7 +108,7 @@ test("initClient composes setup hooks with explicit client context", () => {
     "setupOutputParser"
   ]);
   assert.equal(calls[9], "setupSocket");
-  assert.deepEqual(calls[10], ["socket.on", "data", client.parseSocketData]);
+  assert.equal(client.socket, socket);
   assert.equal(client.client, window.document.querySelector("#browser-client"));
   assert.equal(client.inputReader, window.document.querySelector("#inputBuffer"));
   assert.equal(typeof window.DomeBridge.sendInput, "function");

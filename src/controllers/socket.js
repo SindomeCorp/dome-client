@@ -67,9 +67,12 @@ export async function connection(socket) {
   });
   socket.gameAddress = gameAddress;
   const pendingConnection = new AbortController();
-  const cancelConnection = () => pendingConnection.abort();
-  socket.once("disconnect", cancelConnection);
   let moo;
+  const cancelConnection = () => {
+    pendingConnection.abort();
+    moo?.destroy?.();
+  };
+  socket.once("disconnect", cancelConnection);
   try {
     moo = await connectToMud({
       host: gameAddress.host,
@@ -87,11 +90,32 @@ export async function connection(socket) {
     socket.emit("error", err.toString());
     return;
   } finally {
-    socket.removeListener("disconnect", cancelConnection);
+    if (!moo) socket.removeListener("disconnect", cancelConnection);
   }
-  if (pendingConnection.signal.aborted || socket.disconnected === true) { moo.destroy(); return; }
+  if (pendingConnection.signal.aborted || socket.disconnected === true) {
+    socket.removeListener("disconnect", cancelConnection);
+    moo.destroy();
+    return;
+  }
 
-  const onConnect = async () => {
+  const onEarlyUpstreamEnd = () => {
+    if (pendingConnection.signal.aborted) return;
+    pendingConnection.abort();
+    socket.emit("disconnected");
+  };
+  moo.once("end", onEarlyUpstreamEnd);
+  moo.once("close", onEarlyUpstreamEnd);
+  bindSocketSession({
+    socket,
+    moo,
+    logger,
+    poweredBy: config.node.poweredBy,
+    shortenEnabled: SHORTEN_ENABLED,
+    logUser,
+    logError
+  });
+  // Keep cancellation active through DNS. A late lookup must not revive this socket.
+  try {
     recordConnection(gameAddress.host, gameAddress.port, gameAddress.useTls);
     const address = userIp(socket);
     const userAgent = parse(socket.handshake.headers["user-agent"]);
@@ -104,7 +128,7 @@ export async function connection(socket) {
     socket.hostname = address;
     try {
       const domains = await dns.promises.reverse(address);
-      if (domains && domains.length) {
+      if (!pendingConnection.signal.aborted && domains && domains.length) {
         socket.hostname = domains[0];
         logUser(socket, "DNS", [
           socket.hostname,
@@ -112,18 +136,19 @@ export async function connection(socket) {
         ]);
       }
     } catch (err) {
-      dnsErrorHandler(err, socket, address);
+      if (!pendingConnection.signal.aborted) dnsErrorHandler(err, socket, address);
     }
-    socket.isActive = true;
-    socket.emit("connected", new Date().toString());
-  };
-  await onConnect();
+  } finally {
+    socket.removeListener("disconnect", cancelConnection);
+    moo.removeListener("end", onEarlyUpstreamEnd);
+    moo.removeListener("close", onEarlyUpstreamEnd);
+  }
+  if (pendingConnection.signal.aborted) return;
 
   const telnetIacProcessor = createTelnetIacProcessor({
     onEvent: handleTelnetIacEvent,
     logger
   });
-
   moo.on("data", async function(data) {
     await forwardMudData({
       data,
@@ -136,14 +161,6 @@ export async function connection(socket) {
       telnetIacProcessor
     });
   });
-
-  bindSocketSession({
-    socket,
-    moo,
-    logger,
-    poweredBy: config.node.poweredBy,
-    shortenEnabled: SHORTEN_ENABLED,
-    logUser,
-    logError
-  });
+  socket.isActive = true;
+  socket.emit("connected", new Date().toString());
 }

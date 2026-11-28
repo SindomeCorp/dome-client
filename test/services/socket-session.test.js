@@ -115,3 +115,65 @@ test("player preference changes stop and resume shortening on the active connect
     assert.equal(calls, shortenEnabled ? 2 : 0);
   }
 });
+
+test("upstream close stops late output and reports disconnection once", async () => {
+  const { forwardMudData } = await import("../../src/services/socket-data-flow.js");
+  const session = createSession();
+  session.socket.shortenUrls = true;
+  const pending = Promise.withResolvers();
+  const output = forwardMudData({
+    ...session, data: Buffer.from("old output"), shortenEnabled: true, shortenUrls: () => pending.promise
+  });
+
+  session.moo.emit("close");
+  session.socket.emit("input", "late input");
+  pending.resolve("old shortened output");
+  await output;
+  session.moo.emit("end");
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.equal(session.socket.isActive, false);
+  assert.deepEqual(session.events.filter(([event]) => event === "disconnected"), [["disconnected"]]);
+  assert.equal(session.events.some(([event]) => event === "data" || event === "status"), false);
+  assert.deepEqual(session.writes, []);
+});
+
+test("client disconnect flushes one quit and explicitly closes the upstream", (t) => {
+  const session = createSession();
+  const destroySoon = t.mock.fn(() => assert.deepEqual(session.writes, ["@quit\r\n"]));
+  session.moo.destroySoon = destroySoon;
+  session.socket.emit("disconnect", "transport close");
+  session.socket.emit("disconnect", "duplicate");
+
+  assert.deepEqual(session.writes, ["@quit\r\n"]);
+  assert.equal(destroySoon.mock.callCount(), 1);
+  assert.equal(session.socket.isActive, false);
+});
+
+test("client disconnect still closes the upstream if writing quit throws", (t) => {
+  const session = createSession();
+  const failure = new Error("fixture could not write quit");
+  session.moo.write = () => { throw failure; };
+  const end = t.mock.method(session.moo, "end");
+  session.socket.emit("disconnect");
+  assert.equal(end.mock.callCount(), 1);
+  assert.ok(session.logs.some(([event, message]) => event === "logError" && message === failure.message));
+});
+
+test("a delayed quit acknowledgement cannot disconnect or write twice", async (t) => {
+  const session = createSession();
+  let acknowledge;
+  session.moo.write = (data, _encoding, callback) => {
+    session.writes.push(data);
+    acknowledge = callback;
+  };
+  session.moo.destroySoon = t.mock.fn();
+  session.socket.emit("input", "@quit");
+  session.socket.emit("disconnect");
+  acknowledge();
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.deepEqual(session.writes, ["@quit\r\n"]);
+  assert.equal(session.moo.destroySoon.mock.callCount(), 1);
+  assert.equal(session.events.some(([event]) => event === "status" || event === "disconnected"), false);
+});

@@ -16,15 +16,7 @@ export function bindReconnectButton({ button, client, setupSocket }) {
   }
 
   button.addEventListener("click", () => {
-    client.socket?.disconnect?.();
-    if (client.resetOutputStream) client.resetOutputStream();
-    else {
-      client.resetSdwcNowrapState?.();
-      client.resetAnsiRendererState?.();
-    }
-    client.socket?.off?.("data", client.parseSocketData);
     client.socket = setupSocket({ client });
-    client.socket.on("data", client.parseSocketData);
   });
 }
 

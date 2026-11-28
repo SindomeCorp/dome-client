@@ -38,14 +38,14 @@ const setupDom = (t) => {
   return window;
 };
 
-test("z-setup replaces existing socket and binds data handler", async t => {
+test("z-setup delegates socket replacement to socket setup", async t => {
   const dome = createClientState();
   const window = setupDom(t);
   t.mock.method(window, "setTimeout", fn => { fn(); return 1; });
 
   const oldSocket = { old: true };
   dome.socket = oldSocket;
-  const onCalls = [];
+  const socket = {};
   dome.readPreferences = () => ({ lineBufferFont: "standard", colorSet: "normal", commandSuggestions: false });
   dome.parseSocketData = () => {};
   const setupOutputParser = t.mock.fn();
@@ -59,7 +59,7 @@ test("z-setup replaces existing socket and binds data handler", async t => {
     setupChevronToggle: () => {},
     setupHealthCheck: () => {},
     setupOutputParser,
-    setupSocket: () => ({ on: (...args) => { onCalls.push(args); } })
+    setupSocket: t.mock.fn(() => socket)
   };
 
   initClient({ client: dome, win: window, doc: window.document, features });
@@ -67,8 +67,8 @@ test("z-setup replaces existing socket and binds data handler", async t => {
   assert.equal(dome.clientOptionsButton, window.document.querySelector("#button-client-options"));
   assert.equal(dome.clientOptionsOverlay, window.document.querySelector("#client-options-overlay"));
   assert.notEqual(dome.socket, oldSocket);
-  assert.equal(onCalls[0][0], "data");
-  assert.equal(onCalls[0][1], dome.parseSocketData);
+  assert.equal(dome.socket, socket);
+  assert.equal(features.setupSocket.mock.calls[0].arguments[0].client, dome);
   assert.equal(setupOutputParser.mock.calls.length, 1);
 });
 

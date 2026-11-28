@@ -91,7 +91,6 @@ export const startClientSocket = ({
 
   win.setTimeout(function() {
     client.socket = features.setupSocket({ client, doc, win });
-    client.socket.on("data", client.parseSocketData);
   }, 500);
   return null;
 };

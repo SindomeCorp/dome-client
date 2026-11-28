@@ -1398,3 +1398,35 @@ test("streamed editor protocol passes complete text to the editor in the real pl
   await expect(page.locator("#lineBuffer")).toContainText("Output after the editor.");
   expect((await fixtureState(page)).commands).toEqual(connected.commands);
 });
+
+test("real player drops pre-ready output and profile markers during a transport reconnect", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  await socketFeed(page, "Retained before reconnect\r\n");
+  const output = page.locator("#lineBuffer");
+  await expect(output).toContainText("Retained before reconnect");
+
+  try {
+    const opening = page.waitForEvent("websocket", { timeout: 8000 });
+    await page.request.post("/fixture/reconnect", { data: { holdGameReady: true } });
+    const transport = await opening;
+    await expect.poll(async () => (await fixtureState(page)).waitingForGame).toEqual(["websocket"]);
+    const received = transport.waitForEvent("framereceived", {
+      predicate: frame => String(frame.payload).includes("Stale output during reconnect"),
+      timeout: 5000
+    });
+    await socketFeed(page, "Stale output during reconnect\r\n#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\r\n");
+    await received;
+    await page.evaluate(() => new Promise(resolve => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve))));
+    await expect(output).not.toContainText("Stale output during reconnect");
+    await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
+
+    await page.request.post("/fixture/game-ready");
+    await socketFeed(page, "Fresh after reconnect\r\n");
+    await expect(output).toContainText("Fresh after reconnect");
+    await expect(output).toContainText("Retained before reconnect");
+  } finally {
+    await page.request.post("/fixture/game-ready");
+  }
+});

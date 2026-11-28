@@ -13,6 +13,7 @@ export async function forwardMudData({
   getUserIdentity,
   telnetIacProcessor
 }) {
+  if (!socket.isActive) return;
   try {
     const displayData = telnetIacProcessor ? telnetIacProcessor.filter(data) : data;
     if (displayData.length === 0) {

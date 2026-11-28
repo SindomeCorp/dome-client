@@ -21,24 +21,41 @@ const server = createServer(app);
 const sockets = new Server(server);
 const commands = [];
 let connections = 0;
+let holdGameReady = false;
+const waitingForGame = new Set();
 sockets.on("connection", (socket) => {
   connections++;
   socket.on("input", (command, acknowledge) => {
     commands.push(command);
     acknowledge?.();
   });
-  socket.emit("connected");
+  if (holdGameReady) {
+    holdGameReady = false;
+    waitingForGame.add(socket);
+    socket.once("disconnect", () => waitingForGame.delete(socket));
+  } else {
+    socket.emit("connected");
+  }
 });
 app.use(express.json());
 app.post("/fixture/data", (req, res) => {
   sockets.emit("data", String(req.body.text));
   res.sendStatus(204);
 });
-app.post("/fixture/reconnect", (_req, res) => {
+app.post("/fixture/reconnect", (req, res) => {
+  holdGameReady = req.body?.holdGameReady === true;
   for (const socket of sockets.sockets.sockets.values()) socket.conn.close();
   res.sendStatus(204);
 });
-app.get("/fixture/state", (_req, res) => res.json({ commands, connections }));
+app.post("/fixture/game-ready", (_req, res) => {
+  holdGameReady = false;
+  for (const socket of waitingForGame) socket.emit("connected");
+  waitingForGame.clear();
+  res.sendStatus(204);
+});
+app.get("/fixture/state", (_req, res) => res.json({
+  commands, connections, waitingForGame: [...waitingForGame].map(socket => socket.conn.transport.name)
+}));
 app.get("/runtime.js", (_req, res) => res.type("js").send(bundled.outputFiles[0].text));
 app.use("/profiles", express.static(root + "data/profiles", { dotfiles: "ignore", index: false }));
 app.use(express.static(root + "public"));

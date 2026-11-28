@@ -23,6 +23,7 @@ All notable changes to this project will be documented in this file.
 - Match equivalent IPv4-mapped IPv6 spellings in the IP blocklist.
 - Preserve split UTF-8 output, editor content, and SDWC payloads across game packets.
 - Resume ordinary output after an overlong Telnet subnegotiation ends.
+- Ignore stale output after disconnect or reconnect and close the previous game connection promptly.
 
 ### Added
 - Add wildcard @rewind menus for `[+][channel]` and `[-][channel]` tags in Player, GM and Programmer profiles.

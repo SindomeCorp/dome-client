@@ -220,3 +220,13 @@ test("a Telnet filter failure is logged without emitting partial output", async 
   assert.deepEqual(context.errors, [["exception caught when receiving data from the moo", failure]]);
   assert.deepEqual(context.events, [["data", "next"]]);
 });
+
+test("inactive output never answers a late game metadata request", async () => {
+  const context = createContext();
+  context.socket.isActive = false;
+  await forwardMudData({
+    ...context, data: Buffer.from("#$# dome-client-user\r\n"), getUserIdentity: () => "fixture.invalid"
+  });
+  assert.deepEqual(context.writes, []);
+  assert.deepEqual(context.events, []);
+});

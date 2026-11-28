@@ -858,7 +858,7 @@ test("socket route connection lifecycle", async (t) => {
     dns.promises.reverse = original.reverse;
   });
 
-  await t.test("handles moo.write throwing based on activity", async () => {
+  await t.test("reports active write errors and ignores input after the session ends", async () => {
     const moo = new EventEmitter();
     const err = new Error("write fail");
     moo.write = () => { throw err; };
@@ -896,7 +896,7 @@ test("socket route connection lifecycle", async (t) => {
     socket.isActive = false;
     socket.emit("input", "look");
     await new Promise(r => setImmediate(r));
-    assert.equal(errorLogs.filter(m => m === err.stack).length, 2);
+    assert.equal(errorLogs.filter(m => m === err.stack).length, 1);
     assert.equal(events.filter(e => e[0] === "error").length, errorCount);
 
     net.connect = original.connect;
@@ -1471,4 +1471,33 @@ test("socket route connection lifecycle", async (t) => {
       delete config.node.socketProxied;
     }
   });
+});
+
+test("disconnect during reverse lookup closes the provisional game connection", async (t) => {
+  const lookup = Promise.withResolvers();
+  const lookupStarted = Promise.withResolvers();
+  const moo = new EventEmitter();
+  moo.destroy = t.mock.fn(() => { moo.emit("close"); });
+  t.mock.method(net, "connect", () => {
+    process.nextTick(() => moo.emit("connect"));
+    return moo;
+  });
+  t.mock.method(dns.promises, "reverse", () => {
+    lookupStarted.resolve();
+    return lookup.promise;
+  });
+  const { connection } = await loadRoute();
+  const { socket, events } = createSocket();
+  const starting = connection(socket);
+  await lookupStarted.promise;
+
+  socket.emit("disconnect", "transport close");
+  const destroyedOnDisconnect = moo.destroy.mock.callCount();
+  lookup.resolve(["old-host.fixture.invalid"]);
+  await starting;
+  moo.emit("data", Buffer.from("old output\n"));
+
+  assert.equal(destroyedOnDisconnect, 1);
+  assert.equal(Boolean(socket.isActive), false);
+  assert.equal(events.some(([event]) => event === "connected" || event === "data"), false);
 });
