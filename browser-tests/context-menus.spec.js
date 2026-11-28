@@ -2262,12 +2262,28 @@ test("real output does not pause when overlapping long presses are canceled", as
   const initial = await fixtureState(page);
   await page.goto("/?entry=real&as=long");
   await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
-  await socketFeed(page, "Synthetic long-press target\r\n");
+  await socketFeed(page, "Synthetic long-press target\r\n" + new URL("/fixture/hold-preview.png", page.url()).href + "\r\n");
   const row = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Synthetic long-press target" });
   await expect(row).toBeVisible();
   const pause = page.locator("#button-auto-scroll");
   await expect(pause).toHaveAttribute("aria-label", "Pause main scrolling");
   await page.clock.install();
+  const hold = { pointerType: "touch", isPrimary: true, button: 0, bubbles: true };
+  const assertStillFollowing = async () => {
+    await page.clock.fastForward(2100);
+    await expect(pause).toHaveAttribute("aria-label", "Pause main scrolling");
+  };
+  await row.dispatchEvent("pointerdown", { ...hold, pointerType: "mouse", button: 2 });
+  await assertStillFollowing();
+  const media = page.locator("#lineBuffer [data-output-media]");
+  await expect(media).toBeVisible();
+  await media.dispatchEvent("pointerdown", hold);
+  await assertStillFollowing();
+  for (const type of ["pointerup", "pointerleave"]) {
+    await row.dispatchEvent("pointerdown", hold);
+    await row.dispatchEvent(type, hold);
+    await assertStillFollowing();
+  }
   await row.dispatchEvent("pointerdown", { pointerId: 1, pointerType: "touch", isPrimary: true, button: 0, bubbles: true });
   await row.dispatchEvent("pointerdown", { pointerId: 2, pointerType: "touch", isPrimary: false, button: 0, bubbles: true });
   await row.dispatchEvent("pointercancel", { pointerId: 1, pointerType: "touch", bubbles: true });
@@ -2278,5 +2294,11 @@ test("real output does not pause when overlapping long presses are canceled", as
   await row.dispatchEvent("pointerdown", { pointerId: 3, pointerType: "touch", isPrimary: true, button: 0, bubbles: true });
   await page.clock.fastForward(2100);
   await expect(pause).toHaveAttribute("aria-label", "Resume main scrolling");
+  await pause.click();
+  await page.locator("#button-client-options").click();
+  await page.locator("select[name=auto-scroll-toggle]").selectOption("none");
+  await page.locator("#button-client-options-close").click();
+  await row.dispatchEvent("pointerdown", hold);
+  await assertStillFollowing();
   expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
 });
