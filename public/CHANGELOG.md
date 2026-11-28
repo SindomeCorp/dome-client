@@ -24,6 +24,7 @@ All notable changes to this project will be documented in this file.
 - Preserve split UTF-8 output, editor content, and SDWC payloads across game packets.
 - Resume ordinary output after an overlong Telnet subnegotiation ends.
 - Ignore stale output after disconnect or reconnect and close the previous game connection promptly.
+- Keep IDE display preferences usable when browser storage is blocked.
 
 ### Added
 - Add wildcard @rewind menus for `[+][channel]` and `[-][channel]` tags in Player, GM and Programmer profiles.

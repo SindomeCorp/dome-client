@@ -1430,3 +1430,19 @@ test("real player drops pre-ready output and profile markers during a transport 
     await page.request.post("/fixture/game-ready");
   }
 });
+
+test("the real IDE keeps display preferences usable when storage rejects writes and reads", async ({ page }) => {
+  await page.addInitScript(() => {
+    const keys = new Set(["ide-dark", "ide-orientation"]);
+    for (const operation of ["getItem", "setItem"]) {
+      const original = window.Storage.prototype[operation];
+      window.Storage.prototype[operation] = function (key, ...args) {
+        if (keys.has(key)) throw new DOMException("Fixture storage blocked", "SecurityError");
+        return original.call(this, key, ...args);
+      };
+    }
+  });
+  await page.goto("/editor/ide/");
+  await page.getByRole("button", { name: "Switch to light mode" }).click();
+  await expect(page.getByRole("button", { name: "Switch to dark mode" })).toBeVisible();
+});

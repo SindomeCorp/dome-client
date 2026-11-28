@@ -525,3 +525,31 @@ test("emitInput ignores unavailable sockets and malformed socket adapters", () =
     globalThis.window.uploadSocket = previousWindowSocket;
   }
 });
+
+test("the IDE can render and change settings when browser storage is unavailable", async (t) => {
+  const { window, localStorage, cleanup } = setupDom();
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  t.after(() => {
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    cleanup();
+  });
+  localStorage.getItem = () => { throw new Error("fixture storage is blocked"); };
+  localStorage.setItem = () => { throw new Error("fixture storage is blocked"); };
+
+  function PreferenceHarness() {
+    const [orientation, setOrientation] = usePersistentPreference("ide-orientation", "top");
+    return React.createElement("button", { onClick: () => setOrientation("left") }, orientation);
+  }
+
+  const container = window.document.createElement("div");
+  window.document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(React.createElement(PreferenceHarness)));
+    assert.equal(container.textContent, "top");
+    await act(async () => container.querySelector("button").click());
+    assert.equal(container.textContent, "left");
+  } finally {
+    await act(async () => root.unmount());
+  }
+});

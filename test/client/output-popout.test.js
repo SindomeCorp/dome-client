@@ -216,13 +216,15 @@ test("standalone entry only announces to its same-origin opener and handles dire
   globalThis.window = popup;
   globalThis.document = popup.document;
   try {
-    await import("../../src/client/entrypoints/output-window.js?direct-visit");
-    assert.match(popup.document.querySelector("#output-popout-status").textContent, /No active main client/);
-    assert.equal(popup.document.querySelector("#inputBuffer"), null);
     const sent = [];
     popup.opener = { postMessage: (message, origin) => sent.push({ message, origin }) };
+    await import("../../src/client/entrypoints/output-window.js?direct-visit");
+    assert.deepEqual(sent, []);
+    assert.match(popup.document.querySelector("#output-popout-status").textContent, /No active main client/);
+    assert.equal(popup.document.querySelector("#inputBuffer"), null);
     popup.location.hash = "instance=expected-session";
     await import("../../src/client/entrypoints/output-window.js?companion-visit");
+    popup.dispatchEvent(new popup.Event("pagehide"));
     popup.dispatchEvent(new popup.Event("pagehide"));
     assert.deepEqual(sent.map((value) => value.message.type), ["output-popout-ready", "output-popout-closing"]);
     for (const value of sent) {
