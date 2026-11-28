@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-11-27
 
 ### Fixed
+- Fail the asset build if a selected browser script cannot be compiled, preserving the previous client assets.
 - Keep the previous client assets when a build fails and prevent startup without a successful build.
 - Cancel incomplete game connections and wait for the TLS handshake before reporting a secure connection.
 - Prevent overlapping status checks from replacing fresh results with stale responses.

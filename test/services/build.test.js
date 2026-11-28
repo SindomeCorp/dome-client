@@ -8,6 +8,7 @@ import less from "less";
 import * as buildModule from "../../src/services/build.js";
 import { browserOutputFiles, pageEntries, playerClientEntries } from "../../src/services/browser-entry-manifest.js";
 import { fileURLToPath } from "node:url";
+import { setImmediate } from "node:timers/promises";
 
 const serviceDir = path.dirname(fileURLToPath(new URL("../../src/services/build.js", import.meta.url)));
 const realLessDir = path.join(serviceDir, "..", "..", "less");
@@ -32,9 +33,10 @@ test("cleanDir propagates removal errors", async t => {
   assert.strictEqual(rm.mock.calls.length, 1);
 });
 
-test("compileLess generates CSS for each .less file", async t => {
-  t.mock.method(fs, "mkdir", async () => {});
-  t.mock.method(fs, "readdir", async dir => dir === realCssDir ? ["client.css"] : []);
+test("compileLess generates the requested client stylesheet without source warnings", async t => {
+  const warn = t.mock.method(globalThis.console, "warn", () => {});
+  const mkdir = t.mock.method(fs, "mkdir", async () => {});
+  t.mock.method(fs, "readdir", async dir => dir === realCssDir ? ["client.css", "ide.css", "custom.css"] : []);
   const rm = t.mock.method(fs, "rm", async () => {});
   t.mock.method(fs, "readFile", async file => {
     if (file.startsWith(realLessDir)) return `data:${path.basename(file)}`;
@@ -43,12 +45,14 @@ test("compileLess generates CSS for each .less file", async t => {
   const writeFile = t.mock.method(fs, "writeFile", async () => {});
   t.mock.method(less, "render", async (content, { filename }) => ({ css: `css:${path.basename(filename)}` }));
   await buildModule.compileLess();
+  assert.deepEqual(mkdir.mock.calls[0].arguments, [realCssDir, { recursive: true }]);
   const written = writeFile.mock.calls.map(c => [path.basename(c.arguments[0]), c.arguments[1]]);
   assert.deepStrictEqual(written, [
     ["client.css", "css:client.less"]
   ]);
   const removed = rm.mock.calls.map(c => path.basename(c.arguments[0]));
   assert.deepStrictEqual(removed, ["client.css"]);
+  assert.ok(!warn.mock.calls.some(({ arguments: [message] }) => /Without `from` option PostCSS/.test(message)));
 });
 
 test("compileLess rejects when mkdir fails", async t => {
@@ -71,7 +75,7 @@ test("compileJs bundles entry and produces normal and minified outputs", async t
   t.mock.module("esbuild", { default: {} });
   const { default: esbuild } = await import("esbuild");
   esbuild.build = async args => {
-    built.push(path.basename(args.outfile));
+    built.push(args);
     await fs.writeFile(args.outfile, "placeholder", "utf8");
   };
   const { compileJs } = await import(`../../src/services/build.js?mock=${Date.now()}`);
@@ -91,7 +95,13 @@ test("compileJs bundles entry and produces normal and minified outputs", async t
     "ide-editor-window.js",
     "moo-parser-worker.js"
   ];
-  assert.deepStrictEqual(built.sort(), expected.slice().sort());
+  assert.deepEqual(built.map(({ outfile }) => path.basename(outfile)).sort(), expected.slice().sort());
+  for (const options of built) {
+    const file = path.basename(options.outfile);
+    assert.equal(options.bundle, true, file);
+    assert.equal(options.format, file.startsWith("player-client") ? "iife" : "esm", file);
+    if (file.startsWith("player-client")) assert.equal(options.minify, file.endsWith(".min.js"), file);
+  }
   for (const file of expected) {
     const content = await fs.readFile(path.join(outDir, file), "utf8");
     assert.strictEqual(content, "placeholder");
@@ -162,12 +172,14 @@ test("compileJs rejects when cleanup fails", async t => {
 
 test("copyAce copies ace-builds assets to destination", async t => {
   const outDir = await fs.mkdtemp(path.join(os.tmpdir(), "ace-"));
+  const mkdir = t.mock.method(fs, "mkdir");
   const cp = t.mock.method(fs, "cp", async (src, dest) => {
     await fs.writeFile(path.join(dest, "ace.js"), "// placeholder");
   });
   await buildModule.copyAce(outDir);
   const aceSrcDir = path.dirname(fileURLToPath(import.meta.resolve("ace-builds/src-min-noconflict/ace.js")));
   assert.deepStrictEqual(cp.mock.calls[0].arguments, [aceSrcDir, outDir, { recursive: true }]);
+  assert.deepEqual(mkdir.mock.calls[0].arguments, [outDir, { recursive: true }]);
   const files = await fs.readdir(outDir);
   assert.deepStrictEqual(files, ["ace.js"]);
   const content = await fs.readFile(path.join(outDir, "ace.js"), "utf8");
@@ -257,4 +269,58 @@ test("EJS compilation tolerates a missing optional source directory and reports 
   await buildModule.compileEjsScripts("/unused/js");
   failure = denied;
   await assert.rejects(buildModule.compileEjsScripts("/unused/js"), (error) => error === denied);
+});
+
+test("EJS reports a missing dependency in an existing entry", async (t) => {
+  const failure = Object.assign(new Error("fixture build dependency absent"), { code: "ENOENT" });
+  t.mock.method(fs, "readdir", async () => ["master-header.js"]);
+  t.mock.method(fs, "rm", async () => {});
+  const esbuild = t.mock.module("esbuild", { defaultExport: { build: async () => { throw failure; } } });
+  const { compileEjsScripts } = await import("../../src/services/build.js?missing-entry-dependency");
+  esbuild.restore();
+
+  await assert.rejects(compileEjsScripts("/unused/js"), (error) => error === failure);
+});
+
+test("the direct asset build entry reports a failure and sets a failure exit code", async (t) => {
+  const failure = new Error("fixture asset build failed");
+  t.mock.method(fs, "mkdir", async () => { throw failure; });
+  const error = t.mock.fn();
+  const named = t.mock.fn(() => ({ error }));
+  const logger = t.mock.module("../../src/logger.js", { namedExports: { named } });
+  const previousArg = process.argv[1];
+  const previousExitCode = process.exitCode;
+  t.after(() => {
+    process.argv[1] = previousArg;
+    process.exitCode = previousExitCode;
+  });
+  process.argv[1] = fileURLToPath(new URL("../../src/services/build.js", import.meta.url));
+
+  await import("../../src/services/build.js?direct-entry-fixture");
+  logger.restore();
+  await setImmediate();
+
+  assert.deepEqual(named.mock.calls[0].arguments, ["build"]);
+  assert.deepEqual(error.mock.calls[0].arguments, ["Asset build failed", failure]);
+  assert.equal(process.exitCode, 1);
+});
+
+test("concurrent builds for different output directories remain independent", async (t) => {
+  const firstOutput = "/unused/first";
+  const secondOutput = "/unused/second";
+  const firstFailure = new Error("first fixture output");
+  const secondFailure = new Error("second fixture output");
+  const mkdir = t.mock.method(fs, "mkdir", async (dir) => {
+    throw dir === firstOutput ? firstFailure : secondFailure;
+  });
+  const { default: build } = buildModule;
+
+  assert.deepEqual(await Promise.allSettled([
+    build({ output: firstOutput }),
+    build({ output: secondOutput })
+  ]), [
+    { status: "rejected", reason: firstFailure },
+    { status: "rejected", reason: secondFailure }
+  ]);
+  assert.deepEqual(mkdir.mock.calls.map(({ arguments: [dir] }) => dir), [firstOutput, secondOutput]);
 });

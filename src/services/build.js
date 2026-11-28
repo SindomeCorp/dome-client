@@ -18,6 +18,7 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const require = createRequire(import.meta.url);
 
 const publicDir = path.join(__dirname, "../../public");
+const publicJsDir = path.join(publicDir, "js");
 let buildPromise;
 
 async function cleanDir(dir, filter) {
@@ -30,20 +31,15 @@ async function cleanDir(dir, filter) {
 }
 
 async function compileLess(outDir = path.join(publicDir, "css")) {
-  const srcDir = path.join(__dirname, "..", "..", "less");
-  const files = ["client.less"];
-  const outFiles = files.map(f => f.replace(/\.less$/, ".css"));
+  const source = path.join(__dirname, "../../less/client.less");
+  const file = "client.css";
   await fs.mkdir(outDir, { recursive: true });
-  await cleanDir(outDir, f => outFiles.includes(f));
-  for (const file of files) {
-    const full = path.join(srcDir, file);
-    const data = await fs.readFile(full, "utf8");
-    const output = await less.render(data, { filename: full });
-    const { default: { plugins } } = await import("../../postcss.config.js");
-    const prefixed = await postcss(plugins).process(output.css, { from: undefined });
-    const cssName = file.replace(/\.less$/, ".css");
-    await fs.writeFile(path.join(outDir, cssName), prefixed.css, "utf8");
-  }
+  await cleanDir(outDir, name => name === file);
+  const data = await fs.readFile(source, "utf8");
+  const output = await less.render(data, { filename: source });
+  const { default: { plugins } } = await import("../../postcss.config.js");
+  const prefixed = await postcss(plugins).process(output.css, { from: undefined });
+  await fs.writeFile(path.join(outDir, file), prefixed.css);
 }
 
 async function compileReactCss(outDir = path.join(publicDir, "css")) {
@@ -54,13 +50,13 @@ async function compileReactCss(outDir = path.join(publicDir, "css")) {
     const result = await postcss([tailwindcss()]).process(data, {
       from: srcFile
     });
-    await fs.writeFile(path.join(outDir, "ide.css"), result.css, "utf8");
+    await fs.writeFile(path.join(outDir, "ide.css"), result.css);
   } catch (err) {
     throw new Error("Could not compile IDE CSS", { cause: err });
   }
 }
 
-async function compileJs(outDir = path.join(__dirname, "..", "..", "public", "js")) {
+async function compileJs(outDir = publicJsDir) {
   const srcDir = path.join(__dirname, "..", "client", "entrypoints");
   await fs.mkdir(outDir, { recursive: true });
   await Promise.all(browserOutputFiles.map(f => fs.rm(path.join(outDir, f), { force: true })));
@@ -84,37 +80,34 @@ async function compileJs(outDir = path.join(__dirname, "..", "..", "public", "js
   }
 }
 
-async function compileEjsScripts(outDir = path.join(__dirname, "..", "..", "public", "js")) {
+async function compileEjsScripts(outDir = publicJsDir) {
   const srcDir = path.join(__dirname, "..", "client", "entrypoints", "ejs-scripts");
+  let entries;
   try {
-    const files = (await fs.readdir(srcDir)).filter(f => f.endsWith(".js"));
-    await Promise.all(files.map(f => fs.rm(path.join(outDir, f), { force: true })));
-    await Promise.all(
-      files.map(file =>
-        esbuild.build({
-          bundle: true,
-          entryPoints: [path.join(srcDir, file)],
-          format: "esm",
-          external: ["./client-options.js"],
-          outfile: path.join(outDir, file)
-        })
-      )
-    );
+    entries = await fs.readdir(srcDir);
   } catch (err) {
-    if (err.code !== "ENOENT") {
-      throw err;
-    }
+    if (err.code === "ENOENT") return;
+    throw err;
   }
+  const files = entries.filter(file => file.endsWith(".js"));
+  await Promise.all(files.map(file => fs.rm(path.join(outDir, file), { force: true })));
+  await Promise.all(files.map(file => esbuild.build({
+    bundle: true,
+    entryPoints: [path.join(srcDir, file)],
+    format: "esm",
+    external: ["./client-options.js"],
+    outfile: path.join(outDir, file)
+  })));
 }
 
-async function copyAce(outDir = path.join(__dirname, "..", "..", "public", "js", "ace")) {
+async function copyAce(outDir = path.join(publicJsDir, "ace")) {
   const srcDir = path.dirname(require.resolve("ace-builds/src-min-noconflict/ace.js"));
   await fs.rm(outDir, { recursive: true, force: true });
   await fs.mkdir(outDir, { recursive: true });
   await fs.cp(srcDir, outDir, { recursive: true });
 }
 
-async function copyMooParserWasm(outDir = path.join(__dirname, "..", "..", "public", "js", "parsers")) {
+async function copyMooParserWasm(outDir = path.join(publicJsDir, "parsers")) {
   const mooWasm = require.resolve("tree-sitter-moo/wasm");
   const runtimeWasm = require.resolve("web-tree-sitter/web-tree-sitter.wasm");
   const runtimeJs = path.join(path.dirname(runtimeWasm), "web-tree-sitter.js");

@@ -29,12 +29,13 @@ const logger = named("client-app");
 const packageJsonPath = path.join(__dirname, "..", "package.json");
 
 function getPackageVersion() {
+  let packageJson;
   try {
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-    return packageJson?.version || "0.0.0";
+    packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
   } catch {
-    return "0.0.0";
+    // The fallback also covers standalone installs without package metadata.
   }
+  return packageJson?.version || "0.0.0";
 }
 
 /** Constants **/
@@ -105,21 +106,14 @@ export async function start(options = {}) {
       logger.error("error while checking for autocomplete file ", err);
     }
   }
-  const vDesc = "dome-client.js v" + app.get("version");
-  if (ip) {
-    await listen(server, port, ip);
-    logger.info(vDesc + " (node " + process.version + ") listening on ip " + ip + " and port " + port);
-    if (config.ssl) {
-      await listen(sslServer, httpsPort, ip);
-      logger.info(vDesc + " (node " + process.version + ") listening on ip " + ip + " and port " + httpsPort);
-    }
-  } else {
-    await listen(server, port);
-    logger.info(vDesc + " (node " + process.version + ") listening on port " + port);
-    if (config.ssl) {
-      await listen(sslServer, httpsPort);
-      logger.info(vDesc + " (node " + process.version + ") listening on port " + httpsPort);
-    }
+  const description = "dome-client.js v" + app.get("version") + " (node " + process.version + ")";
+  const host = ip ? [ip] : [];
+  const bindDescription = ip ? " on ip " + ip + " and port " : " on port ";
+  await listen(server, port, ...host);
+  logger.info(description + " listening" + bindDescription + port);
+  if (config.ssl) {
+    await listen(sslServer, httpsPort, ...host);
+    logger.info(description + " listening" + bindDescription + httpsPort);
   }
   status.startStatusPolling();
   return {
@@ -135,10 +129,8 @@ export async function stop() {
   await close(server);
   await close(httpsMgr);
   await close(sslServer);
-  if (uncaughtExceptionBound) {
-    process.removeListener("uncaughtException", onUncaughtException);
-    uncaughtExceptionBound = false;
-  }
+  process.removeListener("uncaughtException", onUncaughtException);
+  uncaughtExceptionBound = false;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

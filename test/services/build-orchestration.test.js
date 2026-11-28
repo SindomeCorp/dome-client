@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import less from "less";
-import build from "../../src/services/build.js";
+import build, { compileReactCss } from "../../src/services/build.js";
 import { browserOutputFiles } from "../../src/services/browser-entry-manifest.js";
 
 test("the real asset build preserves the served release on failure and publishes a complete retry", async (t) => {
@@ -82,4 +82,51 @@ test("a failed asset rollback preserves the last good backup and both errors", a
     return true;
   });
   assert.equal(await fs.readFile(backup, "utf8"), "previous stylesheet");
+});
+
+test("an asset backup failure stops publication and preserves served assets", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "dome-assets-test-"));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const output = path.join(directory, "public");
+  const client = path.join(output, "css", "client.css");
+  await fs.mkdir(path.dirname(client), { recursive: true });
+  await fs.writeFile(client, "previous stylesheet");
+  const failure = Object.assign(new Error("fixture backup blocked"), { code: "EACCES" });
+  const rename = fs.rename.bind(fs);
+  t.mock.method(fs, "rename", (source, target) => {
+    if (source === client) throw failure;
+    return rename(source, target);
+  });
+
+  await assert.rejects(build({ output }), (error) => error === failure);
+  assert.equal(await fs.readFile(client, "utf8"), "previous stylesheet");
+  assert.deepEqual(await fs.readdir(path.join(output, "js")), []);
+  assert.deepEqual(await fs.readdir(directory), ["public"]);
+});
+
+test("the build publishes styles into a fresh output directory", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "dome-assets-test-"));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const output = path.join(directory, "public");
+
+  await build({ output });
+
+  const clientCss = await fs.readFile(path.join(output, "css", "client.css"), "utf8");
+  assert.ok(clientCss.length > 100);
+  assert.ok((await fs.stat(path.join(output, "css", "ide.css"))).size > 100);
+});
+
+test("IDE CSS still uses its source directory when the process starts elsewhere", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "dome-assets-test-"));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const original = process.cwd();
+  try {
+    process.chdir(directory);
+    await compileReactCss(directory);
+  } finally {
+    process.chdir(original);
+  }
+
+  const ideCss = await fs.readFile(path.join(directory, "ide.css"), "utf8");
+  assert.match(ideCss, /\.bg-bg-canvas\s*\{/);
 });
