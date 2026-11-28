@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { createOutputApp } from "../../test-support/output-app.js";
 import { setupOutputToolbar } from "../../src/client/features/output-windows/toolbar.js";
+import { VirtualOutputView } from "../../src/client/features/output-windows/virtual-view.js";
 import { recordText } from "../../src/client/features/output-windows/history.js";
 import { exportSnapshot } from "../../src/client/features/output-windows/history-tools.js";
 import { clearClientBuffer } from "../../src/client/features/terminal/button-workflows.js";
@@ -722,6 +723,38 @@ test("Television routes complete ANSI-formatted screen broadcasts and preserves 
   assert.equal(manager.views.secondary.index.length, 5);
   assert.equal(manager.views.main.index.length, 2);
   assert.equal(recordText(manager.views.secondary.index.at(0)), "On the large wall screen: a broadcast");
+});
+
+test("virtual output coalesces frames and ignores a late measurement after destruction", (t) => {
+  const { window: win } = new JSDOM("<div id=\"output\"></div>", { pretendToBeVisual: true });
+  t.after(() => win.close());
+  const doc = win.document;
+  const element = doc.querySelector("#output");
+  const frames = new Map();
+  let nextFrame = 0;
+  t.mock.method(win, "requestAnimationFrame", (callback) => {
+    frames.set(++nextFrame, callback);
+    return nextFrame;
+  });
+  const cancelFrame = t.mock.method(win, "cancelAnimationFrame", (id) => frames.delete(id));
+  let notifyContainer;
+  win.ResizeObserver = class {
+    constructor(callback) { this.callback = callback; }
+    observe(target) { if (target === element) notifyContainer = this.callback; }
+    disconnect() {}
+  };
+
+  const view = new VirtualOutputView({ element, client: { preferences: {} }, win, name: "secondary" });
+  doc.dispatchEvent(new win.Event("selectionchange"));
+  notifyContainer([]);
+  assert.deepEqual([...frames.keys()], [1], "selection and resize share a pending frame");
+
+  view.destroy();
+  assert.deepEqual(cancelFrame.mock.calls.map(({ arguments: args }) => args), [[1]]);
+  assert.equal(frames.size, 0);
+  notifyContainer([]);
+  doc.dispatchEvent(new win.Event("selectionchange"));
+  assert.equal(frames.size, 0, "callbacks cannot queue layout for a retired pane");
 });
 
 test("the toolbar cancels pending layout work when its output panel is destroyed", async (t) => {
