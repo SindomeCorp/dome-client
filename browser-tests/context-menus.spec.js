@@ -2056,6 +2056,55 @@ test("context menus: real Options reload rejects capture names inside a characte
   expect((await fixtureState(page)).commands).toEqual(connected.commands);
 });
 
+test("context menus: a non-array file import keeps the previous selection actions", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  const config = {
+    version: 1,
+    rules: [],
+    profiles: [{
+      id: "local-copy",
+      label: "Local copy",
+      rules: [],
+      selectionActions: [{ id: "copy", label: "Copy selected text", type: "client-action", action: "clipboard.copy", input: "selection" }]
+    }]
+  };
+  const openOptions = async () => {
+    await page.locator("#button-client-options").click();
+    await page.locator("#client-options-tab-context").click();
+  };
+  const closeOptions = () => page.locator("#button-client-options-close").click();
+  const importConfig = async (name) => {
+    await setContextSection(page, "advanced");
+    await page.locator("#context-menu-file").setInputFiles({
+      name, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(config))
+    });
+  };
+  await openOptions();
+  await importConfig("local-copy.json");
+  await setContextSection(page, "basic");
+  await page.locator("#context-menu-override").check();
+  await page.locator("#context-menu-profile").selectOption("local-copy");
+  const active = page.locator("#context-menu-active");
+  await expect(active).toHaveText("Active Profile: Local copy (Override)");
+
+  config.profiles[0].selectionActions = false;
+  await importConfig("invalid-local-copy.json");
+  await expect(page.locator("#context-menu-error")).toContainText("profiles[0].selectionActions: expected an array of at most 24 actions");
+  await expect(active).toHaveText("Active Profile: Local copy (Override)");
+  await closeOptions();
+  const text = "Selection fixture after rejected import";
+  await socketFeed(page, text + "\n");
+  await page.locator("#lineBuffer [data-output-id]").getByText(text, { exact: true }).evaluate((row) => {
+    row.focus();
+    document.getSelection().selectAllChildren(row);
+  });
+  await openSelection(page);
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
+});
+
 test("context menus: failed Options reload applies intervening OOB and cannot restore a reset session", async ({ page }) => {
   let paused = false;
   let release;

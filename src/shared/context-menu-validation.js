@@ -60,7 +60,7 @@ export function interpolateCommand(action, rule, values) {
 }
 
 function actions(items, captures, selection, path) {
-  check(Array.isArray(items) && items.length <= 24, path, "expected at most 24 actions");
+  check(Array.isArray(items) && items.length <= 24, path, "expected an array of at most 24 actions");
   const ids = new Set();
   return items.map((item, index) => {
     const location = path + "[" + index + "]";
@@ -140,7 +140,8 @@ export function validateContextMenus(value) {
     for (const id of profile.rules) for (const related of rules.get(id).relatedContexts || []) {
       check(profile.rules.includes(related.rule), path + ".rules", "related contexts must use a rule in the same profile");
     }
-    profiles.set(profile.id, { ...profile, selectionActions: actions(profile.selectionActions || [], {}, true, path + ".selectionActions") });
+    const selection = profile.selectionActions === undefined ? [] : profile.selectionActions;
+    profiles.set(profile.id, { ...profile, selectionActions: actions(selection, {}, true, path + ".selectionActions") });
   });
   return { rules, profiles };
 }

@@ -24,6 +24,7 @@ All notable changes to this project will be documented in this file.
 - Keep wider rows in a nowrap output block from jumping back when a narrower row reaches its horizontal scroll limit or arrives while the block is scrolled.
 - Apply the selected theme when opening the IDE and load Ambience in both editor modes.
 - Show why Open in Scratchpad is unavailable when the IDE disables it, including when the game-status service is off.
+- Reject context menu imports with invalid selection actions and keep the previous configuration active.
 
 ## 2026-11-27
 

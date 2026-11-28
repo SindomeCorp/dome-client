@@ -64,6 +64,16 @@ test("named captures distinguish escaped literals, character classes, and lookbe
   }
 });
 
+test("selection actions must be an array when the profile declares them", () => {
+  const profile = { id: "local", label: "Local fixture", rules: [] };
+  const read = (candidate) => validateContextMenus({ version: 1, rules: [], profiles: [candidate] }).profiles.get("local");
+  assert.deepEqual(read(profile).selectionActions, []);
+  assert.deepEqual(read({ ...profile, selectionActions: [] }).selectionActions, []);
+  for (const selectionActions of [false, null, 0, "", {}]) {
+    assert.throws(() => read({ ...profile, selectionActions }), /profiles\[0\]\.selectionActions: expected an array of at most 24 actions/);
+  }
+});
+
 test("separate role files have exact action ordering, delimiters and safe typed interpolation", async () => {
   const expected = {
     player: { object: [], verb: [], property: [] },
