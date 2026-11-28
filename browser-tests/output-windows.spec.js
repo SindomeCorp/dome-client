@@ -358,6 +358,34 @@ test("companion Find, filters, themes, media, pruning and clearing use the share
   await popup.close();
 });
 
+test("closing Find clears the highlight even when the next result waits for indexing", async ({ page }) => {
+  await page.evaluate(() => window.outputTest.feed("first needle\nsecond needle\n"));
+  await page.locator("#button-output-find").click();
+  const query = page.locator("#output-find-query");
+  await query.fill("needle");
+  await expect(page.locator("#output-find-count")).toHaveText("1 of 2");
+  await expect(page.locator("#lineBuffer mark")).toHaveText("needle");
+
+  await page.evaluate(() => {
+    const index = Promise.withResolvers();
+    window.releaseFindIndex = index.resolve;
+    window.outputTest.manager.whenIndexed = () => {
+      window.findJumpWaiting = true;
+      return index.promise;
+    };
+  });
+  await query.press("Enter");
+  await page.waitForFunction(() => window.findJumpWaiting);
+  await page.locator("#output-find-close").click();
+  await page.evaluate(async () => {
+    window.releaseFindIndex();
+    await new Promise(requestAnimationFrame);
+  });
+  await expect(page.locator("#output-find")).toBeHidden();
+  await expect(page.locator("#lineBuffer mark")).toHaveCount(0);
+  expect(await page.evaluate(() => window.outputTest.manager.views.main.highlight)).toBeNull();
+});
+
 test("main Find locates popped-out output and reload closes the companion without restoring a popup", async ({ page }) => {
   await page.evaluate(async () => {
     window.outputTest.manager.updateSettings({ open: true, selected: ["team-chat"] });

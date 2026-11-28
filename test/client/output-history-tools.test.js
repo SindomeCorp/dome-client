@@ -47,6 +47,59 @@ test("Find searches unmounted output, scopes results, and clears old highlights"
   assert.equal(doc.querySelector("#output-find").classList.contains("hide"), true);
 });
 
+test("Find keeps pending jumps scoped to the active search and route", async (t) => {
+  for (const action of ["close", "change query", "newer result", "routing change", "output arrives"]) {
+    await t.test(action, async (t) => {
+      const { manager, feed, doc, win } = await createOutputApp(t);
+      await feed("first needle\nsecond needle\nreplacement\n");
+      manager.tools.open();
+      const form = doc.querySelector("#output-find");
+      const query = doc.querySelector("#output-find-query");
+      query.value = "needle";
+      query.dispatchEvent(new win.Event("input"));
+      await expectText(doc.querySelector("#output-find-count"), "1 of 2");
+      const view = manager.views.main;
+      const previous = view.highlight;
+      assert.equal(previous.id, 1);
+
+      let queued = Promise.withResolvers();
+      let indexed = Promise.withResolvers();
+      const waitForIndex = manager.whenIndexed.bind(manager);
+      t.mock.method(manager, "whenIndexed", () => {
+        queued.resolve();
+        return indexed.promise;
+      });
+      form.dispatchEvent(new win.Event("submit", { cancelable: true }));
+      await queued.promise;
+      const stale = indexed;
+      if (action === "close") {
+        doc.querySelector("#output-find-close").click();
+      } else if (action === "change query") {
+        query.value = "replacement";
+        query.dispatchEvent(new win.Event("input"));
+      } else if (action === "newer result") {
+        queued = Promise.withResolvers();
+        indexed = Promise.withResolvers();
+        form.dispatchEvent(new win.Event("submit", { cancelable: true }));
+        await queued.promise;
+        indexed.resolve();
+        await new Promise(resolve => setImmediate(resolve));
+        assert.deepEqual(view.highlight, previous);
+      } else if (action === "routing change") {
+        manager.updateSettings({ open: true, selected: ["team-chat"] });
+        await waitForIndex();
+      } else {
+        manager.tools.changed();
+      }
+      stale.resolve();
+      await new Promise(resolve => setImmediate(resolve));
+      if (action === "output arrives") assert.equal(view.highlight.id, 2);
+      else if (action === "close" || action === "routing change") assert.equal(view.highlight, null);
+      else assert.deepEqual(view.highlight, previous);
+    });
+  }
+});
+
 test("pruning selected native text clears the selection with an explanation", async (t) => {
   const { manager, client, doc, feed, messages } = await createOutputApp(t);
   await feed("one\ntwo\nthree\nfour\nfive\n");

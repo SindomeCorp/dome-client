@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Keep rejected pastes and newlines out of undo history when a local IDE editor reaches its line limit.
 - Keep keyboard focus inside the VMS save dialog, restore it on close, and let Enter activate Cancel without saving.
 - Open the correct IDE reference on modifier-click when a variable or property name includes `this`.
+- Prevent delayed Find jumps from restoring an old highlight after closing Find, changing the query, or jumping again.
 
 ## 2026-11-27
 

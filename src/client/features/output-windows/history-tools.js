@@ -78,6 +78,7 @@ export function setupHistoryTools(manager) {
   let debounce;
   let refreshTimer;
   let searchSignature;
+  let pendingJump;
   let previousFocus;
   let disposed = false;
   const listeners = [];
@@ -99,8 +100,10 @@ export function setupHistoryTools(manager) {
     selected = ((selected + delta) % matches.length + matches.length) % matches.length;
     const match = matches.at(selected);
     if (!match) return;
+    const jump = pendingJump = {};
     await manager.whenIndexed();
-    if (disposed) return;
+    // A newer jump or a changed search can make the indexed result obsolete.
+    if (disposed || pendingJump !== jump) return;
     const record = manager.history.get(match.id);
     if (record) {
       const panel = manager.panelFor(record);
@@ -122,6 +125,7 @@ export function setupHistoryTools(manager) {
     const controller = searchController = new AbortController();
     const needle = query.value;
     if (!incremental) {
+      pendingJump = null;
       searchSignature = signature;
       searchPending = false;
       matches = emptyMatches();
@@ -163,6 +167,7 @@ export function setupHistoryTools(manager) {
     search();
   }
   function close() {
+    pendingJump = null;
     searchController?.abort();
     matches = emptyMatches();
     selected = -1;
@@ -184,6 +189,7 @@ export function setupHistoryTools(manager) {
   bind(form, "submit", (event) => { event.preventDefault(); go(1); });
   for (const input of [query, scope, matchCase]) {
     bind(input, "input", () => {
+      pendingJump = null;
       clearTimeout(refreshTimer);
       refreshTimer = null;
       clearTimeout(debounce);
@@ -254,6 +260,7 @@ export function setupHistoryTools(manager) {
   }
 
   function changed({ reset = false, routing = false } = {}) {
+    if (reset || routing) pendingJump = null;
     clipboard.changed({ reset, routing });
     const secondary = scope.querySelector("[value=secondary]");
     secondary.disabled = !manager.isSplitOpen();
