@@ -3270,3 +3270,41 @@ test("the real Wasm parser ignores unrelated messages and parses missing source 
   });
   expect(replies).toEqual([{ id: 1, annotations: [] }, { id: 3, annotations: [] }]);
 });
+
+test("the real IDE restores theme and tab layout after reopening", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  const openEditor = async (id) => {
+    const popup = page.waitForEvent("popup", { timeout: 8000 });
+    await socketFeed(page, "#$# edit name: Appearance upload: @program #" + id + ":appearance\r\nreturn 12;\r\n.\r\n");
+    const ide = await popup;
+    await expect(ide.getByRole("tab", { name: /Appearance/ })).toBeVisible();
+    return ide;
+  };
+  const expectAppearance = async (ide, dark, orientation) => {
+    await expect(ide.locator("html")).toHaveClass(dark ? /\bdark\b/ : /^(?!.*\bdark\b)/);
+    await expect(ide.getByRole("tablist")).toHaveAttribute("aria-orientation", orientation);
+    const activeOrientation = orientation === "vertical" ? "Vertical tabs (left)" : "Horizontal tabs (top)";
+    await expect(ide.getByRole("button", { name: activeOrientation })).toHaveAttribute("aria-pressed", "true");
+  };
+
+  let ide = await openEditor(12);
+  await expectAppearance(ide, true, "horizontal");
+  await ide.getByRole("button", { name: "Switch to light mode" }).click();
+  await ide.getByRole("button", { name: "Vertical tabs (left)" }).click();
+  await expectAppearance(ide, false, "vertical");
+  await ide.close();
+
+  ide = await openEditor(13);
+  await expectAppearance(ide, false, "vertical");
+  await ide.getByRole("button", { name: "Switch to dark mode" }).click();
+  await ide.getByRole("button", { name: "Horizontal tabs (top)" }).click();
+  await expectAppearance(ide, true, "horizontal");
+  await ide.close();
+
+  ide = await openEditor(14);
+  await expectAppearance(ide, true, "horizontal");
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
+});
