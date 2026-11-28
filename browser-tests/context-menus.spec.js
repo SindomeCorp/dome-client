@@ -2047,7 +2047,7 @@ test("the real individual verb editor keeps canceled edits and saves only on exp
   await editorInput.press("Control+s");
   const saved = () => fixtureState(page).then(({ commands }) => commands.slice(connected.commands.length));
   await expect.poll(saved).toEqual(["@program #12:preview", "return 13;\n."]);
-  await expect(status).toHaveText(/^Last Save: /);
+  await expect(status).toHaveText(/^Last Save: \d{1,2}:\d{1,2}:\d{1,2}$/);
   expect(await wouldWarnOnUnload()).toBe(false);
   const closed = editor.waitForEvent("close", { timeout: 5000 });
   await close.click().catch((error) => {
@@ -2055,6 +2055,32 @@ test("the real individual verb editor keeps canceled edits and saves only on exp
   });
   await closed;
   expect(await saved()).toEqual(["@program #12:preview", "return 13;\n."]);
+});
+
+test("the real individual verb editor applies MOO mode and clears corrected diagnostics", async ({ page }) => {
+  await page.context().route("**/editor/verb/**", async (route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("parser", "moo");
+    await route.fulfill({ response: await route.fetch({ url: url.href }) });
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=windows");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  const popup = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: Classic diagnostics upload: @program #12:preview\r\nreturn 3 4;\r\n.\r\n");
+  const editor = await popup;
+  const holder = editor.locator("#verb-editor-holder");
+  await expect.poll(() => holder.evaluate((element) => {
+    const aceEditor = element.env?.editor;
+    if (!aceEditor) return null;
+    return [aceEditor.session.getMode().$id, aceEditor.getOption("tabSize"), aceEditor.getOption("useSoftTabs")];
+  })).toEqual(["ace/mode/moo", 2, true]);
+  const annotations = () => holder.evaluate((element) => element.env.editor.session.getAnnotations());
+  await expect.poll(annotations).toContainEqual({ row: 0, column: 9, text: "MOO syntax error", type: "error" });
+  await holder.evaluate((element) => element.env.editor.setValue("return 3;", -1));
+  await expect.poll(annotations).toEqual([]);
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
 });
 
 test("the real basic editor keeps local edits when replacement is canceled and uploads only on Save", async ({ page }) => {

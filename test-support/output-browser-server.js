@@ -71,7 +71,7 @@ app.get("/editor/:type/", async (req, res) => {
     const template = req.params.type === "verb" ? "verb" : "basic";
     const html = await ejs.renderFile(root + `views/editors/${template}.ejs`, {
       req, meta: { title: "Editor fixture", description: "Local test", keywords: "test" }, decache: (value) => value,
-      editor: { readonly: req.params.type === "basic-readonly", parser: "" }
+      editor: { readonly: req.params.type === "basic-readonly", parser: req.query.parser === "moo" ? "moo" : "" }
     });
     return res.type("html").send(html.replace(/<link[^>]+fonts\.googleapis[^>]+>/g, ""));
   }
