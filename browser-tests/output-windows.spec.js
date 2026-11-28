@@ -1214,11 +1214,16 @@ test("downloaded media previews work independently and load only when opened", a
 });
 
 test("Player, GM, Coder, and Custom filter views retain selections across groups", async ({ page }) => {
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.locator("#button-client-options").click();
-  await page.getByRole("tab", { name: "Output Windows", exact: true }).click();
+  const outputTab = page.getByRole("tab", { name: "Output Windows", exact: true });
+  await outputTab.click();
   const player = page.getByRole("tab", { name: /^Player Filters/ });
   const admin = page.getByRole("tab", { name: /^GM Filters/ });
   const custom = page.getByRole("tab", { name: /^Custom Filters/ });
+  const customPanel = page.locator("#output-custom-panel");
+  await expect(customPanel).toBeHidden();
   await expect(player).toHaveAttribute("aria-selected", "true");
   await expect(player).toHaveText("Player Filters [0/13]");
   await expect(page.getByLabel("Grid Output", { exact: true })).toBeVisible();
@@ -1244,6 +1249,9 @@ test("Player, GM, Coder, and Custom filter views retain selections across groups
   await player.press("ArrowRight");
   await expect(admin).toBeFocused();
   await expect(admin).toHaveAttribute("aria-selected", "true");
+  await admin.press("Shift");
+  await expect(admin).toBeFocused();
+  await expect(admin).toHaveAttribute("aria-selected", "true");
   await admin.press("ArrowRight");
   await expect(coder).toBeFocused();
   await expect(coder).toHaveAttribute("aria-selected", "true");
@@ -1253,13 +1261,21 @@ test("Player, GM, Coder, and Custom filter views retain selections across groups
   await expect(player).toHaveText("Player Filters [1/13]");
   await expect(admin).toHaveText("GM Filters [1/33]");
   await custom.click();
+  await expect(customPanel).toBeVisible();
+  await expect(customPanel).toHaveAttribute("aria-labelledby", "output-filter-tab-custom");
   await page.getByLabel("Name", { exact: true }).fill("My output");
   await page.getByLabel("Pattern (without / delimiters)", { exact: true }).fill("^my output");
   await page.getByRole("button", { name: "Add filter", exact: true }).click();
   await expect(custom).toHaveText("Custom Filters [0/1]");
   await page.getByLabel("My output", { exact: true }).check();
   await expect(custom).toHaveText("Custom Filters [1/1]");
-  await player.click();
+  await expect(customPanel.getByRole("button", { name: "Edit My output" })).toBeVisible();
+  await expect(customPanel.getByRole("button", { name: "Delete My output" })).toBeVisible();
+  await page.getByRole("tab", { name: "General", exact: true }).click();
+  await outputTab.click();
+  await expect(player).toHaveAttribute("aria-selected", "true");
+  await expect(customPanel).toBeHidden();
+  await expect(custom).toHaveText("Custom Filters [1/1]");
   await expect(page.getByLabel("OOC Chat", { exact: true })).toBeChecked();
   await page.locator("#output-layout").selectOption("right");
   await page.locator("#button-client-options-close").click();
@@ -1267,6 +1283,7 @@ test("Player, GM, Coder, and Custom filter views retain selections across groups
   await expect(page.locator("#secondaryBuffer")).toContainText("player line");
   await expect(page.locator("#secondaryBuffer")).toContainText("puppet line");
   await expect(page.locator("#secondaryBuffer")).toContainText("my output line");
+  expect(pageErrors).toEqual([]);
 });
 
 test("double-clicking either output pane toggles pause and restores the input cursor", async ({ page }) => {

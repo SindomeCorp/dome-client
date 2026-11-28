@@ -437,6 +437,46 @@ test("context menus: underlines work in both panes, pop-outs and redocked output
   await expect.poll(() => underlinedText(main)).toBe("#123");
 });
 
+test("context menu JSON download exports the active rules and releases its Blob URL", async ({ page }) => {
+  await start(page);
+  await editConfig(page, (config) => {
+    config.profiles.find(({ id }) => id === "player").label = "Export fixture Player";
+  });
+  const active = await page.evaluate(() => window.outputTest.client.contextMenus.config);
+  const draft = page.locator("#context-menu-json");
+  await draft.fill("{unfinished draft");
+  await page.evaluate(() => {
+    const create = window.URL.createObjectURL.bind(window.URL);
+    const revoke = window.URL.revokeObjectURL.bind(window.URL);
+    window.contextExportUrls = [];
+    window.contextRevokedUrls = [];
+    window.URL.createObjectURL = (blob) => {
+      const url = create(blob);
+      window.contextExportUrls.push({ type: blob.type, url });
+      return url;
+    };
+    window.URL.revokeObjectURL = (url) => {
+      window.contextRevokedUrls.push(url);
+      revoke(url);
+    };
+  });
+
+  const download = page.waitForEvent("download");
+  await page.locator("#context-menu-export").click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe("context-menus.json");
+  let body = "";
+  for await (const chunk of await file.createReadStream()) body += chunk;
+  const exported = JSON.parse(body);
+  expect(exported).toEqual(active);
+  expect(exported.profiles.find(({ id }) => id === "player").label).toBe("Export fixture Player");
+  const urls = await page.evaluate(() => ({ created: window.contextExportUrls, revoked: window.contextRevokedUrls }));
+  expect(urls.created).toHaveLength(1);
+  expect(urls.created[0].type).toBe("application/json");
+  expect(urls.revoked).toEqual([urls.created[0].url]);
+  await expect(draft).toHaveValue("{unfinished draft");
+});
+
 test("context menus: configured rules target ANSI-split references and preserve native no-match menus", async ({ page }) => {
   await start(page);
   await feed(page, "#12\u001b[31m3:look\u001b[0m #123.name #123 ordinary\n");
@@ -2136,11 +2176,25 @@ test("the real VMS save dialog keeps keyboard focus and uploads only on submit",
 
   await save.click();
   await input.fill("Fixture VMS note");
+  await ide.evaluate(() => {
+    window.fixtureVmsUploadSocket = window.uploadSocket;
+    window.uploadSocket = null;
+  });
+  await ide.keyboard.press("Enter");
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("Fixture VMS note");
+  expect((await fixtureState(page)).commands).toEqual(before);
+  await ide.evaluate(() => { window.uploadSocket = window.fixtureVmsUploadSocket; });
   await ide.keyboard.press("Enter");
   await expect(dialog).toHaveCount(0);
   await expect(save).toBeFocused();
-  await expect.poll(async () => (await fixtureState(page)).commands.slice(before.length))
-    .toEqual(["@program #12:preview", "return 1;\n.", "Fixture VMS note"]);
+  const programSave = ["@program #12:preview", "return 1;\n.", "Fixture VMS note"];
+  const saves = () => fixtureState(page).then(({ commands }) => commands.slice(before.length));
+  await expect.poll(saves).toEqual(programSave);
+
+  await save.click();
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(saves).toEqual([...programSave, ...programSave]);
 
   const inlineNote = ide.getByRole("textbox", { name: "VMS note", exact: true });
   await expect(inlineNote).toHaveValue("Fixture VMS note");
@@ -2149,8 +2203,15 @@ test("the real VMS save dialog keeps keyboard focus and uploads only on submit",
   await expect(inlineNote).toBeVisible();
   await ide.locator(".ace_editor").click();
   await expect(inlineNote).toHaveCount(0);
-  expect((await fixtureState(page)).commands.slice(before.length))
-    .toEqual(["@program #12:preview", "return 1;\n.", "Fixture VMS note"]);
+  expect(await saves()).toEqual([...programSave, ...programSave]);
+
+  await ide.getByRole("button", { name: "Add Scratch", exact: true }).click();
+  await expect(ide.getByRole("tab", { name: /Temporary Scratch Pad/ })).toHaveAttribute("aria-selected", "true");
+  await ide.locator(".ace_editor:visible").click();
+  await ide.keyboard.insertText("fixture scratch");
+  await save.click();
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(saves).toEqual([...programSave, ...programSave, "@scratch Temporary Scratch Pad", "fixture scratch\n."]);
 });
 
 test("the real IDE modifier click resolves this without opening lookalike variables", async ({ page }) => {
