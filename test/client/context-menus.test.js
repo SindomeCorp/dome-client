@@ -784,6 +784,40 @@ test("an older JSON file read cannot supersede a newer import, reload or teardow
   }
 });
 
+test("corrupt saved context menu preferences recover without losing local profile rules", async (t) => {
+  const { createOutputApp } = await import("../../test-support/output-app.js");
+  const { client, doc, win, messages } = await createOutputApp(t);
+  const config = referenceContextMenus();
+  config.profiles.push({ ...config.profiles[0], id: "local-tools", label: "Local Tools" });
+  const localConfig = JSON.stringify(config);
+  const preferenceKey = CONTEXT_MENUS_KEY + "-preferences";
+  win.localStorage.setItem(CONTEXT_MENUS_KEY, localConfig);
+  win.localStorage.setItem(preferenceKey, "{invalid JSON");
+
+  const controller = setupContextMenus({ client, doc, win, matcherFactory: localMatcher });
+  t.after(() => controller.destroy());
+  await controller.ready;
+  assert.ok(messages.includes("Unable to read saved context menus."));
+  assert.equal(controller.active().source, "Fallback");
+  assert.equal(controller.active().profile.id, "player");
+  const override = doc.querySelector("#context-menu-override");
+  const profiles = doc.querySelector("#context-menu-profile");
+  assert.equal(override.checked, false);
+  assert.equal(profiles.disabled, true);
+  assert.equal(win.localStorage.getItem(CONTEXT_MENUS_KEY), localConfig);
+  assert.ok((await controller.match("Synthetic #123")).some((rule) => rule.text === "#123"));
+
+  override.checked = true;
+  override.dispatchEvent(new win.Event("change"));
+  profiles.value = "local-tools";
+  profiles.dispatchEvent(new win.Event("change"));
+  assert.equal(controller.active().source, "Override");
+  assert.equal(controller.active().profile.id, "local-tools");
+  assert.deepEqual(JSON.parse(win.localStorage.getItem(preferenceKey)), {
+    override: true, profile: "local-tools", underline: false
+  });
+});
+
 test("local rules and override remain usable for the session when storage is read-only", async (t) => {
   const { controller, doc, window } = await fixture(t);
   const saved = window.localStorage.getItem(CONTEXT_MENUS_KEY);

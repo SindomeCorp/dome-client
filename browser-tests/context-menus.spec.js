@@ -2020,7 +2020,9 @@ test("the real individual verb editor keeps canceled edits and saves only on exp
   await expect(status).toHaveText(/^Last Save: /);
   expect(await wouldWarnOnUnload()).toBe(false);
   const closed = editor.waitForEvent("close", { timeout: 5000 });
-  await close.click();
+  await close.click().catch((error) => {
+    if (!editor.isClosed()) throw error; // Firefox can close before acknowledging the click.
+  });
   await closed;
   expect(await saved()).toEqual(["@program #12:preview", "return 13;\n."]);
 });
