@@ -949,6 +949,55 @@ test("dragging the splitter tracks the chosen side and keeps the clamped size af
   await expect(divider).toHaveAttribute("aria-valuenow", "15");
 });
 
+test("the real client Page Up and Page Down move focus through virtual scrollback", async ({ page }) => {
+  const connections = async () => (await (await page.request.get("/fixture/state")).json()).connections;
+  const previousConnections = await connections();
+  await page.goto("/?entry=real");
+  await expect.poll(connections).toBeGreaterThan(previousConnections);
+  const lines = Array.from({ length: 79 }, (_, index) => "Keyboard fixture row " + (index + 1));
+  lines[1] += " https://example.invalid/navigation";
+  await page.request.post("/fixture/data", { data: { text: lines.join("\n") + "\n" } });
+  const output = page.locator("#lineBuffer");
+  const exactRow = (number) => output.locator(`[data-output-id="${number}"]`);
+  await expect(exactRow(79)).toHaveText(lines[78]);
+  await exactRow(79).focus();
+
+  const move = async (key, number) => {
+    await page.keyboard.press(key);
+    await expect(exactRow(number)).toBeFocused();
+    await expect(exactRow(number)).toHaveText(lines[number - 1]);
+    await expect(exactRow(number)).toHaveAttribute("aria-posinset", String(number));
+    await expect(exactRow(number)).toHaveAttribute("aria-setsize", "79");
+  };
+  for (const number of [59, 39, 19, 1]) await move("PageUp", number);
+  await move("ArrowUp", 1);
+
+  // Tab reaches the pane before a row has focus.
+  await output.focus();
+  await expect(output).toBeFocused();
+  await move("PageDown", 21);
+  await move("PageUp", 1);
+  await move("ArrowDown", 2);
+
+  const link = exactRow(2).getByRole("link");
+  await link.focus();
+  const handled = (element) => !element.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key: "PageDown", bubbles: true, cancelable: true
+  }));
+  expect(await link.evaluate(handled)).toBe(false);
+  await expect(link).toBeFocused();
+
+  await exactRow(2).focus();
+  for (const number of [22, 42, 62, 79]) await move("PageDown", number);
+  await move("ArrowDown", 79);
+  expect(await exactRow(79).evaluate(handled)).toBe(true);
+  await page.getByRole("button", { name: "Resume main scrolling" }).click();
+  await expect(page.getByRole("button", { name: "Pause main scrolling" })).toBeVisible();
+  await page.request.post("/fixture/data", { data: { text: "Keyboard fixture row 80\n" } });
+  await expect(exactRow(80)).toHaveText("Keyboard fixture row 80");
+  await expect(exactRow(80)).toBeInViewport();
+});
+
 test("native selection stays mounted while new output arrives", async ({ page }) => {
   await page.evaluate(() => window.outputTest.feed("select this text\nsecond line\n"));
   await page.evaluate(() => {
