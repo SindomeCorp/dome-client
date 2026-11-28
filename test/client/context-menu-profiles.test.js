@@ -43,7 +43,8 @@ test("named captures distinguish escaped literals, character classes, and lookbe
     ["[(?<ghost>)](?<object>#[0-9]+)", "(#17"],
     ["[\\]x(?<ghost>)](?<object>#[0-9]+)", "]#17"],
     ["\\(\\?<ghost>(?<object>#[0-9]+)", "(?<ghost>#17"],
-    ["(?<=tag:)(?<object>#[0-9]+)", "tag:#17"]
+    ["(?<=tag:)(?<object>#[0-9]+)", "tag:#17"],
+    ["(?<=tag:)[(?<ghost>)](?<object>#[0-9]+)", "tag:(#17"]
   ]) {
     const document = {
       version: 1,
