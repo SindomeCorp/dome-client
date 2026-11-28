@@ -118,7 +118,8 @@ export function validateContextMenus(value) {
     fields(rule.captures, Object.keys(rule.captures || {}), path + ".captures");
     const names = groupNames(rule.pattern);
     for (const [name, type] of Object.entries(rule.captures)) {
-      check(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && Object.hasOwn(types, type) && names.has(name), path + ".captures." + name, "expected a declared named group with a supported type");
+      const validType = typeof type === "string" && Object.hasOwn(types, type);
+      check(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && validType && names.has(name), path + ".captures." + name, "expected a declared named group with a supported type");
     }
     const checked = { ...rule, actions: actions(rule.actions, rule.captures, false, path + ".actions") };
     for (const field of ["heading", "target"]) if (rule[field] !== undefined) {

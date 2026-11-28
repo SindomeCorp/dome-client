@@ -1999,7 +1999,7 @@ test("context menus: a slow JSON import cannot overwrite the latest Options rule
   await expect.poll(() => page.evaluate(() => JSON.parse(window.localStorage.getItem("dc-context-menus")).profiles[0].label)).toBe("Latest rules");
 });
 
-test("context menus: real Options reload rejects capture names inside a character class", async ({ page }) => {
+test("context menus: real Options reload rejects malformed capture declarations", async ({ page }) => {
   const initial = await fixtureState(page);
   await page.goto("/?entry=real");
   await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
@@ -2047,6 +2047,11 @@ test("context menus: real Options reload rejects capture names inside a characte
   config.rules[0].captures.ghost = "object-id";
   await reload();
   await expect(error).toContainText("rules[0].captures.ghost: expected a declared named group");
+
+  config.rules[0].pattern = "\\[(?<object>#[0-9]+)\\]";
+  config.rules[0].captures = { object: ["object-id"] };
+  await reload();
+  await expect(error).toContainText("rules[0].captures.object: expected a declared named group with a supported type");
   await expect(active).toHaveText("Active Profile: Local brackets (Override)");
   await closeOptions();
   await expect.poll(async () => {

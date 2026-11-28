@@ -25,6 +25,7 @@ All notable changes to this project will be documented in this file.
 - Apply the selected theme when opening the IDE and load Ambience in both editor modes.
 - Show why Open in Scratchpad is unavailable when the IDE disables it, including when the game-status service is off.
 - Reject context menu imports with invalid selection actions and keep the previous configuration active.
+- Reject context menu rules that declare a capture type as a non-string value.
 
 ## 2026-11-27
 

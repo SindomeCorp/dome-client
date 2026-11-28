@@ -75,6 +75,18 @@ test("selection actions must be an array when the profile declares them", () => 
   }
 });
 
+test("capture types must be supported strings before they are used as registry keys", () => {
+  const rule = { id: "object", priority: 1, pattern: "(?<object>#[0-9]+)", actions: [] };
+  const read = (type) => validateContextMenus({
+    version: 1, rules: [{ ...rule, captures: { object: type } }], profiles: []
+  }).rules.get("object");
+
+  assert.equal(read("object-id").captures.object, "object-id");
+  for (const invalid of [["object-id"], [["object-id"]], { toString: "object-id" }, "unknown", false, null]) {
+    assert.throws(() => read(invalid), /rules\[0\]\.captures\.object: expected a declared named group with a supported type/);
+  }
+});
+
 test("separate role files have exact action ordering, delimiters and safe typed interpolation", async () => {
   const expected = {
     player: { object: [], verb: [], property: [] },
