@@ -1797,6 +1797,49 @@ for (const [mode, name, useBlankPopup] of [
   });
 }
 
+test("the real individual verb editor keeps canceled edits and saves only on explicit Ctrl+S", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=windows");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  const popup = page.waitForEvent("popup", { timeout: 8000 });
+  await socketFeed(page, "#$# edit name: Classic fixture upload: @program #12:preview\r\nreturn 12;\r\n.\r\n");
+  const editor = await popup;
+  const holder = editor.locator("#verb-editor-holder");
+  const text = () => holder.evaluate((element) => element.env?.editor.getValue());
+  const status = editor.locator("#verb-status-holder");
+  await expect.poll(text).toBe("return 12;");
+  await holder.click();
+  await editor.keyboard.press("Control+1");
+  await expect(status).toHaveText("VIM MODE");
+  await editor.keyboard.press("Control+0");
+  await expect(status).toHaveText("REGULAR MODE");
+
+  await editor.keyboard.press("Control+a");
+  await editor.keyboard.insertText("return 13;");
+  await expect.poll(text).toBe("return 13;");
+  const wouldWarnOnUnload = () => editor.evaluate(() => !window.dispatchEvent(new Event("beforeunload", { cancelable: true })));
+  expect(await wouldWarnOnUnload()).toBe(true);
+  const close = editor.getByRole("button", { name: "CLOSE", exact: true });
+  let warning;
+  editor.once("dialog", async (dialog) => { warning = dialog.message(); await dialog.dismiss(); });
+  await close.click();
+  expect(warning).toBe("Abort editing and lose your changes?");
+  await expect.poll(text).toBe("return 13;");
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
+
+  await holder.click();
+  await editor.keyboard.press("Control+s");
+  const saved = () => fixtureState(page).then(({ commands }) => commands.slice(connected.commands.length));
+  await expect.poll(saved).toEqual(["@program #12:preview", "return 13;\n."]);
+  await expect(status).toHaveText(/^Last Save: /);
+  expect(await wouldWarnOnUnload()).toBe(false);
+  const closed = editor.waitForEvent("close", { timeout: 5000 });
+  await close.click();
+  await closed;
+  expect(await saved()).toEqual(["@program #12:preview", "return 13;\n."]);
+});
+
 test("real player drops pre-ready output and profile markers during a transport reconnect", async ({ page }) => {
   const initial = await fixtureState(page);
   await page.goto("/?entry=real");
@@ -1888,6 +1931,44 @@ test("the real IDE adds a blank Scratch tab and explicitly requests the saved Sc
   await expect.poll(() => scratchEditor.evaluate((element) => element.env.editor.getValue())).toBe("return 1;");
   await ide.getByRole("button", { name: "View Scratch", exact: true }).click();
   await expect.poll(commands).toEqual([...saved, "@edit me.scratch"]);
+});
+
+test("the real IDE applies wrap, Vim and Options font changes to both mounted tabs", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  const popup = page.waitForEvent("popup", { timeout: 8000 });
+  await socketFeed(page, "#$# edit name: First settings tab upload: @program #12:first\r\nreturn 12;\r\n.\r\n");
+  const ide = await popup;
+  const editors = ide.locator(".ace_editor");
+  await expect(editors).toHaveCount(1);
+  await socketFeed(page, "#$# edit name: Second settings tab upload: @program #13:second\r\nreturn 13;\r\n.\r\n");
+  await expect(editors).toHaveCount(2);
+  const values = () => editors.evaluateAll((elements) => elements.map(({ env: { editor } }) => ({
+    wrap: editor.getSession().getUseWrapMode(),
+    vim: editor.getKeyboardHandler()?.$id === "ace/keyboard/vim",
+    font: editor.getOption("fontFamily").replaceAll("'", ""),
+    text: editor.getValue()
+  })));
+  const expectSettings = (wrap, vim, font) => expect.poll(values).toEqual([
+    { wrap, vim, font, text: "return 12;" }, { wrap, vim, font, text: "return 13;" }
+  ]);
+  await expectSettings(false, false, "Source Code Pro");
+  await ide.getByRole("button", { name: "Enable word wrap" }).click();
+  await ide.keyboard.press("Control+1");
+  await expectSettings(true, true, "Source Code Pro");
+
+  await page.locator("#button-client-options").click();
+  await page.getByRole("tab", { name: "Presentation", exact: true }).click();
+  await page.locator("#editorfont-option select").selectOption("monaco");
+  await page.locator("#button-client-options-close").click();
+  await expectSettings(true, true, "Monaco");
+
+  await ide.getByRole("button", { name: "Disable word wrap" }).click();
+  await ide.keyboard.press("Control+0");
+  await expectSettings(false, false, "Monaco");
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
 });
 
 test("the real IDE keeps display preferences usable when storage rejects writes and reads", async ({ page }) => {
