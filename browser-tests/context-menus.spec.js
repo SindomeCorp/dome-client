@@ -1864,7 +1864,7 @@ test("the real IDE requests and caches verb and property hover previews", async 
   await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
   const before = (await fixtureState(page)).commands.length;
   const opened = page.waitForEvent("popup");
-  await socketFeed(page, "#$# edit name: hover fixture upload: @program #12:look\r\nthis:preview();\r\n$tools.label;\r\n.\r\n");
+  await socketFeed(page, "#$# edit name: hover fixture upload: @program #12:look\r\nthis:preview();\r\n$tools.label;\r\nreturn 1;\r\n.\r\n");
   const ide = await opened;
   const editor = ide.locator(".ace_editor:visible");
   await expect(editor).toBeVisible();
@@ -1908,6 +1908,10 @@ test("the real IDE requests and caches verb and property hover previews", async 
     object: "$tools", property: "label", value: "Fixture property"
   }) + "\n");
   await expect(overlay).toContainText("$tools.label");
+  await expect(overlay.locator("pre")).toHaveText("Fixture property");
+  await hoverCode(2, 3);
+  await expect(overlay).toHaveCount(0);
+  await hoverCode(1, 9);
   await expect(overlay.locator("pre")).toHaveText("Fixture property");
   const editorText = () => editor.evaluate((element) => element.env.editor.getValue());
   await socketFeed(page, "#$# edit name: second hover fixture upload: @program #13:another\r\nreturn 2;\r\n.\r\n");
