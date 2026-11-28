@@ -687,9 +687,11 @@ test("a rejected context-menu Copy reports the error without sending input and r
     window.contextCopyAttempts = [];
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
-      value: { async writeText(text) {
-        window.contextCopyAttempts.push(text);
-        if (window.contextCopyAttempts.length === 1) throw new Error("Fixture denied clipboard access");
+      value: { writeText(text) {
+        const attempt = window.contextCopyAttempts.push(text);
+        if (attempt === 1) return Promise.reject(new Error("Fixture denied clipboard access"));
+        if (attempt === 2) throw new Error("Fixture clipboard unavailable");
+        return Promise.resolve();
       } }
     });
   });
@@ -703,14 +705,14 @@ test("a rejected context-menu Copy reports the error without sending input and r
   });
 
   const copy = page.getByRole("menuitem", { name: "Copy selected text" });
-  await openSelection(page);
-  await copy.click();
-  await expect(copy).toHaveCount(0);
-  await expect(page.locator("#context-menu-error")).toHaveText("Fixture denied clipboard access");
-  await openSelection(page);
-  await copy.click();
-  await expect(copy).toHaveCount(0);
-  expect(await page.evaluate(() => window.contextCopyAttempts)).toEqual(["selected output copy fixture", "selected output copy fixture"]);
+  for (const error of ["Fixture denied clipboard access", "Fixture clipboard unavailable", null]) {
+    await openSelection(page);
+    await copy.click();
+    await expect(copy).toHaveCount(0);
+    await expect(page.locator("#lineBuffer")).toBeFocused();
+    if (error) await expect(page.locator("#context-menu-error")).toHaveText(error);
+  }
+  expect(await page.evaluate(() => window.contextCopyAttempts)).toEqual(Array(3).fill("selected output copy fixture"));
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
   expect(pageErrors).toEqual([]);
 });
@@ -1872,6 +1874,24 @@ test("the real IDE browses and edits object verbs and properties through the fix
     "#$# SDWC%%PROPS%%#12",
     "@edit #12.label"
   ]);
+
+  const ideErrors = [];
+  ide.on("pageerror", (error) => ideErrors.push(error.message));
+  await ide.evaluate(() => {
+    window.malformedObjectReplies = [];
+    window.addEventListener("message", ({ data }) => {
+      if (data?.payload?.fixtureMissingObject) window.malformedObjectReplies.push(data.type);
+    });
+  });
+  const malformed = JSON.stringify({ fixtureMissingObject: true });
+  await socketFeed(page, "#$# SDWC%%VERBS%%" + malformed + "\r\n"
+    + "#$# SDWC%%PROPS%%" + malformed + "\r\n");
+  await expect.poll(() => ide.evaluate(() => window.malformedObjectReplies))
+    .toEqual(["ide-object-verbs", "ide-object-props"]);
+  await expect(label).toBeVisible();
+  await ide.getByRole("tab", { name: "Object Browser" }).click();
+  await expect(look).toBeVisible();
+  expect(ideErrors).toEqual([]);
 });
 
 test("the real MOO editor indents block code and leaves comment text aligned", async ({ page }) => {
