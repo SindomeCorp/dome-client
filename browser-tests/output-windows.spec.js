@@ -653,6 +653,37 @@ test("unified download includes offscreen history once in arrival order", async 
   expect(html.includes("class=\"output-spacer\"")).toBe(false);
 });
 
+test("a failing native log download falls back to the same browser download", async ({ page }) => {
+  await page.evaluate(async () => {
+    await window.outputTest.feed("Browser fallback log fixture\n");
+    window.nativeLogDownloads = [];
+    window.revokedLogUrls = [];
+    window.DomeNative = {
+      downloadLog(filename, html) {
+        window.nativeLogDownloads.push({ filename, html });
+        throw new Error("Fixture native download failure");
+      }
+    };
+    const revoke = window.URL.revokeObjectURL.bind(window.URL);
+    window.URL.revokeObjectURL = (url) => {
+      window.revokedLogUrls.push(url);
+      revoke(url);
+    };
+  });
+  const ready = page.waitForEvent("download");
+  await page.locator("#button-save-mini").click();
+  const download = await ready;
+  let html = "";
+  for await (const chunk of await download.createReadStream()) html += chunk;
+  expect(html).toContain("Browser fallback log fixture");
+  await expect.poll(() => page.evaluate(() => window.nativeLogDownloads)).toEqual([{
+    filename: download.suggestedFilename(),
+    html
+  }]);
+  await expect(page.locator("#output-announcements")).toHaveText("Log saved.");
+  await expect.poll(() => page.evaluate(() => window.revokedLogUrls)).toEqual([download.url()]);
+});
+
 test("drag resizing and a paused variable-height anchor remain usable", async ({ page }, testInfo) => {
   await page.evaluate(() => {
     window.outputTest.manager.updateSettings({ open: true });
