@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 - Keep IDE display preferences usable when browser storage is blocked.
 - Clear the alert when returning to focused output or a context menu without moving keyboard focus.
 - Keep the selected character and password when Add Character is canceled.
+- Keep context menus working when the matching worker sends a malformed or late reply.
 
 ### Added
 - Add wildcard @rewind menus for `[+][channel]` and `[-][channel]` tags in Player, GM and Programmer profiles.

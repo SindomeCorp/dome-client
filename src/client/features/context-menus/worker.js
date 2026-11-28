@@ -17,7 +17,7 @@ export function createContextMatcher({ workerFactory = () => new Worker("/js/con
       if (!worker) {
         worker = workerFactory();
         worker.addEventListener("message", ({ data }) => {
-          if (data.id !== active?.id) return;
+          if (!active || data?.id !== active.id) return;
           clearTimeout(active.timer);
           const job = active;
           active = null;
