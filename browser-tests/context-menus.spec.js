@@ -1733,6 +1733,56 @@ test("context menus: real bundle staff selection opens the existing IDE without 
   await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(["@scratch Temporary Scratch Pad", selected + "\n."]);
 });
 
+test("context menus: a background unsaved Scratchpad still warns on IDE close", async ({ page }) => {
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=ide");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
+  const text = "Scratchpad close fixture";
+  await socketFeed(page, text + "\n");
+  const output = page.locator("#lineBuffer [data-output-id]").getByText(text, { exact: true });
+  await output.evaluate((row) => {
+    row.focus();
+    document.getSelection().selectAllChildren(row);
+  });
+  await openSelection(page);
+  const popup = page.waitForEvent("popup");
+  await page.getByRole("menuitem", { name: "Open in Scratchpad" }).click();
+  const ide = await popup;
+  const scratch = ide.getByRole("tab", { name: /Temporary Scratch Pad/ });
+  await expect(scratch).toHaveAttribute("aria-selected", "true");
+  await expect(ide.getByText("Unsaved", { exact: true })).toBeVisible();
+
+  await socketFeed(page, "#$# edit name: Clean verb upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
+  const clean = ide.getByRole("tab", { name: /Clean verb/ });
+  await expect(clean).toHaveAttribute("aria-selected", "true");
+  await expect(ide.getByText("Saved", { exact: true })).toBeVisible();
+  const warnsOnUnload = () => ide.evaluate(() => !window.dispatchEvent(new Event("beforeunload", { cancelable: true })));
+  expect(await warnsOnUnload()).toBe(true);
+
+  const closeScratch = scratch.getByRole("button", { name: "Close Temporary Scratch Pad" });
+  let confirmation;
+  ide.once("dialog", async (dialog) => {
+    confirmation = dialog.message();
+    await dialog.dismiss();
+  });
+  await closeScratch.click();
+  expect(confirmation).toBe("Tab has unsaved changes. Close anyway?");
+  await expect(scratch).toBeVisible();
+  await expect(clean).toHaveAttribute("aria-selected", "true");
+  expect(await warnsOnUnload()).toBe(true);
+
+  ide.once("dialog", (dialog) => dialog.accept());
+  await closeScratch.click();
+  await expect(scratch).toHaveCount(0);
+  await expect(clean).toHaveAttribute("aria-selected", "true");
+  await expect.poll(warnsOnUnload).toBe(false);
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
+});
+
 test("context menus: the real IDE reports when its scratchpad is disabled", async ({ page }) => {
   await page.context().route("**/editor/ide/", async (route) => {
     const url = new URL(route.request().url());
@@ -3317,6 +3367,11 @@ test("the real IDE restores theme and tab layout after reopening", async ({ page
   await ide.getByRole("button", { name: "Switch to light mode" }).click();
   await ide.getByRole("button", { name: "Vertical tabs (left)" }).click();
   await expectAppearance(ide, false, "vertical");
+  // These storage keys are shared with existing installations.
+  await expect.poll(() => ide.evaluate(() => [
+    window.localStorage.getItem("ide-dark"),
+    window.localStorage.getItem("ide-orientation")
+  ])).toEqual(["false", "left"]);
   await ide.close();
 
   ide = await openEditor(13);
