@@ -590,12 +590,16 @@ test("context menus: selection Scratchpad opens unsaved, warns immediately, and 
   await expect(editorShell).toHaveCSS("border-top-color", "rgb(226, 232, 240)");
   await expect(ide.getByText("Unsaved", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
-  const confirm = ide.waitForEvent("dialog").then(async (dialog) => {
-    expect(dialog.message()).toContain("unsaved");
-    await dialog.dismiss();
-  });
-  await ide.getByRole("button", { name: "Close", exact: true }).click();
-  await confirm;
+  const close = ide.getByRole("button", { name: "Close", exact: true });
+  const closeWithConfirmation = (response) => Promise.all([
+    ide.waitForEvent("dialog", { timeout: 5000 }).then(async (dialog) => {
+      const message = dialog.message();
+      await dialog[response]();
+      expect(message).toContain("unsaved");
+    }),
+    close.click()
+  ]);
+  await closeWithConfirmation("dismiss");
   await expect(ide.getByRole("tab")).toHaveCount(1);
   // A second selection creates a separate editor document, not a new MOO record.
   await page.bringToFront();
@@ -608,7 +612,26 @@ test("context menus: selection Scratchpad opens unsaved, warns immediately, and 
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
   await ide.getByRole("button", { name: "Save", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.contextSent.length)).toBe(2);
-  expect(await page.evaluate(() => window.contextSent)).toEqual([["input", "@scratch Temporary Scratch Pad"], ["input", "second selection\n."]]);
+  const saved = [["input", "@scratch Temporary Scratch Pad"], ["input", "second selection\n."]];
+  expect(await page.evaluate(() => window.contextSent)).toEqual(saved);
+  await expect(ide.getByText("Saved", { exact: true })).toBeVisible();
+
+  const unexpectedDialogs = [];
+  const recordDialog = async (dialog) => {
+    unexpectedDialogs.push(dialog.message());
+    await dialog.dismiss();
+  };
+  ide.on("dialog", recordDialog);
+  try {
+    await close.click();
+    await expect(ide.getByRole("tab")).toHaveCount(1);
+    expect(unexpectedDialogs).toEqual([]);
+  } finally {
+    ide.off("dialog", recordDialog);
+  }
+
+  await Promise.all([ide.waitForEvent("close", { timeout: 5000 }), closeWithConfirmation("accept")]);
+  expect(await page.evaluate(() => window.contextSent)).toEqual(saved);
 });
 
 test("context menus: profile notice is a centered translucent overlay without stealing focus or clicks", async ({ page }) => {
@@ -1555,8 +1578,12 @@ test("the real IDE browses and edits object verbs and properties through the fix
   const opened = page.waitForEvent("popup");
   await socketFeed(page, "#$# edit name: verb fixture upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
   const ide = await opened;
+  const save = ide.getByRole("button", { name: "Save", exact: true });
+  await expect(save).toBeVisible();
   await ide.getByRole("tab", { name: "Object Browser" }).click();
   await expect(ide.getByRole("heading", { name: "Object Browser" })).toBeVisible();
+  await expect(save).toHaveCount(0);
+  await ide.keyboard.press("Control+s");
   const preview = ide.getByRole("button", { name: "preview", exact: true });
   await expect(preview).toHaveCount(0);
   await ide.getByRole("button", { name: "Load Verbs" }).click();
@@ -1587,6 +1614,8 @@ test("the real IDE browses and edits object verbs and properties through the fix
   await socketFeed(page, "#$# edit name: property fixture upload: @set-note-text #12.preview\r\noriginal\r\n.\r\n");
   await ide.getByRole("tab", { name: "Property Browser" }).click();
   await expect(ide.getByRole("heading", { name: "Property Browser" })).toBeVisible();
+  await expect(save).toHaveCount(0);
+  await ide.keyboard.press("Control+s");
   await expect(preview).toHaveCount(0);
   await ide.getByRole("button", { name: "load props" }).click();
   await expect(preview).toBeVisible();
