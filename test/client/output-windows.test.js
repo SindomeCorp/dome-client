@@ -462,6 +462,62 @@ test("rendered text height excludes pane padding when following the newest outpu
   assert.equal(view.element.scrollTop, view.index.total - 375);
 });
 
+test("scaled scrollback redistributes gaps around distant selection endpoints", async (t) => {
+  const { manager, doc, feed } = await createOutputApp(t);
+  const view = manager.views.main;
+  Object.defineProperty(view.element, "clientHeight", { value: 400 });
+  view.element.style.padding = "0px";
+  await feed(Array.from({ length: 32 }, (_, i) => "row " + (i + 1)).join("\n") + "\n");
+  view.jump(1);
+  view.render();
+  const first = view.mounted.get(1).firstChild;
+  const last = view.mounted.get(32).firstChild;
+  const selection = doc.getSelection();
+  selection.setBaseAndExtent(last, 2, first, 1);
+
+  const rowHeight = 500_000;
+  for (let index = 0; index < 32; index++) view.index.measure(index, rowHeight);
+  const geometry = () => {
+    const gaps = [...view.rows.querySelectorAll(".output-spacer")];
+    assert.ok(gaps.every((gap) => parseFloat(gap.style.height) > 0 && gap.getAttribute("aria-hidden") === "true"));
+    const physical = [view.top, view.bottom, ...gaps]
+      .reduce((total, spacer) => total + parseFloat(spacer.style.height), view.mounted.size * rowHeight);
+    return { gaps, physical };
+  };
+  const visibleIds = () => [...view.rows.querySelectorAll("[data-output-id]")].map((node) => Number(node.dataset.outputId));
+
+  view.jump(16);
+  view.render();
+  assert.deepEqual(visibleIds(), [1, 15, 16, 32]);
+  assert.ok(Math.abs(view.logicalTop() - 15 * rowHeight) < 0.001);
+  const middle = geometry();
+  // CSS serializes million-pixel spacer heights with limited precision.
+  const cssRounding = 10;
+  assert.equal(middle.gaps.length, 2);
+  assert.ok(Math.abs(middle.physical - 8_000_000) <= cssRounding);
+  const anchorOffset = parseFloat(middle.gaps[0].style.height) + 2 * rowHeight;
+  assert.ok(Math.abs(view.element.scrollTop - anchorOffset) <= cssRounding, `scroll top ${view.element.scrollTop}, gap-adjusted anchor ${anchorOffset}`);
+  assert.equal(selection.anchorNode, last);
+  assert.equal(selection.anchorOffset, 2);
+  assert.equal(selection.focusNode, first);
+  assert.equal(selection.focusOffset, 1);
+
+  view.jump(32);
+  view.render();
+  assert.deepEqual(visibleIds(), [1, 31, 32]);
+  assert.equal(geometry().gaps.length, 1);
+
+  selection.removeAllRanges();
+  view.setPaused(false);
+  view.render();
+  assert.deepEqual(visibleIds(), [32]);
+  const tail = geometry();
+  assert.equal(tail.gaps.length, 0);
+  assert.ok(Math.abs(tail.physical - 8_000_000) <= cssRounding);
+  assert.equal(first.isConnected, false);
+  assert.equal(last.isConnected, true);
+});
+
 test("selected media endpoints remain selectable but release previews outside the viewport", async (t) => {
   const { manager, client, doc, feed } = await createOutputApp(t);
   client.preferences.imagePreview = true;
