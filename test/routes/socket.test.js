@@ -1473,31 +1473,55 @@ test("socket route connection lifecycle", async (t) => {
   });
 });
 
-test("disconnect during reverse lookup closes the provisional game connection", async (t) => {
-  const lookup = Promise.withResolvers();
-  const lookupStarted = Promise.withResolvers();
-  const moo = new EventEmitter();
-  moo.destroy = t.mock.fn(() => { moo.emit("close"); });
-  t.mock.method(net, "connect", () => {
-    process.nextTick(() => moo.emit("connect"));
-    return moo;
-  });
-  t.mock.method(dns.promises, "reverse", () => {
-    lookupStarted.resolve();
-    return lookup.promise;
-  });
-  const { connection } = await loadRoute();
-  const { socket, events } = createSocket();
-  const starting = connection(socket);
-  await lookupStarted.promise;
+test("provisional socket handles browser disconnect, game termination, and successful DNS", async (t) => {
+  for (const action of ["browser disconnect", "game end", "game close", "establish"]) {
+    await t.test(action, { timeout: 1000 }, async (t) => {
+      const lookup = Promise.withResolvers();
+      const moo = new EventEmitter();
+      moo.destroy = t.mock.fn(() => { moo.emit("close"); });
+      t.mock.method(net, "connect", () => {
+        process.nextTick(() => moo.emit("connect"));
+        return moo;
+      });
+      const reverse = t.mock.method(dns.promises, "reverse", () => lookup.promise);
+      const { connection } = await loadRoute({ multiMud: false, mudTlsEnabled: false });
+      const { socket, events } = createSocket();
+      let settled = false;
+      const starting = connection(socket);
+      starting.then(() => { settled = true; }, () => {});
+      await new Promise(setImmediate);
+      assert.deepEqual(reverse.mock.calls.map(({ arguments: args }) => args), [["127.0.0.1"]]);
+      assert.equal(settled, false, "connection remains provisional while DNS is pending");
+      assert.equal(moo.listenerCount("data"), 0);
 
-  socket.emit("disconnect", "transport close");
-  const destroyedOnDisconnect = moo.destroy.mock.callCount();
-  lookup.resolve(["old-host.fixture.invalid"]);
-  await starting;
-  moo.emit("data", Buffer.from("old output\n"));
+      if (action === "browser disconnect") socket.emit("disconnect", "transport close");
+      if (action === "game end") {
+        moo.emit("end");
+        moo.emit("close");
+      }
+      if (action === "game close") moo.emit("close");
+      lookup.resolve(["resolved.fixture.invalid"]);
+      await starting;
+      assert.equal(settled, true);
+      assert.equal(moo.listenerCount("close"), 1);
+      assert.equal(moo.listenerCount("end"), 1);
+      assert.equal(socket.listenerCount("disconnect"), 1);
 
-  assert.equal(destroyedOnDisconnect, 1);
-  assert.equal(Boolean(socket.isActive), false);
-  assert.equal(events.some(([event]) => event === "connected" || event === "data"), false);
+      if (action === "establish") {
+        assert.equal(socket.hostname, "resolved.fixture.invalid");
+        assert.equal(socket.isActive, true);
+        moo.emit("data", Buffer.from("fresh output\n"));
+        moo.emit("end");
+        moo.emit("close");
+        assert.deepEqual(events.map(([event]) => event), ["connected", "data", "disconnected"]);
+      } else {
+        assert.equal(socket.hostname, "127.0.0.1");
+        assert.equal(Boolean(socket.isActive), false);
+        assert.equal(moo.listenerCount("data"), 0);
+        moo.emit("data", Buffer.from("stale output\n"));
+        assert.deepEqual(events.map(([event]) => event), action === "browser disconnect" ? ["disconnect"] : ["disconnected"]);
+        assert.equal(moo.destroy.mock.callCount(), action === "browser disconnect" ? 1 : 0);
+      }
+    });
+  }
 });
