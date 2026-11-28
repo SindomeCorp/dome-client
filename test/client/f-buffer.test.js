@@ -282,6 +282,42 @@ test("parseSocketData does not show fade text for SDWC meta lines", async (t) =>
   assert.equal(client.buffer.innerHTML, "");
 });
 
+test("parseSocketData dispatches fragmented profile, ping and nowrap frames in order", async (t) => {
+  await loadOutputParser(t);
+  client.buffer.replaceChildren();
+  client.preferences.performanceBuffer = 0;
+  client.preferences.sdwcNowrapBlocks = true;
+  const effects = [];
+  client.contextMenus = {
+    setServerProfile: (id) => effects.push(["profile", id]),
+    resetSession: () => effects.push(["reset"])
+  };
+  client.health = { showStatus: (text) => effects.push(["status", text]) };
+  t.after(() => {
+    delete client.contextMenus;
+    delete client.health;
+  });
+
+  client.parseSocketData("before\r\n#$# SDWC%%CONTEXT-PRO");
+  assert.deepEqual(effects, []);
+  client.parseSocketData("FILE%%\"programmer\"\r\n#$# - PI");
+  assert.deepEqual(effects, [["profile", "programmer"]]);
+  client.parseSocketData("NG!\r\n#$# SDWC-START-NOWRAP\r\ninside\r\n#$# SDWC-");
+  assert.deepEqual(effects, [["profile", "programmer"], ["status", "pinged"]]);
+  client.parseSocketData("END-NOWRAP\r\n#$# SDWC%%CONTEXT-RESET\r\nafter\r\n");
+
+  assert.deepEqual(effects, [["profile", "programmer"], ["status", "pinged"], ["reset"]]);
+  const block = client.buffer.querySelector(".sdwc-nowrap-block");
+  assert.ok(block);
+  assert.equal(block.textContent, "inside");
+  assert.deepEqual([...client.buffer.children].map((node) => node.textContent), ["before", "inside", "after"]);
+
+  delete client.contextMenus;
+  client.parseSocketData("#$# SDWC%%CONTEXT-PROFILE%%\"gm\"\n#$# SDWC%%CONTEXT-RESET\nno menus\n");
+  assert.equal(client.buffer.lastElementChild.textContent, "no menus");
+  assert.equal(effects.length, 3);
+});
+
 test("parseSocketData streams lines into sdwc-nowrap-block while marker mode is active", async (t) => {
   await loadOutputParser(t);
   client.buffer.innerHTML = "";
