@@ -573,7 +573,7 @@ test("legacy output keyboard navigation clamps to its rows and opens each refere
     delete client.outputWindows;
     client.buffer.replaceChildren();
     client.contextMenus.bindOutput(client.buffer, window);
-    client.parseSocketData("References #123 then #456\nSecond row #789\n");
+    client.parseSocketData("References #123 then #456 https://example.test/manual\nSecond row #789\n");
   });
   const first = page.locator("#lineBuffer > div").filter({ hasText: "References #123 then #456" });
   const second = page.locator("#lineBuffer > div").filter({ hasText: "Second row #789" });
@@ -586,6 +586,17 @@ test("legacy output keyboard navigation clamps to its rows and opens each refere
   await page.keyboard.press("ArrowDown");
   await expect(second).toBeFocused();
   await page.keyboard.press("ArrowUp");
+  await expect(first).toBeFocused();
+
+  const link = first.getByRole("link");
+  await link.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(link).toBeFocused();
+  await first.focus();
+  const keepsDefault = await first.evaluate((element) => element.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key: "ArrowDown", shiftKey: true, bubbles: true, cancelable: true
+  })));
+  expect(keepsDefault).toBe(true);
   await expect(first).toBeFocused();
 
   await expect.poll(async () => {
@@ -1912,6 +1923,18 @@ test("the real classic verb editor updates its font from the parent Options", as
   await page.locator("#editorfont-option select").selectOption("monaco");
   await page.locator("#button-client-options-close").click();
   await expect.poll(font).toBe("Monaco");
+  const messageErrors = await editor.evaluate(() => {
+    const errors = [];
+    const captureError = (event) => errors.push(event.message);
+    window.addEventListener("error", captureError);
+    for (const data of [null, { type: "fixture-other-message", font: "standard" }]) {
+      window.dispatchEvent(new window.MessageEvent("message", { data }));
+    }
+    window.removeEventListener("error", captureError);
+    return errors;
+  });
+  expect(messageErrors).toEqual([]);
+  expect(await font()).toBe("Monaco");
   expect((await fixtureState(page)).commands).toEqual(connected.commands);
 });
 
