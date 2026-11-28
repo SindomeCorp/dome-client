@@ -102,7 +102,7 @@ test("height index supports measured rows, offsets, pruning and compaction", () 
   assert.equal(index.indexOfId(10001), -1);
   const backingRows = index.rows;
   index.prune(4500);
-  assert.equal(index.rows, backingRows, "keep the backing array while most rows are still retained");
+  assert.ok(index.rows === backingRows, "keep the backing array while most rows are still retained");
   index.prune(7000);
   assert.equal(index.length, 3001);
   assert.equal(index.total, 30_010);
@@ -152,7 +152,7 @@ test("height index keeps offsets relative to live scrollback after partial pruni
   checkLayout([[20, 7.5], [40, 42.5], [80, 12], [90, 19]]);
 
   index.prune(41);
-  assert.equal(index.rows, backingRows, "small prunes advance a cursor without copying the backing array");
+  assert.ok(index.rows === backingRows, "small prunes advance a cursor without copying the backing array");
   checkLayout([[80, 12], [90, 19]]);
 });
 
