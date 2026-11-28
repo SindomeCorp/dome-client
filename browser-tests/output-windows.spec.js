@@ -744,31 +744,40 @@ test("drag resizing and a paused variable-height anchor remain usable", async ({
 test("dragging the splitter tracks the chosen side and keeps the clamped size after reload", async ({ page }) => {
   const workspace = page.locator("#output-workspace");
   const divider = page.locator("#output-divider");
+  await workspace.evaluate((element) => { element.style.transform = "translate(12px, 14px)"; });
+  const liveSize = () => workspace.evaluate((element) => {
+    const value = element.style.getPropertyValue("--secondary-size");
+    return value.endsWith("%") ? Math.round(parseFloat(value)) : null;
+  });
   for (const [position, horizontal, expected, edge] of [
-    ["left", true, "42", 0.05], ["right", true, "58", 0.95],
-    ["top", false, "42", 0.05], ["bottom", false, "58", 0.95]
+    ["left", true, 42, 0.05], ["right", true, 58, 0.95],
+    ["top", false, 42, 0.05], ["bottom", false, 58, 0.95]
   ]) {
     await page.evaluate((value) => {
       window.outputTest.manager.updateSettings({ open: true, position: value, secondarySize: 30 });
     }, position);
     await expect(workspace).toHaveAttribute("data-position", position);
     const bounds = await workspace.boundingBox();
-    const drag = async (fraction) => {
+    expect(bounds.x).toBeGreaterThan(0);
+    expect(bounds.y).toBeGreaterThan(0);
+    const drag = async (fraction, expectedSize) => {
       const split = await divider.boundingBox();
       const middle = { x: split.x + split.width / 2, y: split.y + split.height / 2 };
       const x = horizontal ? bounds.x + bounds.width * fraction : middle.x;
       const y = horizontal ? middle.y : bounds.y + bounds.height * fraction;
       await page.mouse.move(middle.x, middle.y);
       await page.mouse.down();
-      await page.mouse.move(x, y, { steps: 3 });
-      await page.mouse.up();
+      try {
+        await page.mouse.move(x, y, { steps: 3 });
+        await expect.poll(liveSize).toBe(expectedSize);
+        await expect(divider).toHaveAttribute("aria-valuenow", String(expectedSize));
+      } finally {
+        await page.mouse.up();
+      }
     };
-    await drag(0.42);
-    await expect(divider).toHaveAttribute("aria-valuenow", expected);
-    await drag(1 - edge);
-    await expect(divider).toHaveAttribute("aria-valuenow", "85");
-    await drag(edge);
-    await expect(divider).toHaveAttribute("aria-valuenow", "15");
+    await drag(0.42, expected);
+    await drag(1 - edge, 85);
+    await drag(edge, 15);
   }
   await page.reload();
   await page.waitForFunction(() => window.outputTest);
