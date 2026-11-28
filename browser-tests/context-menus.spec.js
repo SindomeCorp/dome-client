@@ -477,6 +477,41 @@ test("context menu JSON download exports the active rules and releases its Blob 
   await expect(draft).toHaveValue("{unfinished draft");
 });
 
+test("overlong output keeps the native menu without blocking later reference matches", async ({ page }) => {
+  await start(page);
+  const output = page.locator("#lineBuffer [data-output-id]");
+  const copy = page.getByRole("menuitem", { name: "Copy to Clipboard", exact: true });
+  const copyReference = async (row, value) => {
+    await expect(row).toBeVisible();
+    await expect.poll(async () => {
+      await row.focus();
+      await page.keyboard.press("Shift+F10");
+      return copy.count();
+    }).toBe(1);
+    await page.keyboard.press("Enter");
+    await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe(value);
+  };
+
+  await feed(page, "#123 " + "x".repeat(32763) + "\n");
+  await copyReference(output.filter({ hasText: /^#123 / }), "#123");
+
+  await feed(page, "#456 " + "x".repeat(32764) + "\n");
+  await expect(page.locator("#context-menu-error"))
+    .toHaveText("Context line exceeds 32768 characters; native menus remain available.");
+  const rejected = output.filter({ hasText: /^#456 / });
+  await expect(rejected).toHaveCount(1);
+  await rejected.focus();
+  const native = await rejected.evaluate((element) => element.dispatchEvent(
+    new window.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true })
+  ));
+  expect(native).toBe(true);
+  await expect(page.getByRole("menu")).toHaveCount(0);
+
+  await feed(page, "Later #789\n");
+  await copyReference(output.filter({ hasText: "Later #789" }), "#789");
+  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+});
+
 test("context menus: configured rules target ANSI-split references and preserve native no-match menus", async ({ page }) => {
   await start(page);
   await feed(page, "#12\u001b[31m3:look\u001b[0m #123.name #123 ordinary\n");
