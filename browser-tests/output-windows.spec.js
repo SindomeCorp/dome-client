@@ -1183,8 +1183,28 @@ test("Player, GM, Coder, and Custom filter views retain selections across groups
   await expect(page.getByLabel("Television", { exact: true })).toBeVisible();
   const coder = page.getByRole("tab", { name: /^Coder Filters/ });
   await expect(coder).toHaveText("Coder Filters [0/6]");
-  await page.getByLabel("OOC Chat", { exact: true }).check();
-  await admin.click();
+  for (const [from, key, next] of [
+    [player, "ArrowLeft", custom], [custom, "ArrowRight", player],
+    [player, "End", custom], [custom, "Home", player]
+  ]) {
+    await from.press(key);
+    await expect(next).toBeFocused();
+    await expect(next).toHaveAttribute("aria-selected", "true");
+    await expect(next).toHaveAttribute("tabindex", "0");
+    await expect(from).toHaveAttribute("tabindex", "-1");
+  }
+  const ooc = page.getByLabel("OOC Chat", { exact: true });
+  await ooc.press("Space");
+  await expect(ooc).toBeChecked();
+  await expect(ooc).toBeFocused();
+  await player.press("ArrowRight");
+  await expect(admin).toBeFocused();
+  await expect(admin).toHaveAttribute("aria-selected", "true");
+  await admin.press("ArrowRight");
+  await expect(coder).toBeFocused();
+  await expect(coder).toHaveAttribute("aria-selected", "true");
+  await coder.press("ArrowLeft");
+  await expect(admin).toBeFocused();
   await page.getByLabel("Puppet [All]", { exact: true }).check();
   await expect(player).toHaveText("Player Filters [1/13]");
   await expect(admin).toHaveText("GM Filters [1/33]");
