@@ -1480,6 +1480,30 @@ test("double-clicking detached output requests focus for the opener command inpu
   await redockCompanion(popup);
 });
 
+test("paused secondary keeps its first available row when early history is pruned", async ({ page }) => {
+  await page.goto("/?pb=60");
+  await page.waitForFunction(() => window.outputTest);
+  await page.evaluate(() => window.outputTest.manager.updateSettings({ open: true, selected: ["ooc-chat"] }));
+  const secondary = page.locator("#secondaryBuffer");
+  const rows = secondary.locator("[data-output-id]");
+  await page.getByRole("button", { name: "Pause secondary scrolling", exact: true }).click();
+  await expect(secondary).toHaveClass(/scroll-disabled/);
+  await expect(page.locator("#output-secondary-help")).toBeVisible();
+
+  const text = (start, count) => Array.from({ length: count }, (_, index) =>
+    "[-][OOC-Chat] retained row " + (start + index)).join("\n") + "\n";
+  await page.evaluate((burst) => window.outputTest.feed(burst), text(1, 60));
+  await expect(rows.first()).toHaveText("[-][OOC-Chat] retained row 1");
+  await page.evaluate((burst) => window.outputTest.feed(burst), text(61, 5));
+  await expect(rows.first()).toHaveText("[-][OOC-Chat] retained row 6");
+  await expect.poll(() => secondary.evaluate((element) => element.scrollTop)).toBe(0);
+  await expect(page.getByRole("button", { name: "Resume secondary scrolling", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Resume secondary scrolling", exact: true }).click();
+  await expect(rows.last()).toHaveText("[-][OOC-Chat] retained row 65");
+  await expect.poll(() => secondary.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+});
+
 test("empty secondary uses its configured theme on load and shows pause state before its first match", async ({ page }) => {
   await page.evaluate(() => window.outputTest.manager.updateSettings({ open: true, selected: ["ooc-chat"] }));
   const secondary = page.locator("#secondaryBuffer");

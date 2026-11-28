@@ -650,7 +650,7 @@ test("double-click pause and resume in either pane return focus to the existing 
 });
 
 test("empty secondary uses its scroll surface for help and pause state before output arrives", async (t) => {
-  const { manager, doc, win, feed } = await createOutputApp(t);
+  const { client, manager, doc, win, feed } = await createOutputApp(t);
   manager.updateSettings({ open: true, selected: ["ooc-chat"] });
   const secondary = manager.views.secondary;
   const help = doc.querySelector("#output-secondary-help");
@@ -669,6 +669,18 @@ test("empty secondary uses its scroll surface for help and pause state before ou
   assert.equal(help.classList.contains("hide"), true);
   assert.equal(secondary.element.classList.contains("scroll-disabled"), true);
   assert.equal(secondary.unread, 1);
+  assert.equal(secondary.anchor, null);
+
+  client.preferences.performanceBuffer = 2;
+  await feed("[-][OOC-Chat] second matching line\n");
+  assert.equal(secondary.index.length, 2);
+  await feed("[-][OOC-Chat] third matching line\n");
+  assert.equal(manager.history.first, 2);
+  assert.equal(secondary.paused, true);
+  assert.equal(secondary.anchor?.id, 2);
+  assert.equal(secondary.anchor?.offset, 0);
+  assert.equal(secondary.index.at(0).id, 2);
+
   manager.clear();
   secondary.render();
   assert.equal(help.parentElement, secondary.element);
