@@ -189,3 +189,43 @@ test("openIDE closes a stale popup and reports when the replacement is blocked",
   assert.equal(client.ideWindow, null);
   assert.equal(closed, 1);
 });
+
+test("scratchpad availability feedback belongs to the current IDE window and origin", () => {
+  const origin = "http://localhost";
+  const popup = {};
+  const messages = [];
+  const client = { ideWindow: popup, health: { showStatus: (message) => messages.push(message) } };
+  let receive;
+  const win = {
+    location: { origin },
+    addEventListener(type, listener) {
+      if (type === "message") receive = listener;
+    }
+  };
+  setupIdeLauncher({ client, win });
+  const notice = { type: "ide-scratch-unavailable" };
+  receive({ origin, source: {}, data: notice });
+  receive({ origin: "http://other.invalid", source: popup, data: notice });
+  assert.deepEqual(messages, []);
+  receive({ origin, source: popup, data: notice });
+  assert.deepEqual(messages, ["Scratchpad is disabled by this client's existing IDE settings."]);
+});
+
+test("scratchpad disabled feedback uses local output when the status service is unavailable", () => {
+  for (const virtualOutput of [true, false]) {
+    const messages = [];
+    const ideWindow = {};
+    const client = { ideWindow, buffer: { append: (message) => messages.push(["legacy", message]) } };
+    if (virtualOutput) client.outputWindows = { appendLocal: (message) => messages.push(["virtual", message]) };
+    let receive;
+    const win = {
+      location: { origin: "http://localhost" },
+      addEventListener(type, listener) {
+        if (type === "message") receive = listener;
+      }
+    };
+    setupIdeLauncher({ client, win });
+    receive({ origin: win.location.origin, source: ideWindow, data: { type: "ide-scratch-unavailable" } });
+    assert.deepEqual(messages, [[virtualOutput ? "virtual" : "legacy", "Scratchpad is disabled by this client's existing IDE settings.\n"]]);
+  }
+});

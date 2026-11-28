@@ -1733,6 +1733,33 @@ test("context menus: real bundle staff selection opens the existing IDE without 
   await expect.poll(async () => (await fixtureState(page)).commands.slice(initial.commands.length)).toEqual(["@scratch Temporary Scratch Pad", selected + "\n."]);
 });
 
+test("context menus: the real IDE reports when its scratchpad is disabled", async ({ page }) => {
+  await page.context().route("**/editor/ide/", async (route) => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("scratch", "off");
+    await route.fulfill({ response: await route.fetch({ url: url.href }) });
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+  await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\n");
+  await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
+  await socketFeed(page, "Selected scratchpad fixture\n");
+  const selected = page.locator("#lineBuffer [data-output-id]").filter({ hasText: "Selected scratchpad fixture" });
+  await selected.evaluate((row) => {
+    row.focus();
+    document.getSelection().selectAllChildren(row);
+  });
+  await openSelection(page);
+  const popup = page.waitForEvent("popup");
+  await page.getByRole("menuitem", { name: "Open in Scratchpad" }).click();
+  const ide = await popup;
+  await expect(page.locator("#lineBuffer").getByText("Scratchpad is disabled by this client's existing IDE settings.", { exact: true })).toBeVisible();
+  await expect(ide.locator(".ace_editor")).toHaveCount(0);
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
+});
+
 test("context menus: reverse 2000-line virtual selection copies partial endpoints and opens the same unsaved scratchpad text", async ({ page, browserName }) => {
   await start(page, { clipboardStub: false });
   if (browserName === "chromium") await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
@@ -1994,10 +2021,13 @@ test("the real individual verb editor keeps canceled edits and saves only on exp
   const text = () => holder.evaluate((element) => element.env?.editor.getValue());
   const status = editor.locator("#verb-status-holder");
   await expect.poll(text).toBe("return 12;");
+  await editor.bringToFront();
   await holder.click();
-  await editor.keyboard.press("Control+1");
+  const editorInput = holder.locator(".ace_text-input");
+  await expect(editorInput).toBeFocused();
+  await editorInput.press("Control+1");
   await expect(status).toHaveText("VIM MODE");
-  await editor.keyboard.press("Control+0");
+  await editorInput.press("Control+0");
   await expect(status).toHaveText("REGULAR MODE");
 
   await editor.keyboard.press("Control+a");
@@ -2014,7 +2044,7 @@ test("the real individual verb editor keeps canceled edits and saves only on exp
   expect((await fixtureState(page)).commands).toEqual(connected.commands);
 
   await holder.click();
-  await editor.keyboard.press("Control+s");
+  await editorInput.press("Control+s");
   const saved = () => fixtureState(page).then(({ commands }) => commands.slice(connected.commands.length));
   await expect.poll(saved).toEqual(["@program #12:preview", "return 13;\n."]);
   await expect(status).toHaveText(/^Last Save: /);

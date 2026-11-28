@@ -107,7 +107,10 @@ export function setupIdeLauncher({
 
   win.addEventListener("message", (event) => {
     if (event.data?.type === "ide-scratch-unavailable" && event.source === ideWindow && event.origin === win.location.origin) {
-      client.health?.showStatus("Scratchpad is disabled by this client's existing IDE settings.");
+      const message = "Scratchpad is disabled by this client's existing IDE settings.";
+      if (client.health) client.health.showStatus(message);
+      else if (client.outputWindows) client.outputWindows.appendLocal(message + "\n");
+      else client.buffer?.append(message + "\n");
       return;
     }
     if (!(event.data && event.data.type === "ide-ready" && event.source === ideWindow)) {
