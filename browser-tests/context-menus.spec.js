@@ -1636,6 +1636,11 @@ test("the real MOO editor indents block code and leaves comment text aligned", a
   await expect.poll(() => editor.evaluate((element) => element.env.editor.session.getState(2))).toBe("comment");
   await ide.keyboard.type("f");
   await expect.poll(contents).toBe(comment + "f");
+
+  const block = "  if (x)\n    /* literal text\n      endif\n    */\n";
+  await replace(block + "        els");
+  await ide.keyboard.type("e");
+  await expect.poll(contents).toBe(block + "  else");
   expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
 });
 

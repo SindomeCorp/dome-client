@@ -533,3 +533,30 @@ test("MOO mode aligns an outer branch past a completed nested block", () => {
   assert.equal(doc.lines[5], "  else");
   assert.equal(doc.lines[2], "    endif");
 });
+
+test("MOO outdent ignores multiline literals with cold, partial and warm token caches", () => {
+  const mode = createMode();
+  const { EditSession } = ace.require("ace/edit_session");
+  for (const block of [
+    ["  if (outer)", "    /*", "      endif", "    */", "        else"],
+    ["  if (outer)", "    /**", "      endif", "    */", "        else"],
+    ["  try", "    \"example\\", "      except\\", "    \";", "        finally"]
+  ]) {
+    const lines = ["x = 1;", ...block];
+    const row = lines.length - 1;
+    for (const indexedRows of [0, 3, row]) {
+      const session = new EditSession(lines.join("\n"), mode);
+      try {
+        for (let index = 0; index < indexedRows; index++) {
+          session.getState(index);
+          session.getState(index);
+        }
+        assert.equal(session.bgTokenizer.currentLine, indexedRows);
+        mode.autoOutdent("start", session, row);
+        assert.equal(session.getLine(row), "  " + lines[row].trim());
+      } finally {
+        session.destroy();
+      }
+    }
+  }
+});

@@ -133,7 +133,20 @@ oop.inherits(Mode, TextMode);
         var opener = openers[keyword];
         var depth = 0;
 
+        // Ace may not have tokenized every preceding line yet. Reuse its
+        // valid prefix and read the remaining lexical states in order.
+        const firstUnindexed = Math.min(row, doc.bgTokenizer?.currentLine ?? 0);
+        const literalRows = new Set();
+        let state = firstUnindexed > 0 ? doc.getState(firstUnindexed - 1) : "start";
+        for (let lineIndex = firstUnindexed; lineIndex < row; lineIndex++) {
+            const line = doc.getLine(lineIndex);
+            if (state !== "start") literalRows.add(lineIndex);
+            state = this.$tokenizer.getLineTokens(line, state).state;
+        }
+
         for (var i = row - 1; i >= 0; i--) {
+            const inLiteral = i >= firstUnindexed ? literalRows.has(i) : i > 0 && doc.getState(i - 1) !== "start";
+            if (inLiteral) continue;
             var candidate = doc.getLine(i);
             if (candidate == null) continue;
 
