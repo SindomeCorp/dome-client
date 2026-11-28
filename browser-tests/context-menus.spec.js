@@ -182,9 +182,12 @@ test("context menus: login profile markers preserve output boundaries across coa
     { chunks: [fixture.notice + "\r\n" + user + "\r\n" + profile + "\r\n" + fixture.after + "\r\n"] },
     { chunks: [fixture.notice + "\r\n", user + "\r\n" + profile + "\r\n", fixture.after + "\r\n"] },
     { chunks: [fixture.notice + "\r", "\n" + user + "\r", "\n" + profile.slice(0, 26), profile.slice(26) + "\r", "\n" + fixture.after + "\r", "\n"] },
-    { chunks: [fixture.notice + "\r\n", "\r\n" + user + "\r\n" + profile + "\r\n" + fixture.after + "\r\n"], blankLines: 1 }
+    { chunks: [fixture.notice + "\r\n", "\r\n" + user + "\r\n" + profile + "\r\n" + fixture.after + "\r\n"], blankLines: 1 },
+    { chunks: [fixture.notice + "\n", "\n" + user + "\n" + profile + "\n" + fixture.after + "\n"], blankLines: 1 },
+    { chunks: [fixture.notice + "\r", user + "\r", profile + "\r", fixture.after + "\r"] },
+    { chunks: [fixture.notice + "\n" + user + "\n" + profile + "\n" + fixture.after], continuation: "\n" }
   ];
-  for (const [index, { chunks, blankLines = 0 }] of packets.entries()) {
+  for (const [index, { chunks, blankLines = 0, continuation }] of packets.entries()) {
     await socketFeed(page, "#$# SDWC%%CONTEXT-RESET\r\n");
     await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Player (Fallback)");
     const before = await page.locator("#lineBuffer [data-output-id]").count();
@@ -192,6 +195,10 @@ test("context menus: login profile markers preserve output boundaries across coa
     await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
     const notice = page.locator("#lineBuffer [data-output-id]").filter({ hasText: fixture.notice });
     const after = page.locator("#lineBuffer [data-output-id]").filter({ hasText: fixture.after });
+    if (continuation) {
+      await expect(after).toHaveCount(index);
+      await socketFeed(page, continuation);
+    }
     await expect(notice).toHaveCount(index + 1);
     await expect(after).toHaveCount(index + 1);
     await expect(notice.last()).toHaveText(fixture.notice);
