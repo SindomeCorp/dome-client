@@ -567,24 +567,51 @@ test("context menus: Options commands, global override, session reset and failed
 
 test("legacy output keyboard navigation clamps to its rows and opens each reference", async ({ page }) => {
   await start(page);
-  await page.evaluate(() => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const emptyKeepsDefault = await page.evaluate(() => {
     const { client, manager } = window.outputTest;
     manager.destroy();
     delete client.outputWindows;
     client.buffer.replaceChildren();
     client.contextMenus.bindOutput(client.buffer, window);
-    client.parseSocketData("References #123 then #456 https://example.test/manual\nSecond row #789\n");
+    client.preferences.sdwcNowrapBlocks = true;
+    const emptyKeepsDefault = client.buffer.dispatchEvent(new window.KeyboardEvent("keydown", {
+      key: "ArrowDown", bubbles: true, cancelable: true
+    }));
+    client.parseSocketData("References #123 then #456 https://example.test/manual\n" +
+      "#$# SDWC-START-NOWRAP\nGrid first #7\u001b[31m89\u001b[0m\nGrid second #987\n#$# SDWC-END-NOWRAP\nLast row #396\n");
+    return emptyKeepsDefault;
   });
+  expect(emptyKeepsDefault).toBe(true);
   const first = page.locator("#lineBuffer > div").filter({ hasText: "References #123 then #456" });
-  const second = page.locator("#lineBuffer > div").filter({ hasText: "Second row #789" });
+  const gridRows = page.locator("#lineBuffer > .sdwc-nowrap-block > div");
+  await expect(gridRows).toHaveText(["Grid first #789", "Grid second #987"]);
+  const last = page.locator("#lineBuffer > div").filter({ hasText: "Last row #396" });
   await expect(first).toHaveAttribute("tabindex", "-1");
   await first.focus();
   await page.keyboard.press("ArrowUp");
   await expect(first).toBeFocused();
-  await page.keyboard.press("ArrowDown");
-  await expect(second).toBeFocused();
-  await page.keyboard.press("ArrowDown");
-  await expect(second).toBeFocused();
+  for (const row of [gridRows.nth(0), gridRows.nth(1), last, last]) {
+    await page.keyboard.press("ArrowDown");
+    await expect(row).toBeFocused();
+  }
+  const boundaryKeepsDefault = await last.evaluate((element) => element.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key: "ArrowDown", bubbles: true, cancelable: true
+  })));
+  expect(boundaryKeepsDefault).toBe(false);
+  await expect(last).toBeFocused();
+  for (const row of [gridRows.nth(1), gridRows.nth(0)]) {
+    await page.keyboard.press("ArrowUp");
+    await expect(row).toBeFocused();
+  }
+  await expect.poll(async () => {
+    if (!await page.getByRole("menuitem").count()) await page.keyboard.press("Shift+F10");
+    return page.getByRole("menuitem").allTextContents();
+  }).toEqual(["Copy to Clipboard"]);
+  await page.keyboard.press("Enter");
+  await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#789");
+  await expect(gridRows.nth(0)).toBeFocused();
   await page.keyboard.press("ArrowUp");
   await expect(first).toBeFocused();
 
@@ -609,6 +636,7 @@ test("legacy output keyboard navigation clamps to its rows and opens each refere
   await page.keyboard.press("Enter");
   await expect.poll(() => page.evaluate(() => window.contextCopied)).toBe("#456");
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+  expect(errors).toEqual([]);
 });
 
 test("reference menus close after output pruning, Tab, or a click elsewhere", async ({ page }) => {

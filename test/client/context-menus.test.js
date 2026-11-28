@@ -1032,6 +1032,64 @@ test("output menus wait for current matches on initial render and profile change
   assert.deepEqual(errors, []);
 });
 
+test("output matching ignores a stale profile failure and reports identical current failures once", { timeout: 5000 }, async (t) => {
+  const config = referenceContextMenus();
+  config.profiles.push({ ...config.profiles[0], id: "staff", label: "Staff" });
+  const { controller, doc, window } = await fixture(t, JSON.stringify(config));
+  Object.defineProperty(window.navigator, "clipboard", { value: { async writeText() {} } });
+  const output = doc.createElement("div");
+  const texts = ["First #123", "Second #456", "Ready #789"];
+  const rows = texts.map((text) => {
+    const row = doc.createElement("div");
+    row.textContent = text;
+    output.append(row);
+    return row;
+  });
+  doc.body.append(output);
+
+  const started = Promise.withResolvers();
+  const outdated = Promise.withResolvers();
+  const completed = Promise.withResolvers();
+  const appended = Promise.withResolvers();
+  const report = t.mock.method(controller, "report");
+  const match = controller.match.bind(controller);
+  const calls = [];
+  controller.match = async (text) => {
+    calls.push(text);
+    if (calls.length === 1) { started.resolve(); return outdated.promise; }
+    if (text === texts[0] || text === texts[1]) throw new Error("Current matcher failure");
+    const result = await match(text);
+    if (text === texts[2]) completed.resolve();
+    else appended.resolve();
+    return result;
+  };
+
+  controller.bindOutput(output, window);
+  await started.promise;
+  controller.update({ override: true, profile: "staff" });
+  assert.equal(controller.active().profile.id, "staff");
+  // Reject before the scheduled row refresh so only the profile stamp has changed.
+  outdated.reject(new Error("Outdated matcher failure"));
+  await completed.promise;
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(calls, [texts[0], ...texts]);
+  assert.deepEqual(report.mock.calls.map(({ arguments: args }) => args), [["Current matcher failure"]]);
+  assert.equal(doc.querySelector("#context-menu-error").textContent, "Current matcher failure");
+
+  const menuKey = new window.KeyboardEvent("keydown", { key: "F10", shiftKey: true, bubbles: true, cancelable: true });
+  rows.at(-1).dispatchEvent(menuKey);
+  assert.equal(menuKey.defaultPrevented, true);
+  assert.ok(doc.querySelector("[role=menuitem]"));
+
+  const fresh = doc.createElement("div");
+  fresh.textContent = "Fresh #111";
+  output.append(fresh);
+  await appended.promise;
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(calls, [texts[0], ...texts, fresh.textContent]);
+  assert.equal(report.mock.callCount(), 1);
+});
+
 test("queued output removed and reattached before matching is not stranded in a pending cache entry", async (t) => {
   const { controller, doc, window } = await fixture(t);
   const output = doc.createElement("div");
