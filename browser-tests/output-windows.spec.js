@@ -824,6 +824,35 @@ test("Find ignores an older snapshot while the next query debounces", async ({ p
   expect(await page.evaluate(() => window.fixtureFindJumps)).toEqual([current]);
 });
 
+test("reopening Find does not jump on a query typed before closing", async ({ page }) => {
+  const connections = async () => (await (await page.request.get("/fixture/state")).json()).connections;
+  const previous = await connections();
+  await page.goto("/?entry=real");
+  await expect.poll(connections).toBeGreaterThan(previous);
+  await page.request.post("/fixture/data", { data: { text: "first needle\r\nsecond needle\r\n" } });
+  await expect(page.locator("#lineBuffer")).toContainText("second needle");
+  await page.locator("#button-output-find").click();
+  const query = page.locator("#output-find-query");
+  const count = page.locator("#output-find-count");
+  const mark = page.locator("#lineBuffer mark");
+  await expect(count).toBeEmpty();
+
+  // Keep the close and reopen inside the pending input debounce.
+  await query.evaluate((input) => {
+    input.value = "needle";
+    input.dispatchEvent(new Event("input"));
+    document.querySelector("#output-find-close").click();
+    document.querySelector("#button-output-find").click();
+  });
+  await expect(query).toBeFocused();
+  await expect(count).toHaveText("1 of 2");
+  await page.evaluate(() => new Promise((resolve) => window.setTimeout(resolve, 180)));
+  await expect(mark).toHaveCount(0);
+  await query.press("Enter");
+  await expect(count).toHaveText("2 of 2");
+  await expect(mark).toHaveText("needle");
+});
+
 test("closing Find clears the highlight even when the next result waits for indexing", async ({ page }) => {
   await page.evaluate(() => window.outputTest.feed("first needle\nsecond needle\n"));
   await page.locator("#button-output-find").click();

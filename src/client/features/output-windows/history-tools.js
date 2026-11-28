@@ -173,6 +173,7 @@ export function setupHistoryTools(manager) {
     searchedThrough = 0;
     searching = false;
     searchPending = false;
+    clearTimeout(debounce);
     clearTimeout(refreshTimer);
     refreshTimer = null;
     form.classList.add("hide");
