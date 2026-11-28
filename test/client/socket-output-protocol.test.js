@@ -76,7 +76,7 @@ test("streamed editor headers retain preceding lines and reset clears CRLF conti
   assert.deepEqual(parser.parse("before\n#$# edit name: fixture upload: @program fixture\nsource\n"), [{ type: "text", text: "before\n" }]);
   const events = parser.parse(".\n#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\nafter\n");
   assert.equal(events[0].type, "editor-content");
-  assert.equal(events[0].editor.buffer, "source\n");
+  assert.equal(events[0].editor.buffer, "source");
   assert.deepEqual(events.slice(2), [{ type: "context-profile", id: "programmer" }, { type: "text", text: "after\n" }]);
   parser.parse("old\r");
   parser.reset();
@@ -93,9 +93,9 @@ test("protocol parser emits editor content after split terminator", () => {
   assert.deepEqual(events, [
     {
       type: "editor-content",
+      updateEditorList: true,
       editor: {
-        readingContent: true,
-        buffer: "line1\n",
+        buffer: "line1",
         editorName: "foo",
         uploadCommand: "@program foo"
       }
@@ -185,4 +185,97 @@ test("protocol parser emits ping and user-type events", () => {
     parser.parse("#$# user user-type staff\n"),
     [{ type: "user-type", userType: "staff" }]
   );
+});
+
+test("editor content is independent of packet boundaries", () => {
+  const header = "#$# edit name: fixture upload: @program fixture\r\n";
+  for (const source of ["", "one", "one\r\ntwo", "one\r\n"]) {
+    const wire = header + (source ? source + "\r\n" : "") + ".\r\nnext\r\n";
+    const expected = [
+      { type: "editor-content", updateEditorList: true, editor: {
+        editorName: "fixture", uploadCommand: "@program fixture", buffer: normalizeSocketNewlines(source)
+      } },
+      { type: "text", text: "next\n" }
+    ];
+    for (let split = 0; split <= wire.length; split++) {
+      const parser = createSocketOutputProtocolParser();
+      const events = [...parser.parse(wire.slice(0, split)), ...parser.parse(wire.slice(split))];
+      assert.deepEqual(events.filter(event => event.type !== "fade"), expected, "split " + split);
+    }
+  }
+});
+
+test("SDWC JSON keeps edit field separators inside payloads and recovers after invalid JSON", () => {
+  const parser = createSocketOutputProtocolParser();
+  const payload = { label: "object name: fixture upload: nothing %% remaining" };
+  const events = parser.parse("#$# SDWC%%PROPS%%" + JSON.stringify(payload) +
+    "\n#$# SDWC%%VERBS%%[\n#$# SDWC%%CONTEXT-RESET\nready\n");
+  assert.deepEqual(events[0], { type: "sdwc-props", payload });
+  assert.equal(events[1].type, "sdwc-parse-error");
+  assert.equal(events[1].command, "sdwc-verbs");
+  assert.deepEqual(events.slice(2), [{ type: "context-reset" }, { type: "text", text: "ready\n" }]);
+});
+
+test("a reset discards a pending editor and partial output", () => {
+  const parser = createSocketOutputProtocolParser();
+  parser.parse("#$# edit name: old upload: @program old\npartial");
+  assert.equal(parser.editorState.readingContent, true);
+  parser.reset();
+  assert.deepEqual(parser.parse("new\n"), [{ type: "text", text: "new\n" }]);
+});
+
+test("profile and overlay messages retain typed payloads and reject invalid IDs", () => {
+  const parser = createSocketOutputProtocolParser();
+  const marker = (command, value) => "#$# SDWC%%" + command + "%%" + JSON.stringify(value) + "\n";
+  for (const id of ["staff-gm_2", "A" + "f".repeat(63)]) {
+    assert.deepEqual(parser.parse(marker("context-profile", id)), [{ type: "context-profile", id }]);
+  }
+  for (const id of [null, "two words", "1staff", "A" + "f".repeat(64), "x".repeat(140), { id: "player" }]) {
+    assert.deepEqual(parser.parse(marker("context-profile", id)), [{ type: "context-profile", id: null }]);
+  }
+  const payload = { object: " #5 ", property: " label " };
+  assert.deepEqual(parser.parse(marker(" prop-overlay ", payload)), [
+    { type: "sdwc-prop-overlay", objectId: "#5", propertyName: "label", payload }
+  ]);
+  assert.deepEqual(parser.parse("#$# SDWC%%VERB-OVERLAY\n"), [
+    { type: "sdwc-verb-overlay", objectId: "", verbName: "", payload: null }
+  ]);
+});
+
+test("the streamed editor preserves separate body chunks until the terminator", () => {
+  const parser = createSocketOutputProtocolParser();
+  assert.deepEqual(parser.parse("#$# edit name: stream upload: fixture-command\r\n"), []);
+  const waiting = [{ type: "fade", message: "<span class=\"warn\">BUFFERING POPUP ...</span>" }];
+  assert.deepEqual(parser.parse("first\r\n"), waiting);
+  assert.deepEqual(parser.parse("second\r\n"), waiting);
+  assert.deepEqual(parser.parse(".\r\n"), [
+    { type: "editor-content", updateEditorList: true, editor: {
+      editorName: "stream", uploadCommand: "fixture-command", buffer: "first\nsecond"
+    } },
+    { type: "fade", message: "BUFFERING POPUP ..." }
+  ]);
+});
+
+test("overlay parse failures and empty payloads leave subsequent output readable", () => {
+  const parser = createSocketOutputProtocolParser();
+  assert.deepEqual(parser.parse(null), []);
+  const events = parser.parse("#$# SDWC%%PROP-OVERLAY%%{\n#$# SDWC%%PROP-OVERLAY\n" +
+    "#$#   sdwc-start-nowrap  \ntext\n#$# SDWC-END-NOWRAP\n#$# notice SDWC\n");
+  assert.equal(events[0].type, "sdwc-parse-error");
+  assert.equal(events[0].command, "sdwc-prop-overlay");
+  assert.deepEqual(events.slice(1), [
+    { type: "sdwc-prop-overlay", objectId: "", propertyName: "", payload: null },
+    { type: "sdwc-nowrap-start" }, { type: "text", text: "text\n" }, { type: "sdwc-nowrap-end" },
+    { type: "fade", message: "notice SDWC" }
+  ]);
+});
+
+test("profile payloads honor the size boundary before decoding", () => {
+  const parser = createSocketOutputProtocolParser();
+  const prefix = "#$# SDWC%%CONTEXT-PROFILE%%";
+  const boundary = "\"" + "\\u0061".repeat(21) + "\"";
+  assert.equal(boundary.length, 128);
+  assert.deepEqual(parser.parse(prefix + boundary + "\n"), [{ type: "context-profile", id: "a".repeat(21) }]);
+  assert.deepEqual(parser.parse(prefix + boundary.slice(0, -1) + "a\"\n"), [{ type: "context-profile", id: null }]);
+  assert.deepEqual(parser.parse(prefix + "{\n"), [{ type: "context-profile", id: null }]);
 });

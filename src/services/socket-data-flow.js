@@ -1,4 +1,7 @@
+import { StringDecoder } from "node:string_decoder";
+
 const CLIENT_USER_MARKER = "#$# dome-client-user";
+const decoders = new WeakMap();
 
 export async function forwardMudData({
   data,
@@ -15,7 +18,12 @@ export async function forwardMudData({
     if (displayData.length === 0) {
       return;
     }
-    let text = (socket.domeMarkerCarry || "") + displayData.toString();
+    let decoder = decoders.get(moo);
+    if (!decoder) {
+      decoder = new StringDecoder("utf8");
+      decoders.set(moo, decoder);
+    }
+    let text = (socket.domeMarkerCarry || "") + decoder.write(displayData);
     socket.domeMarkerCarry = "";
     const markerIndex = text.indexOf(CLIENT_USER_MARKER);
     if (markerIndex !== -1) {

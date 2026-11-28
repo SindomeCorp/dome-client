@@ -171,8 +171,7 @@ test("parseSocketData closes editor when dot terminator is split across segments
   assert.equal(client.activeEditor.readingContent, false);
   assert.equal(client.makeEditor.mock.calls.length, 1);
   assert.deepEqual(client.makeEditor.mock.calls[0].arguments[0], {
-    readingContent: true,
-    buffer: "line1\n",
+    buffer: "line1",
     editorName: "foo",
     uploadCommand: "@program foo"
   });

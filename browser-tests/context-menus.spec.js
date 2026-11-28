@@ -1373,3 +1373,28 @@ test("context menus: worker-unusable fetched files disable rather than activatin
   await expect(page.getByRole("menu")).toHaveCount(0);
   expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
 });
+
+test("streamed editor protocol passes complete text to the editor in the real player bundle", async ({ page }) => {
+  await page.context().addInitScript(() => {
+    window.protocolEditors = [];
+    window.open = () => {
+      const editor = { focus() {}, close() {}, addEventListener() {}, closed: false };
+      window.protocolEditors.push(editor);
+      return editor;
+    };
+  });
+  const initial = await fixtureState(page);
+  await page.goto("/?entry=real&ed=windows");
+  await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+  const connected = await fixtureState(page);
+
+  await socketFeed(page, "#$# edit name: protocol fixture upload: fixture-command\r\nfirst\r\n");
+  await socketFeed(page, "second\r\n.\r");
+  await socketFeed(page, "\nOutput after the editor.\r\n");
+
+  await expect.poll(() => page.evaluate(() => window.protocolEditors.map(editor => editor.editorData))).toEqual([
+    { editorName: "protocol fixture", uploadCommand: "fixture-command", buffer: "first\nsecond" }
+  ]);
+  await expect(page.locator("#lineBuffer")).toContainText("Output after the editor.");
+  expect((await fixtureState(page)).commands).toEqual(connected.commands);
+});

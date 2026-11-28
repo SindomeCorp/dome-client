@@ -40,8 +40,6 @@ export function createTelnetIacProcessor({
 
   function resetSequence() {
     state = "data";
-    command = null;
-    option = null;
     sequenceBytes = 0;
     payload = [];
   }
@@ -74,17 +72,16 @@ export function createTelnetIacProcessor({
     });
   }
 
-  function markSequenceByte() {
+  function exceedsSubnegotiationLimit(byte) {
     sequenceBytes++;
-    if (sequenceBytes <= maxSequenceBytes) {
-      return false;
-    }
+    if (sequenceBytes <= maxSequenceBytes) return false;
+
     logger?.warn?.("dropping overlong Telnet IAC sequence");
-    state = "discardSubnegotiation";
-    command = null;
-    option = null;
-    payload = [];
-    sequenceBytes = 0;
+    const previousState = state;
+    resetSequence();
+    if (previousState === "subnegotiationIac" && byte === SE) return true;
+    state = previousState === "subnegotiationData" && byte === IAC
+      ? "discardSubnegotiationIac" : "discardSubnegotiation";
     return true;
   }
 
@@ -93,14 +90,13 @@ export function createTelnetIacProcessor({
     const output = [];
 
     for (const byte of data) {
-      if (state !== "data" && markSequenceByte()) {
+      if (state.startsWith("subnegotiation") && exceedsSubnegotiationLimit(byte)) {
         continue;
       }
 
       if (state === "data") {
         if (byte === IAC) {
           state = "iac";
-          sequenceBytes = 1;
         } else {
           output.push(byte);
         }
@@ -113,7 +109,7 @@ export function createTelnetIacProcessor({
           resetSequence();
         } else if (byte === SB) {
           state = "subnegotiationOption";
-          command = byte;
+          sequenceBytes = 2;
         } else if (negotiationCommands.has(byte)) {
           state = "negotiationOption";
           command = byte;
@@ -159,8 +155,11 @@ export function createTelnetIacProcessor({
         continue;
       }
 
-      if (state === "discardSubnegotiation" && byte === SE) {
-        resetSequence();
+      if (state === "discardSubnegotiationIac") {
+        if (byte === SE) resetSequence();
+        else state = "discardSubnegotiation";
+      } else if (byte === IAC) {
+        state = "discardSubnegotiationIac";
       }
     }
 

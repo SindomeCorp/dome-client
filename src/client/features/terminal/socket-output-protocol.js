@@ -173,12 +173,10 @@ export function createSocketOutputProtocolParser() {
       if (editor.readingContent) {
         const terminator = findDotTerminator(segment);
         if (terminator) {
-          if (terminator.hasLeadingNewline) {
-            editor.buffer += segment.slice(0, terminator.index - 1);
-          } else {
-            editor.buffer += segment.slice(0, terminator.index);
-          }
-          events.push({ type: "editor-content", editor: { ...editor } });
+          const content = editor.buffer + segment.slice(0, terminator.index);
+          const buffer = content.endsWith("\n") ? content.slice(0, -1) : content;
+          const { editorName, uploadCommand } = editor;
+          events.push({ type: "editor-content", updateEditorList: true, editor: { editorName, uploadCommand, buffer } });
           resetEditor();
           segment = segment.slice(terminator.index + terminator.length);
           events.push({ type: "fade", message: "BUFFERING POPUP ..." });
@@ -199,9 +197,12 @@ export function createSocketOutputProtocolParser() {
         const end = segment.indexOf("\n");
         const lineEnd = end === -1 ? segment.length : end;
         const metaLine = segment.slice(0, lineEnd);
-        const { metaCommand, editorName, uploadCommand } = parseMetaLine(metaLine);
+        const command = metaLine.slice(4);
+        const editorMeta = command === "edit" || command.startsWith("edit ") ? parseMetaLine(metaLine) : null;
+        const metaCommand = editorMeta?.metaCommand ?? command;
 
         if (metaCommand === "edit") {
+          const { editorName, uploadCommand } = editorMeta;
           const termPos = findDotTerminator(segment, lineEnd + 1);
           if (termPos) {
             const bufferEnd = termPos.hasLeadingNewline ? termPos.index - 1 : termPos.index;

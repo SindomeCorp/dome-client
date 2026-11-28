@@ -2,16 +2,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import net from "node:net";
+import { setTimeout as delay } from "node:timers/promises";
 import { io as createSocketClient } from "socket.io-client";
 
 async function startMooTestServer() {
   let received = "";
   const server = net.createServer((socket) => {
-    socket.on("data", (chunk) => {
+    socket.on("data", async (chunk) => {
       const text = chunk.toString("utf8");
       received += text;
       if (text.includes("look\r\n")) {
-        socket.write("You look around.\r\n");
+        const output = Buffer.from("You look around. You see café 🌲.\r\n");
+        const split = output.indexOf(0xc3) + 1;
+        socket.write(output.subarray(0, split));
+        await delay(20);
+        socket.write(output.subarray(split));
       }
       if (text.includes("@quit\r\n")) {
         socket.end();
@@ -186,7 +191,7 @@ test("integration: socket bridge works with a real tcp moo server", async (t) =>
 
     socket.on("data", (message) => {
       socketData.push(String(message));
-      if (String(message).includes("You look around.")) {
+      if (socketData.join("").includes(".\r\n")) {
         socket.emit("input", "@quit");
       }
     });
@@ -203,5 +208,5 @@ test("integration: socket bridge works with a real tcp moo server", async (t) =>
   const received = moo.getReceived();
   assert.match(received, /look\r\n/);
   assert.match(received, /@quit\r\n/);
-  assert.ok(socketData.some((chunk) => chunk.includes("You look around.")));
+  assert.equal(socketData.join(""), "You look around. You see café 🌲.\r\n");
 });
