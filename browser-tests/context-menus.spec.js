@@ -1757,6 +1757,10 @@ test("context menus: the real IDE reports when its scratchpad is disabled", asyn
   const ide = await popup;
   await expect(page.locator("#lineBuffer").getByText("Scratchpad is disabled by this client's existing IDE settings.", { exact: true })).toBeVisible();
   await expect(ide.locator(".ace_editor")).toHaveCount(0);
+
+  await socketFeed(page, "#$# edit name: Ordinary verb upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
+  await expect(ide.getByRole("tab", { name: /Ordinary verb/ })).toBeVisible();
+  await expect.poll(() => ide.locator(".ace_editor").evaluate((element) => element.env.editor.getValue())).toBe("return 1;");
   expect((await fixtureState(page)).commands).toEqual(connected.commands);
 });
 
