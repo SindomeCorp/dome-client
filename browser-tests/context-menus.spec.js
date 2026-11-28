@@ -525,6 +525,39 @@ test("legacy output keyboard navigation clamps to its rows and opens each refere
   expect(await page.evaluate(() => window.contextSent)).toEqual([]);
 });
 
+test("reference menus close after output pruning, Tab, or a click elsewhere", async ({ page }) => {
+  await start(page);
+  await feed(page, "old reference #123\nold plain text\n");
+  const output = page.locator("#lineBuffer");
+  const old = output.getByText("old reference #123", { exact: true });
+  const fresh = output.getByText("fresh reference #456", { exact: true });
+  const menu = page.getByRole("menu", { name: "Reference actions" });
+  const openReference = async (row) => {
+    await row.focus();
+    await expect.poll(async () => {
+      await page.keyboard.press("Shift+F10");
+      return menu.count();
+    }).toBe(1);
+    await expect(menu.getByRole("menuitem", { name: "Copy to Clipboard" })).toBeFocused();
+  };
+  await openReference(old);
+  await page.evaluate(() => { window.outputTest.client.preferences.performanceBuffer = 2; });
+  await feed(page, "fresh plain text\nfresh reference #456\n");
+  await expect(old).toHaveCount(0);
+  await expect(menu).toHaveCount(0);
+
+  await openReference(fresh);
+  await page.keyboard.press("Tab");
+  await expect(menu).toHaveCount(0);
+  await expect(fresh).toBeFocused();
+
+  await openReference(fresh);
+  await page.locator("#inputBuffer").click();
+  await expect(menu).toHaveCount(0);
+  expect(await page.evaluate(() => window.contextCopied)).toBeUndefined();
+  expect(await page.evaluate(() => window.contextSent)).toEqual([]);
+});
+
 test("context menus: keyboard actions work in secondary and detached output", async ({ page }) => {
   await start(page);
   await page.evaluate(() => window.outputTest.manager.updateSettings({ open: true, selected: ["team-chat"] }));
