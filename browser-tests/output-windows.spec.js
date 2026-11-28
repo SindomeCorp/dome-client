@@ -741,6 +741,41 @@ test("drag resizing and a paused variable-height anchor remain usable", async ({
   expect(await page.locator("[data-output-id]").count()).toBeLessThan(400);
 });
 
+test("dragging the splitter tracks the chosen side and keeps the clamped size after reload", async ({ page }) => {
+  const workspace = page.locator("#output-workspace");
+  const divider = page.locator("#output-divider");
+  for (const [position, horizontal, expected, edge] of [
+    ["left", true, "42", 0.05], ["right", true, "58", 0.95],
+    ["top", false, "42", 0.05], ["bottom", false, "58", 0.95]
+  ]) {
+    await page.evaluate((value) => {
+      window.outputTest.manager.updateSettings({ open: true, position: value, secondarySize: 30 });
+    }, position);
+    await expect(workspace).toHaveAttribute("data-position", position);
+    const bounds = await workspace.boundingBox();
+    const drag = async (fraction) => {
+      const split = await divider.boundingBox();
+      const middle = { x: split.x + split.width / 2, y: split.y + split.height / 2 };
+      const x = horizontal ? bounds.x + bounds.width * fraction : middle.x;
+      const y = horizontal ? middle.y : bounds.y + bounds.height * fraction;
+      await page.mouse.move(middle.x, middle.y);
+      await page.mouse.down();
+      await page.mouse.move(x, y, { steps: 3 });
+      await page.mouse.up();
+    };
+    await drag(0.42);
+    await expect(divider).toHaveAttribute("aria-valuenow", expected);
+    await drag(1 - edge);
+    await expect(divider).toHaveAttribute("aria-valuenow", "85");
+    await drag(edge);
+    await expect(divider).toHaveAttribute("aria-valuenow", "15");
+  }
+  await page.reload();
+  await page.waitForFunction(() => window.outputTest);
+  await expect(workspace).toHaveAttribute("data-position", "bottom");
+  await expect(divider).toHaveAttribute("aria-valuenow", "15");
+});
+
 test("native selection stays mounted while new output arrives", async ({ page }) => {
   await page.evaluate(() => window.outputTest.feed("select this text\nsecond line\n"));
   await page.evaluate(() => {
