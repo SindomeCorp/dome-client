@@ -1746,23 +1746,29 @@ test("context menus: a background unsaved Scratchpad still warns on IDE close", 
 
   await socketFeed(page, "#$# SDWC%%CONTEXT-PROFILE%%\"programmer\"\n");
   await expect(page.locator("#context-menu-active")).toHaveText("Active Profile: Programmer (selected by server)");
+  const popup = page.waitForEvent("popup");
+  await socketFeed(page, "#$# edit name: Clean verb upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
+  const ide = await popup;
+  const clean = ide.getByRole("tab", { name: /Clean verb/ });
+  await expect(clean).toHaveAttribute("aria-selected", "true");
+
+  await page.bringToFront();
   const text = "Scratchpad close fixture";
   await socketFeed(page, text + "\n");
   const output = page.locator("#lineBuffer [data-output-id]").getByText(text, { exact: true });
-  await output.evaluate((row) => {
-    row.focus();
-    document.getSelection().selectAllChildren(row);
-  });
-  await openSelection(page);
-  const popup = page.waitForEvent("popup");
-  await page.getByRole("menuitem", { name: "Open in Scratchpad" }).click();
-  const ide = await popup;
+  const scratchAction = page.getByRole("menuitem", { name: "Open in Scratchpad" });
+  await expect.poll(async () => {
+    if (await scratchAction.count()) return 1;
+    await output.evaluate((row) => document.getSelection().selectAllChildren(row));
+    await rightText(page, output);
+    return scratchAction.count();
+  }).toBe(1);
+  await scratchAction.click();
   const scratch = ide.getByRole("tab", { name: /Temporary Scratch Pad/ });
   await expect(scratch).toHaveAttribute("aria-selected", "true");
   await expect(ide.getByText("Unsaved", { exact: true })).toBeVisible();
 
-  await socketFeed(page, "#$# edit name: Clean verb upload: @program #12:preview\r\nreturn 1;\r\n.\r\n");
-  const clean = ide.getByRole("tab", { name: /Clean verb/ });
+  await clean.click();
   await expect(clean).toHaveAttribute("aria-selected", "true");
   await expect(ide.getByText("Saved", { exact: true })).toBeVisible();
   const warnsOnUnload = () => ide.evaluate(() => !window.dispatchEvent(new Event("beforeunload", { cancelable: true })));
@@ -2382,27 +2388,45 @@ test("the real IDE applies wrap, Vim and Options font changes to both mounted ta
   await expectResized(760, 740, "return 12;");
   await expectSettings(false, false, "Monaco");
 
-  const firstTab = ide.getByRole("tab", { name: /First settings tab/ });
-  const secondTab = ide.getByRole("tab", { name: /Second settings tab/ });
   await ide.bringToFront();
-  await ide.keyboard.press("Control+BracketLeft");
-  await expect(secondTab).toHaveAttribute("aria-selected", "true");
-  await ide.keyboard.press("Control+BracketRight");
-  await expect(firstTab).toHaveAttribute("aria-selected", "true");
-  await ide.keyboard.press("Control+BracketRight");
-  await expect(secondTab).toHaveAttribute("aria-selected", "true");
-  await ide.keyboard.press("Control+BracketLeft");
-  await expect(firstTab).toHaveAttribute("aria-selected", "true");
-
   await ide.keyboard.press("Control+Shift+L");
   await expectSettings(true, false, "Monaco");
   await ide.keyboard.press("Control+Shift+L");
   await expectSettings(false, false, "Monaco");
+
+  await socketFeed(page, "#$# edit name: Third settings tab upload: @program #14:third\r\nreturn 14;\r\n.\r\n");
+  const firstTab = ide.getByRole("tab", { name: /First settings tab/ });
+  const secondTab = ide.getByRole("tab", { name: /Second settings tab/ });
+  const thirdTab = ide.getByRole("tab", { name: /Third settings tab/ });
+  await expect(thirdTab).toHaveAttribute("aria-selected", "true");
+  await ide.bringToFront();
+  await ide.keyboard.press("Control+BracketLeft");
+  await expect(secondTab).toHaveAttribute("aria-selected", "true");
+  await ide.keyboard.press("Control+BracketLeft");
+  await expect(firstTab).toHaveAttribute("aria-selected", "true");
+  await ide.keyboard.press("Control+BracketLeft");
+  await expect(thirdTab).toHaveAttribute("aria-selected", "true");
+  await ide.keyboard.press("Control+BracketRight");
+  await expect(firstTab).toHaveAttribute("aria-selected", "true");
+  await ide.keyboard.press("Control+BracketRight");
+  await expect(secondTab).toHaveAttribute("aria-selected", "true");
+
   await ide.keyboard.press("Control+Shift+X");
   await expect(ide.getByRole("tablist")).toHaveAttribute("aria-orientation", "vertical");
   await ide.keyboard.press("Control+Shift+X");
   await expect(ide.getByRole("tablist")).toHaveAttribute("aria-orientation", "horizontal");
-  await expect(firstTab).toHaveAttribute("aria-selected", "true");
+  await expect(ide.getByRole("button", { name: "Horizontal tabs (top)" })).toHaveAttribute("aria-pressed", "true");
+  await expect(secondTab).toHaveAttribute("aria-selected", "true");
+
+  const wouldUseBrowserDefault = (key, shiftKey = false) => ide.evaluate(({ key, shiftKey }) => {
+    return document.activeElement.dispatchEvent(new window.KeyboardEvent("keydown", {
+      key, shiftKey, ctrlKey: true, bubbles: true, cancelable: true
+    }));
+  }, { key, shiftKey });
+  for (const [key, shiftKey] of [["0", false], ["[", false], ["]", false], ["l", true], ["x", true]]) {
+    expect(await wouldUseBrowserDefault(key, shiftKey)).toBe(false);
+  }
+  await expect(secondTab).toHaveAttribute("aria-selected", "true");
   expect((await fixtureState(page)).commands).toEqual(connected.commands);
 });
 
