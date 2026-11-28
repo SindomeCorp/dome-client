@@ -2302,3 +2302,31 @@ test("real output does not pause when overlapping long presses are canceled", as
   await assertStillFollowing();
   expect((await fixtureState(page)).commands.slice(initial.commands.length)).toEqual([]);
 });
+
+test("the real Wasm parser ignores unrelated messages and parses missing source as empty", async ({ page }) => {
+  await page.goto("/");
+  const replies = await page.evaluate(async () => {
+    const worker = new window.Worker("/js/moo-parser-worker.js", { type: "module" });
+    const received = [];
+    let timer;
+    try {
+      return await new Promise((resolve, reject) => {
+        timer = window.setTimeout(() => reject(new Error("Parser did not answer the fixture")), 6000);
+        worker.addEventListener("error", (event) => reject(new Error(event.message)));
+        worker.addEventListener("message", ({ data }) => {
+          received.push(data);
+          if (data.id === 1) {
+            worker.postMessage({ type: "unrelated", id: 2, source: "return 2;" });
+            worker.postMessage({ type: "parse", id: 3 });
+          }
+          if (data.id === 3) resolve(received);
+        });
+        worker.postMessage({ type: "parse", id: 1, source: "return 1;" });
+      });
+    } finally {
+      window.clearTimeout(timer);
+      worker.terminate();
+    }
+  });
+  expect(replies).toEqual([{ id: 1, annotations: [] }, { id: 3, annotations: [] }]);
+});
