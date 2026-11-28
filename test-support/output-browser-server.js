@@ -71,6 +71,11 @@ app.get("/editor/:type/", async (req, res) => {
   const html = await ejs.renderFile(root + "views/editors/ide.ejs", {
     req, meta: { title: "IDE fixture", description: "Local test", keywords: "test" }, decache: (value) => value,
     editor: {
+      ...(req.query.lineLimits === "short" ? {
+        localSaveNoteMaxLines: 2,
+        localSaveNodeMaxLines: 3,
+        localSaveNodeAdminMaxLines: 4
+      } : {}),
       ideScratchEnabled: req.query.scratch !== "off",
       ideHoverOverlaysEnabled: true,
       ideObjectBrowserEnabled: req.query.browsers === "on",

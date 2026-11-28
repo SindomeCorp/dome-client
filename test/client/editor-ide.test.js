@@ -83,6 +83,7 @@ function createEditor(node) {
     destroyed: false,
     focused: false,
     gotoLineCalls: [],
+    commands: { on() {} },
     scrollToLineCalls: [],
     resizeCalls: 0,
     renderer: {

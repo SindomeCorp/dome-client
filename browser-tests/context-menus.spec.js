@@ -1672,3 +1672,62 @@ test("context menus hit-test fresh text nodes before an output repaint is observ
   await verb.getByRole("menuitem", { name: "Copy to Clipboard" }).click();
   expect(await page.evaluate(() => window.contextCopied)).toBe("#123:look");
 });
+
+for (const [command, limit] of [["@local-save-note", 2], ["@local-save-node", 3], ["@local-save-node-admin", 4]]) {
+  test("the real IDE keeps accepted edits when " + command + " reaches its line limit", async ({ page }) => {
+    await page.context().route("**/editor/ide/", async (route) => {
+      const url = new URL(route.request().url());
+      url.searchParams.set("lineLimits", "short");
+      await route.fulfill({ response: await route.fetch({ url: url.href }) });
+    });
+    const initial = await fixtureState(page);
+    await page.goto("/?entry=real&ed=ide");
+    await expect.poll(async () => (await fixtureState(page)).connections).toBeGreaterThan(initial.connections);
+    const before = (await fixtureState(page)).commands;
+    const opened = page.waitForEvent("popup");
+    await socketFeed(page, "#$# edit name: line limit fixture upload: " + command + " fixture\r\ninitial\r\n.\r\n");
+    const ide = await opened;
+    const editor = ide.locator(".ace_editor");
+    await expect(editor).toBeVisible();
+    const contents = () => editor.evaluate((element) => element.env.editor.getValue());
+    const paste = (text) => editor.evaluate((element, value) => {
+      const aceEditor = element.env.editor;
+      aceEditor.navigateFileEnd();
+      aceEditor.focus();
+      aceEditor.onPaste(value);
+    }, text);
+    const extra = Array.from({ length: limit - 1 }, (_, index) => "\nLine " + (index + 2)).join("");
+    await paste(extra);
+    const accepted = "initial" + extra;
+    await expect.poll(contents).toBe(accepted);
+    await ide.keyboard.press("Enter");
+    await expect.poll(contents).toBe(accepted);
+    await paste("\nRejected\nAlso rejected");
+    await expect.poll(contents).toBe(accepted);
+
+    // Redo is an ordinary editor command. A rejected paste must not be
+    // replayable or consume an earlier accepted edit from the undo history.
+    await editor.evaluate((element) => element.env.editor.execCommand("redo"));
+    await expect.poll(contents).toBe(accepted);
+    await editor.evaluate((element) => element.env.editor.execCommand("undo"));
+    await expect.poll(contents).toBe("initial");
+    await editor.evaluate((element) => element.env.editor.execCommand("redo"));
+    await expect.poll(contents).toBe(accepted);
+
+    await editor.evaluate((element) => {
+      const aceEditor = element.env.editor;
+      const last = aceEditor.session.getLength() - 1;
+      aceEditor.selection.setSelectionAnchor(last - 1, aceEditor.session.getLine(last - 1).length);
+      aceEditor.selection.selectTo(last, aceEditor.session.getLine(last).length);
+      aceEditor.onPaste("\r\nReplacement");
+    });
+    const replaced = accepted.replace(/[^\n]+$/, "Replacement");
+    await expect.poll(async () => (await contents()).replace(/\r\n/g, "\n")).toBe(replaced);
+    const saved = await contents();
+
+    expect((await fixtureState(page)).commands).toEqual(before);
+    await ide.getByRole("button", { name: "Save", exact: true }).click();
+    await expect.poll(async () => (await fixtureState(page)).commands.slice(before.length))
+      .toEqual([command + " fixture", saved + "\n."]);
+  });
+}

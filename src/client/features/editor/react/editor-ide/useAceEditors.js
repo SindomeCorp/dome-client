@@ -114,6 +114,20 @@ export function useAceEditors({
         }
       });
     }
+    if (lineLimit) {
+      ed.commands.on("exec", (event) => {
+        const { name } = event.command;
+        const text = name === "paste" ? event.args?.text : name === "insertstring" ? event.args : null;
+        if (typeof text !== "string" || ed.inMultiSelectMode) return;
+        const addedLines = text.match(/\r\n|\r|\n/g)?.length ?? 0;
+        if (!addedLines) return;
+        const { start, end } = ed.getSelectionRange();
+        // Reject before Ace records an undo group that could be replayed.
+        if (session.getLength() + addedLines - (end.row - start.row) > lineLimit) {
+          event.preventDefault();
+        }
+      });
+    }
     ed.on("change", () => {
       if (lineLimit) {
         const currentSession = ed.getSession();
