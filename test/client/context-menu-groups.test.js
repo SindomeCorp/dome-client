@@ -68,11 +68,60 @@ test("composition rejects invalid references, mappings, nesting, profile leaks a
     groupLimit: (_value, verb) => { verb.relatedContexts = Array(5).fill(verb.relatedContexts[0]); },
     notArray: (_value, verb) => { verb.relatedContexts = {}; }
   };
+  const relatedRuleError = /^Error: programmer-verb\.relatedContexts\[\d+\]\.rule: expected a unique known related rule$/;
+  const captureError = /^Error: programmer-verb\.relatedContexts\[0\]\.captures\.object: expected a declared capture with a compatible type$/;
+  const templateError = /^Error: programmer-verb\.relatedContexts\[0\]\.rule: related rule requires heading and target templates$/;
+  const relatedLimit = /^Error: rules\[0\]\.relatedContexts: expected at most four related contexts$/;
+  const errors = {
+    unknown: relatedRuleError,
+    duplicate: relatedRuleError,
+    self: relatedRuleError,
+    missing: captureError,
+    incompatible: captureError,
+    narrowing: captureError,
+    unknownCapture: captureError,
+    wrongType: captureError,
+    extra: /programmer-verb\.relatedContexts\[0\]\.captures\.extra: unknown field/,
+    code: /programmer-verb\.relatedContexts\[0\]\.execute: unknown field/,
+    missingHeading: templateError,
+    missingTarget: templateError,
+    badHeading: /rules\[0\]\.heading: template:/,
+    badTarget: /rules\[2\]\.target: template:/,
+    nested: /programmer-verb\.relatedContexts\[0\]\.rule: nested or recursive related contexts are not supported/,
+    profile: /profiles\[0\]\.rules: related contexts must use a rule in the same profile/,
+    limit: /programmer-verb\.relatedContexts\[0\]: combined menu exceeds 24 actions/,
+    groupLimit: relatedLimit,
+    notArray: relatedLimit
+  };
   for (const [name, mutate] of Object.entries(cases)) await t.test(name, async () => {
     const value = await config();
     mutate(value, value.rules[0], value.rules.find((rule) => rule.id === "programmer-object"));
-    assert.throws(() => validateContextMenus(value));
+    assert.throws(() => validateContextMenus(value), errors[name]);
   });
+});
+
+test("grouped context menus accept 24 total actions and identify the related rule that exceeds the limit", async () => {
+  const value = await config();
+  const verb = value.rules.find((rule) => rule.id === "programmer-verb");
+  const object = value.rules.find((rule) => rule.id === "programmer-object");
+  const extraActions = 24 - verb.actions.length - object.actions.length;
+  const related = {
+    ...structuredClone(object),
+    id: "more-object-actions",
+    heading: "More actions for ${object}",
+    actions: Array.from({ length: extraActions }, (_, index) => ({ ...object.actions[0], id: "copy-" + index }))
+  };
+  value.rules.push(related);
+  value.profiles[0].rules.push(related.id);
+  verb.relatedContexts.push({ rule: related.id, captures: { object: "object" } });
+  const snapshot = validateContextMenus(value);
+  const match = matchContextRules("#123:inspect", compileContextRules([snapshot.rules.get(verb.id)]))[0];
+  const groups = buildContextGroups(snapshot, "programmer", match);
+  assert.deepEqual(groups.map((group) => group.actions.length), [verb.actions.length, object.actions.length, extraActions]);
+  assert.equal(groups.flatMap((group) => group.actions).length, 24);
+
+  related.actions.push({ ...object.actions[0], id: "one-too-many" });
+  assert.throws(() => validateContextMenus(value), /^Error: programmer-verb\.relatedContexts\[1\]: combined menu exceeds 24 actions$/);
 });
 
 test("a numeric capture can widen to a related object-reference capture without evaluating expressions", async () => {

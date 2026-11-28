@@ -1363,7 +1363,9 @@ test("context menus: grouped targets support keyboard, bounded positioning, atom
   await setContextSection(page, "advanced");
   await page.locator("#context-menu-json").fill(JSON.stringify(config));
   await page.locator("#context-menu-reload").click();
-  await expect(page.locator("#context-menu-error")).toContainText("compatible type");
+  await expect(page.locator("#context-menu-error")).toContainText(
+    "programmer-verb.relatedContexts[0].captures.object: expected a declared capture with a compatible type"
+  );
   await page.locator("#button-client-options-close").click();
   await open();
   await page.keyboard.press("Escape");
